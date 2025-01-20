@@ -1,6 +1,6 @@
-package uk.ac.ebi.embl.flatfile.converter;
+package uk.ac.ebi.embl.converter.utils;
 
-class ConversionEntry {
+public class ConversionEntry {
     String sOID;
     String sOTerm;
     String definition;
@@ -15,6 +15,22 @@ class ConversionEntry {
         this.feature = tokens[3];
         if (tokens.length > 4) this.qualifier1 = tokens[4].equalsIgnoreCase("null") ? null : tokens[4];
         if (tokens.length > 5) this.qualifier2 = tokens[5].equalsIgnoreCase("null") ? null : tokens[5];
+    }
+
+    public String getQualifier1() {
+        return qualifier1;
+    }
+
+    public String getQualifier2() {
+        return qualifier2;
+    }
+
+    public String getSOID() {
+        return sOID;
+    }
+
+    public String getSOTerm() {
+        return sOTerm;
     }
 
     @Override

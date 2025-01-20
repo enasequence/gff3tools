@@ -1,12 +1,15 @@
-package uk.ac.ebi.embl.flatfile.converter;
+package uk.ac.ebi.embl.converter;
 
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.validation.ValidationResult;
+import uk.ac.ebi.embl.converter.utils.ConversionEntry;
+import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
@@ -15,24 +18,15 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class FFToGFF3Converter {
 
-    Map<String, List<ConversionEntry>> featureMap = new HashMap<>();
+    Map<String, List<ConversionEntry>> featureMap;
     Map<String, Integer> geneCount = new HashMap<>();
     String currentParent = null;
 
     FFToGFF3Converter() throws Exception {
-        Path filePath = Paths.get(Objects.requireNonNull(FFToGFF3Converter.class.getResource("/feature-mapping.tsv")).toURI());
-        List<String> lines = Files.readAllLines(filePath);
-        lines.remove(0);
-
-        for (String line : lines) {
-            ConversionEntry conversionEntry = new ConversionEntry(line.split("\t"));
-            featureMap.putIfAbsent(conversionEntry.feature, new ArrayList<>());
-            featureMap.get(conversionEntry.feature).add(conversionEntry);
-        }
+        featureMap = ConversionUtils.getFFToGFF3FeatureMap();
     }
 
     private void writeHeader(Entry entry, Writer writer, Feature feature) throws IOException {
@@ -44,29 +38,30 @@ public class FFToGFF3Converter {
         writer.write("##sequence-region %s %d %d\n".formatted(accession, start, end));
     }
 
+    //TODO: Update/Remove all main methods once build is stable
     public static void main(String[] args) throws Exception {
         FFToGFF3Converter ffToGFF3Converter = new FFToGFF3Converter();
         String filename = "src/test/resources/embl_BN000065/embl_BN000065.embl";
         ReaderOptions readerOptions = new ReaderOptions();
         readerOptions.setIgnoreSequence(true);
-        EmblEntryReader entryReader = new EmblEntryReader(Files.newBufferedReader(Path.of(filename))
-                , EmblEntryReader.Format.EMBL_FORMAT, filename, readerOptions );
-        ValidationResult validationResult = entryReader.read();
-        Entry entry = entryReader.getEntry();
-        Writer gf3Writer = new StringWriter();
-        ffToGFF3Converter.writeGFF3(entry, gf3Writer);
-        Files.write(Paths.get("delete-this.gff3"), gf3Writer.toString().getBytes());
-
+        try (BufferedReader bufferedReader =  Files.newBufferedReader(Path.of(filename))) {
+            EmblEntryReader entryReader = new EmblEntryReader(bufferedReader, EmblEntryReader.Format.EMBL_FORMAT, filename, readerOptions );
+            ValidationResult validationResult = entryReader.read();
+            Entry entry = entryReader.getEntry();
+            Writer gff3Writer = new StringWriter();
+            ffToGFF3Converter.writeGFF3(entry, gff3Writer);
+            Files.write(Paths.get("delete-this.gff3"), gff3Writer.toString().getBytes());
+        }
     }
 
     private boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {
-        boolean firstQualifierMatches = conversionEntry.qualifier1 == null;
-        boolean secondQualifierMatches = conversionEntry.qualifier2 == null;
+        boolean firstQualifierMatches = conversionEntry.getQualifier1() == null;
+        boolean secondQualifierMatches = conversionEntry.getQualifier2() == null;
 
         for (Qualifier qualifier : feature.getQualifiers()) {
             String formatted = "/%s=%s".formatted(qualifier.getName(), qualifier.getValue());
-            firstQualifierMatches |= formatted.equalsIgnoreCase(conversionEntry.qualifier1);
-            secondQualifierMatches |= formatted.equalsIgnoreCase(conversionEntry.qualifier2);
+            firstQualifierMatches |= formatted.equalsIgnoreCase(conversionEntry.getQualifier1());
+            secondQualifierMatches |= formatted.equalsIgnoreCase(conversionEntry.getQualifier2());
         }
         return firstQualifierMatches && secondQualifierMatches;
     }
@@ -139,7 +134,7 @@ public class FFToGFF3Converter {
             }
 
             // TODO: insert a gene feature if/where appropriate
-            // Rule: If more than one feature/qualifiers tuple is found to match, always use the first one
+
             Optional<ConversionEntry> first = featureMap.get(feature.getName()).stream()
                     .filter(conversionEntry -> hasAllQualifiers(feature, conversionEntry)).findFirst();
 

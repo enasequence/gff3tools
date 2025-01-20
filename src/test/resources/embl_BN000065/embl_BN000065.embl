@@ -2,56 +2,6 @@ ID   BN000065; SV 1; linear; genomic DNA; STD; HUM; 315242 BP.
 XX
 AC   BN000065;
 XX
-DT   23-APR-2002 (Rel. 71, Created)
-DT   14-NOV-2006 (Rel. 89, Last updated, Version 7)
-XX
-DE   TPA: Homo sapiens SMP1 gene, RHD gene and RHCE gene
-XX
-KW   RHCE gene; RhCE protein; RHD gene; RhD protein; small membrane protein 1;
-KW   SMP1 gene; Third Party Data; TPA; TPA:inferential.
-XX
-OS   Homo sapiens (human)
-OC   Eukaryota; Metazoa; Chordata; Craniata; Vertebrata; Euteleostomi; Mammalia;
-OC   Eutheria; Euarchontoglires; Primates; Haplorrhini; Catarrhini; Hominidae;
-OC   Homo.
-XX
-RN   [1]
-RP   1-315242
-RA   Wagner F.F.;
-RT   ;
-RL   Submitted (17-DEC-2001) to the INSDC.
-RL   Wagner F.F., Transfusion Medicine, University Ulm, Helmholtzstrasse 10,
-RL   89075 Ulm, GERMANY.
-XX
-RN   [2]
-RX   DOI; 10.1182/blood-2001-12-0153.
-RX   PUBMED; 11902138.
-RA   Wagner F.F., Flegel W.A.;
-RT   "RHCE represents the ancestral RH position, while RHD is the duplicated
-RT   gene";
-RL   Blood 99(6):2272-2273(2002).
-XX
-RN   [3]
-RX   PUBMED; 10845894.
-RA   Wagner F.F., Flegel W.A.;
-RT   "RHD gene deletion occurred in the Rhesus box";
-RL   Blood 95(12):3662-3668(2000).
-XX
-DR   MD5; 1f2b0707efee994266ec93a7d8bc7311.
-DR   Ensembl-Gn; ENSG00000183726; homo_sapiens.
-DR   Ensembl-Tr; ENST00000374358; homo_sapiens.
-DR   EuropePMC; PMC4024116; 24884404.
-DR   EuropePMC; PMC5210577; 27899630.
-DR   RFAM; RF00026; U6.
-XX
-AH   LOCAL_SPAN      PRIMARY_IDENTIFIER   PRIMARY_SPAN   COMP
-AS   1-129747        AL031432.1           1-129747
-AS   129748-156253   AL139426.14          47566-74071
-AS   156254-190286   AL139426.14          3739-37771
-AS   190287-199524   AJ252312.1           1-9238
-AS   199525-230431   AL139426.14          103121-134027  c
-AS   230432-315242   AL031284.9           1-84811
-XX
 FH   Key             Location/Qualifiers
 FH
 FT   source          1..315242
