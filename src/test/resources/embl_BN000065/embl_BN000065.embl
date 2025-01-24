@@ -2,12 +2,13 @@ ID   BN000065; SV 1; linear; genomic DNA; STD; HUM; 315242 BP.
 XX
 AC   BN000065;
 XX
+KW   .
+XX
 FH   Key             Location/Qualifiers
 FH
 FT   source          1..315242
 FT                   /organism="Homo sapiens"
 FT                   /mol_type="genomic DNA"
-FT                   /db_xref="taxon:9606"
 FT   mRNA            join(133806..133969,145842..146028,151911..152061,
 FT                   162216..162363,162790..162956,164592..164729,
 FT                   167866..167999,178281..178360,183171..183244,
@@ -22,11 +23,6 @@ FT                   167866..167999,178281..178360,183171..183244,
 FT                   190181..190207)
 FT                   /gene="RHD"
 FT                   /product="RhD protein"
-FT                   /db_xref="GOA:Q7RU08"
-FT                   /db_xref="InterPro:IPR002229"
-FT                   /db_xref="InterPro:IPR024041"
-FT                   /db_xref="InterPro:IPR029020"
-FT                   /db_xref="UniProtKB/TrEMBL:Q7RU08"
 FT                   /protein_id="CAD29848.1"
 FT                   /translation="MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEDQKGLV
 FT                   ASYQVGQDLTVMAAIGLGFLTSSFRRHSWSSVAFNLFMLALGVQWAILLDGFLSQFPSG
@@ -107,9 +103,6 @@ FT   CDS             join(201596..201688,204071..204183,212737..212804,
 FT                   213993..214085,217904..217963,221775..221821)
 FT                   /gene="SMP1"
 FT                   /product="small membrane protein 1"
-FT                   /db_xref="GOA:Q7RU07"
-FT                   /db_xref="InterPro:IPR007919"
-FT                   /db_xref="UniProtKB/TrEMBL:Q7RU07"
 FT                   /protein_id="CAD29849.1"
 FT                   /translation="MSGFLEGLRCSECIDWGEKRNTIASIAAGVLFFTGWWIIIDAAVI
 FT                   YPTMKDFNHSYHACGVIATIAFLMINAVSNGQVRGDSYSEGCLGQTGARIWLFVGFMLA
@@ -158,12 +151,6 @@ FT                   251865..252031,253110..253257,263712..263862,
 FT                   269799..269985,281755..281902))
 FT                   /gene="RHCE"
 FT                   /product="RhCE protein"
-FT                   /db_xref="GOA:P18577"
-FT                   /db_xref="HGNC:HGNC:10008"
-FT                   /db_xref="InterPro:IPR002229"
-FT                   /db_xref="InterPro:IPR024041"
-FT                   /db_xref="InterPro:IPR029020"
-FT                   /db_xref="UniProtKB/Swiss-Prot:P18577"
 FT                   /protein_id="CAD29850.1"
 FT                   /translation="MSSKYPRSVRRCLPLCALTLEAALILLFYFFTHYDASLEDQKGLV
 FT                   ASYQVGQDLTVMAALGLGFLTSNFRRHSWSSVAFNLFMLALGVQWAILLDGFLSQFPPG
