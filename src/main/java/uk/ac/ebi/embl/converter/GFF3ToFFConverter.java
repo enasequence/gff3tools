@@ -7,6 +7,7 @@ import uk.ac.ebi.embl.api.entry.feature.FeatureFactory;
 import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.api.entry.location.LocationFactory;
 import uk.ac.ebi.embl.api.entry.location.Order;
+import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.qualifier.QualifierFactory;
 import uk.ac.ebi.embl.api.gff3.GFF3Record;
 import uk.ac.ebi.embl.api.gff3.GFF3RecordSet;
@@ -22,8 +23,10 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class GFF3ToFFConverter {
 
@@ -32,6 +35,7 @@ public class GFF3ToFFConverter {
     private final FeatureFactory featureFactory = new FeatureFactory();
     private final LocationFactory locationFactory = new LocationFactory();
     private final QualifierFactory qualifierFactory = new QualifierFactory();
+    private final Map<String,String> idToParentGeneMap = new HashMap<>();
 
     public GFF3ToFFConverter() throws Exception {
     }
@@ -95,15 +99,31 @@ public class GFF3ToFFConverter {
         feature.setLocations(compoundJoin);
 
         Map<String, String> attributes = record.getAttributes();
-        String parent = attributes.remove("Parent");
-        // TODO: use parent to trace the /gene qualifier as needed
+        String parent = attributes.remove("Parent"); // remove and save parent
+
+        // Build qualifier list
+        List<Qualifier> qualifiers = attributes.entrySet().stream()
+                .map(entry -> qualifierFactory.createQualifier(entry.getKey(), entry.getValue()))
+                .collect(Collectors.toList());
+
+        // Use parent to trace the /gene qualifier if needed
+        String parentGene = null;
+        if (parent!=null) {
+            parentGene = idToParentGeneMap.get(parent);
+            if (parentGene!=null) {
+                qualifiers.add(qualifierFactory.createQualifier("gene", parentGene));
+                if (attributes.get("ID") != null) {
+                    idToParentGeneMap.put(attributes.get("ID"), parentGene);
+                }
+            }
+        }
+        // TODO: Check if we need to restrict this to a subset of qualifiers
+        if (attributes.get("ID")!=null && attributes.get("gene")!=null) {
+            idToParentGeneMap.put(attributes.get("ID"),attributes.get("gene"));
+        }
 
         // Add qualifiers
-        feature.addQualifiers(
-                attributes.entrySet().stream()
-                        .map(entry -> qualifierFactory.createQualifier(entry.getKey(), entry.getValue()))
-                        .toList()
-        );
+        feature.addQualifiers(qualifiers);
 
         return feature;
     }
