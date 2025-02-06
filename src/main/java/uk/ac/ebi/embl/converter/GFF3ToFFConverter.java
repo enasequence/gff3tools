@@ -90,7 +90,9 @@ public class GFF3ToFFConverter {
 
         // update locations
         // Rule: The location of parent will be the join of locations of all children, complemented if strand is "-"
-        idToChildrenMap.forEach((id, features) -> {
+        for (Map.Entry<String, List<Feature>> e : idToChildrenMap.entrySet()) {
+            String id = e.getKey();
+            List<Feature> features = e.getValue();
             CompoundLocation<Location> compoundLocation = new Join<>();
             features.forEach(feature -> feature
                     .getLocations()
@@ -98,12 +100,13 @@ public class GFF3ToFFConverter {
                     .forEach(compoundLocation::addLocation)
             );
             Feature feature = idToFeatureMap.get(id);
+            if (feature == null) {
+                throw new Exception(String.format("Feature %s not found", id));
+            }
             if (feature.getLocations().isComplement())
                 compoundLocation.setComplement(true);
-
             feature.setLocations(compoundLocation);
-
-        });
+        }
         return entry;
     }
 

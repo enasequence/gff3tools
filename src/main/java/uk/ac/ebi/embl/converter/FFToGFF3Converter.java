@@ -71,7 +71,8 @@ public class FFToGFF3Converter {
         Map<String, String> attributes = new LinkedHashMap<>(); // keep order
         feature.getQualifiers().forEach(qualifier -> {
             // TODO: remove attributes which caused the match from conversion entries
-            attributes.put(qualifier.getName(), qualifier.getValue());
+            String value = qualifier.getValue();
+            attributes.put(qualifier.getName(), value.contains(";") ? "\"%s\"".formatted(value) : value );
         });
 
         // Rule: Assign a unique ID to mRNAs with a gene qualifier
