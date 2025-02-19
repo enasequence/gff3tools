@@ -23,27 +23,27 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class GFF3ToFFConverterTest {
 
-    @Test
-    void testConvertRecordSetToEntry() throws Exception {
-        GFF3ToFFConverter gff3ToFFConverter = new GFF3ToFFConverter();
-        String filenamePrefix = "embl_BN000065/embl_BN000065";
-        Writer ffWriter = new StringWriter();
-        try (BufferedReader testFileReader = TestUtils.getResourceReader(filenamePrefix + ".gff3")) {
-            GFF3FlatFileEntryReader entryReader = new GFF3FlatFileEntryReader(new BufferedReader(testFileReader));
-            ValidationResult validationResult = entryReader.read();
-            GFF3RecordSet recordSet = entryReader.getEntry();
-            Entry entry = gff3ToFFConverter.convertRecordSetToEntry(recordSet);
-            new EmblEntryWriter(entry).write(ffWriter);
-            ffWriter.close();
-        }
-
-        String expected;
-        try (BufferedReader testFileReader = TestUtils.getResourceReader(filenamePrefix + ".embl")) {
-            expected = new BufferedReader(testFileReader).lines().collect(Collectors.joining("\n"));
-        }
-
-        assertEquals(expected, ffWriter.toString());
-
+  @Test
+  void testConvertRecordSetToEntry() throws Exception {
+    GFF3ToFFConverter gff3ToFFConverter = new GFF3ToFFConverter();
+    String filenamePrefix = "basic";
+    Writer ffWriter = new StringWriter();
+    try (BufferedReader testFileReader = TestUtils.getResourceReader(filenamePrefix + ".gff3")) {
+      GFF3FlatFileEntryReader entryReader = new GFF3FlatFileEntryReader(new BufferedReader(testFileReader));
+      ValidationResult _validationResult = entryReader.read();
+      GFF3RecordSet recordSet = entryReader.getEntry();
+      Entry entry = gff3ToFFConverter.convertRecordSetToEntry(recordSet);
+      new EmblEntryWriter(entry).write(ffWriter);
+      ffWriter.close();
     }
+
+    String expected;
+    try (BufferedReader testFileReader = TestUtils.getResourceReader(filenamePrefix + ".embl")) {
+      expected = new BufferedReader(testFileReader).lines().collect(Collectors.joining("\n"));
+    }
+
+    assertEquals(expected, ffWriter.toString());
+
+  }
 
 }
