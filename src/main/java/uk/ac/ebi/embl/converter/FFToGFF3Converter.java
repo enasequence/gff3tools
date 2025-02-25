@@ -3,19 +3,10 @@ package uk.ac.ebi.embl.converter;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
-import uk.ac.ebi.embl.api.validation.ValidationResult;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
-import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
-import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
-
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
