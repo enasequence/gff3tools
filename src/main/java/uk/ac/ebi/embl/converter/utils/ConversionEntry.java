@@ -13,6 +13,7 @@ public class ConversionEntry {
         this.sOTerm = tokens[1];
         this.definition = tokens[2];
         this.feature = tokens[3];
+        for (String token : tokens)
         if (tokens.length > 4) this.qualifier1 = tokens[4].equalsIgnoreCase("null") ? null : tokens[4];
         if (tokens.length > 5) this.qualifier2 = tokens[5].equalsIgnoreCase("null") ? null : tokens[5];
     }
