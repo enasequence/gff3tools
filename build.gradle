@@ -20,13 +20,15 @@ repositories {
             header( HttpHeaderAuthentication )
         }
     }
+    maven { url 'https://jitpack.io' }
 }
 
 dependencies {
     implementation( 'uk.ac.ebi.ena.sequence:sequencetools:2.+' )
+    implementation "io.vavr:vavr:0.10.5"
+    implementation "org.jgrapht:jgrapht-core:1.5.2"
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
-    implementation "io.vavr:vavr:0.10.5"
 }
 
 test {
