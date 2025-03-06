@@ -27,7 +27,8 @@ class FFToGFF3ConverterTest {
         String[] toTest = new String[]{
                 "HeadersAndSource",
                 "GeneID",
-                "ParentGene"
+                "ParentGene",
+                "MultipleGene"
         };
         for (String testName : toTest) {
             Entry entry;
