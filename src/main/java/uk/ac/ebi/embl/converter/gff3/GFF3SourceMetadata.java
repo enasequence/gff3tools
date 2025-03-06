@@ -7,10 +7,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class GFF3SourceAttributesRecord implements IGFF3Feature{
+public class GFF3SourceMetadata implements IGFF3Feature{
     Map<String, String> attributes;
 
-    public GFF3SourceAttributesRecord() {
+    public GFF3SourceMetadata() {
         this.attributes = new LinkedHashMap<>();
     }
 
