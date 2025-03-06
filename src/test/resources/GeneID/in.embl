@@ -9,9 +9,8 @@ FH
 FT   source          1..822
 FT                   /organism="Epipremnum pinnatum"
 FT                   /mol_type="genomic DNA"
-FT   gene            <1..>822
+FT   gene            1..822
 FT                   /gene="matK"
-FT                   /gene="trnK"
 XX
 //
 

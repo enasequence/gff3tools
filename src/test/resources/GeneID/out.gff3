@@ -1,0 +1,4 @@
+##gff-version 3.1.26
+##sequence-region TEST01.1 1 822
+# BACKPORT	source	organism=Epipremnum pinnatum
+TEST01.1	.	gene	1	822	.	+	.	ID=matK
