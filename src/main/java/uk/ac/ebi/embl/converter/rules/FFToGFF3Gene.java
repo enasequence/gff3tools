@@ -40,8 +40,23 @@ public class FFToGFF3Gene implements IConversionRule<Feature, GFF3Gene>{
                 String id = genes.get(0);
                 GFF3Gene gene = new GFF3Gene(id, record);
                 record.removeAttribute("gene");
-                // TODO parse children here.
 
+                // Child parsing
+                while (input.hasNext()) {
+                    Feature potentialChildFeature = input.next();
+                    Tuple2<Optional<GFF3Record>, List<ConversionError>> results = fftogff3record.fromFeature(potentialChildFeature);
+                    // GFF3Record is always present.
+                    GFF3Record childRecord = results._1.get();
+                    if(childRecord.getAttributeValues("gene").contains(id)) {
+                        childRecord.removeAttribute("gene");
+                        childRecord.addAttribute("Parent", id);
+                        gene.addChild(childRecord);
+                    } else {
+                        // Not a child, step back and stop parsing children
+                        input.previous();
+                        break;
+                    }
+                }
                 return new Tuple2<>(Optional.of(gene), errors);
             }
         }

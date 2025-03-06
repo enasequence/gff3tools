@@ -40,7 +40,7 @@ public class Main {
 //  }
 
   public static void main(String[] args) throws Exception {
-    String filename = "src/test/resources/GeneID/in.embl";
+    String filename = "src/test/resources/ParentGene/in.embl";
     ReaderOptions readerOptions = new ReaderOptions();
     readerOptions.setIgnoreSequence(true);
     try (BufferedReader bufferedReader = Files.newBufferedReader(Path.of(filename))) {
@@ -61,7 +61,7 @@ public class Main {
               throw new RuntimeException(ex);
           }
       });
-      Files.write(Paths.get("src/test/resources/GeneID/test_out.gff3"), gff3Writer.toString().getBytes());
+      Files.write(Paths.get("src/test/resources/ParentGene/test_out.gff3"), gff3Writer.toString().getBytes());
     }
   }
 }
