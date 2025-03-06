@@ -1,0 +1,31 @@
+ID   TEST01; XXX; XXX; XXX; XXX; XXX; XXX.
+XX
+AC   TEST01;
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..822
+FT                   /organism="Epipremnum pinnatum"
+FT                   /mol_type="genomic DNA"
+FT   gene            <1..>822
+FT                   /gene="matK"
+FT   CDS             <1..>822
+FT                   /codon_start=1
+FT                   /transl_table=11
+FT                   /gene="matK"
+FT                   /product="maturase K"
+FT                   /protein_id="WES72345.1"
+FT                   /translation="ILQCWIQDVPSLHLLQFFFHEYHNWNNLITPRKSSYGFSKENPRL
+FT                   FRFLYNSYVVECESLLVFLRKQSSYLRSTSSGTFLERTHFYEKIEHLVVVCCNDFQKTL
+FT                   WLFKDPFMHYVRYQGKSILASKGPHLLMNKWKFYFVNFWQCHFHFWFQPCRIHINQFSH
+FT                   FSFYFLGYLSSVLINPSVVKSQMLENSFFIDTVAKKFETIVPIIPMIGSLSKAKFCNVS
+FT                   GNPISKPVWADLSDSDIIDRFGRICRNLSHYYSGSSTKQSLYRIKYILRLSC"
+FT   intron          <1..>822
+FT                   /gene="trnK"
+FT   exon            11..600
+FT                   /gene="trnK"
+XX
+//
+

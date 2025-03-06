@@ -3,22 +3,22 @@ package uk.ac.ebi.embl.converter.rules;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
-import uk.ac.ebi.embl.converter.gff3.GFF3SourceAttributesRecord;
+import uk.ac.ebi.embl.converter.gff3.GFF3SourceMetadata;
 
-public class FFEntryToGFF3SourceAttributes implements IConversionRule<Entry, GFF3SourceAttributesRecord> {
+public class FFEntryToGFF3SourceAttributes implements IConversionRule<Entry, GFF3SourceMetadata> {
 
     @Override
-    public GFF3SourceAttributesRecord from(Entry entry) throws ConversionError {
+    public GFF3SourceMetadata from(Entry entry) throws ConversionError {
 
         for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
 
             // Output header
             if (feature.getName().equalsIgnoreCase("source")) {
-                GFF3SourceAttributesRecord sourceAttributes = new GFF3SourceAttributesRecord();
+                GFF3SourceMetadata sourceMetadata = new GFF3SourceMetadata();
                 for (Qualifier q: feature.getQualifiers()) {
-                    sourceAttributes.addAttribute(q.getName(), q.getValue());
+                    sourceMetadata.addAttribute(q.getName(), q.getValue());
                 }
-                return sourceAttributes;
+                return sourceMetadata;
             }
         }
 

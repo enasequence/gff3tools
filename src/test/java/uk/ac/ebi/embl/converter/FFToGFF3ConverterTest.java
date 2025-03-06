@@ -7,11 +7,15 @@ import uk.ac.ebi.embl.converter.gff3.IGFF3Feature;
 import uk.ac.ebi.embl.converter.rules.FFEntryToGFF3Headers;
 import uk.ac.ebi.embl.converter.rules.FFEntryToGFF3Model;
 import uk.ac.ebi.embl.converter.rules.FFEntryToGFF3SourceAttributes;
+import uk.ac.ebi.embl.converter.rules.FFFeatureToGFF3Feature;
 import uk.ac.ebi.embl.converter.rules.IConversionRule;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 import java.io.*;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,33 +27,38 @@ class FFToGFF3ConverterTest {
 
         String filenamePrefix = "embl_BN000065/embl_BN000065";
         FFEntryToGFF3Headers.class.getConstructor().newInstance();
-        Class<?>[] toTest = new Class[]{
-                FFEntryToGFF3Headers.class,
-                FFEntryToGFF3SourceAttributes.class,
-                FFEntryToGFF3Model.class
-        };
-        for (Class<?> testcase : toTest) {
+        List<IConversionRule> toTest = List.of(
+                /*new FFEntryToGFF3Headers(),
+                new FFEntryToGFF3SourceAttributes(),
+                new FFEntryToGFF3Model(),*/
+                new FFFeatureToGFF3Feature()
+        );
+        for ( IConversionRule testcase : toTest) {
             Entry entry;
-            String testName = testcase.getSimpleName();
-            try (BufferedReader testFileReader = TestUtils.getResourceReader(testName + "/in.embl")) {
-                ReaderOptions readerOptions = new ReaderOptions();
-                readerOptions.setIgnoreSequence(true);
-                EmblEntryReader entryReader = new EmblEntryReader(
-                        testFileReader, EmblEntryReader.Format.EMBL_FORMAT, filenamePrefix, readerOptions);
-                entryReader.read();
-                entry = entryReader.getEntry();
-            }
-            Writer gff3Writer = new StringWriter();
-            @SuppressWarnings("unchecked") IConversionRule<Entry, IGFF3Feature> rule = (IConversionRule<Entry, IGFF3Feature>) testcase.getConstructor().newInstance();
-            IGFF3Feature gff3Model = rule.from(entry);
-            gff3Model.writeGFF3String(gff3Writer);
+            String testName = testcase.getClass().getSimpleName();
+            Map<String, Path> testFiles =  TestUtils.getTestFiles(testName);
+            for(String filePrefix: testFiles.keySet()) {
 
-            String expected;
-            try (BufferedReader testFileReader = TestUtils.getResourceReader(testName + "/out.gff3")) {
-                expected = new BufferedReader(testFileReader).lines().collect(Collectors.joining("\n"));
-            }
+                try (BufferedReader testFileReader = TestUtils.getResourceReader(testFiles.get(filePrefix).toString())) {
+                    ReaderOptions readerOptions = new ReaderOptions();
+                    readerOptions.setIgnoreSequence(true);
+                    EmblEntryReader entryReader = new EmblEntryReader(
+                            testFileReader, EmblEntryReader.Format.EMBL_FORMAT, filenamePrefix, readerOptions);
+                    entryReader.read();
+                    entry = entryReader.getEntry();
+                }
+                Writer gff3Writer = new StringWriter();
+                IGFF3Feature gff3Model = (IGFF3Feature) testcase.from(entry);
+                gff3Model.writeGFF3String(gff3Writer);
 
-            assertEquals(expected.trim(), gff3Writer.toString().trim());
+                String expected;
+                String expectedFilePath=testFiles.get(filePrefix).toString().replace(".embl",".gff3");
+                try (BufferedReader testFileReader = TestUtils.getResourceReader(expectedFilePath)) {
+                    expected = new BufferedReader(testFileReader).lines().collect(Collectors.joining("\n"));
+                }
+
+                assertEquals(expected.trim(), gff3Writer.toString().trim());
+            }
         }
     }
 }
