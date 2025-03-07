@@ -4,11 +4,7 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.converter.gff3.GFF3Model;
 import uk.ac.ebi.embl.converter.gff3.IGFF3Feature;
-import uk.ac.ebi.embl.converter.rules.FFEntryToGFF3Headers;
-import uk.ac.ebi.embl.converter.rules.FFEntryToGFF3Model;
-import uk.ac.ebi.embl.converter.rules.FFEntryToGFF3SourceAttributes;
-import uk.ac.ebi.embl.converter.rules.FFFeatureToGFF3Feature;
-import uk.ac.ebi.embl.converter.rules.IConversionRule;
+import uk.ac.ebi.embl.converter.rules.*;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
@@ -31,7 +27,7 @@ class FFToGFF3ConverterTest {
                 /*new FFEntryToGFF3Headers(),
                 new FFEntryToGFF3SourceAttributes(),
                 new FFEntryToGFF3Model(),*/
-                new FFFeatureToGFF3Feature()
+                new FFFeatureToGFF3Feature2()
         );
         for ( IConversionRule testcase : toTest) {
             Entry entry;
