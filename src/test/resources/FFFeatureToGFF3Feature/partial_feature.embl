@@ -2,6 +2,8 @@ ID   TEST01; XXX; XXX; XXX; XXX; XXX; XXX.
 XX
 AC   TEST01;
 XX
+CC   Test for partiality in the gff3 feature attribute
+XX
 KW   .
 XX
 FH   Key             Location/Qualifiers
@@ -23,9 +25,9 @@ FT                   WLFKDPFMHYVRYQGKSILASKGPHLLMNKWKFYFVNFWQCHFHFWFQPCRIHINQFSH
 FT                   FSFYFLGYLSSVLINPSVVKSQMLENSFFIDTVAKKFETIVPIIPMIGSLSKAKFCNVS
 FT                   GNPISKPVWADLSDSDIIDRFGRICRNLSHYYSGSSTKQSLYRIKYILRLSC"
 FT   intron          <1..>822
-FT                   /gene="trnK"
+FT                   /gene="matK"
 FT   exon            11..600
-FT                   /gene="trnK"
+FT                   /gene="matK"
 XX
 //
 
