@@ -4,18 +4,18 @@ import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
-import uk.ac.ebi.embl.converter.gff3.GFF3FeatureMap;
+import uk.ac.ebi.embl.converter.gff3.Gff3GroupedFeatures;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class FFFeatureToGFF3Feature implements IConversionRule<Entry, GFF3FeatureMap> {
+public class FFFeaturesToGFF3Features implements IConversionRule<Entry, Gff3GroupedFeatures> {
     Map<String, List<GFF3Feature>> geneMap = new LinkedHashMap<>();
 
     @Override
-    public GFF3FeatureMap from(Entry entry) {
+    public Gff3GroupedFeatures from(Entry entry) {
 
         try {
             entry.setPrimaryAccession(entry.getPrimaryAccession() + ".1");
@@ -24,7 +24,7 @@ public class FFFeatureToGFF3Feature implements IConversionRule<Entry, GFF3Featur
             Map<String, List<ConversionEntry>> featureMap = ConversionUtils.getFFToGFF3FeatureMap();
 
             for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
-                // Output header
+
                 if (feature.getName().equalsIgnoreCase("source")) {
                     continue; // early exit
                 }
@@ -42,7 +42,8 @@ public class FFFeatureToGFF3Feature implements IConversionRule<Entry, GFF3Featur
             }
             sortFeaturesAndAssignId();
 
-            return new GFF3FeatureMap(geneMap);
+            return new Gff3GroupedFeatures(geneMap);
+
         }catch (Exception e){
             throw new ConversionError();
         }
@@ -93,7 +94,7 @@ public class FFFeatureToGFF3Feature implements IConversionRule<Entry, GFF3Featur
         for( String geneName : geneMap.keySet()) {
             List<GFF3Feature> gfFeatures = geneMap.get(geneName);
 
-            //Sort feature by start and end
+            //Sort feature by start and end location
             gfFeatures.sort(Comparator
                     .comparingLong(GFF3Feature::getStart)
                     .thenComparing(GFF3Feature::getEnd, Comparator.reverseOrder()));
@@ -102,9 +103,12 @@ public class FFFeatureToGFF3Feature implements IConversionRule<Entry, GFF3Featur
 
             // Set ID and Parent
             if (firstFeature.isPresent()) {
+
+                // Set ID for root
                 String idValue = "%s_%s".formatted(firstFeature.get().getName(), geneName);
                 firstFeature.get().getAttributes().put("ID", idValue);
 
+                // Set Parent only for children
                 gfFeatures.stream().skip(1).forEach(feature -> {
                     feature.getAttributes().put("Parent", idValue);
                     feature.getAttributes().remove("gene");

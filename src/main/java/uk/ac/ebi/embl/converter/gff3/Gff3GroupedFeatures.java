@@ -6,11 +6,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class GFF3FeatureMap implements IGFF3Feature {
+public class Gff3GroupedFeatures implements IGFF3Feature {
 
     Map<String, List<GFF3Feature>> geneMap;
 
-    public GFF3FeatureMap(Map<String, List<GFF3Feature>> geneMap) {
+    public Gff3GroupedFeatures(Map<String, List<GFF3Feature>> geneMap) {
         this.geneMap = geneMap;
     }
 
