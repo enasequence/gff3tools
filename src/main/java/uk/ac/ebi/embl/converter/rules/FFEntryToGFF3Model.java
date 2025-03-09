@@ -10,6 +10,7 @@ public class FFEntryToGFF3Model implements IConversionRule<Entry, GFF3Model> {
     GFF3Headers headers = new FFEntryToGFF3Headers().from(entry);
     model.addFeature(headers);
     model.addFeature(new FFEntryToGFF3SourceAttributes().from(entry));
+    model.addFeature(new FFFeaturesToGFF3Features().from(entry));
     return model;
   };
 }

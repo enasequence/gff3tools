@@ -26,7 +26,7 @@ class FFToGFF3ConverterTest {
                 /*new FFEntryToGFF3Headers(),
                 new FFEntryToGFF3SourceAttributes(),
                 new FFEntryToGFF3Model(),*/
-                new FFFeatureToGFF3Feature()
+                new FFFeaturesToGFF3Features()
         );
         for ( IConversionRule rule : rules) {
             Entry entry;
