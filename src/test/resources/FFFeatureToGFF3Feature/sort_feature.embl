@@ -1,0 +1,45 @@
+ID   BN000065; SV 1; linear; genomic DNA; STD; HUM; 315242 BP.
+XX
+AC   BN000065;
+XX
+CC   Test ordering of features based on location. Note mRNA is picked as the parent feature even if exon feature is found before mRNA.
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..315242
+FT                   /organism="Homo sapiens"
+FT                   /mol_type="genomic DNA"
+FT   exon            133806..133969
+FT                   /gene="RHD"
+FT                   /number=1
+FT   mRNA            join(133806..133969,145842..146028,151911..152061,
+FT                   162216..162363,162790..162956,164592..164729,
+FT                   167866..167999,178281..178360,183171..183244,
+FT                   190181..191728)
+FT                   /gene="RHD"
+FT   intron          133970..145841
+FT                   /gene="RHD"
+FT                   /number=1
+FT   exon            199479..199569
+FT                   /gene="SMP1"
+FT                   /number=1
+FT   mRNA            join(199479..199569,201587..201688,204071..204183,
+FT                   212737..212804,213993..214085,217904..217963,
+FT                   221775..223477)
+FT                   /gene="SMP1"
+FT   intron          199570..201586
+FT                   /gene="SMP1"
+FT                   /number=1
+FT   exon            complement(223543..223669)
+FT                   /gene="RHCE"
+FT                   /number=10
+FT   mRNA            complement(join(223543..223669,231583..231656,
+FT                   236465..236544,246827..246960,250092..250229,
+FT                   251865..252031,253110..253257,263712..263862,
+FT                   269799..269985,281755..281918))
+FT   intron          complement(223670..231582)
+FT                   /gene="RHCE"
+FT                   /number=9
+XX
+//

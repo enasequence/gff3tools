@@ -2,7 +2,6 @@ package uk.ac.ebi.embl.converter;
 
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.converter.gff3.GFF3Model;
 import uk.ac.ebi.embl.converter.gff3.IGFF3Feature;
 import uk.ac.ebi.embl.converter.rules.*;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
@@ -23,18 +22,19 @@ class FFToGFF3ConverterTest {
 
         String filenamePrefix = "embl_BN000065/embl_BN000065";
         FFEntryToGFF3Headers.class.getConstructor().newInstance();
-        List<IConversionRule> toTest = List.of(
+        List<IConversionRule> rules = List.of(
                 /*new FFEntryToGFF3Headers(),
                 new FFEntryToGFF3SourceAttributes(),
                 new FFEntryToGFF3Model(),*/
-                new FFFeatureToGFF3Feature2()
+                new FFFeatureToGFF3Feature()
         );
-        for ( IConversionRule testcase : toTest) {
+        for ( IConversionRule rule : rules) {
             Entry entry;
-            String testName = testcase.getClass().getSimpleName();
+            String testName = rule.getClass().getSimpleName();
             Map<String, Path> testFiles =  TestUtils.getTestFiles(testName);
-            for(String filePrefix: testFiles.keySet()) {
 
+            for(String filePrefix: testFiles.keySet()) {
+                rule = rule.getClass().getDeclaredConstructor().newInstance();
                 try (BufferedReader testFileReader = TestUtils.getResourceReader(testFiles.get(filePrefix).toString())) {
                     ReaderOptions readerOptions = new ReaderOptions();
                     readerOptions.setIgnoreSequence(true);
@@ -44,7 +44,7 @@ class FFToGFF3ConverterTest {
                     entry = entryReader.getEntry();
                 }
                 Writer gff3Writer = new StringWriter();
-                IGFF3Feature gff3Model = (IGFF3Feature) testcase.from(entry);
+                IGFF3Feature gff3Model = (IGFF3Feature) rule.from(entry);
                 gff3Model.writeGFF3String(gff3Writer);
 
                 String expected;
@@ -54,6 +54,7 @@ class FFToGFF3ConverterTest {
                 }
 
                 assertEquals(expected.trim(), gff3Writer.toString().trim());
+                gff3Writer.close();
             }
         }
     }

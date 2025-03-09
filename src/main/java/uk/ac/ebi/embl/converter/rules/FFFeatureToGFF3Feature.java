@@ -4,36 +4,32 @@ import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
+import uk.ac.ebi.embl.converter.gff3.GFF3FeatureMap;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class FFFeatureToGFF3Feature implements IConversionRule<Entry, GFF3Feature> {
-    Map<String, Integer> geneCount = new HashMap<>();
-    String currentParent = null;
+public class FFFeatureToGFF3Feature implements IConversionRule<Entry, GFF3FeatureMap> {
+    Map<String, List<GFF3Feature>> geneMap = new LinkedHashMap<>();
 
     @Override
-    public GFF3Feature from(Entry entry) {
+    public GFF3FeatureMap from(Entry entry) {
 
         try {
             entry.setPrimaryAccession(entry.getPrimaryAccession() + ".1");
             entry.getSequence().setAccession(entry.getSequence().getAccession() + ".1");
 
             Map<String, List<ConversionEntry>> featureMap = ConversionUtils.getFFToGFF3FeatureMap();
-            List<List<String>> rows = new ArrayList<>();
 
             for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
-
-                List<String> columns = new ArrayList<>();
                 // Output header
                 if (feature.getName().equalsIgnoreCase("source")) {
                     continue; // early exit
                 }
 
                 // TODO: insert a gene feature if/where appropriate
-
                 Optional<ConversionEntry> first = featureMap.get(feature.getName()).stream()
                         .filter(conversionEntry -> hasAllQualifiers(feature, conversionEntry)).findFirst();
 
@@ -41,43 +37,87 @@ public class FFFeatureToGFF3Feature implements IConversionRule<Entry, GFF3Featur
                 if (first.isEmpty())
                     throw new Exception("Mapping not found for " + feature.getName());
 
-
-                columns.add(entry.getSequence().getAccession());
-
-                // Add source
-                columns.add(".");
-
-                // Add type
-                columns.add(feature.getName());
-
-                // Add start
-                columns.add(feature.getLocations().getMinPosition().toString());
-
-                // Add end
-                // TODO: Ask if this leads to data loss in case on joins etc.
-                columns.add(feature.getLocations().getMaxPosition().toString());
-
-                // Add score
-                columns.add(".");
-
-                // Write strand
-                columns.add(feature.getLocations().isComplement() ? "-" : "+");
-
-                // Write phase
-                columns.add(getPhase(feature));
-
-                // Write attributes
-                columns.add(getAttributes(feature));
-
-                rows.add(columns);
+                buildGeneFeatureMap(entry.getPrimaryAccession(),feature);
 
             }
-            return new GFF3Feature(rows);
+            sortFeaturesAndAssignId();
+
+            return new GFF3FeatureMap(geneMap);
         }catch (Exception e){
             throw new ConversionError();
         }
     }
 
+
+    private void buildGeneFeatureMap(String accession, Feature ffFeature) {
+
+       List<Qualifier> genes = ffFeature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
+       String source = ".";
+       String score = ".";
+
+        try {
+            for (Qualifier gene : genes) {
+
+                List<GFF3Feature> gfFeatures = geneMap.getOrDefault(gene.getValue(), new ArrayList<>());
+                Map<String, String> attributes = ffFeature.getQualifiers().stream()
+                        .filter(q -> !"gene".equals(q.getName())) // gene is filtered for handling overlapping gene
+                        .collect(Collectors.toMap(Qualifier::getName, Qualifier::getValue));
+                attributes.put("gene", gene.getValue());
+
+                if (!getPartiality(ffFeature).isBlank()) {
+                    attributes.put("partial", getPartiality(ffFeature));
+                }
+
+                GFF3Feature gfFeature = new GFF3Feature(
+                        accession,
+                        source,
+                        ffFeature.getName(),
+                        ffFeature.getLocations().getMinPosition(),
+                        ffFeature.getLocations().getMaxPosition(),
+                        score,
+                        getStrand(ffFeature),
+                        getPhase(ffFeature),
+                        attributes
+                );
+
+                gfFeatures.add(gfFeature);
+
+                geneMap.put(gene.getValue(), gfFeatures);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    private void sortFeaturesAndAssignId() {
+        for( String geneName : geneMap.keySet()) {
+            List<GFF3Feature> gfFeatures = geneMap.get(geneName);
+
+            //Sort feature by start and end
+            gfFeatures.sort(Comparator
+                    .comparingLong(GFF3Feature::getStart)
+                    .thenComparing(GFF3Feature::getEnd, Comparator.reverseOrder()));
+
+            Optional<GFF3Feature> firstFeature = gfFeatures.stream().findFirst();
+
+            // Set ID and Parent
+            if (firstFeature.isPresent()) {
+                String idValue = "%s_%s".formatted(firstFeature.get().getName(), geneName);
+                firstFeature.get().getAttributes().put("ID", idValue);
+
+                gfFeatures.stream().skip(1).forEach(feature -> {
+                    feature.getAttributes().put("Parent", idValue);
+                    feature.getAttributes().remove("gene");
+                });
+            }
+        }
+    }
+
+private String getStrand(Feature feature) {
+    return feature.getLocations().isComplement()
+            ? "-"
+            : "+";
+}
 
 
     private String getPhase(Feature feature) {
@@ -101,38 +141,6 @@ public class FFFeatureToGFF3Feature implements IConversionRule<Entry, GFF3Featur
         return ".";
     }
 
-    private String getAttributes(Feature feature) {
-        Map<String, String> attributes = new LinkedHashMap<>(); // keep order
-        feature.getQualifiers().forEach(qualifier -> {
-            // TODO: remove attributes which caused the match from conversion entries
-            attributes.put(qualifier.getName(), qualifier.getValue());
-        });
-
-        // Rule: Assign a unique ID to mRNAs with a gene qualifier
-        // Rule: Add the ID of the parent mRNA to all other features that have the same
-        // gene qualifier value
-        String gene = attributes.getOrDefault("gene", null);
-        if (gene != null) {
-            if (feature.getName().equalsIgnoreCase("gene") || feature.getName().equalsIgnoreCase("mRNA")) {
-                int count = this.geneCount.getOrDefault(gene, 0) + 1;
-                geneCount.put(gene, count);
-                currentParent = feature.getName()+"%d_%s".formatted(count, gene);
-                attributes.put("ID", currentParent);
-            } else {
-                attributes.put("Parent", currentParent);
-                attributes.remove("gene");
-            }
-        }
-
-        if( ! getPartiality(feature).isBlank()) {
-            attributes.put("partial", getPartiality(feature));
-        }
-
-        return attributes.entrySet().stream()
-                .map(att -> "%s=%s".formatted(att.getKey(), att.getValue()))
-                .sorted()
-                .collect(Collectors.joining(";"));
-    }
 
     private String getPartiality(Feature feature) {
 
