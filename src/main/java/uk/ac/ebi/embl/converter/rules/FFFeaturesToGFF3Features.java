@@ -86,7 +86,7 @@ public class FFFeaturesToGFF3Features implements IConversionRule<Entry, Gff3Grou
                 geneMap.put(gene.getValue(), gfFeatures);
             }
         }catch (Exception e){
-            e.printStackTrace();
+            throw new ConversionError();
         }
     }
 
