@@ -37,14 +37,14 @@ public class FFFeaturesToGFF3Features implements IConversionRule<Entry, Gff3Grou
                 if (first.isEmpty())
                     throw new Exception("Mapping not found for " + feature.getName());
 
-                buildGeneFeatureMap(entry.getPrimaryAccession(),feature);
+                buildGeneFeatureMap(entry.getPrimaryAccession(), feature);
 
             }
             sortFeaturesAndAssignId();
 
             return new Gff3GroupedFeatures(geneMap);
 
-        }catch (Exception e){
+        } catch (Exception e) {
             throw new ConversionError();
         }
     }
@@ -52,9 +52,9 @@ public class FFFeaturesToGFF3Features implements IConversionRule<Entry, Gff3Grou
 
     private void buildGeneFeatureMap(String accession, Feature ffFeature) {
 
-       List<Qualifier> genes = ffFeature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
-       String source = ".";
-       String score = ".";
+        List<Qualifier> genes = ffFeature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
+        String source = ".";
+        String score = ".";
 
         try {
             for (Qualifier gene : genes) {
@@ -85,13 +85,13 @@ public class FFFeaturesToGFF3Features implements IConversionRule<Entry, Gff3Grou
 
                 geneMap.put(gene.getValue(), gfFeatures);
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             throw new ConversionError();
         }
     }
 
     private void sortFeaturesAndAssignId() {
-        for( String geneName : geneMap.keySet()) {
+        for (String geneName : geneMap.keySet()) {
             List<GFF3Feature> gfFeatures = geneMap.get(geneName);
 
             //Sort feature by start and end location
@@ -117,11 +117,11 @@ public class FFFeaturesToGFF3Features implements IConversionRule<Entry, Gff3Grou
         }
     }
 
-private String getStrand(Feature feature) {
-    return feature.getLocations().isComplement()
-            ? "-"
-            : "+";
-}
+    private String getStrand(Feature feature) {
+        return feature.getLocations().isComplement()
+                ? "-"
+                : "+";
+    }
 
 
     private String getPhase(Feature feature) {
