@@ -14,13 +14,19 @@ public class FFToGFF3Model implements IConversionRule<Feature, GFF3Model> {
     this.accession = accession + ".1";
   }
 
-  public Tuple2<Optional<GFF3Model>, List<ConversionError>> from(ListIterator<Feature> features) {
+  public Tuple2<List<GFF3Model>, List<ConversionError>> from(ListIterator<Feature> features) {
 
     ArrayList<IConversionRule.ConversionError> errors = new ArrayList<>();
     GFF3Model model = new GFF3Model();
 
-    Tuple2<Optional<GFF3Headers>, List<ConversionError>> headerResults = new FFToGFF3Headers(accession).from(features);
-    headerResults._1.ifPresentOrElse(model::addFeature, () -> errors.add(new NoHeaders()));
+    Tuple2<List<GFF3Headers>, List<ConversionError>> headerResults = new FFToGFF3Headers(accession).from(features);
+    if (!headerResults._1.isEmpty()) {
+      // There should be only one header on teh result.
+      model.addFeature(headerResults._1.get(0));
+    } else {
+      // TODO: I presume this is a fatal error?
+      errors.add(new NoHeaders());
+    }
 
     errors.addAll(headerResults._2);
     IConversionRule[] rules = new IConversionRule[] {
@@ -30,13 +36,17 @@ public class FFToGFF3Model implements IConversionRule<Feature, GFF3Model> {
     while (features.hasNext()) {
       for (IConversionRule rule : rules) {
         @SuppressWarnings("unchecked")
-        Tuple2<Optional<IGFF3Feature>, List<ConversionError>> result = rule.from(features);
-        result._1.ifPresent(model::addFeature);
+        Tuple2<List<IGFF3Feature>, List<ConversionError>> result = rule.from(features);
+        for (IGFF3Feature feature : result._1) {
+          model.addFeature(feature);
+        }
         errors.addAll(result._2);
         break;
       }
     }
-    return new Tuple2<>(Optional.of(model), errors);
+    ArrayList<GFF3Model> models = new ArrayList<>();
+    models.add(model);
+    return new Tuple2<>(models, errors);
   };
 
   static class NoHeaders extends ConversionError {}

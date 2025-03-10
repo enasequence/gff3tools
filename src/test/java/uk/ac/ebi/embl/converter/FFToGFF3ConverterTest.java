@@ -28,7 +28,8 @@ class FFToGFF3ConverterTest {
                 "HeadersAndSource",
                 "GeneID",
                 "ParentGene",
-                "MultipleGene"
+                "MultipleGene",
+                "MultipleGeneQualifiers"
         };
         for (String testName : toTest) {
             Entry entry;
@@ -44,10 +45,10 @@ class FFToGFF3ConverterTest {
             Writer gff3Writer = new StringWriter();
             FFToGFF3Model fftogff3 = new FFToGFF3Model(entry.getPrimaryAccession());
 
-            Tuple2<Optional<GFF3Model>, List<IConversionRule.ConversionError>> gff3Model = fftogff3.from(entry.getFeatures().listIterator());
-            assertTrue(gff3Model._1.isPresent());
+            Tuple2<List<GFF3Model>, List<IConversionRule.ConversionError>> gff3Model = fftogff3.from(entry.getFeatures().listIterator());
+            assertEquals(1, gff3Model._1.size());
 
-            gff3Model._1.get().writeGFF3String(gff3Writer);
+            gff3Model._1.get(0).writeGFF3String(gff3Writer);
 
             String expected;
             try (BufferedReader testFileReader = TestUtils.getResourceReader(testName + "/out.gff3")) {

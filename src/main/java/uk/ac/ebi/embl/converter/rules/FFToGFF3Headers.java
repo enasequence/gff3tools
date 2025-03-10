@@ -44,7 +44,14 @@ public class FFToGFF3Headers implements IConversionRule<Feature, GFF3Headers> {
     }
 
     @Override
-    public Tuple2<Optional<GFF3Headers>, List<ConversionError>> from(ListIterator<Feature> input) {
-        return transformHeaders(accession, input);
+    public Tuple2<List<GFF3Headers>, List<ConversionError>> from(ListIterator<Feature> input) {
+        return transformHeaders(accession, input)
+                .map1((headers) -> headers.map(h -> {
+                                ArrayList<GFF3Headers> mapped = new ArrayList<>();
+                                mapped.add(h);
+                                return mapped;
+                            }
+                    ).orElse(new ArrayList<>())
+                );
     }
 }

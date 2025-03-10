@@ -7,6 +7,7 @@ import uk.ac.ebi.embl.converter.gff3.GFF3Phase;
 import uk.ac.ebi.embl.converter.gff3.GFF3Record;
 import uk.ac.ebi.embl.converter.gff3.GFF3Strand;
 
+import java.lang.reflect.Array;
 import java.util.*;
 
 public class FFToGFF3Record implements IConversionRule<Feature, GFF3Record> {
@@ -17,12 +18,12 @@ public class FFToGFF3Record implements IConversionRule<Feature, GFF3Record> {
     }
 
     @Override
-    public Tuple2<Optional<GFF3Record>, List<ConversionError>> from(ListIterator<Feature> features) {
+    public Tuple2<List<GFF3Record>, List<ConversionError>> from(ListIterator<Feature> features) {
         Feature feature = features.next();
         return fromFeature(feature);
     }
 
-    public Tuple2<Optional<GFF3Record>, List<ConversionError>> fromFeature(Feature feature) {
+    public Tuple2<List<GFF3Record>, List<ConversionError>> fromFeature(Feature feature) {
         ArrayList<ConversionError> errors = new ArrayList<>();
 
         String featureType = feature.getName();
@@ -47,7 +48,9 @@ public class FFToGFF3Record implements IConversionRule<Feature, GFF3Record> {
         feature.getQualifiers().forEach(qualifier -> {
             gff3Record.addAttribute(qualifier.getName(), qualifier.getValue());
         });
-        return new Tuple2<>(Optional.of(gff3Record), errors);
+        ArrayList<GFF3Record> records = new ArrayList<>();
+        records.add(gff3Record);
+        return new Tuple2<>(records, errors);
     }
 
     private Either<ConversionError, GFF3Phase> getPhaseFromString(String value) {

@@ -7,6 +7,6 @@ import java.util.ListIterator;
 import java.util.Optional;
 
 public interface IConversionRule<I, O> {
-  Tuple2<Optional<O>, List<ConversionError>> from(ListIterator<I> input);
+  Tuple2<List<O>, List<ConversionError>> from(ListIterator<I> input);
   class ConversionError extends Error {}
 }

@@ -19,49 +19,48 @@ public class FFToGFF3Gene implements IConversionRule<Feature, GFF3Gene>{
     }
 
     @Override
-    public Tuple2<Optional<GFF3Gene>, List<ConversionError>> from(ListIterator<Feature> input) {
+    public Tuple2<List<GFF3Gene>, List<ConversionError>> from(ListIterator<Feature> input) {
         ArrayList<ConversionError> errors = new ArrayList<>();
         FFToGFF3Record fftogff3record = new FFToGFF3Record(accession);
         Feature feature = input.next();
+        ArrayList<GFF3Gene> genes = new ArrayList<>();
         // Output header
         if (feature.getName().equalsIgnoreCase("gene")) {
-            Tuple2<Optional<GFF3Record>, List<ConversionError>> result =  fftogff3record.fromFeature(feature);
-            if (result._1.isPresent()) {
-                GFF3Record record = result._1.get();
-                List<String> genes = record.getAttributeValues("gene");
-                if (genes.isEmpty()) {
-                    errors.add(new NoGeneQualifierOnGeneFeature());
-                    return new Tuple2<>(Optional.empty(), errors);
-                }
-                if (genes.size() > 1) {
-                    //TODO We need to do something about multiple genes on a single gene feature.
-                    // Ideally we want to return two GENE features in these cases. We may need to change the parse interface.
-                }
-                String id = genes.get(0);
-                GFF3Gene gene = new GFF3Gene(id, record);
-                record.removeAttribute("gene");
+            Tuple2<List<GFF3Record>, List<ConversionError>> result =  fftogff3record.fromFeature(feature);
+            GFF3Record record = result._1.get(0);
+            List<String> geneNames = record.getAttributeValues("gene");
+            if (geneNames.isEmpty()) {
+                errors.add(new NoGeneQualifierOnGeneFeature());
+                return new Tuple2<>(genes, errors);
+            } else {
+                for (String id : geneNames) {
+                    GFF3Gene gene = new GFF3Gene(id, record);
+                    record.removeAttribute("gene", id);
 
-                // Child parsing
-                while (input.hasNext()) {
-                    Feature potentialChildFeature = input.next();
-                    Tuple2<Optional<GFF3Record>, List<ConversionError>> results = fftogff3record.fromFeature(potentialChildFeature);
-                    // GFF3Record is always present.
-                    GFF3Record childRecord = results._1.get();
-                    if(childRecord.getAttributeValues("gene").contains(id)) {
-                        childRecord.removeAttribute("gene");
-                        childRecord.addAttribute("Parent", id);
-                        gene.addChild(childRecord);
-                    } else {
-                        // Not a child, step back and stop parsing children
-                        input.previous();
-                        break;
+                    // Child parsing
+                    while (input.hasNext()) {
+                        Feature potentialChildFeature = input.next();
+                        Tuple2<List<GFF3Record>, List<ConversionError>> results = fftogff3record.fromFeature(potentialChildFeature);
+                        // GFF3Record is always present.
+                        GFF3Record childRecord = results._1.get(0);
+                        if(childRecord.getAttributeValues("gene").contains(id)) {
+                            childRecord.removeAttribute("gene");
+                            childRecord.addAttribute("Parent", id);
+                            gene.addChild(childRecord);
+                        } else {
+                            // Not a child, step back and stop parsing children
+                            input.previous();
+                            break;
+                        }
                     }
+                    genes.add(gene);
                 }
-                return new Tuple2<>(Optional.of(gene), errors);
             }
+
+            return new Tuple2<>(genes, errors);
         }
         input.previous();
-        return new Tuple2<>(Optional.empty(), errors);
+        return new Tuple2<>(genes, errors);
     }
 
     static class NoGeneQualifierOnGeneFeature extends ConversionError {}

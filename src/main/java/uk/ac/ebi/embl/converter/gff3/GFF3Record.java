@@ -64,6 +64,14 @@ public class GFF3Record implements IGFF3Feature{
     public void removeAttribute(String attribute) {
         attributes.remove(attribute);
     }
+    public void removeAttribute(String attribute, String value) {
+        if (attributes.containsKey(attribute)) {
+            attributes.get(attribute).remove(value);
+            if (attributes.get(attribute).isEmpty()) {
+                attributes.remove(attribute);
+            }
+        }
+    }
 
     @Override
     public void writeGFF3String(Writer writer) throws IOException {

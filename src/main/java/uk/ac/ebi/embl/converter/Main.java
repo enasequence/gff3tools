@@ -40,7 +40,7 @@ public class Main {
 //  }
 
   public static void main(String[] args) throws Exception {
-    String filename = "src/test/resources/ParentGene/in.embl";
+    String filename = "src/test/resources/MultipleGeneQualifiers/in.embl";
     ReaderOptions readerOptions = new ReaderOptions();
     readerOptions.setIgnoreSequence(true);
     try (BufferedReader bufferedReader = Files.newBufferedReader(Path.of(filename))) {
@@ -52,16 +52,16 @@ public class Main {
       // 1. Generate the same file back
       Writer gff3Writer = new StringWriter();
       FFToGFF3Model fftogff3 = new FFToGFF3Model(entry.getPrimaryAccession());
-      Tuple2<Optional<GFF3Model>, List<IConversionRule.ConversionError>> results =
+      Tuple2<List<GFF3Model>, List<IConversionRule.ConversionError>> results =
               fftogff3.from(entry.getFeatures().listIterator());
-      results._1.ifPresent((e) -> {
+      for (GFF3Model gff3Model : results._1) {
           try {
-              e.writeGFF3String(gff3Writer);
+              gff3Model.writeGFF3String(gff3Writer);
           } catch (IOException ex) {
               throw new RuntimeException(ex);
           }
-      });
-      Files.write(Paths.get("src/test/resources/ParentGene/test_out.gff3"), gff3Writer.toString().getBytes());
+      }
+      Files.write(Paths.get("src/test/resources/MultipleGeneQualifiers/out_test.gff3"), gff3Writer.toString().getBytes());
     }
   }
 }
