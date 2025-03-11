@@ -58,6 +58,8 @@ public class FFGFF3FeaturesFactory implements IConversionRule<Entry, Gff3Grouped
         String score = ".";
 
         try {
+            Map<String, String> qualifierMap = ConversionUtils.getFFToGFF3QualifierMap();
+
             for (Qualifier gene : genes) {
 
                 List<GFF3Feature> gfFeatures = geneMap.getOrDefault(gene.getValue(), new ArrayList<>());
@@ -68,9 +70,9 @@ public class FFGFF3FeaturesFactory implements IConversionRule<Entry, Gff3Grouped
                                 q.setValue("true");
                             }
                         })
-                        .peek(q -> { // Avoid crashing when qualifiers have no values
-                            if("circular_RNA".equals(q.getName())) {
-                                q.setName("Is_circular");
+                        .peek(q -> { // Transform qualifier names if they match an entry.
+                            if(qualifierMap.containsKey(q.getName())) {
+                                q.setName(qualifierMap.get(q.getName()));
                             }
                         })
                         .collect(Collectors.toMap(Qualifier::getName, Qualifier::getValue));
