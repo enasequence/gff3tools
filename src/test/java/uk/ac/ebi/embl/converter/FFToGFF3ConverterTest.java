@@ -2,6 +2,7 @@ package uk.ac.ebi.embl.converter;
 
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.api.entry.Entry;
+import uk.ac.ebi.embl.converter.gff3.GFF3Model;
 import uk.ac.ebi.embl.converter.gff3.IGFF3Feature;
 import uk.ac.ebi.embl.converter.rules.*;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
@@ -20,20 +21,11 @@ class FFToGFF3ConverterTest {
     @Test
     void testWriteGFF3() throws Exception {
 
-        FFEntryToGFF3Headers.class.getConstructor().newInstance();
-        List<IConversionRule> rules = List.of(
-                /*new FFEntryToGFF3Headers(),
-                new FFEntryToGFF3SourceAttributes(),
-                new FFEntryToGFF3Model(),*/
-                new FFFeaturesToGFF3Features()
-        );
-        for ( IConversionRule rule : rules) {
             Entry entry;
-            String testName = rule.getClass().getSimpleName();
-            Map<String, Path> testFiles =  TestUtils.getTestFiles(testName);
+            Map<String, Path> testFiles =  TestUtils.getTestFiles("fftogff3_rules");
 
             for(String filePrefix: testFiles.keySet()) {
-                rule = rule.getClass().getDeclaredConstructor().newInstance();
+                FFEntryToGFF3Model rule = new FFEntryToGFF3Model();
                 try (BufferedReader testFileReader = TestUtils.getResourceReader(testFiles.get(filePrefix).toString())) {
                     ReaderOptions readerOptions = new ReaderOptions();
                     readerOptions.setIgnoreSequence(true);
@@ -52,9 +44,9 @@ class FFToGFF3ConverterTest {
                     expected = new BufferedReader(testFileReader).lines().collect(Collectors.joining("\n"));
                 }
 
-                assertEquals(expected.trim(), gff3Writer.toString().trim());
+                assertEquals(expected.trim(), gff3Writer.toString().trim(), "Error on test case: " + filePrefix);
                 gff3Writer.close();
             }
-        }
+
     }
 }

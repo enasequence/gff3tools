@@ -1,2 +1,6 @@
+##gff-version 3.1.26
+##sequence-region TEST01.1 1 822
+
+# BACKPORT	source	organism=Epipremnum pinnatum
 TEST01.1	.	gene	1	822	.	+	.	ID=gene_matK;gene=matK;locus_tag=test;
 TEST01.1	.	intron	1	822	.	+	.	Parent=gene_matK;locus_tag=test;
