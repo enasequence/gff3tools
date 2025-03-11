@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -20,7 +21,7 @@ public class TestUtils {
     public static Map<String,Path> getTestFiles(String resourceName) {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         URL resource = classLoader.getResource(resourceName);
-        Map<String, Path> inFiles = new HashMap<>();
+        Map<String, Path> inFiles = new LinkedHashMap<>();
         if (resource != null) {
             File folder = new File(resource.getPath());
             for (File file : Objects.requireNonNull(folder.listFiles())) {

@@ -8,7 +8,6 @@ XX
 FH   Key             Location/Qualifiers
 FH
 FT   source          1..315242
-FT                   /organism="Homo sapiens"
 FT                   /mol_type="genomic DNA"
 FT   mRNA            join(133806..133969,145842..146028,151911..152061,
 FT                   162216..162363,162790..162956,164592..164729,

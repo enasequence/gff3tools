@@ -19,7 +19,6 @@ public class GFF3File implements IGFF3Feature {
     public void writeGFF3String(Writer writer) throws IOException {
         for (IGFF3Feature feature : features) {
             feature.writeGFF3String(writer);
-            writer.write('\n');
         }
     }
 }

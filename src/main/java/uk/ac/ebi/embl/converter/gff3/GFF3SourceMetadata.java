@@ -20,10 +20,9 @@ public class GFF3SourceMetadata implements IGFF3Feature{
 
     @Override
     public void writeGFF3String(Writer writer) throws IOException {
-        String attrs = attributes.entrySet().stream()
-                .map(att -> "%s=%s".formatted(att.getKey(), att.getValue()))
-                .sorted()
-                .collect(Collectors.joining(";"));
-        writer.write("# BACKPORT\tsource\t%s".formatted(attrs));
+        if (attributes.containsKey("organism")) {
+            writer.write("##species %s\n".formatted(attributes.get("organism")));
+        }
+        writer.write('\n');
     }
 }

@@ -2,16 +2,12 @@ ID   TEST01; XXX; XXX; XXX; XXX; XXX; XXX.
 XX
 AC   TEST01;
 XX
-CC   Test for partiality in the gff3 feature attribute
-XX
 KW   .
 XX
 FH   Key             Location/Qualifiers
 FH
-FT   source          1..822
+FT   source          1..588788
 FT                   /mol_type="genomic DNA"
-FT   gene            <1..>822
-FT                   /gene="matK"
 XX
 //
 

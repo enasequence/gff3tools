@@ -8,7 +8,6 @@ XX
 FH   Key             Location/Qualifiers
 FH
 FT   source          1..315242
-FT                   /organism="Homo sapiens"
 FT                   /mol_type="genomic DNA"
 FT   gene            1..315242
 FT                   /gene="RHD"
