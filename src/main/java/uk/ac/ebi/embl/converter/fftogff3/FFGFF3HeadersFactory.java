@@ -1,10 +1,11 @@
-package uk.ac.ebi.embl.converter.rules;
+package uk.ac.ebi.embl.converter.fftogff3;
 
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
+import uk.ac.ebi.embl.converter.IConversionRule;
 import uk.ac.ebi.embl.converter.gff3.GFF3Headers;
 
-public class FFEntryToGFF3Headers implements IConversionRule<Entry, GFF3Headers> {
+public class FFGFF3HeadersFactory implements IConversionRule<Entry, GFF3Headers> {
 
     @Override
     public GFF3Headers from(Entry entry) {

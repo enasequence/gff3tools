@@ -4,10 +4,10 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 
-public class GFF3Model implements IGFF3Feature {
+public class GFF3File implements IGFF3Feature {
     ArrayList<IGFF3Feature> features;
 
-    public GFF3Model() {
+    public GFF3File() {
         features = new ArrayList<>();
     }
 

@@ -1,15 +1,14 @@
 package uk.ac.ebi.embl.converter;
 
 import java.io.BufferedReader;
-import java.io.Console;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import uk.ac.ebi.embl.converter.gff3.GFF3Model;
-import uk.ac.ebi.embl.converter.rules.FFEntryToGFF3Model;
+import uk.ac.ebi.embl.converter.gff3.GFF3File;
+import uk.ac.ebi.embl.converter.fftogff3.FFGFF3FileFactory;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.api.validation.ValidationResult;
@@ -29,8 +28,8 @@ public class Main {
       // TODO: Is this entry correct?
       // 1. Generate the same file back
       Writer gff3Writer = new StringWriter();
-      FFEntryToGFF3Model fftogff3 = new FFEntryToGFF3Model();
-      GFF3Model model = fftogff3.from(entry);
+      FFGFF3FileFactory fftogff3 = new FFGFF3FileFactory();
+      GFF3File model = fftogff3.from(entry);
       model.writeGFF3String(gff3Writer);
       Files.write(Paths.get("test_out.gff3"), gff3Writer.toString().getBytes());
     }

@@ -1,6 +1,4 @@
-package uk.ac.ebi.embl.converter.rules;
-
-import io.vavr.control.Either;
+package uk.ac.ebi.embl.converter;
 
 public interface IConversionRule<I, O> {
   O from(I input) throws ConversionError;

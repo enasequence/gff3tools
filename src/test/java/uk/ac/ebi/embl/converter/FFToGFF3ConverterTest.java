@@ -2,15 +2,14 @@ package uk.ac.ebi.embl.converter;
 
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.converter.gff3.GFF3Model;
+import uk.ac.ebi.embl.converter.gff3.GFF3File;
 import uk.ac.ebi.embl.converter.gff3.IGFF3Feature;
-import uk.ac.ebi.embl.converter.rules.*;
+import uk.ac.ebi.embl.converter.fftogff3.*;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 import java.io.*;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -25,7 +24,7 @@ class FFToGFF3ConverterTest {
             Map<String, Path> testFiles =  TestUtils.getTestFiles("fftogff3_rules");
 
             for(String filePrefix: testFiles.keySet()) {
-                FFEntryToGFF3Model rule = new FFEntryToGFF3Model();
+                FFGFF3FileFactory rule = new FFGFF3FileFactory();
                 try (BufferedReader testFileReader = TestUtils.getResourceReader(testFiles.get(filePrefix).toString())) {
                     ReaderOptions readerOptions = new ReaderOptions();
                     readerOptions.setIgnoreSequence(true);
@@ -35,8 +34,8 @@ class FFToGFF3ConverterTest {
                     entry = entryReader.getEntry();
                 }
                 Writer gff3Writer = new StringWriter();
-                IGFF3Feature gff3Model = (IGFF3Feature) rule.from(entry);
-                gff3Model.writeGFF3String(gff3Writer);
+                GFF3File gff3 = rule.from(entry);
+                gff3.writeGFF3String(gff3Writer);
 
                 String expected;
                 String expectedFilePath=testFiles.get(filePrefix).toString().replace(".embl",".gff3");

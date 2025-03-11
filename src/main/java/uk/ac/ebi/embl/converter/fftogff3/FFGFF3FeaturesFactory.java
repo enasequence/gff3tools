@@ -1,8 +1,9 @@
-package uk.ac.ebi.embl.converter.rules;
+package uk.ac.ebi.embl.converter.fftogff3;
 
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
+import uk.ac.ebi.embl.converter.IConversionRule;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 import uk.ac.ebi.embl.converter.gff3.Gff3GroupedFeatures;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
@@ -11,7 +12,7 @@ import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class FFFeaturesToGFF3Features implements IConversionRule<Entry, Gff3GroupedFeatures> {
+public class FFGFF3FeaturesFactory implements IConversionRule<Entry, Gff3GroupedFeatures> {
     Map<String, List<GFF3Feature>> geneMap = new LinkedHashMap<>();
 
     @Override
