@@ -1,7 +1,5 @@
 package uk.ac.ebi.embl.converter.utils;
 
-import uk.ac.ebi.embl.converter.GFF3ToFFConverter;
-
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -30,7 +28,7 @@ public class ConversionUtils {
     private static void loadMaps() throws URISyntaxException, IOException {
         ff2gff3 = new HashMap<>();
         gff32ff = new HashMap<>();
-        Path filePath = Paths.get(Objects.requireNonNull(GFF3ToFFConverter.class.getResource("/feature-mapping.tsv")).toURI());
+        Path filePath = Paths.get(Objects.requireNonNull(ConversionUtils.class.getResource("/feature-mapping.tsv")).toURI());
         List<String> lines = Files.readAllLines(filePath);
         lines.remove(0);
         for (String line : lines) {
