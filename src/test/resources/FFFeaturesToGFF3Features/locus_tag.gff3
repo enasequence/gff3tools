@@ -1,0 +1,2 @@
+TEST01.1	.	gene	1	822	.	+	.	ID=gene_matK;gene=matK;locus_tag=test;
+TEST01.1	.	intron	1	822	.	+	.	Parent=gene_matK;locus_tag=test;

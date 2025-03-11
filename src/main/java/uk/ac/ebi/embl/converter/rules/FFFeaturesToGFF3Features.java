@@ -107,10 +107,13 @@ public class FFFeaturesToGFF3Features implements IConversionRule<Entry, Gff3Grou
                 // Set ID for root
                 String idValue = "%s_%s".formatted(firstFeature.get().getName(), geneName);
                 firstFeature.get().getAttributes().put("ID", idValue);
-
+                String locus_tag = firstFeature.get().getAttributes().get("locus_tag");
                 // Set Parent only for children
                 gfFeatures.stream().skip(1).forEach(feature -> {
                     feature.getAttributes().put("Parent", idValue);
+                    if (locus_tag != null) {
+                        feature.getAttributes().put("locus_tag", locus_tag);
+                    }
                     feature.getAttributes().remove("gene");
                 });
             }

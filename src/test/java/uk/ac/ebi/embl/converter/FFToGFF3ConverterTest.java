@@ -20,7 +20,6 @@ class FFToGFF3ConverterTest {
     @Test
     void testWriteGFF3() throws Exception {
 
-        String filenamePrefix = "embl_BN000065/embl_BN000065";
         FFEntryToGFF3Headers.class.getConstructor().newInstance();
         List<IConversionRule> rules = List.of(
                 /*new FFEntryToGFF3Headers(),
@@ -39,7 +38,7 @@ class FFToGFF3ConverterTest {
                     ReaderOptions readerOptions = new ReaderOptions();
                     readerOptions.setIgnoreSequence(true);
                     EmblEntryReader entryReader = new EmblEntryReader(
-                            testFileReader, EmblEntryReader.Format.EMBL_FORMAT, filenamePrefix, readerOptions);
+                            testFileReader, EmblEntryReader.Format.EMBL_FORMAT, "", readerOptions);
                     entryReader.read();
                     entry = entryReader.getEntry();
                 }

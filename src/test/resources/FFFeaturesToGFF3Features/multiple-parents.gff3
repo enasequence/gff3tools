@@ -1,0 +1,4 @@
+TEST01.1	.	gene	1	822	.	+	.	ID=gene_matK;gene=matK;
+TEST01.1	.	intron	1	822	.	+	.	Parent=gene_matK;
+TEST01.1	.	gene	1	822	.	+	.	ID=gene_trnK;gene=trnK;
+TEST01.1	.	intron	1	822	.	+	.	Parent=gene_trnK;

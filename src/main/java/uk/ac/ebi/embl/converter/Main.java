@@ -18,7 +18,7 @@ import uk.ac.ebi.embl.api.entry.Entry;
 public class Main {
 
   public static void main(String[] args) throws Exception {
-    String filename = "src/test/resources/embl_BN000065/embl_BN000065.embl";
+    String filename = "src/test/resources/FFFeaturesToGFF3Features/gene_mrna_parents.embl";
     ReaderOptions readerOptions = new ReaderOptions();
     readerOptions.setIgnoreSequence(true);
     try (BufferedReader bufferedReader = Files.newBufferedReader(Path.of(filename))) {
