@@ -65,19 +65,14 @@ public class FFGFF3FileFactory implements IConversionRule<Entry, GFF3File> {
             for (Qualifier gene : genes) {
 
                 List<GFF3Feature> gfFeatures = geneMap.getOrDefault(gene.getValue(), new ArrayList<>());
+
                 Map<String, String> attributes = ffFeature.getQualifiers().stream()
                         .filter(q -> !"gene".equals(q.getName())) // gene is filtered for handling overlapping gene
-                        .peek(q -> { // Avoid crashing when qualifiers have no values
-                            if(!q.isValue()) {
-                                q.setValue("true");
-                            }
-                        })
-                        .peek(q -> { // Transform qualifier names if they match an entry.
-                            if(qualifierMap.containsKey(q.getName())) {
-                                q.setName(qualifierMap.get(q.getName()));
-                            }
-                        })
-                        .collect(Collectors.toMap(Qualifier::getName, Qualifier::getValue));
+                        .collect(Collectors.toMap(
+                                q -> qualifierMap.getOrDefault(q.getName(), q.getName()), // Rename if mapping exists
+                                q -> q.isValue() ? q.getValue() : "true" // Ensure non-empty values
+                        ));
+
                 attributes.put("gene", gene.getValue());
 
                 if (!getPartiality(ffFeature).isBlank()) {
