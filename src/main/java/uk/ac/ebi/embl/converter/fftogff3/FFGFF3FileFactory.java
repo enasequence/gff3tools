@@ -111,8 +111,8 @@ public class FFGFF3FileFactory implements IConversionRule<Entry, GFF3File> {
 
             //Sort feature by start and end location
             gfFeatures.sort(Comparator
-                    .comparingLong(GFF3Feature::getStart)
-                    .thenComparing(GFF3Feature::getEnd, Comparator.reverseOrder()));
+                    .comparingLong(GFF3Feature::start)
+                    .thenComparing(GFF3Feature::end, Comparator.reverseOrder()));
 
             Optional<GFF3Feature> firstFeature = gfFeatures.stream().findFirst();
 
@@ -120,16 +120,16 @@ public class FFGFF3FileFactory implements IConversionRule<Entry, GFF3File> {
             if (firstFeature.isPresent()) {
 
                 // Set ID for root
-                String idValue = "%s_%s".formatted(firstFeature.get().getName(), geneName);
-                firstFeature.get().getAttributes().put("ID", idValue);
-                String locus_tag = firstFeature.get().getAttributes().get("locus_tag");
+                String idValue = "%s_%s".formatted(firstFeature.get().name(), geneName);
+                firstFeature.get().attributes().put("ID", idValue);
+                String locus_tag = firstFeature.get().attributes().get("locus_tag");
                 // Set Parent only for children
                 gfFeatures.stream().skip(1).forEach(feature -> {
-                    feature.getAttributes().put("Parent", idValue);
+                    feature.attributes().put("Parent", idValue);
                     if (locus_tag != null) {
-                        feature.getAttributes().put("locus_tag", locus_tag);
+                        feature.attributes().put("locus_tag", locus_tag);
                     }
-                    feature.getAttributes().remove("gene");
+                    feature.attributes().remove("gene");
                 });
             }
         }

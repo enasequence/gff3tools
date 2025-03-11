@@ -15,11 +15,10 @@ public class FFGFF3SourceAttributesFactory implements IConversionRule<Entry, GFF
 
             // Output header
             if (feature.getName().equalsIgnoreCase("source")) {
-                GFF3SourceMetadata sourceMetadata = new GFF3SourceMetadata();
-                for (Qualifier q: feature.getQualifiers()) {
-                    sourceMetadata.addAttribute(q.getName(), q.getValue());
-                }
-                return sourceMetadata;
+                String organism = feature.getQualifiers("organism").stream().findFirst()
+                        .map(Qualifier::getValue)
+                        .orElseGet(() -> null);
+                return new GFF3SourceMetadata(organism);
             }
         }
 
