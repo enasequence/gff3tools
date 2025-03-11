@@ -11,20 +11,12 @@ public class FFGFF3SourceAttributesFactory implements IConversionRule<Entry, GFF
     @Override
     public GFF3SourceMetadata from(Entry entry) throws ConversionError {
 
-        for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
+        Feature feature = entry.getPrimarySourceFeature();
 
-            // Output header
-            if (feature.getName().equalsIgnoreCase("source")) {
-                String organism = feature.getQualifiers("organism").stream().findFirst()
-                        .map(Qualifier::getValue)
-                        .orElseGet(() -> null);
-                return new GFF3SourceMetadata(organism);
-            }
-        }
+        String organism = feature.getQualifiers("organism").stream().findFirst()
+                .map(Qualifier::getValue)
+                .orElseGet(() -> null);
+        return new GFF3SourceMetadata(organism);
 
-        throw new NoSourcePresent();
     }
-
-    public static class NoSourcePresent extends ConversionError {
-    };
 }
