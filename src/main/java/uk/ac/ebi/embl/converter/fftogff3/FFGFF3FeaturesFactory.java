@@ -63,6 +63,16 @@ public class FFGFF3FeaturesFactory implements IConversionRule<Entry, Gff3Grouped
                 List<GFF3Feature> gfFeatures = geneMap.getOrDefault(gene.getValue(), new ArrayList<>());
                 Map<String, String> attributes = ffFeature.getQualifiers().stream()
                         .filter(q -> !"gene".equals(q.getName())) // gene is filtered for handling overlapping gene
+                        .peek(q -> { // Avoid crashing when qualifiers have no values
+                            if(!q.isValue()) {
+                                q.setValue("true");
+                            }
+                        })
+                        .peek(q -> { // Avoid crashing when qualifiers have no values
+                            if("circular_RNA".equals(q.getName())) {
+                                q.setName("Is_circular");
+                            }
+                        })
                         .collect(Collectors.toMap(Qualifier::getName, Qualifier::getValue));
                 attributes.put("gene", gene.getValue());
 
