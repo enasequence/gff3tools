@@ -7,8 +7,10 @@ XX
 FH   Key             Location/Qualifiers
 FH
 FT   source          1..588788
-FT                   /db_xref="taxon:P28763"
 FT                   /mol_type="genomic DNA"
+FT   gene            1..315242
+FT                   /db_xref="taxon:P28763"
+FT                   /gene="RHD"
 XX
 //
 
