@@ -1,0 +1,4 @@
+##gff-version 3.1.26
+##sequence-region TEST01.1 1 6107
+
+TEST01.1	.	repeat_region	77	138	.	+	.	Note=L2;
