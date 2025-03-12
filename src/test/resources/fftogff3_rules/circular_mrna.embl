@@ -1,0 +1,16 @@
+ID   BN000065; SV 1; linear; genomic DNA; STD; HUM; 315242 BP.
+XX
+AC   BN000065;
+XX
+CC   Test ordering of features based on location. Note mRNA is picked as the parent feature even if exon feature is found before mRNA.
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..315242
+FT                   /mol_type="genomic DNA"
+FT   mRNA            1..315242
+FT                   /gene="RHD"
+FT                   /circular_RNA
+XX
+//

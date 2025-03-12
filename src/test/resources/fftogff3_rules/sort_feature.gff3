@@ -1,0 +1,11 @@
+##gff-version 3.1.26
+##sequence-region BN000065.1 1 315242
+
+BN000065.1	.	mRNA	133806	191728	.	+	.	ID=mRNA_RHD;gene=RHD;
+BN000065.1	.	exon	133806	133969	.	+	.	Parent=mRNA_RHD;number=1;
+BN000065.1	.	intron	133970	145841	.	+	.	Parent=mRNA_RHD;number=1;
+BN000065.1	.	mRNA	199479	223477	.	+	.	ID=mRNA_SMP1;gene=SMP1;
+BN000065.1	.	exon	199479	199569	.	+	.	Parent=mRNA_SMP1;number=1;
+BN000065.1	.	intron	199570	201586	.	+	.	Parent=mRNA_SMP1;number=1;
+BN000065.1	.	exon	223543	223669	.	-	.	ID=exon_RHCE;gene=RHCE;number=10;
+BN000065.1	.	intron	223670	231582	.	-	.	Parent=exon_RHCE;number=9;

@@ -1,0 +1,4 @@
+##gff-version 3.1.26
+##sequence-region BN000065.1 1 315242
+
+BN000065.1	.	gene	1	315242	.	+	.	ID=gene_RHD;Ontology_term=taxon:P28763;gene=RHD;
