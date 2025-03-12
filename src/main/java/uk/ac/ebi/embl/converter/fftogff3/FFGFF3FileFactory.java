@@ -34,7 +34,7 @@ public class FFGFF3FileFactory implements IConversionRule<Entry, GFF3File> {
       entry.setPrimaryAccession(entry.getPrimaryAccession() + ".1");
       entry.getSequence().setAccession(entry.getSequence().getAccession() + ".1");
 
-      Map<String, List<ConversionEntry>> featureMap = ConversionUtils.getFFToGFF3FeatureMap();
+      Map<String, List<ConversionEntry>> featureMap = ConversionUtils.getFF2GFF3FeatureMap();
 
       for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
 
@@ -68,7 +68,7 @@ public class FFGFF3FileFactory implements IConversionRule<Entry, GFF3File> {
     String score = ".";
 
     try {
-      Map<String, String> qualifierMap = ConversionUtils.getFFToGFF3QualifierMap();
+      Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
 
       for (Qualifier gene : genes) {
 
