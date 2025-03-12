@@ -11,9 +11,6 @@ import java.util.Objects;
 public class TestUtils {
 
     public static BufferedReader getResourceReader(String resourceName) throws IOException {
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        //InputStreamReader reader = new InputStreamReader(Objects.requireNonNull(classLoader.getResourceAsStream(resourceName)));
-        //InputStreamReader reader = new InputStreamReader(new InputStreamReader(new FileInputStream(resourceName).));
         FileReader reader = new FileReader(resourceName);
         return new BufferedReader(reader);
     }

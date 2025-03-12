@@ -37,9 +37,7 @@ public class ConversionEntry {
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer("ConversionEntry{");
-        //sb.append("sOID='").append(sOID).append('\'');
         sb.append(", sOTerm='").append(sOTerm).append('\'');
-        //sb.append(", definition='").append(definition).append('\'');
         sb.append(", feature='").append(feature).append('\'');
         sb.append(", qualifier1='").append(qualifier1).append('\'');
         sb.append(", qualifier2='").append(qualifier2).append('\'');
