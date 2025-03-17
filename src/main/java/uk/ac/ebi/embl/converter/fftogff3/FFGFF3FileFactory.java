@@ -25,6 +25,7 @@ import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
 public class FFGFF3FileFactory implements IConversionRule<Entry, GFF3File> {
   Map<String, List<GFF3Feature>> geneMap = new LinkedHashMap<>();
+  List<GFF3Feature> freeFeatures = new ArrayList<>();
 
   @Override
   public GFF3File from(Entry entry) {
@@ -69,6 +70,10 @@ public class FFGFF3FileFactory implements IConversionRule<Entry, GFF3File> {
 
     try {
       Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
+
+      if (genes.isEmpty()) {
+
+      }
 
       for (Qualifier gene : genes) {
 
