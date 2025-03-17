@@ -21,21 +21,21 @@ import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 public class FFGFF3SourceAttributesFactory implements IConversionRule<Entry, GFF3SourceMetadata> {
 
-  final static String BASE_TAXON_URL = "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi";
+  static final String BASE_TAXON_URL = "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi";
 
   private String buildTaxonomyUrl(Optional<OrganismQualifier> qualifier) {
     Function0<String> getOrganism =
-            () ->
-                    qualifier
-                            .map(OrganismQualifier::getValue)
-                            .map((name) -> "%s?name=%s".formatted(BASE_TAXON_URL, name))
-                            .orElseGet(() -> null);
+        () ->
+            qualifier
+                .map(OrganismQualifier::getValue)
+                .map((name) -> "%s?name=%s".formatted(BASE_TAXON_URL, name))
+                .orElseGet(() -> null);
 
-      return qualifier
-              .map(OrganismQualifier::getTaxon)
-              .map(Taxon::getTaxId)
-              .map((Long id) -> "%s?id=%d".formatted(BASE_TAXON_URL, id))
-              .orElseGet(getOrganism);
+    return qualifier
+        .map(OrganismQualifier::getTaxon)
+        .map(Taxon::getTaxId)
+        .map((Long id) -> "%s?id=%d".formatted(BASE_TAXON_URL, id))
+        .orElseGet(getOrganism);
   }
 
   @Override
