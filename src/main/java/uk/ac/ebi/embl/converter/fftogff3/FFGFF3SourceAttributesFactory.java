@@ -21,6 +21,23 @@ import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 public class FFGFF3SourceAttributesFactory implements IConversionRule<Entry, GFF3SourceMetadata> {
 
+  final static String BASE_TAXON_URL = "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi";
+
+  private String buildTaxonomyUrl(Optional<OrganismQualifier> qualifier) {
+    Function0<String> getOrganism =
+            () ->
+                    qualifier
+                            .map(OrganismQualifier::getValue)
+                            .map((name) -> "%s?name=%s".formatted(BASE_TAXON_URL, name))
+                            .orElseGet(() -> null);
+
+      return qualifier
+              .map(OrganismQualifier::getTaxon)
+              .map(Taxon::getTaxId)
+              .map((Long id) -> "%s?id=%d".formatted(BASE_TAXON_URL, id))
+              .orElseGet(getOrganism);
+  }
+
   @Override
   public GFF3SourceMetadata from(Entry entry) throws ConversionError {
 
@@ -31,20 +48,6 @@ public class FFGFF3SourceAttributesFactory implements IConversionRule<Entry, GFF
     Optional<OrganismQualifier> qualifier =
         feature.getQualifiers("organism").stream().findFirst().map(q -> (OrganismQualifier) q);
 
-    Function0<String> getOrganism =
-        () ->
-            qualifier
-                .map(OrganismQualifier::getValue)
-                .map("https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?name=%s"::formatted)
-                .orElseGet(() -> null);
-
-    String species =
-        qualifier
-            .map(OrganismQualifier::getTaxon)
-            .map(Taxon::getTaxId)
-            .map("https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=%d"::formatted)
-            .orElseGet(getOrganism);
-
-    return new GFF3SourceMetadata(species);
+    return new GFF3SourceMetadata(buildTaxonomyUrl(qualifier));
   }
 }
