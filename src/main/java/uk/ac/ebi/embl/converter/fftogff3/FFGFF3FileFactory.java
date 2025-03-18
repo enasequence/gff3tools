@@ -56,64 +56,70 @@ public class FFGFF3FileFactory implements IConversionRule<Entry, GFF3File> {
       }
       sortFeaturesAndAssignId();
 
-      return new GFF3File(headers, metadata, geneMap);
+      return new GFF3File(headers, metadata, geneMap, freeFeatures);
     } catch (Exception e) {
       throw new ConversionError();
     }
   }
 
+  private GFF3Feature transformFeature(String accession, Feature ffFeature, Optional<String> gene) {
+    Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
+
+    String source = ".";
+    String score = ".";
+
+    Map<String, String> attributes = ffFeature.getQualifiers().stream()
+                    .filter(
+                            q ->
+                                    !"gene"
+                                            .equals(q.getName())) // gene is filtered for handling overlapping gene
+                    .collect(
+                            Collectors.toMap(
+                                    q ->
+                                            qualifierMap.getOrDefault(
+                                                    q.getName(), q.getName()), // Rename if mapping exists
+                                    q -> q.isValue() ? q.getValue() : "true" // Ensure non-empty values
+                            ));
+
+    gene.ifPresent(v -> attributes.put("gene", v));
+
+    if (!getPartiality(ffFeature).isBlank()) {
+      attributes.put("partial", getPartiality(ffFeature));
+    }
+
+    return new GFF3Feature(
+                    accession,
+                    source,
+                    ffFeature.getName(),
+                    ffFeature.getLocations().getMinPosition(),
+                    ffFeature.getLocations().getMaxPosition(),
+                    score,
+                    getStrand(ffFeature),
+                    getPhase(ffFeature),
+                    attributes);
+
+  }
+
   private void buildGeneFeatureMap(String accession, Feature ffFeature) {
 
     List<Qualifier> genes = ffFeature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
-    String source = ".";
-    String score = ".";
 
     try {
       Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
 
       if (genes.isEmpty()) {
+        freeFeatures.add(transformFeature(accession, ffFeature, Optional.empty()));
+      } else {
 
-      }
+        for (Qualifier gene : genes) {
+          String geneName = gene.getValue();
 
-      for (Qualifier gene : genes) {
+          List<GFF3Feature> gfFeatures = geneMap.getOrDefault(geneName, new ArrayList<>());
 
-        List<GFF3Feature> gfFeatures = geneMap.getOrDefault(gene.getValue(), new ArrayList<>());
+          gfFeatures.add(transformFeature(accession, ffFeature, Optional.of(geneName)));
 
-        Map<String, String> attributes =
-            ffFeature.getQualifiers().stream()
-                .filter(
-                    q ->
-                        !"gene"
-                            .equals(q.getName())) // gene is filtered for handling overlapping gene
-                .collect(
-                    Collectors.toMap(
-                        q ->
-                            qualifierMap.getOrDefault(
-                                q.getName(), q.getName()), // Rename if mapping exists
-                        q -> q.isValue() ? q.getValue() : "true" // Ensure non-empty values
-                        ));
-
-        attributes.put("gene", gene.getValue());
-
-        if (!getPartiality(ffFeature).isBlank()) {
-          attributes.put("partial", getPartiality(ffFeature));
+          geneMap.put(geneName, gfFeatures);
         }
-
-        GFF3Feature gfFeature =
-            new GFF3Feature(
-                accession,
-                source,
-                ffFeature.getName(),
-                ffFeature.getLocations().getMinPosition(),
-                ffFeature.getLocations().getMaxPosition(),
-                score,
-                getStrand(ffFeature),
-                getPhase(ffFeature),
-                attributes);
-
-        gfFeatures.add(gfFeature);
-
-        geneMap.put(gene.getValue(), gfFeatures);
       }
     } catch (Exception e) {
       throw new ConversionError();
