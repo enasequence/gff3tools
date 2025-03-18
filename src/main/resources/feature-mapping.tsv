@@ -221,3 +221,4 @@ SO:0001019 	copy_number_variation	A variation that increases or decreases the co
 SO:0000205 	three_prime_UTR	A region at the 3' end of a mature transcript (following the stop codon) that is not translated into a protein.	3'UTR
 SO:0000204 	five_prime_UTR	A region at the 5' end of a mature transcript (preceding the initiation codon) that is not translated into a protein.	5'UTR
 SO:1000001	repeat_region	Region of genome containing repeating units	repeat_region
+SO:0000002 	assembly_gap	gap between two components of a genome or transcriptome assembly;	assembly_gap

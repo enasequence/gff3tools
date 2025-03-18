@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.converter.fftogff3.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
+import uk.ac.ebi.embl.converter.gff3.GFF3Sequence;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
@@ -28,7 +29,6 @@ class FFToGFF3ConverterTest {
   @Test
   void testWriteGFF3() throws Exception {
 
-    Entry entry;
     Map<String, Path> testFiles = TestUtils.getTestFiles("fftogff3_rules");
 
     for (String filePrefix : testFiles.keySet()) {
@@ -40,22 +40,20 @@ class FFToGFF3ConverterTest {
         EmblEntryReader entryReader =
             new EmblEntryReader(
                 testFileReader, EmblEntryReader.Format.EMBL_FORMAT, "", readerOptions);
-        entryReader.read();
-        entry = entryReader.getEntry();
-      }
-      Writer gff3Writer = new StringWriter();
-      GFF3File gff3 = rule.from(entry);
-      gff3.writeGFF3String(gff3Writer);
+        Writer gff3Writer = new StringWriter();
+        GFF3File gff3 = rule.from(entryReader);
+        gff3.writeGFF3String(gff3Writer);
 
-      String expected;
-      String expectedFilePath = testFiles.get(filePrefix).toString().replace(".embl", ".gff3");
-      try (BufferedReader testFileReader = TestUtils.getResourceReader(expectedFilePath)) {
-        expected = new BufferedReader(testFileReader).lines().collect(Collectors.joining("\n"));
-      }
+        String expected;
+        String expectedFilePath = testFiles.get(filePrefix).toString().replace(".embl", ".gff3");
+        try (BufferedReader gff3TestFileReader = TestUtils.getResourceReader(expectedFilePath)) {
+          expected = new BufferedReader(gff3TestFileReader).lines().collect(Collectors.joining("\n"));
+        }
 
-      assertEquals(
-          expected.trim(), gff3Writer.toString().trim(), "Error on test case: " + filePrefix);
-      gff3Writer.close();
+        assertEquals(
+                expected.trim(), gff3Writer.toString().trim(), "Error on test case: " + filePrefix);
+        gff3Writer.close();
+      }
     }
   }
 }
