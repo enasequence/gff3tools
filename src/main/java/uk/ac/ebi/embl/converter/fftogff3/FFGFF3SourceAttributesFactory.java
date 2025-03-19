@@ -10,14 +10,33 @@
  */
 package uk.ac.ebi.embl.converter.fftogff3;
 
+import io.vavr.Function0;
 import java.util.Optional;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
-import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
+import uk.ac.ebi.embl.api.entry.qualifier.OrganismQualifier;
 import uk.ac.ebi.embl.converter.IConversionRule;
 import uk.ac.ebi.embl.converter.gff3.GFF3SourceMetadata;
+import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 public class FFGFF3SourceAttributesFactory implements IConversionRule<Entry, GFF3SourceMetadata> {
+
+  static final String BASE_TAXON_URL = "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi";
+
+  private String buildTaxonomyUrl(Optional<OrganismQualifier> qualifier) {
+    Function0<String> getOrganism =
+        () ->
+            qualifier
+                .map(OrganismQualifier::getValue)
+                .map((name) -> "%s?name=%s".formatted(BASE_TAXON_URL, name))
+                .orElseGet(() -> null);
+
+    return qualifier
+        .map(OrganismQualifier::getTaxon)
+        .map(Taxon::getTaxId)
+        .map((Long id) -> "%s?id=%d".formatted(BASE_TAXON_URL, id))
+        .orElseGet(getOrganism);
+  }
 
   @Override
   public GFF3SourceMetadata from(Entry entry) throws ConversionError {
@@ -25,11 +44,10 @@ public class FFGFF3SourceAttributesFactory implements IConversionRule<Entry, GFF
     Feature feature =
         Optional.ofNullable(entry.getPrimarySourceFeature())
             .orElseThrow(FFGFF3HeadersFactory.NoSourcePresent::new);
-    String organism =
-        feature.getQualifiers("organism").stream()
-            .findFirst()
-            .map(Qualifier::getValue)
-            .orElseGet(() -> null);
-    return new GFF3SourceMetadata(organism);
+
+    Optional<OrganismQualifier> qualifier =
+        feature.getQualifiers("organism").stream().findFirst().map(q -> (OrganismQualifier) q);
+
+    return new GFF3SourceMetadata(buildTaxonomyUrl(qualifier));
   }
 }

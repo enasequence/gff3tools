@@ -8,7 +8,8 @@ FH   Key             Location/Qualifiers
 FH
 FT   source          1..588788
 FT                   /mol_type="genomic DNA"
-
+FT                   /db_xref="taxon:9606"
+FT                   /organism="Homo sapiens"
 XX
 //
 
