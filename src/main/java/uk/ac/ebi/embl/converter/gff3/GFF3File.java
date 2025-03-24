@@ -14,13 +14,12 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
 
-public record GFF3File(GFF3Header header, List<GFF3Sequence> sequences)
-        implements IGFF3Feature {
-    @Override
-    public void writeGFF3String(Writer writer) throws IOException {
-        this.header.writeGFF3String(writer);
-        for (GFF3Sequence sequence : sequences) {
-            sequence.writeGFF3String(writer);
-        }
+public record GFF3File(GFF3Header header, List<GFF3Sequence> sequences) implements IGFF3Feature {
+  @Override
+  public void writeGFF3String(Writer writer) throws IOException {
+    this.header.writeGFF3String(writer);
+    for (GFF3Sequence sequence : sequences) {
+      sequence.writeGFF3String(writer);
     }
+  }
 }

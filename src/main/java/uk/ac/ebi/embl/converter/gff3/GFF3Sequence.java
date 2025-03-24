@@ -16,7 +16,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public record GFF3Sequence(GFF3Directives directives, Map<String, List<GFF3Feature>> geneMap, List<GFF3Feature> nonGeneFeatures)
+public record GFF3Sequence(
+    GFF3Directives directives,
+    Map<String, List<GFF3Feature>> geneMap,
+    List<GFF3Feature> nonGeneFeatures)
     implements IGFF3Feature {
   private void writeFeature(Writer writer, GFF3Feature feature) throws IOException {
     writer.write(feature.accession());
@@ -28,13 +31,14 @@ public record GFF3Sequence(GFF3Directives directives, Map<String, List<GFF3Featu
     writer.write('\t' + feature.strand().toString());
     writer.write('\t' + feature.phase());
     writer.write(
-            '\t'
-                    + feature.attributes().entrySet().stream()
-                    .sorted(Map.Entry.comparingByKey()) // Sort by key
-                    .map(entry -> entry.getKey() + "=" + entry.getValue()) // Format k=v
-                    .collect(Collectors.joining(";", "", ";")));
+        '\t'
+            + feature.attributes().entrySet().stream()
+                .sorted(Map.Entry.comparingByKey()) // Sort by key
+                .map(entry -> entry.getKey() + "=" + entry.getValue()) // Format k=v
+                .collect(Collectors.joining(";", "", ";")));
     writer.write("\n");
   }
+
   @Override
   public void writeGFF3String(Writer writer) throws IOException {
     this.directives.writeGFF3String(writer);

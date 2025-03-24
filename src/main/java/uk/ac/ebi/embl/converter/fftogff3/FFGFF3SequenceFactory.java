@@ -57,7 +57,6 @@ public class FFGFF3SequenceFactory implements IConversionRule<Entry, GFF3Sequenc
     }
   }
 
-
   private GFF3Feature transformFeature(String accession, Feature ffFeature, Optional<String> gene) {
     Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
 
@@ -65,16 +64,16 @@ public class FFGFF3SequenceFactory implements IConversionRule<Entry, GFF3Sequenc
     String score = ".";
 
     Map<String, String> attributes =
-            ffFeature.getQualifiers().stream()
-                    .filter(
-                            q -> !"gene".equals(q.getName())) // gene is filtered for handling overlapping gene
-                    .collect(
-                            Collectors.toMap(
-                                    q ->
-                                            qualifierMap.getOrDefault(
-                                                    q.getName(), q.getName()), // Rename if mapping exists
-                                    q -> q.isValue() ? q.getValue() : "true" // Ensure non-empty values
-                            ));
+        ffFeature.getQualifiers().stream()
+            .filter(
+                q -> !"gene".equals(q.getName())) // gene is filtered for handling overlapping gene
+            .collect(
+                Collectors.toMap(
+                    q ->
+                        qualifierMap.getOrDefault(
+                            q.getName(), q.getName()), // Rename if mapping exists
+                    q -> q.isValue() ? q.getValue() : "true" // Ensure non-empty values
+                    ));
 
     gene.ifPresent(v -> attributes.put("gene", v));
 
@@ -83,15 +82,15 @@ public class FFGFF3SequenceFactory implements IConversionRule<Entry, GFF3Sequenc
     }
 
     return new GFF3Feature(
-            accession,
-            source,
-            ffFeature.getName(),
-            ffFeature.getLocations().getMinPosition(),
-            ffFeature.getLocations().getMaxPosition(),
-            score,
-            getStrand(ffFeature),
-            getPhase(ffFeature),
-            attributes);
+        accession,
+        source,
+        ffFeature.getName(),
+        ffFeature.getLocations().getMinPosition(),
+        ffFeature.getLocations().getMaxPosition(),
+        score,
+        getStrand(ffFeature),
+        getPhase(ffFeature),
+        attributes);
   }
 
   private void buildGeneFeatureMap(String accession, Feature ffFeature) {
@@ -118,7 +117,6 @@ public class FFGFF3SequenceFactory implements IConversionRule<Entry, GFF3Sequenc
       throw new ConversionError();
     }
   }
-
 
   private void sortFeaturesAndAssignId() {
     for (String geneName : geneMap.keySet()) {

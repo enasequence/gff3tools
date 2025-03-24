@@ -17,10 +17,8 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.converter.fftogff3.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
-import uk.ac.ebi.embl.converter.gff3.GFF3Sequence;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
@@ -47,11 +45,12 @@ class FFToGFF3ConverterTest {
         String expected;
         String expectedFilePath = testFiles.get(filePrefix).toString().replace(".embl", ".gff3");
         try (BufferedReader gff3TestFileReader = TestUtils.getResourceReader(expectedFilePath)) {
-          expected = new BufferedReader(gff3TestFileReader).lines().collect(Collectors.joining("\n"));
+          expected =
+              new BufferedReader(gff3TestFileReader).lines().collect(Collectors.joining("\n"));
         }
 
         assertEquals(
-                expected.trim(), gff3Writer.toString().trim(), "Error on test case: " + filePrefix);
+            expected.trim(), gff3Writer.toString().trim(), "Error on test case: " + filePrefix);
         gff3Writer.close();
       }
     }

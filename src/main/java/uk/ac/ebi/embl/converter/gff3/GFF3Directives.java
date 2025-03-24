@@ -14,8 +14,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
 
-public record GFF3Directives(List<GFF3Directive> directives)
-    implements IGFF3Feature {
+public record GFF3Directives(List<GFF3Directive> directives) implements IGFF3Feature {
   @Override
   public void writeGFF3String(Writer writer) throws IOException {
     for (GFF3Directive directive : directives) {
@@ -23,12 +22,12 @@ public record GFF3Directives(List<GFF3Directive> directives)
     }
   }
 
-  public record GFF3SequenceRegion(String accession, long start, long end) implements GFF3Directive {
+  public record GFF3SequenceRegion(String accession, long start, long end)
+      implements GFF3Directive {
 
     @Override
     public void writeGFF3String(Writer writer) throws IOException {
-      writer.write(
-              "##sequence-region %s %d %d\n".formatted(accession, start, end));
+      writer.write("##sequence-region %s %d %d\n".formatted(accession, start, end));
     }
   }
 
