@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public record GFF3Sequence(
+public record GFF3Annotation(
     GFF3Directives directives,
     Map<String, List<GFF3Feature>> geneMap,
     List<GFF3Feature> nonGeneFeatures)
