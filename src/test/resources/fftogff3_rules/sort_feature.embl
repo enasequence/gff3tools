@@ -33,10 +33,6 @@ FT                   /number=1
 FT   exon            complement(223543..223669)
 FT                   /gene="RHCE"
 FT                   /number=10
-FT   mRNA            complement(join(223543..223669,231583..231656,
-FT                   236465..236544,246827..246960,250092..250229,
-FT                   251865..252031,253110..253257,263712..263862,
-FT                   269799..269985,281755..281918))
 FT   intron          complement(223670..231582)
 FT                   /gene="RHCE"
 FT                   /number=9

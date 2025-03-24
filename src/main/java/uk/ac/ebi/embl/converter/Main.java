@@ -26,7 +26,7 @@ import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 public class Main {
 
   public static void main(String[] args) throws Exception {
-    String filename = "src/test/resources/FFFeaturesToGFF3Features/gene_mrna_parents.embl";
+    String filename = "src/test/resources/fftogff3_rules/parents_no_parent.embl";
     ReaderOptions readerOptions = new ReaderOptions();
     readerOptions.setIgnoreSequence(true);
     try (BufferedReader bufferedReader = Files.newBufferedReader(Path.of(filename))) {
