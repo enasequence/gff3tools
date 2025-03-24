@@ -17,7 +17,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public record GFF3File(
-    GFF3Headers headers, GFF3SourceMetadata metadata, Map<String, List<GFF3Feature>> geneMap, List<GFF3Feature> nonGeneFeatures)
+    GFF3Headers headers,
+    GFF3SourceMetadata metadata,
+    Map<String, List<GFF3Feature>> geneMap,
+    List<GFF3Feature> nonGeneFeatures)
     implements IGFF3Feature {
 
   private void writeGFF3Feature(Writer writer, GFF3Feature feature) throws IOException {
@@ -30,11 +33,11 @@ public record GFF3File(
     writer.write('\t' + feature.strand().toString());
     writer.write('\t' + feature.phase());
     writer.write(
-            '\t'
-                    + feature.attributes().entrySet().stream()
-                    .sorted(Map.Entry.comparingByKey()) // Sort by key
-                    .map(entry -> entry.getKey() + "=" + entry.getValue()) // Format k=v
-                    .collect(Collectors.joining(";", "", ";")));
+        '\t'
+            + feature.attributes().entrySet().stream()
+                .sorted(Map.Entry.comparingByKey()) // Sort by key
+                .map(entry -> entry.getKey() + "=" + entry.getValue()) // Format k=v
+                .collect(Collectors.joining(";", "", ";")));
     writer.write("\n");
   }
 
