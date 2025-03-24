@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public record GFF3File(
-    GFF3Headers headers, GFF3SourceMetadata metadata, Map<String, List<GFF3Feature>> geneMap, List<GFF3Feature> freeFeatures)
+    GFF3Headers headers, GFF3SourceMetadata metadata, Map<String, List<GFF3Feature>> geneMap, List<GFF3Feature> nonGeneFeatures)
     implements IGFF3Feature {
 
   private void writeGFF3Feature(Writer writer, GFF3Feature feature) throws IOException {
@@ -50,7 +50,7 @@ public record GFF3File(
         writeGFF3Feature(writer, feature);
       }
     }
-    for (GFF3Feature feature : freeFeatures) {
+    for (GFF3Feature feature : nonGeneFeatures) {
       writeGFF3Feature(writer, feature);
     }
   }

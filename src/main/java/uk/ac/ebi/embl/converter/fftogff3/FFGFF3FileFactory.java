@@ -25,7 +25,7 @@ import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
 public class FFGFF3FileFactory implements IConversionRule<Entry, GFF3File> {
   Map<String, List<GFF3Feature>> geneMap = new LinkedHashMap<>();
-  List<GFF3Feature> freeFeatures = new ArrayList<>();
+  List<GFF3Feature> nonGeneFeatures = new ArrayList<>();
 
   @Override
   public GFF3File from(Entry entry) {
@@ -56,7 +56,7 @@ public class FFGFF3FileFactory implements IConversionRule<Entry, GFF3File> {
       }
       sortFeaturesAndAssignId();
 
-      return new GFF3File(headers, metadata, geneMap, freeFeatures);
+      return new GFF3File(headers, metadata, geneMap, nonGeneFeatures);
     } catch (Exception e) {
       throw new ConversionError();
     }
@@ -108,7 +108,7 @@ public class FFGFF3FileFactory implements IConversionRule<Entry, GFF3File> {
       Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
 
       if (genes.isEmpty()) {
-        freeFeatures.add(transformFeature(accession, ffFeature, Optional.empty()));
+        nonGeneFeatures.add(transformFeature(accession, ffFeature, Optional.empty()));
       } else {
 
         for (Qualifier gene : genes) {
