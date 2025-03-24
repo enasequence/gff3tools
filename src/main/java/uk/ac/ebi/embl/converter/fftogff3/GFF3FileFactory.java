@@ -18,11 +18,11 @@ import uk.ac.ebi.embl.converter.gff3.GFF3Header;
 import uk.ac.ebi.embl.converter.gff3.GFF3Sequence;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
-public class FFGFF3FileFactory implements IConversionRule<EmblEntryReader, GFF3File> {
+public class GFF3FileFactory implements IConversionRule<EmblEntryReader, GFF3File> {
   @Override
   public GFF3File from(EmblEntryReader input) throws ConversionError {
     GFF3Header header = new GFF3Header("3.1.26");
-    FFGFF3SequenceFactory seqFactory = new FFGFF3SequenceFactory();
+    GFF3SequenceFactory seqFactory = new GFF3SequenceFactory();
     List<GFF3Sequence> sequences = new ArrayList<>();
     try {
       while (input.read() != null && input.isEntry()) {

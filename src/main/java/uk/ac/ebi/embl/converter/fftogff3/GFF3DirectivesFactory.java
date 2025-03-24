@@ -20,7 +20,7 @@ import uk.ac.ebi.embl.converter.IConversionRule;
 import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
-public class FFGFF3DirectivesFactory implements IConversionRule<Entry, GFF3Directives> {
+public class GFF3DirectivesFactory implements IConversionRule<Entry, GFF3Directives> {
 
   static final String BASE_TAXON_URL = "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi";
 

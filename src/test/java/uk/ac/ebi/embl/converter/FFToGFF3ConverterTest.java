@@ -30,7 +30,7 @@ class FFToGFF3ConverterTest {
     Map<String, Path> testFiles = TestUtils.getTestFiles("fftogff3_rules");
 
     for (String filePrefix : testFiles.keySet()) {
-      FFGFF3FileFactory rule = new FFGFF3FileFactory();
+      GFF3FileFactory rule = new GFF3FileFactory();
       try (BufferedReader testFileReader =
           TestUtils.getResourceReader(testFiles.get(filePrefix).toString())) {
         ReaderOptions readerOptions = new ReaderOptions();

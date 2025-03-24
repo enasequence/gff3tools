@@ -20,7 +20,7 @@ import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
-public class FFGFF3SequenceFactory implements IConversionRule<Entry, GFF3Sequence> {
+public class GFF3SequenceFactory implements IConversionRule<Entry, GFF3Sequence> {
   Map<String, List<GFF3Feature>> geneMap = new LinkedHashMap<>();
   List<GFF3Feature> nonGeneFeatures = new ArrayList<>();
 
@@ -28,7 +28,7 @@ public class FFGFF3SequenceFactory implements IConversionRule<Entry, GFF3Sequenc
   public GFF3Sequence from(Entry entry) {
     entry.setPrimaryAccession(entry.getPrimaryAccession() + ".1");
     entry.getSequence().setAccession(entry.getSequence().getAccession() + ".1");
-    GFF3Directives directives = new FFGFF3DirectivesFactory().from(entry);
+    GFF3Directives directives = new GFF3DirectivesFactory().from(entry);
     try {
       Map<String, List<ConversionEntry>> featureMap = ConversionUtils.getFF2GFF3FeatureMap();
 
