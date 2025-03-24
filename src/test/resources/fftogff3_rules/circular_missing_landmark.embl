@@ -1,0 +1,12 @@
+ID   BN000065; SV 1; circular; genomic DNA; STD; HUM; 315242 BP.
+XX
+AC   BN000065;
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..315242
+FT                   /mol_type="genomic DNA"
+XX
+//

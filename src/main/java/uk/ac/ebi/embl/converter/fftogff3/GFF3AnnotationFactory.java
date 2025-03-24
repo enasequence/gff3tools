@@ -14,11 +14,34 @@ import java.util.*;
 import java.util.stream.Collectors;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
+import uk.ac.ebi.embl.api.entry.location.CompoundLocation;
+import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
+import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.converter.IConversionRule;
 import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
+
+enum CircularFeatures {
+  CIRCULAR_DOUBLE_STRANDED_DNA_CHROMOSOME,
+
+  CIRCULAR_SINGLE_STRANDED_DNA_CHROMOSOME,
+
+  CIRCULAR_SINGLE_STRANDED_RNA_CHROMOSOME,
+
+  CIRCULAR_DOUBLE_STRANDED_RNA_CHROMOSOME,
+
+  CIRCULAR_PLASMID,
+
+  CIRCULAR_NCRNA,
+
+  CIRCULAR_MRNA,
+
+  MINICIRCLE,
+
+  INVERTED_RING_CHROMOSOME,
+}
 
 public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotation> {
   Map<String, List<GFF3Feature>> geneMap;
@@ -28,8 +51,17 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
   public GFF3Annotation from(Entry entry) {
     geneMap = new LinkedHashMap<>();
     nonGeneFeatures = new ArrayList<>();
-    entry.setPrimaryAccession(entry.getPrimaryAccession() + ".1");
-    entry.getSequence().setAccession(entry.getSequence().getAccession() + ".1");
+
+    boolean missingCircularLandmark =
+        entry.getSequence().getTopology() == Sequence.Topology.CIRCULAR;
+    List<String> circularFeatures =
+        Arrays.stream(CircularFeatures.values()).map(Enum::name).map(String::toLowerCase).toList();
+    String name = entry.getSequence().getAccession();
+
+    // TODO: We need to handle accession versions
+    entry.setPrimaryAccession(name + ".1");
+    entry.getSequence().setAccession(name + ".1");
+
     GFF3Directives directives = new GFF3DirectivesFactory().from(entry);
     try {
       Map<String, List<ConversionEntry>> featureMap = ConversionUtils.getFF2GFF3FeatureMap();
@@ -49,13 +81,40 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
         // Rule: Throw an error if we find an unmapped feature
         if (first.isEmpty()) throw new Exception("Mapping not found for " + feature.getName());
 
+        if (missingCircularLandmark) {
+          // A feature that has "circular_RNA" can be used as a landmark for circular topologies.
+          if (!feature.getQualifiers("circular_RNA").isEmpty()) {
+            missingCircularLandmark = false;
+          } else if (circularFeatures.contains(feature.getName().toUpperCase())) {
+            feature.setSingleQualifier("Is_circular");
+            missingCircularLandmark = false;
+          }
+        }
+
         buildGeneFeatureMap(entry.getPrimaryAccession(), feature);
+      }
+
+      // For circular topologies; We have not found a circular feature so we must include a region
+      // encompasing all source.
+      if (missingCircularLandmark) {
+        CompoundLocation<Location> locations = entry.getPrimarySourceFeature().getLocations();
+        nonGeneFeatures.add(
+            new GFF3Feature(
+                entry.getPrimaryAccession(),
+                ".",
+                "region",
+                locations.getMinPosition(),
+                locations.getMaxPosition(),
+                ".",
+                "+",
+                ".",
+                Map.of("ID", name, "Is_circular", "true")));
       }
       sortFeaturesAndAssignId();
 
       return new GFF3Annotation(directives, geneMap, nonGeneFeatures);
     } catch (Exception e) {
-      throw new ConversionError();
+      throw new RuntimeException(e);
     }
   }
 
