@@ -20,13 +20,13 @@ import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 public class GFF3FileFactory implements IConversionRule<EmblEntryReader, GFF3File> {
   @Override
-  public GFF3File from(EmblEntryReader input) throws ConversionError {
+  public GFF3File from(EmblEntryReader entryReader) throws ConversionError {
     GFF3Header header = new GFF3Header("3.1.26");
     GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory();
     List<GFF3Annotation> annotations = new ArrayList<>();
     try {
-      while (input.read() != null && input.isEntry()) {
-        annotations.add(annotationFactory.from(input.getEntry()));
+      while (entryReader.read() != null && entryReader.isEntry()) {
+        annotations.add(annotationFactory.from(entryReader.getEntry()));
       }
     } catch (Exception e) {
       throw new RuntimeException(e);
