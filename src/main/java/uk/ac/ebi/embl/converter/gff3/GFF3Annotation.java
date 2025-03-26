@@ -42,7 +42,6 @@ public record GFF3Annotation(
   @Override
   public void writeGFF3String(Writer writer) throws IOException {
     this.directives.writeGFF3String(writer);
-    writer.write('\n');
     for (String geneName : geneMap.keySet()) {
       for (GFF3Feature feature : geneMap.get(geneName)) {
         writeFeature(writer, feature);
@@ -51,5 +50,6 @@ public record GFF3Annotation(
     for (GFF3Feature feature : nonGeneFeatures) {
       writeFeature(writer, feature);
     }
+    writer.write('\n');
   }
 }

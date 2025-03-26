@@ -21,11 +21,13 @@ import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
 public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotation> {
-  Map<String, List<GFF3Feature>> geneMap = new LinkedHashMap<>();
-  List<GFF3Feature> nonGeneFeatures = new ArrayList<>();
+  Map<String, List<GFF3Feature>> geneMap;
+  List<GFF3Feature> nonGeneFeatures;
 
   @Override
   public GFF3Annotation from(Entry entry) {
+    geneMap = new LinkedHashMap<>();
+    nonGeneFeatures = new ArrayList<>();
     entry.setPrimaryAccession(entry.getPrimaryAccession() + ".1");
     entry.getSequence().setAccession(entry.getSequence().getAccession() + ".1");
     GFF3Directives directives = new GFF3DirectivesFactory().from(entry);

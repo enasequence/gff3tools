@@ -24,7 +24,7 @@ import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 public class Main {
 
   public static void main(String[] args) throws Exception {
-    String filename = "src/test/resources/fftogff3_rules/parents_no_parent.embl";
+    String filename = "src/test/resources/fftogff3_rules/multiple_entries1.embl";
     ReaderOptions readerOptions = new ReaderOptions();
     readerOptions.setIgnoreSequence(true);
     try (BufferedReader bufferedReader = Files.newBufferedReader(Path.of(filename))) {
