@@ -13,12 +13,9 @@ package uk.ac.ebi.embl.converter.gff3;
 import java.io.IOException;
 import java.io.Writer;
 
-public record GFF3SourceMetadata(String species) implements IGFF3Feature {
-
+public record GFF3Header(String version) implements IGFF3Feature {
   @Override
   public void writeGFF3String(Writer writer) throws IOException {
-    if (species != null) {
-      writer.write("##species %s\n".formatted(species));
-    }
+    writer.write("##gff-version %s\n".formatted(version));
   }
 }

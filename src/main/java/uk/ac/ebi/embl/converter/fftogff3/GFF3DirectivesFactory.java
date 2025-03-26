@@ -11,15 +11,16 @@
 package uk.ac.ebi.embl.converter.fftogff3;
 
 import io.vavr.Function0;
+import java.util.ArrayList;
 import java.util.Optional;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.OrganismQualifier;
 import uk.ac.ebi.embl.converter.IConversionRule;
-import uk.ac.ebi.embl.converter.gff3.GFF3SourceMetadata;
+import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
-public class FFGFF3SourceAttributesFactory implements IConversionRule<Entry, GFF3SourceMetadata> {
+public class GFF3DirectivesFactory implements IConversionRule<Entry, GFF3Directives> {
 
   static final String BASE_TAXON_URL = "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi";
 
@@ -38,16 +39,40 @@ public class FFGFF3SourceAttributesFactory implements IConversionRule<Entry, GFF
         .orElseGet(getOrganism);
   }
 
-  @Override
-  public GFF3SourceMetadata from(Entry entry) throws ConversionError {
+  public GFF3Directives.GFF3Species extractSpecies(Entry entry) throws ConversionError {
 
     Feature feature =
-        Optional.ofNullable(entry.getPrimarySourceFeature())
-            .orElseThrow(FFGFF3HeadersFactory.NoSourcePresent::new);
+        Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresent::new);
 
     Optional<OrganismQualifier> qualifier =
         feature.getQualifiers("organism").stream().findFirst().map(q -> (OrganismQualifier) q);
 
-    return new GFF3SourceMetadata(buildTaxonomyUrl(qualifier));
+    return new GFF3Directives.GFF3Species(buildTaxonomyUrl(qualifier));
   }
+
+  public GFF3Directives.GFF3SequenceRegion extractSequenceRegion(Entry entry)
+      throws ConversionError {
+
+    String accession = entry.getPrimaryAccession();
+    Feature feature =
+        Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresent::new);
+
+    long start = feature.getLocations().getMinPosition();
+    long end = feature.getLocations().getMaxPosition();
+
+    return new GFF3Directives.GFF3SequenceRegion(accession, start, end);
+  }
+
+  @Override
+  public GFF3Directives from(Entry entry) {
+
+    ArrayList<GFF3Directives.GFF3Directive> directives = new ArrayList<>();
+    directives.add(extractSequenceRegion(entry));
+    directives.add(extractSpecies(entry));
+
+    return new GFF3Directives(directives);
+  }
+
+  public static class NoSourcePresent extends ConversionError {}
+  ;
 }

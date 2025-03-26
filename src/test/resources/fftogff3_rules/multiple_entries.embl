@@ -1,0 +1,20 @@
+ID   CACUVO010000001; SV 1; linear; genomic DNA; WGS; ENV; 59081 BP.
+XX
+AC   CACUVO010000001;
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..59081
+FT                   /mol_type="genomic DNA"
+XX
+//
+ID   CACUVO010000002; SV 1; linear; genomic DNA; WGS; ENV; 266666 BP.
+XX
+AC   CACUVO010000002;
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..266666
+FT                   /mol_type="genomic DNA"
+XX
+//

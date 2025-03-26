@@ -16,25 +16,22 @@ import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.converter.IConversionRule;
-import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
-import uk.ac.ebi.embl.converter.gff3.GFF3File;
-import uk.ac.ebi.embl.converter.gff3.GFF3Headers;
-import uk.ac.ebi.embl.converter.gff3.GFF3SourceMetadata;
+import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
-public class FFGFF3FileFactory implements IConversionRule<Entry, GFF3File> {
-  Map<String, List<GFF3Feature>> geneMap = new LinkedHashMap<>();
-  List<GFF3Feature> nonGeneFeatures = new ArrayList<>();
+public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotation> {
+  Map<String, List<GFF3Feature>> geneMap;
+  List<GFF3Feature> nonGeneFeatures;
 
   @Override
-  public GFF3File from(Entry entry) {
-    GFF3Headers headers = new FFGFF3HeadersFactory().from(entry);
-    GFF3SourceMetadata metadata = new FFGFF3SourceAttributesFactory().from(entry);
+  public GFF3Annotation from(Entry entry) {
+    geneMap = new LinkedHashMap<>();
+    nonGeneFeatures = new ArrayList<>();
+    entry.setPrimaryAccession(entry.getPrimaryAccession() + ".1");
+    entry.getSequence().setAccession(entry.getSequence().getAccession() + ".1");
+    GFF3Directives directives = new GFF3DirectivesFactory().from(entry);
     try {
-      entry.setPrimaryAccession(entry.getPrimaryAccession() + ".1");
-      entry.getSequence().setAccession(entry.getSequence().getAccession() + ".1");
-
       Map<String, List<ConversionEntry>> featureMap = ConversionUtils.getFF2GFF3FeatureMap();
 
       for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
@@ -56,7 +53,7 @@ public class FFGFF3FileFactory implements IConversionRule<Entry, GFF3File> {
       }
       sortFeaturesAndAssignId();
 
-      return new GFF3File(headers, metadata, geneMap, nonGeneFeatures);
+      return new GFF3Annotation(directives, geneMap, nonGeneFeatures);
     } catch (Exception e) {
       throw new ConversionError();
     }
@@ -103,7 +100,6 @@ public class FFGFF3FileFactory implements IConversionRule<Entry, GFF3File> {
     List<Qualifier> genes = ffFeature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
 
     try {
-      Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
 
       if (genes.isEmpty()) {
         nonGeneFeatures.add(transformFeature(accession, ffFeature, Optional.empty()));
