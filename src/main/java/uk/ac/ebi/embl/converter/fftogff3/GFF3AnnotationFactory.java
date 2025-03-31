@@ -44,18 +44,29 @@ enum CircularFeatures {
 }
 
 public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotation> {
+  ///  This is a helper property used to keep a list of all the features where a circular landmark could be set.
+  /// In the case the annotation is a circular topology and no other landmark is explicitly set but the annotation contains
+  /// a feature on this list, then the matching feature is used as the landmark.
+  /// This logic is outlined in the "updateCircularLandmarkPresence" method and the "missingCircularLandmark" property.
+  private static final List<String> circularFeatures =
+      Arrays.stream(CircularFeatures.values()).map(Enum::name).map(String::toLowerCase).toList();
+  /// This property is used to keep track of the presence of circular landmarks on the annotation.
+  /// If the topology is circular and no circular landmark was found, then a new "region"
+  /// is added using the "createLandmarkFeature" method.
+  boolean missingCircularLandmark;
+
+  ///  Keeps track of all the features belonging to a gene.
   Map<String, List<GFF3Feature>> geneMap;
+  ///  List of features that do not belong to a gene.
   List<GFF3Feature> nonGeneFeatures;
 
   @Override
   public GFF3Annotation from(Entry entry) {
+
     geneMap = new LinkedHashMap<>();
     nonGeneFeatures = new ArrayList<>();
+    missingCircularLandmark = entry.getSequence().getTopology() == Sequence.Topology.CIRCULAR;
 
-    boolean missingCircularLandmark =
-        entry.getSequence().getTopology() == Sequence.Topology.CIRCULAR;
-    List<String> circularFeatures =
-        Arrays.stream(CircularFeatures.values()).map(Enum::name).map(String::toLowerCase).toList();
     String name = entry.getSequence().getAccession();
 
     // TODO: We need to handle accession versions
@@ -81,15 +92,7 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
         // Rule: Throw an error if we find an unmapped feature
         if (first.isEmpty()) throw new Exception("Mapping not found for " + feature.getName());
 
-        if (missingCircularLandmark) {
-          // A feature that has "circular_RNA" can be used as a landmark for circular topologies.
-          if (!feature.getQualifiers("circular_RNA").isEmpty()) {
-            missingCircularLandmark = false;
-          } else if (circularFeatures.contains(feature.getName().toUpperCase())) {
-            feature.setSingleQualifier("Is_circular");
-            missingCircularLandmark = false;
-          }
-        }
+        updateCircularLandmarkPresence(feature);
 
         buildGeneFeatureMap(entry.getPrimaryAccession(), feature);
       }
@@ -97,18 +100,7 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
       // For circular topologies; We have not found a circular feature so we must include a region
       // encompasing all source.
       if (missingCircularLandmark) {
-        CompoundLocation<Location> locations = entry.getPrimarySourceFeature().getLocations();
-        nonGeneFeatures.add(
-            new GFF3Feature(
-                entry.getPrimaryAccession(),
-                ".",
-                "region",
-                locations.getMinPosition(),
-                locations.getMaxPosition(),
-                ".",
-                "+",
-                ".",
-                Map.of("ID", name, "Is_circular", "true")));
+        nonGeneFeatures.add(createLandmarkFeature(name, entry));
       }
       sortFeaturesAndAssignId();
 
@@ -116,6 +108,32 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private void updateCircularLandmarkPresence(Feature feature) {
+    if (missingCircularLandmark) {
+      // A feature that has "circular_RNA" can be used as a landmark for circular topologies.
+      if (!feature.getQualifiers("circular_RNA").isEmpty()) {
+        missingCircularLandmark = false;
+      } else if (circularFeatures.contains(feature.getName().toUpperCase())) {
+        feature.setSingleQualifier("Is_circular");
+        missingCircularLandmark = false;
+      }
+    }
+  }
+
+  private GFF3Feature createLandmarkFeature(String name, Entry entry) {
+    CompoundLocation<Location> locations = entry.getPrimarySourceFeature().getLocations();
+    return new GFF3Feature(
+        entry.getPrimaryAccession(),
+        ".",
+        "region",
+        locations.getMinPosition(),
+        locations.getMaxPosition(),
+        ".",
+        "+",
+        ".",
+        Map.of("ID", name, "Is_circular", "true"));
   }
 
   private GFF3Feature transformFeature(String accession, Feature ffFeature, Optional<String> gene) {
