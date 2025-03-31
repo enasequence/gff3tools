@@ -67,11 +67,11 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
     nonGeneFeatures = new ArrayList<>();
     missingCircularLandmark = entry.getSequence().getTopology() == Sequence.Topology.CIRCULAR;
 
-    String name = entry.getSequence().getAccession();
+    String accession = entry.getSequence().getAccession();
 
     // TODO: We need to handle accession versions
-    entry.setPrimaryAccession(name + ".1");
-    entry.getSequence().setAccession(name + ".1");
+    entry.setPrimaryAccession(accession + ".1");
+    entry.getSequence().setAccession(accession + ".1");
 
     GFF3Directives directives = new GFF3DirectivesFactory().from(entry);
     try {
@@ -100,7 +100,7 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
       // For circular topologies; We have not found a circular feature so we must include a region
       // encompasing all source.
       if (missingCircularLandmark) {
-        nonGeneFeatures.add(createLandmarkFeature(name, entry));
+        nonGeneFeatures.add(createLandmarkFeature(accession, entry));
       }
       sortFeaturesAndAssignId();
 
