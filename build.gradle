@@ -52,6 +52,9 @@ dependencies {
     implementation( 'uk.ac.ebi.ena.sequence:sequencetools:2.+' )
     implementation "io.vavr:vavr:0.10.5"
     implementation "org.jgrapht:jgrapht-core:1.5.2"
+    implementation("info.picocli:picocli:4.7.6")
+    implementation 'ch.qos.logback:logback-classic:1.3.14'
+    implementation 'org.slf4j:slf4j-api:2.0.9'
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
 }
