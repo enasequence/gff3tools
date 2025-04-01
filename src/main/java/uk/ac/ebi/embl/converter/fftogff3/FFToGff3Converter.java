@@ -14,6 +14,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.file.Files;
+import java.nio.file.Path;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.converter.cli.Params;
@@ -26,7 +28,8 @@ public class FFToGff3Converter {
   private static final Logger LOG = LoggerFactory.getLogger(FFToGff3Converter.class);
 
   public void convert(Params params) throws IOException {
-    try (BufferedReader bufferedReader = Files.newBufferedReader(params.inFile.toPath());
+    Path filePath = params.inFile.toPath();
+    try (BufferedReader bufferedReader = Files.newBufferedReader(filePath);
          StringWriter gff3Writer = new StringWriter()) {
       EmblEntryReader entryReader =
           new EmblEntryReader(

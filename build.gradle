@@ -64,5 +64,5 @@ test {
 }
 
 application {
-  mainClass = 'uk.ac.ebi.embl.converter.Main'
+  mainClass = 'uk.ac.ebi.embl.converter.cli.FFToGff3CLI'
 }

@@ -22,11 +22,12 @@ public class GFF3FileFactory implements IConversionRule<EmblEntryReader, GFF3Fil
   @Override
   public GFF3File from(EmblEntryReader entryReader) throws ConversionError {
     GFF3Header header = new GFF3Header("3.1.26");
-    GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory();
     List<GFF3Annotation> annotations = new ArrayList<>();
     try {
+      int entryCount = 0;
       while (entryReader.read() != null && entryReader.isEntry()) {
-        annotations.add(annotationFactory.from(entryReader.getEntry()));
+        annotations.add(new GFF3AnnotationFactory(entryCount > 0).from(entryReader.getEntry()));
+        entryCount++;
       }
     } catch (Exception e) {
       throw new RuntimeException(e);
