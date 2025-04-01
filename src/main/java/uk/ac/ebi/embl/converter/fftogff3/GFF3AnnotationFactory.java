@@ -24,10 +24,6 @@ import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
 public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotation> {
-  /// This property is used to keep track of the presence of circular landmarks on the annotation.
-  /// If the topology is circular and no circular landmark was found, then a new "region"
-  /// is added using the "createLandmarkFeature" method.
-  boolean missingCircularLandmark;
 
   ///  Keeps track of all the features belonging to a gene.
   Map<String, List<GFF3Feature>> geneMap;
@@ -39,7 +35,6 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
 
     geneMap = new LinkedHashMap<>();
     nonGeneFeatures = new ArrayList<>();
-    missingCircularLandmark = entry.getSequence().getTopology() == Sequence.Topology.CIRCULAR;
 
     String accession = entry.getSequence().getAccession();
 
@@ -66,14 +61,12 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
         // Rule: Throw an error if we find an unmapped feature
         if (first.isEmpty()) throw new Exception("Mapping not found for " + feature.getName());
 
-        updateCircularLandmarkPresence(feature);
-
         buildGeneFeatureMap(entry.getPrimaryAccession(), feature);
       }
 
       // For circular topologies; We have not found a circular feature so we must include a region
       // encompasing all source.
-      if (missingCircularLandmark) {
+      if (isCircularTopology(entry) && lacksCircularAttribute()) {
         nonGeneFeatures.add(createLandmarkFeature(accession, entry));
       }
       sortFeaturesAndAssignId();
@@ -84,13 +77,14 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
     }
   }
 
-  private void updateCircularLandmarkPresence(Feature feature) {
-    if (missingCircularLandmark) {
-      // A feature that has "circular_RNA" can be used as a landmark for circular topologies.
-      if (!feature.getQualifiers("circular_RNA").isEmpty()) {
-        missingCircularLandmark = false;
-      }
-    }
+  private boolean lacksCircularAttribute() {
+    return !geneMap.values().stream()
+        .flatMap(List::stream)
+        .anyMatch(feature -> feature.attributes().containsKey("Is_circular"));
+  }
+
+  private boolean isCircularTopology(Entry entry) {
+    return entry.getSequence().getTopology() == Sequence.Topology.CIRCULAR;
   }
 
   private GFF3Feature createLandmarkFeature(String name, Entry entry) {
@@ -122,8 +116,8 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
                     q ->
                         qualifierMap.getOrDefault(
                             q.getName(), q.getName()), // Rename if mapping exists
-                    q -> q.isValue() ? q.getValue() : "true" // Ensure non-empty values
-                    ));
+                    q -> q.isValue() ? q.getValue() : "true", // Ensure non-empty values
+                    (existing, replacement) -> existing));
 
     gene.ifPresent(v -> attributes.put("gene", v));
 

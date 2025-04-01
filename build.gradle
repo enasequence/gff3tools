@@ -2,10 +2,11 @@ plugins {
     id 'java'
     id 'application'
     id "com.diffplug.spotless" version "6.11.0"
+    id 'com.github.johnrengelman.shadow' version '5.2.0'
 }
 
 group = 'uk.ac.ebi.ena'
-version = '1.0-SNAPSHOT'
+version = '1.0'
 
 spotless {
     encoding 'UTF-8'
@@ -63,6 +64,13 @@ test {
     useJUnitPlatform()
 }
 
-application {
-  mainClass = 'uk.ac.ebi.embl.converter.Main'
+
+shadowJar {
+    archiveClassifier.set('')
 }
+
+application {
+    mainClassName = 'uk.ac.ebi.embl.converter.cli.FFToGff3CLI'
+}
+
+

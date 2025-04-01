@@ -27,7 +27,7 @@ public class FFToGff3Converter {
 
   public void convert(Params params) throws IOException {
     try (BufferedReader bufferedReader = Files.newBufferedReader(params.inFile.toPath());
-         StringWriter gff3Writer = new StringWriter()) {
+        StringWriter gff3Writer = new StringWriter()) {
       EmblEntryReader entryReader =
           new EmblEntryReader(
               bufferedReader,

@@ -10,10 +10,12 @@
  */
 package uk.ac.ebi.embl.converter.utils;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public enum ConversionUtils {
   INSTANCE;
@@ -38,11 +40,7 @@ public enum ConversionUtils {
     try {
       ff2gff3 = new HashMap<>();
       gff32ff = new HashMap<>();
-      Path filePath =
-          Paths.get(
-              Objects.requireNonNull(ConversionUtils.class.getResource("/feature-mapping.tsv"))
-                  .toURI());
-      List<String> lines = Files.readAllLines(filePath);
+      List<String> lines = readTsvFile("feature-mapping.tsv");
       lines.remove(0);
       for (String line : lines) {
         ConversionEntry conversionEntry = new ConversionEntry(line.split("\t"));
@@ -54,11 +52,7 @@ public enum ConversionUtils {
 
       ff2gff3_qualifiers = new HashMap<>();
       gff32ff_qualifiers = new HashMap<>();
-      filePath =
-          Paths.get(
-              Objects.requireNonNull(ConversionUtils.class.getResource("/qualifier-mapping.tsv"))
-                  .toURI());
-      lines = Files.readAllLines(filePath);
+      lines = readTsvFile("qualifier-mapping.tsv");
       lines.remove(0);
       for (String line : lines) {
         String[] words = line.split("\t");
@@ -67,6 +61,22 @@ public enum ConversionUtils {
       }
     } catch (Exception e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  private static List<String> readTsvFile(String fileName) {
+    try (InputStream inputStream =
+        ConversionUtils.class.getClassLoader().getResourceAsStream(fileName)) {
+      if (inputStream == null) {
+        throw new IllegalArgumentException("File not found: " + fileName);
+      }
+
+      try (BufferedReader reader =
+          new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+        return reader.lines().collect(Collectors.toList());
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Error reading file: " + fileName, e);
     }
   }
 }
