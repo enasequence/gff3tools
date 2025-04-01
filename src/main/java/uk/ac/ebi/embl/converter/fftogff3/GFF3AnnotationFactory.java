@@ -30,6 +30,12 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
   ///  List of features that do not belong to a gene.
   List<GFF3Feature> nonGeneFeatures;
 
+  boolean ignoreSpecies;
+
+  public GFF3AnnotationFactory(boolean ignoreSpecies) {
+    this.ignoreSpecies = ignoreSpecies;
+  }
+
   @Override
   public GFF3Annotation from(Entry entry) {
 
@@ -42,7 +48,7 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
     entry.setPrimaryAccession(accession + ".1");
     entry.getSequence().setAccession(accession + ".1");
 
-    GFF3Directives directives = new GFF3DirectivesFactory().from(entry);
+    GFF3Directives directives = new GFF3DirectivesFactory(this.ignoreSpecies).from(entry);
     try {
       Map<String, List<ConversionEntry>> featureMap = ConversionUtils.getFF2GFF3FeatureMap();
 

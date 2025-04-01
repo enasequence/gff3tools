@@ -2,7 +2,6 @@ plugins {
     id 'java'
     id 'application'
     id "com.diffplug.spotless" version "6.11.0"
-    id 'com.github.johnrengelman.shadow' version '5.2.0'
 }
 
 group = 'uk.ac.ebi.ena'
@@ -72,5 +71,3 @@ shadowJar {
 application {
     mainClassName = 'uk.ac.ebi.embl.converter.cli.FFToGff3CLI'
 }
-
-

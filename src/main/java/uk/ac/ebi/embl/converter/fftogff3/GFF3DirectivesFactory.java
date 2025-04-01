@@ -22,6 +22,12 @@ import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 public class GFF3DirectivesFactory implements IConversionRule<Entry, GFF3Directives> {
 
+  boolean ignoreSpecies;
+
+  public GFF3DirectivesFactory(boolean ignoreSpecies) {
+    this.ignoreSpecies = ignoreSpecies;
+  }
+
   static final String BASE_TAXON_URL = "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi";
 
   private String buildTaxonomyUrl(Optional<OrganismQualifier> qualifier) {
@@ -68,7 +74,8 @@ public class GFF3DirectivesFactory implements IConversionRule<Entry, GFF3Directi
 
     ArrayList<GFF3Directives.GFF3Directive> directives = new ArrayList<>();
     directives.add(extractSequenceRegion(entry));
-    directives.add(extractSpecies(entry));
+    if (!this.ignoreSpecies)
+      directives.add(extractSpecies(entry));
 
     return new GFF3Directives(directives);
   }
