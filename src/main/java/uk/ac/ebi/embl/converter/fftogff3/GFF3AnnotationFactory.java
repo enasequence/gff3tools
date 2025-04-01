@@ -23,33 +23,7 @@ import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
-enum CircularFeatures {
-  CIRCULAR_DOUBLE_STRANDED_DNA_CHROMOSOME,
-
-  CIRCULAR_SINGLE_STRANDED_DNA_CHROMOSOME,
-
-  CIRCULAR_SINGLE_STRANDED_RNA_CHROMOSOME,
-
-  CIRCULAR_DOUBLE_STRANDED_RNA_CHROMOSOME,
-
-  CIRCULAR_PLASMID,
-
-  CIRCULAR_NCRNA,
-
-  CIRCULAR_MRNA,
-
-  MINICIRCLE,
-
-  INVERTED_RING_CHROMOSOME,
-}
-
 public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotation> {
-  ///  This is a helper property used to keep a list of all the features where a circular landmark could be set.
-  /// In the case the annotation is a circular topology and no other landmark is explicitly set but the annotation contains
-  /// a feature on this list, then the matching feature is used as the landmark.
-  /// This logic is outlined in the "updateCircularLandmarkPresence" method and the "missingCircularLandmark" property.
-  private static final List<String> circularFeatures =
-      Arrays.stream(CircularFeatures.values()).map(Enum::name).map(String::toLowerCase).toList();
   /// This property is used to keep track of the presence of circular landmarks on the annotation.
   /// If the topology is circular and no circular landmark was found, then a new "region"
   /// is added using the "createLandmarkFeature" method.
@@ -114,9 +88,6 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
     if (missingCircularLandmark) {
       // A feature that has "circular_RNA" can be used as a landmark for circular topologies.
       if (!feature.getQualifiers("circular_RNA").isEmpty()) {
-        missingCircularLandmark = false;
-      } else if (circularFeatures.contains(feature.getName().toUpperCase())) {
-        feature.setSingleQualifier("Is_circular");
         missingCircularLandmark = false;
       }
     }
