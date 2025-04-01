@@ -12,6 +12,9 @@ package uk.ac.ebi.embl.converter.fftogff3;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.location.CompoundLocation;
@@ -25,6 +28,7 @@ import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
 public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotation> {
 
+  Logger LOG = LoggerFactory.getLogger(GFF3AnnotationFactory.class);
   ///  Keeps track of all the features belonging to a gene.
   Map<String, List<GFF3Feature>> geneMap;
   ///  List of features that do not belong to a gene.
@@ -43,7 +47,7 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
     nonGeneFeatures = new ArrayList<>();
 
     String accession = entry.getSequence().getAccession();
-
+    LOG.info("Converting FF entry: {}", accession);
     // TODO: We need to handle accession versions
     entry.setPrimaryAccession(accession + ".1");
     entry.getSequence().setAccession(accession + ".1");
