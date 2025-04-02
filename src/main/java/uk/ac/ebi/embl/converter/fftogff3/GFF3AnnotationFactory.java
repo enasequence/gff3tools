@@ -12,7 +12,6 @@ package uk.ac.ebi.embl.converter.fftogff3;
 
 import java.util.*;
 import java.util.stream.Collectors;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -64,7 +63,8 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
 
         // TODO: insert a gene feature if/where appropriate
         Optional<ConversionEntry> first =
-            featureMap.get(feature.getName()).stream()
+            Optional.ofNullable(featureMap.get(feature.getName())).stream()
+                .flatMap(List::stream)
                 .filter(conversionEntry -> hasAllQualifiers(feature, conversionEntry))
                 .findFirst();
 

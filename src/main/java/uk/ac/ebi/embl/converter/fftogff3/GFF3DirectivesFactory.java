@@ -73,8 +73,8 @@ public class GFF3DirectivesFactory implements IConversionRule<Entry, GFF3Directi
   public GFF3Directives from(Entry entry) {
 
     ArrayList<GFF3Directives.GFF3Directive> directives = new ArrayList<>();
-    directives.add(extractSequenceRegion(entry));
     if (!this.ignoreSpecies) directives.add(extractSpecies(entry));
+    directives.add(extractSequenceRegion(entry));
 
     return new GFF3Directives(directives);
   }
