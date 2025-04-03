@@ -36,6 +36,14 @@ public enum ConversionUtils {
     return INSTANCE.ff2gff3_qualifiers;
   }
 
+  public static Map<String, ConversionEntry> getGFF32FFFeatureMap() {
+    return INSTANCE.gff32ff;
+  }
+
+  public static Map<String, String> getGFF32FFQualifierMap() {
+    return INSTANCE.gff32ff_qualifiers;
+  }
+
   private void loadMaps() {
     try {
       ff2gff3 = new HashMap<>();
@@ -46,6 +54,7 @@ public enum ConversionUtils {
         ConversionEntry conversionEntry = new ConversionEntry(line.split("\t"));
         ff2gff3.putIfAbsent(conversionEntry.feature, new ArrayList<>());
         ff2gff3.get(conversionEntry.feature).add(conversionEntry);
+
         gff32ff.putIfAbsent(conversionEntry.sOID, conversionEntry);
         gff32ff.putIfAbsent(conversionEntry.sOTerm, conversionEntry);
       }

@@ -41,6 +41,10 @@ public class ConversionEntry {
     return sOID;
   }
 
+  public String getFeature() {
+    return feature;
+  }
+
   public String getSOTerm() {
     return sOTerm;
   }
