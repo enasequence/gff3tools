@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.converter.cli.Params;
 import uk.ac.ebi.embl.converter.ff.EmblFlatFile;
-import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.gff3.reader.GFF3FlatFileEntryReader;
 
 public class Gff3ToFFConverter {
