@@ -41,6 +41,12 @@ public enum ConversionUtils {
         return INSTANCE.featureRelations;
     }
 
+    public static Map<String, ConversionEntry> getGFF32FFFeatureMap() {
+        return INSTANCE.gff32ff;
+    }
+    public static Map<String, String> getGFF32FFQualifierMap() {
+        return INSTANCE.gff32ffQualifiers;
+    }
     private void loadMaps() {
         try {
             ff2gff3 = new HashMap<>();
