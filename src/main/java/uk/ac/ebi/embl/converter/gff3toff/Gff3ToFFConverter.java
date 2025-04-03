@@ -28,14 +28,14 @@ public class Gff3ToFFConverter {
   public void convert(Params params) throws IOException {
     Path filePath = params.inFile.toPath();
     try (BufferedReader bufferedReader = Files.newBufferedReader(filePath);
-        StringWriter gff3Writer = new StringWriter()) {
+        StringWriter ffWriter = new StringWriter()) {
       GFF3FlatFileEntryReader entryReader = new GFF3FlatFileEntryReader(bufferedReader);
 
       FFEntryFactory ffEntryFactory = new FFEntryFactory();
       List<Entry> entries = ffEntryFactory.from(entryReader);
       EmblFlatFile emblFlatFile = new EmblFlatFile(entries);
-      emblFlatFile.writeFFString(gff3Writer);
-      Files.write(params.outFile.toPath(), gff3Writer.toString().getBytes());
+      emblFlatFile.writeFFString(ffWriter);
+      Files.write(params.outFile.toPath(), ffWriter.toString().getBytes());
       LOG.info("Embl flat file is written in: {}", params.outFile.toPath());
     }
   }
