@@ -111,6 +111,39 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
         Map.of("ID", name, "Is_circular", "true"));
   }
 
+  private List<GFF3Feature> getCDS(String accession, Feature ffFeature, Optional<String> gene) {
+    Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
+
+    String source = ".";
+    String score = ".";
+
+    List<GFF3Feature> features = new ArrayList<>();
+
+
+    for (Location location: ffFeature.getLocations().getLocations()) {
+      Map<String, String> attributes = new LinkedHashMap<>();
+      gene.ifPresent(v -> attributes.put("gene", v));
+
+      String partiality = getPartiality(location);
+      if (!partiality.isBlank()) {
+        attributes.put("partial", getPartiality(ffFeature));
+      }
+
+      features.add(new GFF3Feature(
+              accession,
+              source,
+              "CDS",
+              location.getBeginPosition(),
+              location.getEndPosition(),
+              score,
+              getStrand(ffFeature),
+              getPhase(ffFeature),
+              attributes));
+    }
+
+    return features;
+  }
+
   private GFF3Feature transformFeature(String accession, Feature ffFeature, Optional<String> gene) {
     Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
 
@@ -155,6 +188,10 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
 
       if (genes.isEmpty()) {
         nonGeneFeatures.add(transformFeature(accession, ffFeature, Optional.empty()));
+        List<GFF3Feature> cds = getCDS(accession, ffFeature, Optional.empty());
+        if (cds.size() > 1) {
+          nonGeneFeatures.addAll(cds);
+        }
       } else {
 
         for (Qualifier gene : genes) {
@@ -163,7 +200,10 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
           List<GFF3Feature> gfFeatures = geneMap.getOrDefault(geneName, new ArrayList<>());
 
           gfFeatures.add(transformFeature(accession, ffFeature, Optional.of(geneName)));
-
+          List<GFF3Feature> cds = getCDS(accession, ffFeature, Optional.of(geneName));
+          if (cds.size() > 1) {
+            gfFeatures.addAll(cds);
+          }
           geneMap.put(geneName, gfFeatures);
         }
       }
@@ -232,6 +272,20 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
     }
 
     return ".";
+  }
+
+  private String getPartiality(Location location) {
+
+    StringJoiner partiality = new StringJoiner(",");
+
+    if (location.isFivePrimePartial()) {
+      partiality.add("start");
+    }
+    if (location.isThreePrimePartial()) {
+      partiality.add("end");
+    }
+    // Returns empty string if non partial location
+    return partiality.length() > 1 ? partiality.toString() : "";
   }
 
   private String getPartiality(Feature feature) {
