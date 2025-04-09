@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.converter.fftogff3;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +29,9 @@ import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotation> {
 
   Logger LOG = LoggerFactory.getLogger(GFF3AnnotationFactory.class);
+
+  static final Map<String, String> featureRelationMap = ConversionUtils.getFeatureRelationMap();
+
   ///  Keeps track of all the features belonging to a gene.
   Map<String, List<GFF3Feature>> geneMap;
   ///  List of features that do not belong to a gene.
@@ -90,16 +94,18 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
   private boolean lacksCircularAttribute() {
     return !geneMap.values().stream()
         .flatMap(List::stream)
-        .anyMatch(feature -> feature.attributes().containsKey("Is_circular"));
+        .anyMatch(feature -> feature.getAttributes().containsKey("Is_circular"));
   }
 
   private boolean isCircularTopology(Entry entry) {
     return entry.getSequence().getTopology() == Sequence.Topology.CIRCULAR;
   }
 
-  private GFF3Feature createLandmarkFeature(String name, Entry entry) {
+  private GFF3Feature createLandmarkFeature(String accession, Entry entry) {
     CompoundLocation<Location> locations = entry.getPrimarySourceFeature().getLocations();
     return new GFF3Feature(
+        Optional.of(accession),
+        null,
         entry.getPrimaryAccession(),
         ".",
         "region",
@@ -108,14 +114,24 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
         ".",
         "+",
         ".",
-        Map.of("ID", name, "Is_circular", "true"));
+        Map.of("ID", accession, "Is_circular", "true"));
   }
 
-  private GFF3Feature transformFeature(String accession, Feature ffFeature, Optional<String> gene) {
+  private GFF3Feature transformFeature(
+      String accession, Feature ffFeature, Optional<String> geneName) {
     Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
 
     String source = ".";
     String score = ".";
+
+    Optional<String> id = Optional.empty();
+    Optional<String> parentId = Optional.empty();
+
+    if (geneName.isPresent()) {
+      id = Optional.of(getId(ffFeature.getName(), geneName.get()));
+      String parentFeatureName = getParentFeature(ffFeature.getName());
+      parentId = Optional.ofNullable(parentFeatureName).map(name -> getId(name, geneName.get()));
+    }
 
     Map<String, String> attributes =
         ffFeature.getQualifiers().stream()
@@ -129,13 +145,17 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
                     q -> q.isValue() ? q.getValue() : "true", // Ensure non-empty values
                     (existing, replacement) -> existing));
 
-    gene.ifPresent(v -> attributes.put("gene", v));
+    geneName.ifPresent(v -> attributes.put("gene", v));
+    id.ifPresent(v -> attributes.put("ID", v));
+    parentId.ifPresent(v -> attributes.put("Parent", v));
 
     if (!getPartiality(ffFeature).isBlank()) {
       attributes.put("partial", getPartiality(ffFeature));
     }
 
     return new GFF3Feature(
+        id,
+        parentId,
         accession,
         source,
         ffFeature.getName(),
@@ -173,35 +193,62 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
   }
 
   private void sortFeaturesAndAssignId() {
-    for (String geneName : geneMap.keySet()) {
-      List<GFF3Feature> gfFeatures = geneMap.get(geneName);
+    for (Map.Entry<String, List<GFF3Feature>> entry : geneMap.entrySet()) {
+      List<GFF3Feature> gffFeatures = entry.getValue();
 
-      // Sort feature by start and end location
-      gfFeatures.sort(
-          Comparator.comparingLong(GFF3Feature::start)
-              .thenComparing(GFF3Feature::end, Comparator.reverseOrder()));
+      // Sort gffFeatures by start asc, end desc
+      gffFeatures.sort(
+          Comparator.comparingLong(GFF3Feature::getStart)
+              .thenComparing(GFF3Feature::getEnd, Comparator.reverseOrder()));
 
-      Optional<GFF3Feature> firstFeature = gfFeatures.stream().findFirst();
 
-      // Set ID and Parent
-      if (firstFeature.isPresent()) {
+      List<GFF3Feature> rootNode = buildFeatureTree(gffFeatures);
 
-        // Set ID for root
-        String idValue = "%s_%s".formatted(firstFeature.get().name(), geneName);
-        firstFeature.get().attributes().put("ID", idValue);
-        String locus_tag = firstFeature.get().attributes().get("locus_tag");
-        // Set Parent only for children
-        gfFeatures.stream()
-            .skip(1)
-            .forEach(
-                feature -> {
-                  feature.attributes().put("Parent", idValue);
-                  if (locus_tag != null) {
-                    feature.attributes().put("locus_tag", locus_tag);
-                  }
-                  feature.attributes().remove("gene");
-                });
+      // Clear and re-add in correct order
+      gffFeatures.clear();
+      for (GFF3Feature root : rootNode) {
+        updateRootAndChildren(gffFeatures, root);
       }
+    }
+  }
+
+  public List<GFF3Feature> buildFeatureTree(List<GFF3Feature> gffFeatures) {
+    List<GFF3Feature> rootNode = new ArrayList<>();
+
+    Map<String, GFF3Feature> idMap =
+        gffFeatures.stream()
+            .filter(f -> f.getId().isPresent())
+            .collect(Collectors.toMap(f -> f.getId().get(), Function.identity()));
+
+    for (GFF3Feature feature : gffFeatures) {
+      String parentId = feature.getParentId().orElse(null);
+      if (parentId != null && idMap.containsKey(parentId)) {
+        GFF3Feature parent = idMap.get(parentId);
+        parent.getChildren().add(feature);
+        feature.setParent(parent);
+      } else {
+        rootNode.add(feature);
+      }
+    }
+
+    return rootNode;
+  }
+
+  private void updateRootAndChildren(List<GFF3Feature> gffFeatures, GFF3Feature root) {
+
+    // Parent node
+    root.getAttributes().remove("Parent");
+    gffFeatures.add(root);
+    String locusTag = root.getAttributes().get("locus_tag");
+
+    // Children
+    for (GFF3Feature child : root.getChildren()) {
+      child.getAttributes().remove("gene");
+      child.getAttributes().remove("ID");
+      if (locusTag != null) {
+        child.getAttributes().put("locus_tag", locusTag);
+      }
+      gffFeatures.add(child);
     }
   }
 
@@ -258,5 +305,13 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
       secondQualifierMatches |= formatted.equalsIgnoreCase(conversionEntry.getQualifier2());
     }
     return firstQualifierMatches && secondQualifierMatches;
+  }
+
+  private String getId(String name, String geneName) {
+    return "%s_%s".formatted(name, geneName);
+  }
+
+  private String getParentFeature(String featureName) {
+    return featureRelationMap.get(featureName);
   }
 }

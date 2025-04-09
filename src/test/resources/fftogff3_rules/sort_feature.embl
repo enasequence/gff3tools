@@ -33,7 +33,7 @@ FT                   /number=1
 FT   exon            complement(223543..223669)
 FT                   /gene="RHCE"
 FT                   /number=10
-FT   intron          complement(223670..231582)
+FT   3'UTR           complement(223670..231582)
 FT                   /gene="RHCE"
 FT                   /number=9
 XX
