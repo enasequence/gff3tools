@@ -37,4 +37,11 @@ public class GFF3Feature {
 
   List<GFF3Feature> children = new ArrayList<>();
   GFF3Feature parent;
+
+  public void addChild(GFF3Feature child) {
+    children.add(child);
+  }
+  public boolean hasChildren() {
+    return !children.isEmpty();
+  }
 }

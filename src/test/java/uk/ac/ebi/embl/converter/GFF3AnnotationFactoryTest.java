@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -27,19 +29,25 @@ class GFF3AnnotationFactoryTest {
     }
 
     @Test
-    public void buildFeatureTreeTest(){
+    public void buildFeatureTreeFullMapTest(){
         GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
         featureRelationMap.forEach((child,parent)->{
-            List featureList = new ArrayList<>();
+            List<GFF3Feature> featureList = new ArrayList<>();
             FeatureFactory featureFactory = new FeatureFactory();
             GFF3Feature childFeature = getGFF3Feature(Optional.of(child),Optional.of(parent));
             GFF3Feature parentFeature = getGFF3Feature(Optional.of(parent),Optional.empty());
             featureList.add(childFeature);
             featureList.add(parentFeature);
+
+            Map<String, GFF3Feature> idMap =
+                    featureList.stream()
+                            .filter(f -> f.getId().isPresent())
+                            .collect(Collectors.toMap(f -> f.getId().get(), Function.identity()));
+
             List<GFF3Feature> gff3Features = gFF3AnnotationFactory.buildFeatureTree(featureList);
 
-            assertTrue (gff3Features.stream().findFirst().isPresent());
-            assertTrue (gff3Features.stream().findFirst().get().getChildren().get(0).equals(childFeature));
+            GFF3Feature firstFeature = gff3Features.stream().findFirst().get();
+            assertTrue (firstFeature.getChildren().get(0).equals(childFeature));
 
         });
     }
