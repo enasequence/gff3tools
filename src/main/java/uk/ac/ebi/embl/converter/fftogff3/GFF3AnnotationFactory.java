@@ -261,20 +261,6 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
     return partiality.length() > 1 ? partiality.toString() : "";
   }
 
-  private String getPartiality(Feature feature) {
-
-    StringJoiner partiality = new StringJoiner(",");
-
-    if (feature.getLocations().isFivePrimePartial()) {
-      partiality.add("start");
-    }
-    if (feature.getLocations().isThreePrimePartial()) {
-      partiality.add("end");
-    }
-    // Returns empty string if non partial location
-    return partiality.length() > 1 ? partiality.toString() : "";
-  }
-
   private boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {
     boolean firstQualifierMatches = conversionEntry.getQualifier1() == null;
     boolean secondQualifierMatches = conversionEntry.getQualifier2() == null;
