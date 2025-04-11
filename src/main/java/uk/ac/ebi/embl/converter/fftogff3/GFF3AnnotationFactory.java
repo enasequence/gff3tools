@@ -113,6 +113,7 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
 
   private List<GFF3Feature> transformFeature(String accession, Feature ffFeature, Optional<String> gene) {
     Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
+    List<GFF3Feature> gff3Features = new ArrayList<>();
 
     String source = ".";
     String score = ".";
@@ -130,7 +131,6 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
                     (existing, replacement) -> existing));
 
     gene.ifPresent(v -> baseAttributes.put("gene", v));
-    List<GFF3Feature> features = new ArrayList<>();
 
     for (Location location: ffFeature.getLocations().getLocations()) {
       Map<String, String> attributes = new LinkedHashMap<>(baseAttributes);
@@ -140,7 +140,7 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
         attributes.put("partial", partiality);
       }
 
-      features.add(new GFF3Feature(
+      gff3Features.add(new GFF3Feature(
               accession,
               source,
               ffFeature.getName(),
@@ -152,7 +152,7 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
               attributes));
     }
 
-    return features;
+    return gff3Features;
   }
 
   private void buildGeneFeatureMap(String accession, Feature ffFeature) {
