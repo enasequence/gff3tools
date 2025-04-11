@@ -111,7 +111,8 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
         Map.of("ID", name, "Is_circular", "true"));
   }
 
-  private List<GFF3Feature> transformFeature(String accession, Feature ffFeature, Optional<String> gene) {
+  private List<GFF3Feature> transformFeature(
+      String accession, Feature ffFeature, Optional<String> gene) {
     Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
     List<GFF3Feature> gff3Features = new ArrayList<>();
 
@@ -132,7 +133,7 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
 
     gene.ifPresent(v -> baseAttributes.put("gene", v));
 
-    for (Location location: ffFeature.getLocations().getLocations()) {
+    for (Location location : ffFeature.getLocations().getLocations()) {
       Map<String, String> attributes = new LinkedHashMap<>(baseAttributes);
 
       String partiality = getPartiality(location);
@@ -140,7 +141,8 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
         attributes.put("partial", partiality);
       }
 
-      gff3Features.add(new GFF3Feature(
+      gff3Features.add(
+          new GFF3Feature(
               accession,
               source,
               ffFeature.getName(),
@@ -205,8 +207,7 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
                   String featID = "%s_%s".formatted(feature.name(), geneName);
                   if (featID.equals(idValue)) {
                     feature.attributes().put("ID", featID);
-                  }
-                  else {
+                  } else {
                     feature.attributes().put("Parent", idValue);
                     feature.attributes().remove("gene");
                     if (locus_tag != null) {
