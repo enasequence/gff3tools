@@ -180,7 +180,6 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
   }
 
   private void sortFeaturesAndAssignId() {
-    List<String> parents = new ArrayList<>();
     for (String geneName : geneMap.keySet()) {
       List<GFF3Feature> gfFeatures = geneMap.get(geneName);
 
