@@ -117,7 +117,7 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
     String source = ".";
     String score = ".";
 
-    Map<String, String> base_attributes =
+    Map<String, String> baseAttributes =
         ffFeature.getQualifiers().stream()
             .filter(
                 q -> !"gene".equals(q.getName())) // gene is filtered for handling overlapping gene
@@ -129,11 +129,11 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
                     q -> q.isValue() ? q.getValue() : "true", // Ensure non-empty values
                     (existing, replacement) -> existing));
 
-    gene.ifPresent(v -> base_attributes.put("gene", v));
+    gene.ifPresent(v -> baseAttributes.put("gene", v));
     List<GFF3Feature> features = new ArrayList<>();
 
     for (Location location: ffFeature.getLocations().getLocations()) {
-      Map<String, String> attributes = new LinkedHashMap<>(base_attributes);
+      Map<String, String> attributes = new LinkedHashMap<>(baseAttributes);
 
       String partiality = getPartiality(location);
       if (!partiality.isBlank()) {
