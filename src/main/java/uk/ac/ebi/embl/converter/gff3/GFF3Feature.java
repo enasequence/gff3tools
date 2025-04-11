@@ -41,6 +41,7 @@ public class GFF3Feature {
   public void addChild(GFF3Feature child) {
     children.add(child);
   }
+
   public boolean hasChildren() {
     return !children.isEmpty();
   }

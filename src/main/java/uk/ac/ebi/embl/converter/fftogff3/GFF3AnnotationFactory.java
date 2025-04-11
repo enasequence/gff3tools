@@ -105,7 +105,7 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
     CompoundLocation<Location> locations = entry.getPrimarySourceFeature().getLocations();
     return new GFF3Feature(
         Optional.of(accession),
-        null,
+        Optional.empty(),
         entry.getPrimaryAccession(),
         ".",
         "region",
@@ -193,14 +193,13 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
   }
 
   private void sortFeaturesAndAssignId() {
-    for (Map.Entry<String, List<GFF3Feature>> entry : geneMap.entrySet()) {
-      List<GFF3Feature> gffFeatures = entry.getValue();
+    for (String geneName : geneMap.keySet()) {
+      List<GFF3Feature> gffFeatures = geneMap.get(geneName);
 
       // Sort gffFeatures by start asc, end desc
       gffFeatures.sort(
           Comparator.comparingLong(GFF3Feature::getStart)
               .thenComparing(GFF3Feature::getEnd, Comparator.reverseOrder()));
-
 
       // build a tree of parent node and its children
       List<GFF3Feature> rootNode = buildFeatureTree(gffFeatures);
@@ -217,9 +216,13 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
     List<GFF3Feature> rootNode = new ArrayList<>();
 
     Map<String, GFF3Feature> idMap =
-            gffFeatures.stream()
-                    .filter(f -> f.getId().isPresent())
-                    .collect(Collectors.toMap(f -> f.getId().get(), Function.identity()));
+        gffFeatures.stream()
+            .filter(f -> f.getId().isPresent())
+            .collect(
+                Collectors.toMap(
+                    f -> f.getId().get(),
+                    Function.identity(),
+                    (existing, replacement) -> existing));
 
     for (GFF3Feature feature : gffFeatures) {
       String parentId = feature.getParentId().orElse(null);
@@ -235,16 +238,16 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
     return rootNode;
   }
 
-  private void orderRootAndChildren(List<GFF3Feature> gffFeatures, GFF3Feature root) {
+  public void orderRootAndChildren(List<GFF3Feature> gffFeatures, GFF3Feature root) {
 
     String locusTag = root.getAttributes().get("locus_tag");
     gffFeatures.add(root);
 
     // Recursively process children
     for (GFF3Feature child : root.getChildren()) {
-      if(child.hasChildren()) {
+      if (child.hasChildren()) {
         orderRootAndChildren(gffFeatures, child);
-      }else{
+      } else {
         // Leaf node processing
         if (locusTag != null) {
           child.getAttributes().put("locus_tag", locusTag);
@@ -255,21 +258,21 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
       }
     }
 
-    if(hasParent(root,gffFeatures)) {
+    if (hasParent(root, gffFeatures)) {
       // Parent cleanup
       root.getAttributes().remove("gene");
-    }else{
+    } else {
       // Child cleanup
       root.getAttributes().remove("Parent");
     }
   }
 
-  private boolean hasParent(GFF3Feature feature,List<GFF3Feature> gffFeatures) {
+  private boolean hasParent(GFF3Feature feature, List<GFF3Feature> gffFeatures) {
     Optional<String> parentId = feature.getParentId();
     // Check if gffFeatures has the parent
-    return parentId.isPresent() &&
-            gffFeatures.stream()
-                    .anyMatch(f -> f.getId().map(id -> id.equalsIgnoreCase(parentId.get())).orElse(false));
+    return parentId.isPresent()
+        && gffFeatures.stream()
+            .anyMatch(f -> f.getId().map(id -> id.equalsIgnoreCase(parentId.get())).orElse(false));
   }
 
   private String getStrand(Feature feature) {

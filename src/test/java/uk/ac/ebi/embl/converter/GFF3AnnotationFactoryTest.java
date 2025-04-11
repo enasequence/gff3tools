@@ -1,69 +1,111 @@
+/*
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package uk.ac.ebi.embl.converter;
 
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.*;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Assertions.*;
-import uk.ac.ebi.embl.api.entry.feature.Feature;
-import uk.ac.ebi.embl.api.entry.feature.FeatureFactory;
 import uk.ac.ebi.embl.converter.fftogff3.GFF3AnnotationFactory;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-
 class GFF3AnnotationFactoryTest {
-    static Map<String, String> featureRelationMap;
-    @BeforeAll
-    public static void setUp() throws Exception {
-        featureRelationMap = ConversionUtils.getFeatureRelationMap();
+  static Map<String, String> featureRelationMap;
 
-    }
+  @BeforeAll
+  public static void setUp() throws Exception {
+    featureRelationMap = ConversionUtils.getFeatureRelationMap();
+  }
 
-    @Test
-    public void buildFeatureTreeFullMapTest(){
-        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
-        featureRelationMap.forEach((child,parent)->{
-            List<GFF3Feature> featureList = new ArrayList<>();
-            FeatureFactory featureFactory = new FeatureFactory();
-            GFF3Feature childFeature = getGFF3Feature(Optional.of(child),Optional.of(parent));
-            GFF3Feature parentFeature = getGFF3Feature(Optional.of(parent),Optional.empty());
-            featureList.add(childFeature);
-            featureList.add(parentFeature);
+  @Test
+  public void buildFeatureTreeFullMapTest() {
+    GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
+    featureRelationMap.forEach(
+        (child, parent) -> {
+          List<GFF3Feature> featureList = new ArrayList<>();
+          GFF3Feature childFeature = createGFF3Feature(Optional.of(child), Optional.of(parent));
+          GFF3Feature parentFeature = createGFF3Feature(Optional.of(parent), Optional.empty());
+          featureList.add(childFeature);
+          featureList.add(parentFeature);
 
-            Map<String, GFF3Feature> idMap =
-                    featureList.stream()
-                            .filter(f -> f.getId().isPresent())
-                            .collect(Collectors.toMap(f -> f.getId().get(), Function.identity()));
+          List<GFF3Feature> gff3Features = gFF3AnnotationFactory.buildFeatureTree(featureList);
 
-            List<GFF3Feature> gff3Features = gFF3AnnotationFactory.buildFeatureTree(featureList);
-
-            GFF3Feature firstFeature = gff3Features.stream().findFirst().get();
-            assertTrue (firstFeature.getChildren().get(0).equals(childFeature));
-
+          GFF3Feature firstFeature = gff3Features.stream().findFirst().get();
+          assertTrue(firstFeature.getChildren().get(0).equals(childFeature));
         });
+  }
+
+  @Test
+  public void orderRootAndChildrenTest() {
+    GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
+    List<GFF3Feature> featureList = new ArrayList<>();
+    featureRelationMap.forEach(
+        (child, parent) -> {
+          GFF3Feature childFeature = createGFF3Feature(Optional.of(child), Optional.of(parent));
+          GFF3Feature parentFeature = createGFF3Feature(Optional.of(parent), Optional.empty());
+          featureList.add(childFeature);
+          featureList.add(parentFeature);
+        });
+
+    // One feature for each parent and child
+    int numberOfFeatures = featureRelationMap.entrySet().size() * 2;
+    assertEquals(featureList.size(), numberOfFeatures);
+    List<GFF3Feature> rootNode = gFF3AnnotationFactory.buildFeatureTree(featureList);
+
+    // Assert rootNode size = size of parentFeatures got from
+    // createGFF3Feature(Optional.of(parent),Optional.empty());
+    assertEquals(rootNode.size(), featureRelationMap.size());
+
+    featureList.clear();
+    for (GFF3Feature root : rootNode) {
+      gFF3AnnotationFactory.orderRootAndChildren(featureList, root);
+    }
+    assertEquals(featureList.size(), numberOfFeatures);
+
+    Set<String> fetureMapValueSet = new HashSet(featureRelationMap.values());
+
+    long childrenCount = 0;
+    for (String parent : fetureMapValueSet) {
+      long noOfChildrenFromMap =
+          featureRelationMap.values().stream().filter(f -> f.equals(parent)).count();
+      long noOfChildrenFromTree =
+          rootNode.stream().filter(f -> f.getId().get().equals(parent)).count();
+      // System.out.println(parent+" "+noOfChildrenFromMap+" "+noOfChildrenFromTree);
+      assertEquals(noOfChildrenFromMap, noOfChildrenFromTree);
+      childrenCount += noOfChildrenFromTree;
     }
 
-    private GFF3Feature getGFF3Feature(Optional<String> featureName, Optional<String> parentFeatureName){
-        return new GFF3Feature(
-                featureName,
-                parentFeatureName,
-                "1234",
-                ".",
-                featureName.get(),
-                1,
-                800,
-                ".",
-                "+",
-                "",
-                null);
-    }
+    // Assert rootNode children count = count of childFeatures got from
+    // createGFF3Feature(Optional.of(child), Optional.of(parent));
+    assertEquals(childrenCount, featureRelationMap.size());
+  }
+
+  private GFF3Feature createGFF3Feature(
+      Optional<String> featureName, Optional<String> parentFeatureName) {
+    String id = featureName.map(v -> v + "_gene").orElse("_gene");
+    String parent = parentFeatureName.map(v -> v + "_gene").orElse("_gene");
+
+    return new GFF3Feature(
+        featureName,
+        parentFeatureName,
+        "1234",
+        ".",
+        featureName.get(),
+        1,
+        800,
+        ".",
+        "+",
+        "",
+        new HashMap<>(Map.of("ID", id, "Parent", parent, "gene", "geneX")));
+  }
 }
