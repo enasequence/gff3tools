@@ -10,15 +10,39 @@
  */
 package uk.ac.ebi.embl.converter.gff3;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 
-public record GFF3Feature(
-    String accession,
-    String source,
-    String name,
-    long start,
-    long end,
-    String score,
-    String strand,
-    String phase,
-    Map<String, String> attributes) {}
+@RequiredArgsConstructor
+@Getter
+@Setter
+public class GFF3Feature {
+
+  final Optional<String> id;
+  final Optional<String> parentId;
+  final String accession;
+  final String source;
+  final String name;
+  final long start;
+  final long end;
+  final String score;
+  final String strand;
+  final String phase;
+  final Map<String, String> attributes;
+
+  List<GFF3Feature> children = new ArrayList<>();
+  GFF3Feature parent;
+
+  public void addChild(GFF3Feature child) {
+    children.add(child);
+  }
+
+  public boolean hasChildren() {
+    return !children.isEmpty();
+  }
+}

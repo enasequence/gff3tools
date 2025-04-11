@@ -12,8 +12,13 @@ FT   source          1..822
 FT                   /mol_type="genomic DNA"
 FT   gene            1..822
 FT                   /gene="matK"
-FT                   /gene="trnK"
-FT   mRNA             1..822
-FT                   /gene="trnK"
+FT   mRNA            1..822
+FT                   /gene="matK"
+FT   exon            1..50
+FT                   /gene="matK"
+FT   intron          100..150
+FT                   /gene="matK"
+FT   5'UTR           20..30
+FT                   /gene="matK"
 XX
 //

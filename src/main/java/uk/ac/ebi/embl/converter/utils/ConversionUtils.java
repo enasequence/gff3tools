@@ -23,6 +23,7 @@ public enum ConversionUtils {
   private Map<String, ConversionEntry> gff32ff = null;
   private Map<String, String> ff2gff3_qualifiers = null;
   private Map<String, String> gff32ff_qualifiers = null;
+  private Map<String, String> featureRelations = null;
 
   private ConversionUtils() {
     this.loadMaps();
@@ -34,6 +35,10 @@ public enum ConversionUtils {
 
   public static Map<String, String> getFF2GFF3QualifierMap() {
     return INSTANCE.ff2gff3_qualifiers;
+  }
+
+  public static Map<String, String> getFeatureRelationMap() {
+    return INSTANCE.featureRelations;
   }
 
   private void loadMaps() {
@@ -52,6 +57,7 @@ public enum ConversionUtils {
 
       ff2gff3_qualifiers = new HashMap<>();
       gff32ff_qualifiers = new HashMap<>();
+      featureRelations = new HashMap<>();
       lines = readTsvFile("qualifier-mapping.tsv");
       lines.remove(0);
       for (String line : lines) {
@@ -59,6 +65,14 @@ public enum ConversionUtils {
         ff2gff3_qualifiers.put(words[0], words[1]);
         gff32ff_qualifiers.put(words[1], words[0]);
       }
+
+      lines = readTsvFile("feature-parent-child-relation.tsv");
+      lines.remove(0);
+      for (String line : lines) {
+        String[] words = line.split("\t");
+        featureRelations.put(words[0], words[1]);
+      }
+
     } catch (Exception e) {
       throw new RuntimeException(e);
     }

@@ -8,7 +8,7 @@ FT   source          1..59081
 FT                   /mol_type="genomic DNA"
 FT   gene            345..822
 FT                   /gene="matK"
-FT   intron          345..822
+FT   mRNA            345..822
 FT                   /gene="matK"
 XX
 //
