@@ -230,7 +230,7 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
                                 Collectors.toMap(
                                         f -> f.getId().get(),
                                         Function.identity(),
-                                        (existing, replacement) -> existing));
+                                        (existing, replacement) -> replacement));
 
         for (GFF3Feature feature : gffFeatures) {
             String parentId = feature.getParentId().orElse(null);
