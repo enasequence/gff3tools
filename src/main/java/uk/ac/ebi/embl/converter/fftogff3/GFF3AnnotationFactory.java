@@ -320,8 +320,8 @@ public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotat
         // Check if gffFeatures has the parent
         return parentId.isPresent()
                 && gffFeatures.stream().anyMatch(f -> f.getId()
-                .map(id -> id.equalsIgnoreCase(parentId.get()))
-                .orElse(false));
+                        .map(id -> id.equalsIgnoreCase(parentId.get()))
+                        .orElse(false));
     }
 
     private String getId(String name, String geneName) {
