@@ -22,27 +22,29 @@ import lombok.Setter;
 @Getter
 @Setter
 public class GFF3Feature {
+    // Non-Mutable members used in constructor
+    final Optional<String> id;
+    final Optional<String> parentId;
+    final String accession;
+    final String source;
+    final String name;
+    final long start;
+    final long end;
+    final String score;
+    final String strand;
+    final String phase;
+    final Map<String, String> attributes;
 
-  final Optional<String> id;
-  final Optional<String> parentId;
-  final String accession;
-  final String source;
-  final String name;
-  final long start;
-  final long end;
-  final String score;
-  final String strand;
-  final String phase;
-  final Map<String, String> attributes;
+    // Mutable members
+    List<GFF3Feature> children = new ArrayList<>();
+    GFF3Feature parent;
 
-  List<GFF3Feature> children = new ArrayList<>();
-  GFF3Feature parent;
+    // Methods
+    public void addChild(GFF3Feature child) {
+        children.add(child);
+    }
 
-  public void addChild(GFF3Feature child) {
-    children.add(child);
-  }
-
-  public boolean hasChildren() {
-    return !children.isEmpty();
-  }
+    public boolean hasChildren() {
+        return !children.isEmpty();
+    }
 }
