@@ -22,63 +22,58 @@ import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 public class GFF3DirectivesFactory implements IConversionRule<Entry, GFF3Directives> {
 
-  boolean ignoreSpecies;
+    boolean ignoreSpecies;
 
-  public GFF3DirectivesFactory(boolean ignoreSpecies) {
-    this.ignoreSpecies = ignoreSpecies;
-  }
+    public GFF3DirectivesFactory(boolean ignoreSpecies) {
+        this.ignoreSpecies = ignoreSpecies;
+    }
 
-  static final String BASE_TAXON_URL = "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi";
+    static final String BASE_TAXON_URL = "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi";
 
-  private String buildTaxonomyUrl(Optional<OrganismQualifier> qualifier) {
-    Function0<String> getOrganism =
-        () ->
-            qualifier
+    private String buildTaxonomyUrl(Optional<OrganismQualifier> qualifier) {
+        Function0<String> getOrganism = () -> qualifier
                 .map(OrganismQualifier::getValue)
                 .map((name) -> "%s?name=%s".formatted(BASE_TAXON_URL, name))
                 .orElseGet(() -> null);
 
-    return qualifier
-        .map(OrganismQualifier::getTaxon)
-        .map(Taxon::getTaxId)
-        .map((Long id) -> "%s?id=%d".formatted(BASE_TAXON_URL, id))
-        .orElseGet(getOrganism);
-  }
+        return qualifier
+                .map(OrganismQualifier::getTaxon)
+                .map(Taxon::getTaxId)
+                .map((Long id) -> "%s?id=%d".formatted(BASE_TAXON_URL, id))
+                .orElseGet(getOrganism);
+    }
 
-  public GFF3Directives.GFF3Species extractSpecies(Entry entry) throws ConversionError {
+    public GFF3Directives.GFF3Species extractSpecies(Entry entry) throws ConversionError {
 
-    Feature feature =
-        Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresent::new);
+        Feature feature = Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresent::new);
 
-    Optional<OrganismQualifier> qualifier =
-        feature.getQualifiers("organism").stream().findFirst().map(q -> (OrganismQualifier) q);
+        Optional<OrganismQualifier> qualifier =
+                feature.getQualifiers("organism").stream().findFirst().map(q -> (OrganismQualifier) q);
 
-    return new GFF3Directives.GFF3Species(buildTaxonomyUrl(qualifier));
-  }
+        return new GFF3Directives.GFF3Species(buildTaxonomyUrl(qualifier));
+    }
 
-  public GFF3Directives.GFF3SequenceRegion extractSequenceRegion(Entry entry)
-      throws ConversionError {
+    public GFF3Directives.GFF3SequenceRegion extractSequenceRegion(Entry entry) throws ConversionError {
 
-    String accession = entry.getPrimaryAccession();
-    Feature feature =
-        Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresent::new);
+        String accession = entry.getPrimaryAccession();
+        Feature feature = Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresent::new);
 
-    long start = feature.getLocations().getMinPosition();
-    long end = feature.getLocations().getMaxPosition();
+        long start = feature.getLocations().getMinPosition();
+        long end = feature.getLocations().getMaxPosition();
 
-    return new GFF3Directives.GFF3SequenceRegion(accession, start, end);
-  }
+        return new GFF3Directives.GFF3SequenceRegion(accession, start, end);
+    }
 
-  @Override
-  public GFF3Directives from(Entry entry) {
+    @Override
+    public GFF3Directives from(Entry entry) {
 
-    ArrayList<GFF3Directives.GFF3Directive> directives = new ArrayList<>();
-    if (!this.ignoreSpecies) directives.add(extractSpecies(entry));
-    directives.add(extractSequenceRegion(entry));
+        ArrayList<GFF3Directives.GFF3Directive> directives = new ArrayList<>();
+        if (!this.ignoreSpecies) directives.add(extractSpecies(entry));
+        directives.add(extractSequenceRegion(entry));
 
-    return new GFF3Directives(directives);
-  }
+        return new GFF3Directives(directives);
+    }
 
-  public static class NoSourcePresent extends ConversionError {}
-  ;
+    public static class NoSourcePresent extends ConversionError {}
+    ;
 }

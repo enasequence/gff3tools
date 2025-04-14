@@ -17,39 +17,36 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public record GFF3Annotation(
-    GFF3Directives directives,
-    Map<String, List<GFF3Feature>> geneMap,
-    List<GFF3Feature> nonGeneFeatures)
-    implements IGFF3Feature {
-  private void writeFeature(Writer writer, GFF3Feature feature) throws IOException {
-    writer.write(feature.accession());
-    writer.write('\t' + feature.source());
-    writer.write('\t' + feature.name());
-    writer.write("\t%d".formatted(feature.start()));
-    writer.write("\t%d".formatted(feature.end()));
-    writer.write('\t' + feature.score());
-    writer.write('\t' + feature.strand().toString());
-    writer.write('\t' + feature.phase());
-    writer.write(
-        '\t'
-            + feature.attributes().entrySet().stream()
-                .sorted(Map.Entry.comparingByKey()) // Sort by key
-                .map(entry -> entry.getKey() + "=" + entry.getValue()) // Format k=v
-                .collect(Collectors.joining(";", "", ";")));
-    writer.write("\n");
-  }
+        GFF3Directives directives, Map<String, List<GFF3Feature>> geneMap, List<GFF3Feature> nonGeneFeatures)
+        implements IGFF3Feature {
+    private void writeFeature(Writer writer, GFF3Feature feature) throws IOException {
+        writer.write(feature.accession());
+        writer.write('\t' + feature.source());
+        writer.write('\t' + feature.name());
+        writer.write("\t%d".formatted(feature.start()));
+        writer.write("\t%d".formatted(feature.end()));
+        writer.write('\t' + feature.score());
+        writer.write('\t' + feature.strand().toString());
+        writer.write('\t' + feature.phase());
+        writer.write('\t'
+                + feature.attributes().entrySet().stream()
+                        .sorted(Map.Entry.comparingByKey()) // Sort by key
+                        .map(entry -> entry.getKey() + "=" + entry.getValue()) // Format k=v
+                        .collect(Collectors.joining(";", "", ";")));
+        writer.write("\n");
+    }
 
-  @Override
-  public void writeGFF3String(Writer writer) throws IOException {
-    this.directives.writeGFF3String(writer);
-    for (String geneName : geneMap.keySet()) {
-      for (GFF3Feature feature : geneMap.get(geneName)) {
-        writeFeature(writer, feature);
-      }
+    @Override
+    public void writeGFF3String(Writer writer) throws IOException {
+        this.directives.writeGFF3String(writer);
+        for (String geneName : geneMap.keySet()) {
+            for (GFF3Feature feature : geneMap.get(geneName)) {
+                writeFeature(writer, feature);
+            }
+        }
+        for (GFF3Feature feature : nonGeneFeatures) {
+            writeFeature(writer, feature);
+        }
+        writer.write('\n');
     }
-    for (GFF3Feature feature : nonGeneFeatures) {
-      writeFeature(writer, feature);
-    }
-    writer.write('\n');
-  }
 }

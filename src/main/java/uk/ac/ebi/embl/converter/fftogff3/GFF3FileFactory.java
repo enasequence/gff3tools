@@ -19,19 +19,19 @@ import uk.ac.ebi.embl.converter.gff3.GFF3Header;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 public class GFF3FileFactory implements IConversionRule<EmblEntryReader, GFF3File> {
-  @Override
-  public GFF3File from(EmblEntryReader entryReader) throws ConversionError {
-    GFF3Header header = new GFF3Header("3.1.26");
-    List<GFF3Annotation> annotations = new ArrayList<>();
-    try {
-      int entryCount = 0;
-      while (entryReader.read() != null && entryReader.isEntry()) {
-        annotations.add(new GFF3AnnotationFactory(entryCount > 0).from(entryReader.getEntry()));
-        entryCount++;
-      }
-    } catch (Exception e) {
-      throw new RuntimeException(e);
+    @Override
+    public GFF3File from(EmblEntryReader entryReader) throws ConversionError {
+        GFF3Header header = new GFF3Header("3.1.26");
+        List<GFF3Annotation> annotations = new ArrayList<>();
+        try {
+            int entryCount = 0;
+            while (entryReader.read() != null && entryReader.isEntry()) {
+                annotations.add(new GFF3AnnotationFactory(entryCount > 0).from(entryReader.getEntry()));
+                entryCount++;
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return new GFF3File(header, annotations);
     }
-    return new GFF3File(header, annotations);
-  }
 }

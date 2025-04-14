@@ -18,19 +18,19 @@ import uk.ac.ebi.embl.converter.fftogff3.FFToGff3Converter;
 
 public class FFToGff3CLI {
 
-  private static final Logger LOG = LoggerFactory.getLogger(FFToGff3CLI.class);
+    private static final Logger LOG = LoggerFactory.getLogger(FFToGff3CLI.class);
 
-  public static void main(String[] args) {
-    try {
-      // Parse command line arguments
-      Params params = Params.parse(args);
+    public static void main(String[] args) {
+        try {
+            // Parse command line arguments
+            Params params = Params.parse(args);
 
-      // Convert FF to Gff3
-      new FFToGff3Converter().convert(params);
+            // Convert FF to Gff3
+            new FFToGff3Converter().convert(params);
 
-    } catch (CommandLine.ParameterException | IOException e) {
-      LOG.error(e.getMessage());
-      System.exit(1);
+        } catch (CommandLine.ParameterException | IOException e) {
+            LOG.error(e.getMessage());
+            System.exit(1);
+        }
     }
-  }
 }

@@ -17,25 +17,22 @@ import picocli.CommandLine;
 
 public class ParamTest {
 
-  @Test
-  void testValidArgs() {
-    String[] args = "-in inFile -out outFile".split(" ");
+    @Test
+    void testValidArgs() {
+        String[] args = "-in inFile -out outFile".split(" ");
 
-    Params params = Params.parse(args);
-    assertEquals(params.inFile.getName(), "inFile");
-    assertEquals(params.outFile.getName(), "outFile");
-  }
+        Params params = Params.parse(args);
+        assertEquals(params.inFile.getName(), "inFile");
+        assertEquals(params.outFile.getName(), "outFile");
+    }
 
-  @Test
-  void testInvalidArgs() {
-    String[] args = {};
+    @Test
+    void testInvalidArgs() {
+        String[] args = {};
 
-    Exception exception =
-        assertThrows(
-            CommandLine.MissingParameterException.class,
-            () -> {
-              Params.parse(args);
-            });
-    assertTrue(exception.getMessage().contains("Missing required options"));
-  }
+        Exception exception = assertThrows(CommandLine.MissingParameterException.class, () -> {
+            Params.parse(args);
+        });
+        assertTrue(exception.getMessage().contains("Missing required options"));
+    }
 }

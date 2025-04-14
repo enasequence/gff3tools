@@ -24,35 +24,32 @@ import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 class FFToGFF3ConverterTest {
 
-  @Test
-  void testWriteGFF3() throws Exception {
+    @Test
+    void testWriteGFF3() throws Exception {
 
-    Map<String, Path> testFiles = TestUtils.getTestFiles("fftogff3_rules");
+        Map<String, Path> testFiles = TestUtils.getTestFiles("fftogff3_rules");
 
-    for (String filePrefix : testFiles.keySet()) {
-      GFF3FileFactory rule = new GFF3FileFactory();
-      try (BufferedReader testFileReader =
-          TestUtils.getResourceReader(testFiles.get(filePrefix).toString())) {
-        ReaderOptions readerOptions = new ReaderOptions();
-        readerOptions.setIgnoreSequence(true);
-        EmblEntryReader entryReader =
-            new EmblEntryReader(
-                testFileReader, EmblEntryReader.Format.EMBL_FORMAT, "", readerOptions);
-        Writer gff3Writer = new StringWriter();
-        GFF3File gff3 = rule.from(entryReader);
-        gff3.writeGFF3String(gff3Writer);
+        for (String filePrefix : testFiles.keySet()) {
+            GFF3FileFactory rule = new GFF3FileFactory();
+            try (BufferedReader testFileReader =
+                    TestUtils.getResourceReader(testFiles.get(filePrefix).toString())) {
+                ReaderOptions readerOptions = new ReaderOptions();
+                readerOptions.setIgnoreSequence(true);
+                EmblEntryReader entryReader =
+                        new EmblEntryReader(testFileReader, EmblEntryReader.Format.EMBL_FORMAT, "", readerOptions);
+                Writer gff3Writer = new StringWriter();
+                GFF3File gff3 = rule.from(entryReader);
+                gff3.writeGFF3String(gff3Writer);
 
-        String expected;
-        String expectedFilePath = testFiles.get(filePrefix).toString().replace(".embl", ".gff3");
-        try (BufferedReader gff3TestFileReader = TestUtils.getResourceReader(expectedFilePath)) {
-          expected =
-              new BufferedReader(gff3TestFileReader).lines().collect(Collectors.joining("\n"));
+                String expected;
+                String expectedFilePath = testFiles.get(filePrefix).toString().replace(".embl", ".gff3");
+                try (BufferedReader gff3TestFileReader = TestUtils.getResourceReader(expectedFilePath)) {
+                    expected = new BufferedReader(gff3TestFileReader).lines().collect(Collectors.joining("\n"));
+                }
+
+                assertEquals(expected.trim(), gff3Writer.toString().trim(), "Error on test case: " + filePrefix);
+                gff3Writer.close();
+            }
         }
-
-        assertEquals(
-            expected.trim(), gff3Writer.toString().trim(), "Error on test case: " + filePrefix);
-        gff3Writer.close();
-      }
     }
-  }
 }

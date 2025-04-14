@@ -27,250 +27,235 @@ import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
 public class GFF3AnnotationFactory implements IConversionRule<Entry, GFF3Annotation> {
 
-  Logger LOG = LoggerFactory.getLogger(GFF3AnnotationFactory.class);
-  ///  Keeps track of all the features belonging to a gene.
-  Map<String, List<GFF3Feature>> geneMap;
-  ///  List of features that do not belong to a gene.
-  List<GFF3Feature> nonGeneFeatures;
+    Logger LOG = LoggerFactory.getLogger(GFF3AnnotationFactory.class);
+    ///  Keeps track of all the features belonging to a gene.
+    Map<String, List<GFF3Feature>> geneMap;
+    ///  List of features that do not belong to a gene.
+    List<GFF3Feature> nonGeneFeatures;
 
-  boolean ignoreSpecies;
+    boolean ignoreSpecies;
 
-  public GFF3AnnotationFactory(boolean ignoreSpecies) {
-    this.ignoreSpecies = ignoreSpecies;
-  }
+    public GFF3AnnotationFactory(boolean ignoreSpecies) {
+        this.ignoreSpecies = ignoreSpecies;
+    }
 
-  @Override
-  public GFF3Annotation from(Entry entry) {
+    @Override
+    public GFF3Annotation from(Entry entry) {
 
-    geneMap = new LinkedHashMap<>();
-    nonGeneFeatures = new ArrayList<>();
+        geneMap = new LinkedHashMap<>();
+        nonGeneFeatures = new ArrayList<>();
 
-    String accession = entry.getSequence().getAccession();
-    LOG.info("Converting FF entry: {}", accession);
-    // TODO: We need to handle accession versions
-    entry.setPrimaryAccession(accession + ".1");
-    entry.getSequence().setAccession(accession + ".1");
+        String accession = entry.getSequence().getAccession();
+        LOG.info("Converting FF entry: {}", accession);
+        // TODO: We need to handle accession versions
+        entry.setPrimaryAccession(accession + ".1");
+        entry.getSequence().setAccession(accession + ".1");
 
-    GFF3Directives directives = new GFF3DirectivesFactory(this.ignoreSpecies).from(entry);
-    try {
-      Map<String, List<ConversionEntry>> featureMap = ConversionUtils.getFF2GFF3FeatureMap();
+        GFF3Directives directives = new GFF3DirectivesFactory(this.ignoreSpecies).from(entry);
+        try {
+            Map<String, List<ConversionEntry>> featureMap = ConversionUtils.getFF2GFF3FeatureMap();
 
-      for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
+            for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
 
-        if (feature.getName().equalsIgnoreCase("source")) {
-          continue; // early exit
+                if (feature.getName().equalsIgnoreCase("source")) {
+                    continue; // early exit
+                }
+
+                // TODO: insert a gene feature if/where appropriate
+                Optional<ConversionEntry> first = Optional.ofNullable(featureMap.get(feature.getName())).stream()
+                        .flatMap(List::stream)
+                        .filter(conversionEntry -> hasAllQualifiers(feature, conversionEntry))
+                        .findFirst();
+
+                // Rule: Throw an error if we find an unmapped feature
+                if (first.isEmpty()) throw new Exception("Mapping not found for " + feature.getName());
+
+                buildGeneFeatureMap(entry.getPrimaryAccession(), feature);
+            }
+
+            // For circular topologies; We have not found a circular feature so we must include a region
+            // encompasing all source.
+            if (isCircularTopology(entry) && lacksCircularAttribute()) {
+                nonGeneFeatures.add(createLandmarkFeature(accession, entry));
+            }
+            sortFeaturesAndAssignId();
+
+            return new GFF3Annotation(directives, geneMap, nonGeneFeatures);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private boolean lacksCircularAttribute() {
+        return !geneMap.values().stream().flatMap(List::stream).anyMatch(feature -> feature.attributes()
+                .containsKey("Is_circular"));
+    }
+
+    private boolean isCircularTopology(Entry entry) {
+        return entry.getSequence().getTopology() == Sequence.Topology.CIRCULAR;
+    }
+
+    private GFF3Feature createLandmarkFeature(String name, Entry entry) {
+        CompoundLocation<Location> locations = entry.getPrimarySourceFeature().getLocations();
+        return new GFF3Feature(
+                entry.getPrimaryAccession(),
+                ".",
+                "region",
+                locations.getMinPosition(),
+                locations.getMaxPosition(),
+                ".",
+                "+",
+                ".",
+                Map.of("ID", name, "Is_circular", "true"));
+    }
+
+    private List<GFF3Feature> transformFeature(String accession, Feature ffFeature, Optional<String> gene) {
+        Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
+        List<GFF3Feature> gff3Features = new ArrayList<>();
+
+        String source = ".";
+        String score = ".";
+
+        Map<String, String> baseAttributes = ffFeature.getQualifiers().stream()
+                .filter(q -> !"gene".equals(q.getName())) // gene is filtered for handling overlapping gene
+                .collect(Collectors.toMap(
+                        q -> qualifierMap.getOrDefault(q.getName(), q.getName()), // Rename if mapping exists
+                        q -> q.isValue() ? q.getValue() : "true", // Ensure non-empty values
+                        (existing, replacement) -> existing));
+
+        gene.ifPresent(v -> baseAttributes.put("gene", v));
+
+        for (Location location : ffFeature.getLocations().getLocations()) {
+            Map<String, String> attributes = new LinkedHashMap<>(baseAttributes);
+
+            String partiality = getPartiality(location);
+            if (!partiality.isBlank()) {
+                attributes.put("partial", partiality);
+            }
+
+            gff3Features.add(new GFF3Feature(
+                    accession,
+                    source,
+                    ffFeature.getName(),
+                    location.getBeginPosition(),
+                    location.getEndPosition(),
+                    score,
+                    getStrand(ffFeature),
+                    getPhase(ffFeature),
+                    attributes));
         }
 
-        // TODO: insert a gene feature if/where appropriate
-        Optional<ConversionEntry> first =
-            Optional.ofNullable(featureMap.get(feature.getName())).stream()
-                .flatMap(List::stream)
-                .filter(conversionEntry -> hasAllQualifiers(feature, conversionEntry))
-                .findFirst();
-
-        // Rule: Throw an error if we find an unmapped feature
-        if (first.isEmpty()) throw new Exception("Mapping not found for " + feature.getName());
-
-        buildGeneFeatureMap(entry.getPrimaryAccession(), feature);
-      }
-
-      // For circular topologies; We have not found a circular feature so we must include a region
-      // encompasing all source.
-      if (isCircularTopology(entry) && lacksCircularAttribute()) {
-        nonGeneFeatures.add(createLandmarkFeature(accession, entry));
-      }
-      sortFeaturesAndAssignId();
-
-      return new GFF3Annotation(directives, geneMap, nonGeneFeatures);
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private boolean lacksCircularAttribute() {
-    return !geneMap.values().stream()
-        .flatMap(List::stream)
-        .anyMatch(feature -> feature.attributes().containsKey("Is_circular"));
-  }
-
-  private boolean isCircularTopology(Entry entry) {
-    return entry.getSequence().getTopology() == Sequence.Topology.CIRCULAR;
-  }
-
-  private GFF3Feature createLandmarkFeature(String name, Entry entry) {
-    CompoundLocation<Location> locations = entry.getPrimarySourceFeature().getLocations();
-    return new GFF3Feature(
-        entry.getPrimaryAccession(),
-        ".",
-        "region",
-        locations.getMinPosition(),
-        locations.getMaxPosition(),
-        ".",
-        "+",
-        ".",
-        Map.of("ID", name, "Is_circular", "true"));
-  }
-
-  private List<GFF3Feature> transformFeature(
-      String accession, Feature ffFeature, Optional<String> gene) {
-    Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
-    List<GFF3Feature> gff3Features = new ArrayList<>();
-
-    String source = ".";
-    String score = ".";
-
-    Map<String, String> baseAttributes =
-        ffFeature.getQualifiers().stream()
-            .filter(
-                q -> !"gene".equals(q.getName())) // gene is filtered for handling overlapping gene
-            .collect(
-                Collectors.toMap(
-                    q ->
-                        qualifierMap.getOrDefault(
-                            q.getName(), q.getName()), // Rename if mapping exists
-                    q -> q.isValue() ? q.getValue() : "true", // Ensure non-empty values
-                    (existing, replacement) -> existing));
-
-    gene.ifPresent(v -> baseAttributes.put("gene", v));
-
-    for (Location location : ffFeature.getLocations().getLocations()) {
-      Map<String, String> attributes = new LinkedHashMap<>(baseAttributes);
-
-      String partiality = getPartiality(location);
-      if (!partiality.isBlank()) {
-        attributes.put("partial", partiality);
-      }
-
-      gff3Features.add(
-          new GFF3Feature(
-              accession,
-              source,
-              ffFeature.getName(),
-              location.getBeginPosition(),
-              location.getEndPosition(),
-              score,
-              getStrand(ffFeature),
-              getPhase(ffFeature),
-              attributes));
+        return gff3Features;
     }
 
-    return gff3Features;
-  }
+    private void buildGeneFeatureMap(String accession, Feature ffFeature) {
 
-  private void buildGeneFeatureMap(String accession, Feature ffFeature) {
+        List<Qualifier> genes = ffFeature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
 
-    List<Qualifier> genes = ffFeature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
+        try {
 
-    try {
+            if (genes.isEmpty()) {
+                nonGeneFeatures.addAll(transformFeature(accession, ffFeature, Optional.empty()));
+            } else {
 
-      if (genes.isEmpty()) {
-        nonGeneFeatures.addAll(transformFeature(accession, ffFeature, Optional.empty()));
-      } else {
+                for (Qualifier gene : genes) {
+                    String geneName = gene.getValue();
 
-        for (Qualifier gene : genes) {
-          String geneName = gene.getValue();
+                    List<GFF3Feature> gfFeatures = geneMap.getOrDefault(geneName, new ArrayList<>());
 
-          List<GFF3Feature> gfFeatures = geneMap.getOrDefault(geneName, new ArrayList<>());
-
-          gfFeatures.addAll(transformFeature(accession, ffFeature, Optional.of(geneName)));
-          geneMap.put(geneName, gfFeatures);
+                    gfFeatures.addAll(transformFeature(accession, ffFeature, Optional.of(geneName)));
+                    geneMap.put(geneName, gfFeatures);
+                }
+            }
+        } catch (Exception e) {
+            throw new ConversionError();
         }
-      }
-    } catch (Exception e) {
-      throw new ConversionError();
     }
-  }
 
-  private void sortFeaturesAndAssignId() {
-    for (String geneName : geneMap.keySet()) {
-      List<GFF3Feature> gfFeatures = geneMap.get(geneName);
+    private void sortFeaturesAndAssignId() {
+        for (String geneName : geneMap.keySet()) {
+            List<GFF3Feature> gfFeatures = geneMap.get(geneName);
 
-      // Sort feature by start and end location
-      gfFeatures.sort(
-          Comparator.comparingLong(GFF3Feature::start)
-              .thenComparing(GFF3Feature::end, Comparator.reverseOrder()));
+            // Sort feature by start and end location
+            gfFeatures.sort(Comparator.comparingLong(GFF3Feature::start)
+                    .thenComparing(GFF3Feature::end, Comparator.reverseOrder()));
 
-      Optional<GFF3Feature> firstFeature = gfFeatures.stream().findFirst();
+            Optional<GFF3Feature> firstFeature = gfFeatures.stream().findFirst();
 
-      // Set ID and Parent
-      if (firstFeature.isPresent()) {
+            // Set ID and Parent
+            if (firstFeature.isPresent()) {
 
-        // Set ID for root
-        String idValue = "%s_%s".formatted(firstFeature.get().name(), geneName);
-        firstFeature.get().attributes().put("ID", idValue);
-        String locus_tag = firstFeature.get().attributes().get("locus_tag");
-        // Set Parent only for children
-        gfFeatures.stream()
-            .skip(1)
-            .forEach(
-                feature -> {
-                  String featID = "%s_%s".formatted(feature.name(), geneName);
-                  if (featID.equals(idValue)) {
-                    feature.attributes().put("ID", featID);
-                  } else {
-                    feature.attributes().put("Parent", idValue);
-                    feature.attributes().remove("gene");
-                    if (locus_tag != null) {
-                      feature.attributes().put("locus_tag", locus_tag);
+                // Set ID for root
+                String idValue = "%s_%s".formatted(firstFeature.get().name(), geneName);
+                firstFeature.get().attributes().put("ID", idValue);
+                String locus_tag = firstFeature.get().attributes().get("locus_tag");
+                // Set Parent only for children
+                gfFeatures.stream().skip(1).forEach(feature -> {
+                    String featID = "%s_%s".formatted(feature.name(), geneName);
+                    if (featID.equals(idValue)) {
+                        feature.attributes().put("ID", featID);
+                    } else {
+                        feature.attributes().put("Parent", idValue);
+                        feature.attributes().remove("gene");
+                        if (locus_tag != null) {
+                            feature.attributes().put("locus_tag", locus_tag);
+                        }
                     }
-                  }
                 });
-      }
-    }
-  }
-
-  private String getStrand(Feature feature) {
-    return feature.getLocations().isComplement() ? "-" : "+";
-  }
-
-  private String getPhase(Feature feature) {
-
-    // Rule: Use the phase value if present in a qualified.
-    // Rule: If phase qualifier is not present, calculate it only for CDS (default
-    // 0) or use "." otherwise
-
-    Qualifier phase =
-        feature.getQualifiers().stream()
-            .filter(qualifier -> qualifier.getName().equalsIgnoreCase("phase"))
-            .findFirst()
-            .orElse(null);
-    Qualifier codonStart =
-        feature.getQualifiers().stream()
-            .filter(qualifier -> qualifier.getName().equalsIgnoreCase("codon_start"))
-            .findFirst()
-            .orElse(null);
-    if (phase != null) {
-      return phase.getValue();
-    } else if (feature.getName().equalsIgnoreCase("CDS")) {
-      return codonStart == null ? "0" : String.valueOf((Long.parseLong(codonStart.getValue()) - 1));
+            }
+        }
     }
 
-    return ".";
-  }
-
-  private String getPartiality(Location location) {
-
-    StringJoiner partiality = new StringJoiner(",");
-
-    if (location.isFivePrimePartial()) {
-      partiality.add("start");
+    private String getStrand(Feature feature) {
+        return feature.getLocations().isComplement() ? "-" : "+";
     }
-    if (location.isThreePrimePartial()) {
-      partiality.add("end");
-    }
-    // Returns empty string if non partial location
-    return partiality.length() > 1 ? partiality.toString() : "";
-  }
 
-  private boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {
-    boolean firstQualifierMatches = conversionEntry.getQualifier1() == null;
-    boolean secondQualifierMatches = conversionEntry.getQualifier2() == null;
+    private String getPhase(Feature feature) {
 
-    for (Qualifier qualifier : feature.getQualifiers()) {
-      String formatted = "/%s=%s".formatted(qualifier.getName(), qualifier.getValue());
-      firstQualifierMatches |= formatted.equalsIgnoreCase(conversionEntry.getQualifier1());
-      secondQualifierMatches |= formatted.equalsIgnoreCase(conversionEntry.getQualifier2());
+        // Rule: Use the phase value if present in a qualified.
+        // Rule: If phase qualifier is not present, calculate it only for CDS (default
+        // 0) or use "." otherwise
+
+        Qualifier phase = feature.getQualifiers().stream()
+                .filter(qualifier -> qualifier.getName().equalsIgnoreCase("phase"))
+                .findFirst()
+                .orElse(null);
+        Qualifier codonStart = feature.getQualifiers().stream()
+                .filter(qualifier -> qualifier.getName().equalsIgnoreCase("codon_start"))
+                .findFirst()
+                .orElse(null);
+        if (phase != null) {
+            return phase.getValue();
+        } else if (feature.getName().equalsIgnoreCase("CDS")) {
+            return codonStart == null ? "0" : String.valueOf((Long.parseLong(codonStart.getValue()) - 1));
+        }
+
+        return ".";
     }
-    return firstQualifierMatches && secondQualifierMatches;
-  }
+
+    private String getPartiality(Location location) {
+
+        StringJoiner partiality = new StringJoiner(",");
+
+        if (location.isFivePrimePartial()) {
+            partiality.add("start");
+        }
+        if (location.isThreePrimePartial()) {
+            partiality.add("end");
+        }
+        // Returns empty string if non partial location
+        return partiality.length() > 1 ? partiality.toString() : "";
+    }
+
+    private boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {
+        boolean firstQualifierMatches = conversionEntry.getQualifier1() == null;
+        boolean secondQualifierMatches = conversionEntry.getQualifier2() == null;
+
+        for (Qualifier qualifier : feature.getQualifiers()) {
+            String formatted = "/%s=%s".formatted(qualifier.getName(), qualifier.getValue());
+            firstQualifierMatches |= formatted.equalsIgnoreCase(conversionEntry.getQualifier1());
+            secondQualifierMatches |= formatted.equalsIgnoreCase(conversionEntry.getQualifier2());
+        }
+        return firstQualifierMatches && secondQualifierMatches;
+    }
 }

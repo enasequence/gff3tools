@@ -15,28 +15,28 @@ import picocli.CommandLine;
 
 public class Params {
 
-  @CommandLine.Option(names = "-in", description = "Input file for conversion", required = true)
-  public File inFile;
+    @CommandLine.Option(names = "-in", description = "Input file for conversion", required = true)
+    public File inFile;
 
-  @CommandLine.Option(names = "-out", description = "Out file after conversion", required = true)
-  public File outFile;
+    @CommandLine.Option(names = "-out", description = "Out file after conversion", required = true)
+    public File outFile;
 
-  public static Params parse(String[] args) {
-    Params params = new Params();
-    CommandLine cmd = new CommandLine(params);
-    try {
-      cmd.setOptionsCaseInsensitive(true).parseArgs(args);
-    } catch (CommandLine.ParameterException ex) {
-      printErrorAndUsage(cmd, ex);
-      throw ex;
+    public static Params parse(String[] args) {
+        Params params = new Params();
+        CommandLine cmd = new CommandLine(params);
+        try {
+            cmd.setOptionsCaseInsensitive(true).parseArgs(args);
+        } catch (CommandLine.ParameterException ex) {
+            printErrorAndUsage(cmd, ex);
+            throw ex;
+        }
+        return params;
     }
-    return params;
-  }
 
-  private static void printErrorAndUsage(CommandLine cmd, CommandLine.ParameterException ex) {
-    cmd.getErr().println(ex.getMessage());
-    if (!CommandLine.UnmatchedArgumentException.printSuggestions(ex, cmd.getErr())) {
-      cmd.usage(cmd.getErr());
+    private static void printErrorAndUsage(CommandLine cmd, CommandLine.ParameterException ex) {
+        cmd.getErr().println(ex.getMessage());
+        if (!CommandLine.UnmatchedArgumentException.printSuggestions(ex, cmd.getErr())) {
+            cmd.usage(cmd.getErr());
+        }
     }
-  }
 }

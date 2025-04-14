@@ -24,30 +24,29 @@ import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 public class FFToGff3Converter {
 
-  private static final Logger LOG = LoggerFactory.getLogger(FFToGff3Converter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(FFToGff3Converter.class);
 
-  public void convert(Params params) throws IOException {
-    Path filePath = params.inFile.toPath();
-    try (BufferedReader bufferedReader = Files.newBufferedReader(filePath);
-        StringWriter gff3Writer = new StringWriter()) {
-      EmblEntryReader entryReader =
-          new EmblEntryReader(
-              bufferedReader,
-              EmblEntryReader.Format.EMBL_FORMAT,
-              params.inFile.getAbsolutePath(),
-              getReaderOptions());
+    public void convert(Params params) throws IOException {
+        Path filePath = params.inFile.toPath();
+        try (BufferedReader bufferedReader = Files.newBufferedReader(filePath);
+                StringWriter gff3Writer = new StringWriter()) {
+            EmblEntryReader entryReader = new EmblEntryReader(
+                    bufferedReader,
+                    EmblEntryReader.Format.EMBL_FORMAT,
+                    params.inFile.getAbsolutePath(),
+                    getReaderOptions());
 
-      GFF3FileFactory fftogff3 = new GFF3FileFactory();
-      GFF3File file = fftogff3.from(entryReader);
-      file.writeGFF3String(gff3Writer);
-      Files.write(params.outFile.toPath(), gff3Writer.toString().getBytes());
-      LOG.info("Gff3 file is written in: {}", params.outFile.toPath());
+            GFF3FileFactory fftogff3 = new GFF3FileFactory();
+            GFF3File file = fftogff3.from(entryReader);
+            file.writeGFF3String(gff3Writer);
+            Files.write(params.outFile.toPath(), gff3Writer.toString().getBytes());
+            LOG.info("Gff3 file is written in: {}", params.outFile.toPath());
+        }
     }
-  }
 
-  private ReaderOptions getReaderOptions() {
-    ReaderOptions readerOptions = new ReaderOptions();
-    readerOptions.setIgnoreSequence(true);
-    return readerOptions;
-  }
+    private ReaderOptions getReaderOptions() {
+        ReaderOptions readerOptions = new ReaderOptions();
+        readerOptions.setIgnoreSequence(true);
+        return readerOptions;
+    }
 }

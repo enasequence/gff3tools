@@ -11,7 +11,7 @@
 package uk.ac.ebi.embl.converter;
 
 public interface IConversionRule<I, O> {
-  O from(I input) throws ConversionError;
+    O from(I input) throws ConversionError;
 
-  class ConversionError extends Error {}
+    class ConversionError extends Error {}
 }

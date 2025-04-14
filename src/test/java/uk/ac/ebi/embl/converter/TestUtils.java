@@ -19,25 +19,25 @@ import java.util.Objects;
 
 public class TestUtils {
 
-  public static BufferedReader getResourceReader(String resourceName) throws IOException {
-    FileReader reader = new FileReader(resourceName);
-    return new BufferedReader(reader);
-  }
-
-  public static Map<String, Path> getTestFiles(String resourceName) {
-    ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-    URL resource = classLoader.getResource(resourceName);
-    Map<String, Path> inFiles = new LinkedHashMap<>();
-    if (resource != null) {
-      File folder = new File(resource.getPath());
-      for (File file : Objects.requireNonNull(folder.listFiles())) {
-        if (file.getName().endsWith(".embl")) {
-          inFiles.put(file.getName().replace(".embl", ""), file.toPath());
-        }
-      }
-    } else {
-      System.out.println("Directory not found!");
+    public static BufferedReader getResourceReader(String resourceName) throws IOException {
+        FileReader reader = new FileReader(resourceName);
+        return new BufferedReader(reader);
     }
-    return inFiles;
-  }
+
+    public static Map<String, Path> getTestFiles(String resourceName) {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        URL resource = classLoader.getResource(resourceName);
+        Map<String, Path> inFiles = new LinkedHashMap<>();
+        if (resource != null) {
+            File folder = new File(resource.getPath());
+            for (File file : Objects.requireNonNull(folder.listFiles())) {
+                if (file.getName().endsWith(".embl")) {
+                    inFiles.put(file.getName().replace(".embl", ""), file.toPath());
+                }
+            }
+        } else {
+            System.out.println("Directory not found!");
+        }
+        return inFiles;
+    }
 }
