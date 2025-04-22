@@ -20,16 +20,16 @@ public record GFF3Annotation(
         GFF3Directives directives, Map<String, List<GFF3Feature>> geneMap, List<GFF3Feature> nonGeneFeatures)
         implements IGFF3Feature {
     private void writeFeature(Writer writer, GFF3Feature feature) throws IOException {
-        writer.write(feature.accession());
-        writer.write('\t' + feature.source());
-        writer.write('\t' + feature.name());
-        writer.write("\t%d".formatted(feature.start()));
-        writer.write("\t%d".formatted(feature.end()));
-        writer.write('\t' + feature.score());
-        writer.write('\t' + feature.strand().toString());
-        writer.write('\t' + feature.phase());
+        writer.write(feature.getAccession());
+        writer.write('\t' + feature.getSource());
+        writer.write('\t' + feature.getName());
+        writer.write("\t%d".formatted(feature.getStart()));
+        writer.write("\t%d".formatted(feature.getEnd()));
+        writer.write('\t' + feature.getScore());
+        writer.write('\t' + feature.getStrand().toString());
+        writer.write('\t' + feature.getPhase());
         writer.write('\t'
-                + feature.attributes().entrySet().stream()
+                + feature.getAttributes().entrySet().stream()
                         .sorted(Map.Entry.comparingByKey()) // Sort by key
                         .map(entry -> entry.getKey() + "=" + entry.getValue()) // Format k=v
                         .collect(Collectors.joining(";", "", ";")));

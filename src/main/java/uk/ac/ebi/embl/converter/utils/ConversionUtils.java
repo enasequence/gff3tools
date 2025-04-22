@@ -21,8 +21,9 @@ public enum ConversionUtils {
     INSTANCE;
     private Map<String, List<ConversionEntry>> ff2gff3 = null;
     private Map<String, ConversionEntry> gff32ff = null;
-    private Map<String, String> ff2gff3_qualifiers = null;
-    private Map<String, String> gff32ff_qualifiers = null;
+    private Map<String, String> ff2gff3Qualifiers = null;
+    private Map<String, String> gff32ffQualifiers = null;
+    private Map<String, String> featureRelations = null;
 
     private ConversionUtils() {
         this.loadMaps();
@@ -33,7 +34,11 @@ public enum ConversionUtils {
     }
 
     public static Map<String, String> getFF2GFF3QualifierMap() {
-        return INSTANCE.ff2gff3_qualifiers;
+        return INSTANCE.ff2gff3Qualifiers;
+    }
+
+    public static Map<String, String> getFeatureRelationMap() {
+        return INSTANCE.featureRelations;
     }
 
     private void loadMaps() {
@@ -50,15 +55,24 @@ public enum ConversionUtils {
                 gff32ff.putIfAbsent(conversionEntry.sOTerm, conversionEntry);
             }
 
-            ff2gff3_qualifiers = new HashMap<>();
-            gff32ff_qualifiers = new HashMap<>();
+            ff2gff3Qualifiers = new HashMap<>();
+            gff32ffQualifiers = new HashMap<>();
+            featureRelations = new HashMap<>();
             lines = readTsvFile("qualifier-mapping.tsv");
             lines.remove(0);
             for (String line : lines) {
                 String[] words = line.split("\t");
-                ff2gff3_qualifiers.put(words[0], words[1]);
-                gff32ff_qualifiers.put(words[1], words[0]);
+                ff2gff3Qualifiers.put(words[0], words[1]);
+                gff32ffQualifiers.put(words[1], words[0]);
             }
+
+            lines = readTsvFile("feature-parent-child-relation.tsv");
+            lines.remove(0);
+            for (String line : lines) {
+                String[] words = line.split("\t");
+                featureRelations.put(words[0], words[1]);
+            }
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

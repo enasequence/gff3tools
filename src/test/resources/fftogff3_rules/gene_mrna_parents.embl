@@ -13,7 +13,7 @@ FT   gene            1..315242
 FT                   /gene="RHD"
 FT   mRNA            133806..191728
 FT                   /gene="RHD"
-FT   intron          133970..145841
+FT   rRNA            133970..145841
 FT                   /gene="RHD"
 FT                   /number=1
 XX

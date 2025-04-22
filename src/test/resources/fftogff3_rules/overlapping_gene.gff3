@@ -2,4 +2,4 @@
 ##sequence-region TEST01.1 1 822
 TEST01.1	.	gene	1	822	.	+	.	ID=gene_matK;gene=matK;
 TEST01.1	.	gene	1	822	.	+	.	ID=gene_trnK;gene=trnK;
-TEST01.1	.	intron	1	822	.	+	.	Parent=gene_trnK;
+TEST01.1	.	mRNA	1	822	.	+	.	Parent=gene_trnK;

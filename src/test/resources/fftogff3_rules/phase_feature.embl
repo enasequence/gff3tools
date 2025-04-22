@@ -9,9 +9,9 @@ FH   Key             Location/Qualifiers
 FH
 FT   source          1..315242
 FT                   /mol_type="genomic DNA"
-FT   mRNA            133806..191728
+FT   gene            133806..191728
 FT                   /gene="RHD"
-FT   exon            133806..133969
+FT   mRNA            133806..133969
 FT                   /gene="RHD"
 FT                   /number=1
 FT   CDS             133822..190207
@@ -27,9 +27,9 @@ FT                   FNSALLRSPIERKNAVFNTYYAVAVSVVTAISGSSLAHPQGKISKTYVHSAVLAGGVAV
 FT                   GTSCHLIPSPWLAMVLGLVAGLISVGGAKYLPGCCNRVLGIPHSSIMGYNFSLLGLLGE
 FT                   IIYIVLLVLDTVGAGNGMIGFQVLLSIGELSLAIVIALTSGLLTGLLLNLKIWKAPHEA
 FT                   KYFDDQVFWKFPHLAVGF"
-FT   mRNA            133806..191728
+FT   gene            133806..191728
 FT                   /gene="matK"
-FT   exon            133806..133969
+FT   mRNA            133806..133969
 FT                   /gene="matK"
 FT                   /number=1
 FT   CDS             133822..190207
@@ -45,9 +45,9 @@ FT                   FNSALLRSPIERKNAVFNTYYAVAVSVVTAISGSSLAHPQGKISKTYVHSAVLAGGVAV
 FT                   GTSCHLIPSPWLAMVLGLVAGLISVGGAKYLPGCCNRVLGIPHSSIMGYNFSLLGLLGE
 FT                   IIYIVLLVLDTVGAGNGMIGFQVLLSIGELSLAIVIALTSGLLTGLLLNLKIWKAPHEA
 FT                   KYFDDQVFWKFPHLAVGF"
-FT   mRNA            133806..191728
+FT   gene            133806..191728
 FT                   /gene="RHCE"
-FT   exon            133806..133969
+FT   mRNA            133806..133969
 FT                   /gene="RHCE"
 FT                   /number=1
 FT   CDS             133822..190207
@@ -63,9 +63,9 @@ FT                   FNSALLRSPIERKNAVFNTYYAVAVSVVTAISGSSLAHPQGKISKTYVHSAVLAGGVAV
 FT                   GTSCHLIPSPWLAMVLGLVAGLISVGGAKYLPGCCNRVLGIPHSSIMGYNFSLLGLLGE
 FT                   IIYIVLLVLDTVGAGNGMIGFQVLLSIGELSLAIVIALTSGLLTGLLLNLKIWKAPHEA
 FT                   KYFDDQVFWKFPHLAVGF"
-FT   mRNA            133806..191728
+FT   gene            133806..191728
 FT                   /gene="SMP1"
-FT   exon            133806..133969
+FT   mRNA            133806..133969
 FT                   /gene="SMP1"
 FT                   /number=1
 FT   CDS             133822..190207
