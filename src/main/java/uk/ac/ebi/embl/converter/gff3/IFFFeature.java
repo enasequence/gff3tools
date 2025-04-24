@@ -14,5 +14,5 @@ import java.io.IOException;
 import java.io.Writer;
 
 public interface IFFFeature {
-  void writeFFString(Writer writer) throws IOException;
+    void writeFFString(Writer writer) throws IOException;
 }

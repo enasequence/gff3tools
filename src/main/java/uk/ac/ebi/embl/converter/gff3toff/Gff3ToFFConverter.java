@@ -19,24 +19,23 @@ import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.converter.cli.Params;
 import uk.ac.ebi.embl.converter.ff.EmblFlatFile;
-import uk.ac.ebi.embl.gff3.reader.GFF3FlatFileEntryReader;
+import uk.ac.ebi.embl.converter.gff3.GFF3Reader;
 
 public class Gff3ToFFConverter {
 
-  private static final Logger LOG = LoggerFactory.getLogger(Gff3ToFFConverter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Gff3ToFFConverter.class);
 
-  public void convert(Params params) throws IOException {
-    Path filePath = params.inFile.toPath();
-    try (BufferedReader bufferedReader = Files.newBufferedReader(filePath);
-        StringWriter ffWriter = new StringWriter()) {
-      GFF3FlatFileEntryReader entryReader = new GFF3FlatFileEntryReader(bufferedReader);
-
-      FFEntryFactory ffEntryFactory = new FFEntryFactory();
-      List<Entry> entries = ffEntryFactory.from(entryReader);
-      EmblFlatFile emblFlatFile = new EmblFlatFile(entries);
-      emblFlatFile.writeFFString(ffWriter);
-      Files.write(params.outFile.toPath(), ffWriter.toString().getBytes());
-      LOG.info("Embl flat file is written in: {}", params.outFile.toPath());
+    public void convert(Params params) throws IOException {
+        Path filePath = params.inFile.toPath();
+        try (BufferedReader bufferedReader = Files.newBufferedReader(filePath);
+                StringWriter ffWriter = new StringWriter()) {
+            GFF3Reader gff3Reader = new GFF3Reader(bufferedReader);
+            FFEntryFactory ffEntryFactory = new FFEntryFactory();
+            List<Entry> entries = ffEntryFactory.from(gff3Reader);
+            EmblFlatFile emblFlatFile = new EmblFlatFile(entries);
+            emblFlatFile.writeFFString(ffWriter);
+            Files.write(params.outFile.toPath(), ffWriter.toString().getBytes());
+            LOG.info("Embl flat file is written in: {}", params.outFile.toPath());
+        }
     }
-  }
 }

@@ -10,10 +10,7 @@
  */
 package uk.ac.ebi.embl.converter.gff3;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -46,5 +43,40 @@ public class GFF3Feature {
 
     public boolean hasChildren() {
         return !children.isEmpty();
+    }
+
+    public static GFF3Feature fromString(String line) {
+        String[] parts = line.split("\t");
+        Optional<String> id = Optional.empty();
+        if (parts.length > 0) {
+            id = Optional.of(parts[0]);
+        }
+
+        Optional<String> parentId = Optional.empty();
+        if (parts.length > 0) {
+            parentId = Optional.of(parts[1]);
+        }
+        return new GFF3Feature(
+                id,
+                parentId,
+                parts[2],
+                parts[3],
+                parts[4],
+                Long.parseLong(parts[5]),
+                Long.parseLong(parts[6]),
+                parts[7],
+                parts[8],
+                parts[9],
+                attributesFromString(parts[10]));
+    }
+
+    private static Map<String, String> attributesFromString(String line) {
+        Map<String, String> attributes = new HashMap<>();
+        String[] parts = line.split(";");
+        for (String part : parts) {
+            String[] keyValue = part.split("=");
+            attributes.put(keyValue[0], keyValue[1]);
+        }
+        return attributes;
     }
 }

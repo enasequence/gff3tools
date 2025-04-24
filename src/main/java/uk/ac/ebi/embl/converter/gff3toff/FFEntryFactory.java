@@ -13,23 +13,17 @@ package uk.ac.ebi.embl.converter.gff3toff;
 import java.io.IOException;
 import java.util.List;
 import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.api.gff3.GFF3RecordSet;
 import uk.ac.ebi.embl.converter.IConversionRule;
-import uk.ac.ebi.embl.converter.ff.FFEntryMapper;
-import uk.ac.ebi.embl.gff3.reader.GFF3FlatFileEntryReader;
+import uk.ac.ebi.embl.converter.gff3.GFF3Reader;
 
-public class FFEntryFactory implements IConversionRule<GFF3FlatFileEntryReader, List<Entry>> {
-  @Override
-  public List<Entry> from(GFF3FlatFileEntryReader entryReader) throws ConversionError {
-    try {
-      while (entryReader.read() != null && entryReader.isEntry()) {
-        GFF3RecordSet recordSet = entryReader.getEntry();
-        List<Entry> emblEntryList = FFEntryMapper.mapGFF3RecordToEntry(recordSet);
-        return emblEntryList;
-      }
-      return null;
-    } catch (IOException e) {
-      throw new ConversionError();
+public class FFEntryFactory implements IConversionRule<GFF3Reader, List<Entry>> {
+    @Override
+    public List<Entry> from(GFF3Reader entryReader) throws ConversionError {
+        GFF3Mapper mapper = new GFF3Mapper();
+        try {
+            return mapper.mapGFF3ToEntry(entryReader);
+        } catch (IOException e) {
+            throw new ConversionError();
+        }
     }
-  }
 }

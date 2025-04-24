@@ -18,13 +18,13 @@ import uk.ac.ebi.embl.converter.gff3.IFFFeature;
 import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 
 public record EmblFlatFile(List<Entry> entries) implements IFFFeature {
-  @Override
-  public void writeFFString(Writer writer) throws IOException {
+    @Override
+    public void writeFFString(Writer writer) throws IOException {
 
-    for (Entry entry : entries) {
-      EmblEntryWriter entryWriter = new EmblEntryWriter(entry);
-      entryWriter.setShowAcStartLine(false);
-      entryWriter.write(writer);
+        for (Entry entry : entries) {
+            EmblEntryWriter entryWriter = new EmblEntryWriter(entry);
+            entryWriter.setShowAcStartLine(false);
+            entryWriter.write(writer);
+        }
     }
-  }
 }

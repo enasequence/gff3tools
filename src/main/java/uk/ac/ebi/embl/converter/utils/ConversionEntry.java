@@ -40,13 +40,13 @@ public class ConversionEntry {
         return sOID;
     }
 
-  public String getFeature() {
-    return feature;
-  }
+    public String getFeature() {
+        return feature;
+    }
 
-  public String getSOTerm() {
-    return sOTerm;
-  }
+    public String getSOTerm() {
+        return sOTerm;
+    }
 
     @Override
     public String toString() {
