@@ -10,10 +10,13 @@
  */
 package uk.ac.ebi.embl.converter.gff3;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.util.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
 
 @RequiredArgsConstructor
 @Getter
@@ -45,29 +48,35 @@ public class GFF3Feature {
         return !children.isEmpty();
     }
 
-    public static GFF3Feature fromString(String line) {
+    public static GFF3Feature fromReader(BufferedReader reader) throws GFF3ValidationError, IOException {
+        reader.mark(1024);
+        String line = reader.readLine();
         String[] parts = line.split("\t");
-        Optional<String> id = Optional.empty();
-        if (parts.length > 0) {
-            id = Optional.of(parts[0]);
+        if (line.startsWith("#")) {
+            reader.reset();
+        }
+        if (parts.length != 9) {
+            throw new GFF3ValidationError("Feature doesn't have 9 columns");
         }
 
-        Optional<String> parentId = Optional.empty();
-        if (parts.length > 0) {
-            parentId = Optional.of(parts[1]);
-        }
+        Map<String, String> attributes = attributesFromString(parts[8]);
+
+        Optional<String> id = attributes.containsKey("ID") ? Optional.of(attributes.get("ID")) : Optional.empty();
+        Optional<String> parentId =
+                attributes.containsKey("parentID") ? Optional.of(attributes.get("parentID")) : Optional.empty();
+
         return new GFF3Feature(
                 id,
                 parentId,
+                parts[0],
+                parts[1],
                 parts[2],
-                parts[3],
-                parts[4],
-                Long.parseLong(parts[5]),
-                Long.parseLong(parts[6]),
+                Long.parseLong(parts[3]),
+                Long.parseLong(parts[4]),
+                parts[5],
+                parts[6],
                 parts[7],
-                parts[8],
-                parts[9],
-                attributesFromString(parts[10]));
+                attributesFromString(parts[8]));
     }
 
     private static Map<String, String> attributesFromString(String line) {

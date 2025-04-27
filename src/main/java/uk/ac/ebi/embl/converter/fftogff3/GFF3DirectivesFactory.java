@@ -16,11 +16,10 @@ import java.util.Optional;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.OrganismQualifier;
-import uk.ac.ebi.embl.converter.IConversionRule;
 import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
-public class GFF3DirectivesFactory implements IConversionRule<Entry, GFF3Directives> {
+public class GFF3DirectivesFactory {
 
     boolean ignoreSpecies;
 
@@ -43,7 +42,7 @@ public class GFF3DirectivesFactory implements IConversionRule<Entry, GFF3Directi
                 .orElseGet(getOrganism);
     }
 
-    public GFF3Directives.GFF3Species extractSpecies(Entry entry) throws ConversionError {
+    public GFF3Directives.GFF3Species extractSpecies(Entry entry) throws FFtoGFF3ConversionError {
 
         Feature feature = Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresent::new);
 
@@ -53,7 +52,7 @@ public class GFF3DirectivesFactory implements IConversionRule<Entry, GFF3Directi
         return new GFF3Directives.GFF3Species(buildTaxonomyUrl(qualifier));
     }
 
-    public GFF3Directives.GFF3SequenceRegion extractSequenceRegion(Entry entry) throws ConversionError {
+    public GFF3Directives.GFF3SequenceRegion extractSequenceRegion(Entry entry) throws FFtoGFF3ConversionError {
 
         String accession = entry.getPrimaryAccession();
         Feature feature = Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresent::new);
@@ -64,8 +63,7 @@ public class GFF3DirectivesFactory implements IConversionRule<Entry, GFF3Directi
         return new GFF3Directives.GFF3SequenceRegion(accession, start, end);
     }
 
-    @Override
-    public GFF3Directives from(Entry entry) {
+    public GFF3Directives from(Entry entry) throws FFtoGFF3ConversionError {
 
         ArrayList<GFF3Directives.GFF3Directive> directives = new ArrayList<>();
         if (!this.ignoreSpecies) directives.add(extractSpecies(entry));
@@ -74,6 +72,10 @@ public class GFF3DirectivesFactory implements IConversionRule<Entry, GFF3Directi
         return new GFF3Directives(directives);
     }
 
-    public static class NoSourcePresent extends ConversionError {}
+    public static class NoSourcePresent extends FFtoGFF3ConversionError {
+        public NoSourcePresent() {
+            super("No source found");
+        }
+    }
     ;
 }

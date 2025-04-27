@@ -27,7 +27,7 @@ class FFToGFF3ConverterTest {
     @Test
     void testWriteGFF3() throws Exception {
 
-        Map<String, Path> testFiles = TestUtils.getTestFiles("fftogff3_rules");
+        Map<String, Path> testFiles = TestUtils.getTestFiles("fftogff3_rules", ".embl");
 
         for (String filePrefix : testFiles.keySet()) {
             GFF3FileFactory rule = new GFF3FileFactory();

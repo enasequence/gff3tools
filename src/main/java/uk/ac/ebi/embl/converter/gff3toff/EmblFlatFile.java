@@ -14,11 +14,9 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
 import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.converter.gff3.IFFFeature;
 import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 
-public record EmblFlatFile(List<Entry> entries) implements IFFFeature {
-    @Override
+public record EmblFlatFile(List<Entry> entries) {
     public void writeFFString(Writer writer) throws IOException {
 
         for (Entry entry : entries) {

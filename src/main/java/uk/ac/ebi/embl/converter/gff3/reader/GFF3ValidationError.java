@@ -8,11 +8,10 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.gff3;
+package uk.ac.ebi.embl.converter.gff3.reader;
 
-import java.io.IOException;
-import java.io.Writer;
-
-public interface IFFFeature {
-    void writeFFString(Writer writer) throws IOException;
+public class GFF3ValidationError extends Exception {
+    public GFF3ValidationError(String message) {
+        super(message);
+    }
 }

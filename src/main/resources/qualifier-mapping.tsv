@@ -1,3 +1,5 @@
 FFTerm	GFF3Term
 circular_RNA	Is_circular
 db_xref	Dbxref
+	ID
+	partial

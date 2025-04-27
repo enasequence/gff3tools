@@ -14,6 +14,7 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
+import uk.ac.ebi.embl.converter.fftogff3.FFtoGFF3ConversionError;
 import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
 
 public class Gff3ToFFCLI {
@@ -28,7 +29,7 @@ public class Gff3ToFFCLI {
             // Convert Gff3 to FF
             new Gff3ToFFConverter().convert(params);
 
-        } catch (CommandLine.ParameterException | IOException e) {
+        } catch (CommandLine.ParameterException | IOException | FFtoGFF3ConversionError e) {
             LOG.error(e.getMessage());
             System.exit(1);
         }
