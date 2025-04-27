@@ -60,6 +60,9 @@ public class GFF3Mapper {
             for(GFF3Directives.GFF3Directive directive: annotation.directives().directives()) {
                 if (directive.getClass() == GFF3Directives.GFF3SequenceRegion.class) {
                     GFF3Directives.GFF3SequenceRegion reg = (GFF3Directives.GFF3SequenceRegion) directive;
+                    String accession = reg.accession();
+                    String accessionId = accession.substring(0, accession.lastIndexOf('.'));
+                    entry.setPrimaryAccession(accessionId);
                     Location location = this.locationFactory.createLocalRange(reg.start(), reg.end());
                     Order<Location> compoundJoin = new Order();
                     compoundJoin.addLocation(location);
@@ -71,9 +74,21 @@ public class GFF3Mapper {
 
 
         for (GFF3Feature feature : getAnnotationFeatures(annotation)) {
-            String accession = feature.getAccession();
-            String accessionId = accession.substring(0, accession.lastIndexOf('.'));
-            entry.setPrimaryAccession(accessionId);
+            entry.addFeature(mapGFF3Feature(feature));
+            for (GFF3Feature childFeature : feature.getChildren()) {
+                Feature ffChildFeature = mapGFF3Feature(childFeature);
+                if (feature.getAttributes().containsKey("gene")) {
+                    ffChildFeature.addQualifier("gene", feature.getAttributes().get("gene"));
+                }
+                entry.addFeature(ffChildFeature);
+            }
+        }
+
+        return entry;
+    }
+
+    private Feature mapGFF3Feature(GFF3Feature feature) {
+
             String featureType = feature.getName();
             long start = feature.getStart();
             long end = feature.getEnd();
@@ -111,11 +126,8 @@ public class GFF3Mapper {
             Feature ffFeature = this.featureFactory.createFeature(featureType);
             ffFeature.setLocations(compoundJoin);
             ffFeature.addQualifiers(qualifierList);
-            entry.addFeature(ffFeature);
 
-        }
-
-        return entry;
+            return ffFeature;
     }
 
     public List<Entry> mapGFF3ToEntry(GFF3FileReader gff3Reader) throws IOException, GFF3ValidationError {

@@ -3,3 +3,4 @@ circular_RNA	Is_circular
 db_xref	Dbxref
 	ID
 	partial
+	Parent
