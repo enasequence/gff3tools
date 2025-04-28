@@ -11,6 +11,10 @@
 package uk.ac.ebi.embl.converter.fftogff3;
 
 public class FFtoGFF3ConversionError extends Exception {
+    public FFtoGFF3ConversionError(final String message, final Exception cause) {
+        super(message, cause);
+    }
+
     public FFtoGFF3ConversionError(String message) {
         super(message);
     }
