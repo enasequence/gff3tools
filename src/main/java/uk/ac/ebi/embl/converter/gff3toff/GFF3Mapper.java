@@ -17,6 +17,7 @@ import uk.ac.ebi.embl.api.entry.EntryFactory;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.feature.FeatureFactory;
 import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
+import uk.ac.ebi.embl.api.entry.location.CompoundLocation;
 import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.api.entry.location.LocationFactory;
 import uk.ac.ebi.embl.api.entry.location.Order;
@@ -86,19 +87,28 @@ public class GFF3Mapper {
 
     private Feature mapGFF3Feature(GFF3Feature gff3Feature) {
 
-        String featureType = gff3Feature.getName();
-        long start = gff3Feature.getStart();
-        long end = gff3Feature.getEnd();
         Map<String, String> attributes = gff3Feature.getAttributes();
-
         Collection<Qualifier> qualifiers = mapGFF3Attributes(attributes);
 
+        CompoundLocation<Location> locations = mapGFF3Location(gff3Feature);
+
+        String featureType = gff3Feature.getName();
+        Feature ffFeature = this.featureFactory.createFeature(featureType);
+        ffFeature.setLocations(locations);
+        ffFeature.addQualifiers(qualifiers);
+
+        return ffFeature;
+    }
+
+    private CompoundLocation<Location> mapGFF3Location(GFF3Feature gff3Feature) {
+
+        long start = gff3Feature.getStart();
+        long end = gff3Feature.getEnd();
         List<String> partials = Arrays.stream(
                         gff3Feature.getAttributes().getOrDefault("partial", "").split(","))
                 .toList();
 
-        Location location = this.locationFactory.createLocalRange(
-                start, end, gff3Feature.getStrand().equals("-"));
+        Location location = this.locationFactory.createLocalRange(start, end, gff3Feature.getStrand().equals("-"));
         if (partials.contains("start")) {
             location.setFivePrimePartial(true);
         }
@@ -107,12 +117,7 @@ public class GFF3Mapper {
         }
         Order<Location> compoundJoin = new Order();
         compoundJoin.addLocation(location);
-
-        Feature ffFeature = this.featureFactory.createFeature(featureType);
-        ffFeature.setLocations(compoundJoin);
-        ffFeature.addQualifiers(qualifiers);
-
-        return ffFeature;
+        return compoundJoin;
     }
 
     private Collection<Qualifier> mapGFF3Attributes(Map<String, String> attributes) {
