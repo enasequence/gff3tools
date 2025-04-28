@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.converter.gff3.reader;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.*;
@@ -27,24 +28,27 @@ public class GFF3FileReader {
     static Pattern GFF3_FEATURE = Pattern.compile(
             "^(?<accession>.+)\\t(?<source>.+)\\t(?<name>.+)\\t(?<start>[0-9]+)\\t(?<end>[0-9]+)\\t(?<score>.+)\\t(?<strand>\\+|\\-)\\t(?<phase>.+)\\t(?<attributes>.+)?$");
 
-    Scanner scanner;
+    BufferedReader bufferedReader;
 
     public GFF3FileReader(Reader reader) {
-        this.scanner = new Scanner(reader);
+        this.bufferedReader = new BufferedReader(reader);
     }
 
     private GFF3Annotation readAnnotation() throws IOException, GFF3ValidationError {
-        scanner.useDelimiter("\n");
         List<GFF3Directives.GFF3Directive> directives = new ArrayList<>();
         Map<String, List<GFF3Feature>> geneMap = new HashMap<>();
         List<GFF3Feature> nonGeneFeatures = new ArrayList<>();
         Map<String, GFF3Feature> featureIdx = new HashMap<>();
 
-        while (scanner.hasNext()) {
-            String line = scanner.next();
+        while (true) {
+            String line = this.bufferedReader.readLine();
+            if (line == null) {
+                // Reached end of stream
+                break;
+            }
             if (line.isBlank()) {
                 // Ignore blank lines
-                break;
+                continue;
             }
             Matcher m = DIRECTIVE_SEQUENCE.matcher(line);
             if (m.matches()) {
@@ -142,23 +146,31 @@ public class GFF3FileReader {
         return annotations;
     }
 
-    public GFF3File read() throws IOException, GFF3ValidationError {
+    public GFF3Header readHeader() throws IOException, GFF3ValidationError, GFF3ValidationError {
+        while (true) {
+            String line = this.bufferedReader.readLine();
+            if (line == null) {
+                throw new GFF3ValidationError("GFF3 header not found");
+            }
+            if (line.isBlank()) {
+                continue;
+            }
 
-        scanner.useDelimiter("\n");
-        if (scanner.hasNext()) {
-            String line = scanner.next();
             Matcher m = DIRECTIVE_VERSION.matcher(line);
             if (m.matches()) {
                 String version = m.group("version");
                 GFF3Header header = new GFF3Header(version);
-                List<GFF3Annotation> annotations = this.readAnnotationList();
-                GFF3File gff3File = new GFF3File(header, annotations);
-                return gff3File;
+                return header;
             } else {
                 throw new GFF3ValidationError("Invalid GFF3 header");
             }
-        } else {
-            return null;
         }
+    }
+
+    public GFF3File read() throws IOException, GFF3ValidationError {
+        GFF3Header header = readHeader();
+        List<GFF3Annotation> annotations = this.readAnnotationList();
+        GFF3File gff3File = new GFF3File(header, annotations);
+        return gff3File;
     }
 }
