@@ -29,7 +29,7 @@ public class FFToGff3CLI {
             // Convert FF to Gff3
             new FFToGff3Converter().convert(params);
 
-        } catch (CommandLine.ParameterException | IOException | FFtoGFF3ConversionError e) {
+        } catch (CommandLine.ParameterException | FFtoGFF3ConversionError e) {
             LOG.error(e.getMessage());
             System.exit(1);
         }

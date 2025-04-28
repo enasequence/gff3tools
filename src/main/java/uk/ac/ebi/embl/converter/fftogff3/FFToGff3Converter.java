@@ -26,7 +26,7 @@ public class FFToGff3Converter {
 
     private static final Logger LOG = LoggerFactory.getLogger(FFToGff3Converter.class);
 
-    public void convert(Params params) throws IOException, FFtoGFF3ConversionError {
+    public void convert(Params params) throws FFtoGFF3ConversionError {
         Path filePath = params.inFile.toPath();
         try (BufferedReader bufferedReader = Files.newBufferedReader(filePath);
                 StringWriter gff3Writer = new StringWriter()) {
@@ -41,6 +41,8 @@ public class FFToGff3Converter {
             file.writeGFF3String(gff3Writer);
             Files.write(params.outFile.toPath(), gff3Writer.toString().getBytes());
             LOG.info("Gff3 file is written in: {}", params.outFile.toPath());
+        } catch (IOException e) {
+            throw new FFtoGFF3ConversionError("Error reading file " + filePath, e);
         }
     }
 
