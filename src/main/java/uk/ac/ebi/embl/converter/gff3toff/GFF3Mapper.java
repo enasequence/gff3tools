@@ -12,19 +12,16 @@ package uk.ac.ebi.embl.converter.gff3toff;
 
 import java.io.IOException;
 import java.util.*;
-
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.EntryFactory;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.feature.FeatureFactory;
 import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
-import uk.ac.ebi.embl.api.entry.location.Join;
 import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.api.entry.location.LocationFactory;
 import uk.ac.ebi.embl.api.entry.location.Order;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.qualifier.QualifierFactory;
-import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
@@ -52,12 +49,12 @@ public class GFF3Mapper {
 
     public Entry mapGFF3ToEntry(GFF3Annotation annotation) {
 
-
         Entry entry = entryFactory.createEntry();
         entry.setSequence(sequenceFactory.createSequence());
         if (annotation.directives().directives().size() > 0) {
             SourceFeature sourceFeature = this.featureFactory.createSourceFeature();
-            for(GFF3Directives.GFF3Directive directive: annotation.directives().directives()) {
+            for (GFF3Directives.GFF3Directive directive :
+                    annotation.directives().directives()) {
                 if (directive.getClass() == GFF3Directives.GFF3SequenceRegion.class) {
                     GFF3Directives.GFF3SequenceRegion reg = (GFF3Directives.GFF3SequenceRegion) directive;
                     String accession = reg.accession();
@@ -71,7 +68,6 @@ public class GFF3Mapper {
             }
             entry.addFeature(sourceFeature);
         }
-
 
         for (GFF3Feature feature : getAnnotationFeatures(annotation)) {
             entry.addFeature(mapGFF3Feature(feature));
@@ -89,52 +85,53 @@ public class GFF3Mapper {
 
     private Feature mapGFF3Feature(GFF3Feature feature) {
 
-            String featureType = feature.getName();
-            long start = feature.getStart();
-            long end = feature.getEnd();
-            Map attributes = feature.getAttributes();
-            Collection<Qualifier> qualifierList = new ArrayList();
+        String featureType = feature.getName();
+        long start = feature.getStart();
+        long end = feature.getEnd();
+        Map attributes = feature.getAttributes();
+        Collection<Qualifier> qualifierList = new ArrayList();
 
-            Map<String, String> qmap = ConversionUtils.getGFF32FFQualifierMap();
-            for (Object o : attributes.entrySet()) {
-                Map.Entry attributePairs = (Map.Entry) o;
-                String attributeKey = attributePairs.getKey().toString();
-                if (qmap.containsKey(attributeKey)) {
-                    attributeKey = qmap.get(attributeKey);
-                }
-                if (!attributeKey.isBlank()) {
-                    String attributeValue = attributePairs.getValue().toString();
-
-                    Qualifier qualifier = this.qualifierFactory.createQualifier(attributeKey, attributeValue);
-                    qualifierList.add(qualifier);
-                }
-
+        Map<String, String> qmap = ConversionUtils.getGFF32FFQualifierMap();
+        for (Object o : attributes.entrySet()) {
+            Map.Entry attributePairs = (Map.Entry) o;
+            String attributeKey = attributePairs.getKey().toString();
+            if (qmap.containsKey(attributeKey)) {
+                attributeKey = qmap.get(attributeKey);
             }
+            if (!attributeKey.isBlank()) {
+                String attributeValue = attributePairs.getValue().toString();
 
-            List<String> partials = Arrays.stream(feature.getAttributes().getOrDefault("partial", "").split(",")).toList();
-
-            Location location = this.locationFactory.createLocalRange(start, end, feature.getStrand().equals("-"));
-            if (partials.contains("start")) {
-                location.setFivePrimePartial(true);
+                Qualifier qualifier = this.qualifierFactory.createQualifier(attributeKey, attributeValue);
+                qualifierList.add(qualifier);
             }
-            if (partials.contains("end")) {
-                location.setThreePrimePartial(true);
-            }
-            Order<Location> compoundJoin = new Order();
-            compoundJoin.addLocation(location);
+        }
 
-            Feature ffFeature = this.featureFactory.createFeature(featureType);
-            ffFeature.setLocations(compoundJoin);
-            ffFeature.addQualifiers(qualifierList);
+        List<String> partials = Arrays.stream(
+                        feature.getAttributes().getOrDefault("partial", "").split(","))
+                .toList();
 
-            return ffFeature;
+        Location location = this.locationFactory.createLocalRange(
+                start, end, feature.getStrand().equals("-"));
+        if (partials.contains("start")) {
+            location.setFivePrimePartial(true);
+        }
+        if (partials.contains("end")) {
+            location.setThreePrimePartial(true);
+        }
+        Order<Location> compoundJoin = new Order();
+        compoundJoin.addLocation(location);
+
+        Feature ffFeature = this.featureFactory.createFeature(featureType);
+        ffFeature.setLocations(compoundJoin);
+        ffFeature.addQualifiers(qualifierList);
+
+        return ffFeature;
     }
 
     public List<Entry> mapGFF3ToEntry(GFF3FileReader gff3Reader) throws IOException, GFF3ValidationError {
         GFF3File gff3File = gff3Reader.read();
-        ArrayList<Entry> entries = new ArrayList<>(gff3File.annotations().stream()
-                .map(this::mapGFF3ToEntry)
-                .toList());
+        ArrayList<Entry> entries = new ArrayList<>(
+                gff3File.annotations().stream().map(this::mapGFF3ToEntry).toList());
         return entries;
     }
 }

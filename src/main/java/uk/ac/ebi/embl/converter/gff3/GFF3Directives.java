@@ -10,13 +10,9 @@
  */
 package uk.ac.ebi.embl.converter.gff3;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
 
 public record GFF3Directives(List<GFF3Directive> directives) implements IGFF3Feature {
     @Override
@@ -27,63 +23,19 @@ public record GFF3Directives(List<GFF3Directive> directives) implements IGFF3Fea
     }
 
     public record GFF3SequenceRegion(String accession, long start, long end) implements GFF3Directive {
-        // This regex provides the following matching roups:
-        //  - accession
-        //      - accessionID
-        //      - accessionVersion (optional)
-        //  - start
-        //  - end
-        static Pattern RX = Pattern.compile(
-                "^##sequence-region (?<accession>(?<accessionID>[0-9a-zA-Z]+)([.](?<accessionVersion>[0-9]+))?)\\s(?<start>[0-9]+)\\s(?<end>[0-9]+)\\s*$");
 
         @Override
         public void writeGFF3String(Writer writer) throws IOException {
             writer.write("##sequence-region %s %d %d\n".formatted(accession, start, end));
         }
-
-        public static GFF3SequenceRegion fromGFF3Reader(BufferedReader bufferedReader)
-                throws IOException, GFF3ValidationError {
-            bufferedReader.mark(1024);
-            String line = bufferedReader.readLine();
-            if (line == null || !line.startsWith("##sequence-region")) {
-                bufferedReader.reset();
-                return null;
-            }
-            Matcher matcher = RX.matcher(line);
-            if (matcher.matches()) {
-                String id = matcher.group("accessionID");
-                long start = Long.parseLong(matcher.group("start"));
-                long end = Long.parseLong(matcher.group("end"));
-                return new GFF3SequenceRegion(id, start, end);
-            }
-            throw new GFF3ValidationError("Invalid sequence-region");
-        }
     }
 
     public record GFF3Species(String species) implements GFF3Directive {
-        static Pattern RX = Pattern.compile("^##species (?<species>.+)$");
-
         @Override
         public void writeGFF3String(Writer writer) throws IOException {
             if (species != null) {
                 writer.write("##species %s\n".formatted(species));
             }
-        }
-
-        public static GFF3Species fromGFF3Reader(BufferedReader bufferedReader)
-                throws IOException, GFF3ValidationError {
-            bufferedReader.mark(1024);
-            String line = bufferedReader.readLine();
-            if (line == null || !line.startsWith("##species")) {
-                bufferedReader.reset();
-                return null;
-            }
-            Matcher matcher = RX.matcher(line);
-            if (matcher.matches()) {
-                String species = matcher.group("species");
-                return new GFF3Species(species);
-            }
-            throw new GFF3ValidationError("Invalid species");
         }
     }
 

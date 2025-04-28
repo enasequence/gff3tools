@@ -10,15 +10,7 @@
  */
 package uk.ac.ebi.embl.converter;
 
-import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.converter.fftogff3.FFtoGFF3ConversionError;
-import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.converter.gff3toff.EmblFlatFile;
-import uk.ac.ebi.embl.converter.gff3toff.FFEntryFactory;
-import uk.ac.ebi.embl.converter.gff3.GFF3File;
-import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
-import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.BufferedReader;
 import java.io.StringWriter;
@@ -26,8 +18,11 @@ import java.io.Writer;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.converter.fftogff3.FFtoGFF3ConversionError;
+import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.converter.gff3toff.EmblFlatFile;
+import uk.ac.ebi.embl.converter.gff3toff.FFEntryFactory;
 
 class GFF3ToFFConverterTest {
 
