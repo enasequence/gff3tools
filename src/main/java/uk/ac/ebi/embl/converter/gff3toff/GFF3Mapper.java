@@ -83,12 +83,12 @@ public class GFF3Mapper {
         return entry;
     }
 
-    private Feature mapGFF3Feature(GFF3Feature feature) {
+    private Feature mapGFF3Feature(GFF3Feature gff3Feature) {
 
-        String featureType = feature.getName();
-        long start = feature.getStart();
-        long end = feature.getEnd();
-        Map attributes = feature.getAttributes();
+        String featureType = gff3Feature.getName();
+        long start = gff3Feature.getStart();
+        long end = gff3Feature.getEnd();
+        Map attributes = gff3Feature.getAttributes();
         Collection<Qualifier> qualifierList = new ArrayList();
 
         Map<String, String> qmap = ConversionUtils.getGFF32FFQualifierMap();
@@ -107,11 +107,11 @@ public class GFF3Mapper {
         }
 
         List<String> partials = Arrays.stream(
-                        feature.getAttributes().getOrDefault("partial", "").split(","))
+                        gff3Feature.getAttributes().getOrDefault("partial", "").split(","))
                 .toList();
 
         Location location = this.locationFactory.createLocalRange(
-                start, end, feature.getStrand().equals("-"));
+                start, end, gff3Feature.getStrand().equals("-"));
         if (partials.contains("start")) {
             location.setFivePrimePartial(true);
         }
