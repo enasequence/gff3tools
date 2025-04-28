@@ -40,12 +40,8 @@ public class GFF3FileReader {
         List<GFF3Feature> nonGeneFeatures = new ArrayList<>();
         Map<String, GFF3Feature> featureIdx = new HashMap<>();
 
-        while (true) {
-            String line = this.bufferedReader.readLine();
-            if (line == null) {
-                // Reached end of stream
-                break;
-            }
+        String line;
+        while ((line = this.bufferedReader.readLine()) != null) {
             if (line.isBlank()) {
                 // Ignore blank lines
                 continue;
@@ -113,6 +109,7 @@ public class GFF3FileReader {
 
                 continue;
             }
+            // TODO: Validation, line not recognised
             break;
         }
 
@@ -147,11 +144,8 @@ public class GFF3FileReader {
     }
 
     public GFF3Header readHeader() throws IOException, GFF3ValidationError, GFF3ValidationError {
-        while (true) {
-            String line = this.bufferedReader.readLine();
-            if (line == null) {
-                throw new GFF3ValidationError("GFF3 header not found");
-            }
+        String line;
+        while ((line = this.bufferedReader.readLine()) != null) {
             if (line.isBlank()) {
                 continue;
             }
@@ -165,6 +159,7 @@ public class GFF3FileReader {
                 throw new GFF3ValidationError("Invalid GFF3 header");
             }
         }
+        throw new GFF3ValidationError("GFF3 header not found");
     }
 
     public GFF3File read() throws IOException, GFF3ValidationError {
