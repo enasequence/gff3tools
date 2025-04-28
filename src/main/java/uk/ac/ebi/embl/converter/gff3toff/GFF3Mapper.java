@@ -32,6 +32,7 @@ import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
 public class GFF3Mapper {
+    private final Map<String, String> qmap = ConversionUtils.getGFF32FFQualifierMap();
     private final EntryFactory entryFactory = new EntryFactory();
     private final FeatureFactory featureFactory = new FeatureFactory();
     private final QualifierFactory qualifierFactory = new QualifierFactory();
@@ -88,23 +89,9 @@ public class GFF3Mapper {
         String featureType = gff3Feature.getName();
         long start = gff3Feature.getStart();
         long end = gff3Feature.getEnd();
-        Map attributes = gff3Feature.getAttributes();
-        Collection<Qualifier> qualifierList = new ArrayList();
+        Map<String, String> attributes = gff3Feature.getAttributes();
 
-        Map<String, String> qmap = ConversionUtils.getGFF32FFQualifierMap();
-        for (Object o : attributes.entrySet()) {
-            Map.Entry attributePairs = (Map.Entry) o;
-            String attributeKey = attributePairs.getKey().toString();
-            if (qmap.containsKey(attributeKey)) {
-                attributeKey = qmap.get(attributeKey);
-            }
-            if (!attributeKey.isBlank()) {
-                String attributeValue = attributePairs.getValue().toString();
-
-                Qualifier qualifier = this.qualifierFactory.createQualifier(attributeKey, attributeValue);
-                qualifierList.add(qualifier);
-            }
-        }
+        Collection<Qualifier> qualifiers = mapGFF3Attributes(attributes);
 
         List<String> partials = Arrays.stream(
                         gff3Feature.getAttributes().getOrDefault("partial", "").split(","))
@@ -123,9 +110,35 @@ public class GFF3Mapper {
 
         Feature ffFeature = this.featureFactory.createFeature(featureType);
         ffFeature.setLocations(compoundJoin);
-        ffFeature.addQualifiers(qualifierList);
+        ffFeature.addQualifiers(qualifiers);
 
         return ffFeature;
+    }
+
+    private Collection<Qualifier> mapGFF3Attributes(Map<String, String> attributes) {
+        Collection<Qualifier> qualifierList = new ArrayList();
+
+        for (Object o : attributes.entrySet()) {
+            Map.Entry<String, String> attributePairs = (Map.Entry) o;
+            Qualifier qualifier = this.mapGFF3Attribute(attributePairs);
+            if (qualifier != null) {
+                qualifierList.add(qualifier);
+            }
+        }
+
+        return qualifierList;
+    }
+
+    private Qualifier mapGFF3Attribute(Map.Entry<String, String> attributePairs) {
+        String attributeKey = attributePairs.getKey().toString();
+        if (qmap.containsKey(attributeKey)) {
+            attributeKey = qmap.get(attributeKey);
+        }
+        if (!attributeKey.isBlank()) {
+            String attributeValue = attributePairs.getValue().toString();
+            return this.qualifierFactory.createQualifier(attributeKey, attributeValue);
+        }
+        return null;
     }
 
     public List<Entry> mapGFF3ToEntry(GFF3FileReader gff3Reader) throws IOException, GFF3ValidationError {
