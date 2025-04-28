@@ -23,7 +23,7 @@ public class Gff3ToFFConverter {
 
     private static final Logger LOG = LoggerFactory.getLogger(Gff3ToFFConverter.class);
 
-    public void convert(Params params) throws IOException, FFtoGFF3ConversionError {
+    public void convert(Params params) throws FFtoGFF3ConversionError {
         Path filePath = params.inFile.toPath();
         try (BufferedReader bufferedReader = Files.newBufferedReader(filePath);
                 StringWriter ffWriter = new StringWriter()) {
@@ -33,6 +33,8 @@ public class Gff3ToFFConverter {
             emblFlatFile.writeFFString(ffWriter);
             Files.write(params.outFile.toPath(), ffWriter.toString().getBytes());
             LOG.info("Embl flat file is written in: {}", params.outFile.toPath());
+        } catch (IOException e) {
+            throw new FFtoGFF3ConversionError("Error reading file " + filePath, e);
         }
     }
 }

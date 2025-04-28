@@ -10,7 +10,6 @@
  */
 package uk.ac.ebi.embl.converter.cli;
 
-import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -29,7 +28,7 @@ public class Gff3ToFFCLI {
             // Convert Gff3 to FF
             new Gff3ToFFConverter().convert(params);
 
-        } catch (CommandLine.ParameterException | IOException | FFtoGFF3ConversionError e) {
+        } catch (CommandLine.ParameterException | FFtoGFF3ConversionError e) {
             LOG.error(e.getMessage());
             System.exit(1);
         }
