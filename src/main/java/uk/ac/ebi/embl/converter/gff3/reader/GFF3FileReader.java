@@ -29,9 +29,11 @@ public class GFF3FileReader {
             "^(?<accession>.+)\\t(?<source>.+)\\t(?<name>.+)\\t(?<start>[0-9]+)\\t(?<end>[0-9]+)\\t(?<score>.+)\\t(?<strand>\\+|\\-)\\t(?<phase>.+)\\t(?<attributes>.+)?$");
 
     BufferedReader bufferedReader;
+    int lineCount;
 
     public GFF3FileReader(Reader reader) {
         this.bufferedReader = new BufferedReader(reader);
+        lineCount = 0;
     }
 
     private GFF3Annotation readAnnotation() throws IOException, GFF3ValidationError {
@@ -41,7 +43,7 @@ public class GFF3FileReader {
         Map<String, GFF3Feature> featureIdx = new HashMap<>();
 
         String line;
-        while ((line = this.bufferedReader.readLine()) != null) {
+        while ((line = readLine()) != null) {
             if (line.isBlank()) {
                 // Ignore blank lines
                 continue;
@@ -109,7 +111,7 @@ public class GFF3FileReader {
 
                 continue;
             }
-            // TODO: Validation, line not recognised
+            // TODO: Validation, cant match line to a valid GFF3Record
             break;
         }
 
@@ -129,7 +131,7 @@ public class GFF3FileReader {
         return attributes;
     }
 
-    private List<GFF3Annotation> readAnnotationList() throws IOException, GFF3ValidationError, GFF3ValidationError {
+    private List<GFF3Annotation> readAnnotationList() throws IOException, GFF3ValidationError {
         List<GFF3Annotation> annotations = new ArrayList<>();
         while (true) {
             // readAnnotation
@@ -143,9 +145,9 @@ public class GFF3FileReader {
         return annotations;
     }
 
-    public GFF3Header readHeader() throws IOException, GFF3ValidationError, GFF3ValidationError {
+    public GFF3Header readHeader() throws IOException, GFF3ValidationError {
         String line;
-        while ((line = this.bufferedReader.readLine()) != null) {
+        while ((line = readLine()) != null) {
             if (line.isBlank()) {
                 continue;
             }
@@ -156,10 +158,10 @@ public class GFF3FileReader {
                 GFF3Header header = new GFF3Header(version);
                 return header;
             } else {
-                throw new GFF3ValidationError("Invalid GFF3 header");
+                throw new GFF3ValidationError(lineCount, "Invalid GFF3 header");
             }
         }
-        throw new GFF3ValidationError("GFF3 header not found");
+        throw new GFF3ValidationError(lineCount, "GFF3 header not found");
     }
 
     public GFF3File read() throws IOException, GFF3ValidationError {
@@ -167,5 +169,10 @@ public class GFF3FileReader {
         List<GFF3Annotation> annotations = this.readAnnotationList();
         GFF3File gff3File = new GFF3File(header, annotations);
         return gff3File;
+    }
+
+    private String readLine() throws IOException {
+        this.lineCount++;
+        return this.bufferedReader.readLine();
     }
 }

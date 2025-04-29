@@ -11,7 +11,7 @@
 package uk.ac.ebi.embl.converter.gff3.reader;
 
 public class GFF3ValidationError extends Exception {
-    public GFF3ValidationError(String message) {
-        super(message);
+    public GFF3ValidationError(int line, String message) {
+        super(String.format("Line: %d - %s", line, message));
     }
 }
