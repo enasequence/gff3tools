@@ -16,8 +16,6 @@ import java.io.Reader;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import uk.ac.ebi.embl.converter.gff3.*;
 
 public class GFF3FileReader {
@@ -38,9 +36,9 @@ public class GFF3FileReader {
         lineCount = 0;
     }
 
-    private GFF3Annotation readAnnotation() throws IOException, GFF3ValidationError {
-        List<GFF3Directives.GFF3Directive> directives = new ArrayList<>();
-        List<GFF3Feature> features = new ArrayList<>();
+    private List<GFF3Annotation> readAnnotation() throws IOException, GFF3ValidationError {
+        List<GFF3Annotation> gff3Annotations = new ArrayList<>();
+        GFF3Annotation gff3Annotation = null;
 
         String line;
         while ((line = readLine()) != null) {
@@ -50,6 +48,9 @@ public class GFF3FileReader {
             }
             Matcher m = DIRECTIVE_SEQUENCE.matcher(line);
             if (m.matches()) {
+                // Create new gff3 annotation for each sequence directive
+                gff3Annotation = new GFF3Annotation();
+
                 String accession = m.group("accession");
                 long start = Long.parseLong(m.group("start"));
                 long end = Long.parseLong(m.group("end"));
@@ -57,14 +58,18 @@ public class GFF3FileReader {
                 // TODO: Validation Sequence accession is required!
                 GFF3Directives.GFF3SequenceRegion sequenceAccession =
                         new GFF3Directives.GFF3SequenceRegion(accession, start, end);
-                directives.add(sequenceAccession);
+
+                gff3Annotation.getDirectives().add(sequenceAccession);
+
+                // Add gff3Annotation to the list of annotations
+                gff3Annotations.add(gff3Annotation);
                 continue;
             }
             m = DIRECTIVE_SPECIES.matcher(line);
             if (m.matches()) {
                 GFF3Directives.GFF3Species species = new GFF3Directives.GFF3Species(m.group("species"));
                 // TODO: Validation no multiple species
-                directives.add(species);
+                gff3Annotation.getDirectives().add(species);
                 continue;
             }
             m = COMMENT.matcher(line);
@@ -93,17 +98,18 @@ public class GFF3FileReader {
                 GFF3Feature feature = new GFF3Feature(
                         id, parentId, accession, source, name, start, end, score, strand, phase, attributesMap);
 
-                features.add(feature);
+                gff3Annotation.addFeature(feature);
             } else {
                 throw new GFF3ValidationError(lineCount, "Invalid gff3 record \"" + line + "\"");
             }
         }
 
-        if (directives.isEmpty() && features.isEmpty()) {
+        if (gff3Annotation.getDirectives().getDirectives().isEmpty()
+                && gff3Annotation.getFeatures().isEmpty()) {
             return null;
         }
 
-        return new GFF3Annotation(new GFF3Directives(directives), features);
+        return gff3Annotations;
     }
 
     private static Map<String, String> attributesFromString(String line) {
@@ -114,20 +120,6 @@ public class GFF3FileReader {
             attributes.put(keyValue[0], keyValue[1]);
         }
         return attributes;
-    }
-
-    private List<GFF3Annotation> readAnnotationList() throws IOException, GFF3ValidationError {
-        List<GFF3Annotation> annotations = new ArrayList<>();
-        while (true) {
-            // readAnnotation
-            GFF3Annotation annotation = readAnnotation();
-            if (annotation == null) {
-                break;
-            } else {
-                annotations.add(annotation);
-            }
-        }
-        return annotations;
     }
 
     public GFF3Header readHeader() throws IOException, GFF3ValidationError {
@@ -152,7 +144,7 @@ public class GFF3FileReader {
 
     public GFF3File read() throws IOException, GFF3ValidationError {
         GFF3Header header = readHeader();
-        List<GFF3Annotation> annotations = this.readAnnotationList();
+        List<GFF3Annotation> annotations = this.readAnnotation();
         GFF3File gff3File = new GFF3File(header, annotations);
         return gff3File;
     }

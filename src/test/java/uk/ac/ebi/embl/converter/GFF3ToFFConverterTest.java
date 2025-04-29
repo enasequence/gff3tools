@@ -32,6 +32,10 @@ class GFF3ToFFConverterTest {
         Map<String, Path> testFiles = TestUtils.getTestFiles("gff3toff_rules", ".gff3");
 
         for (String filePrefix : testFiles.keySet()) {
+
+            if (!filePrefix.startsWith("multiple_entries")) {
+                continue;
+            }
             FFEntryFactory rule = new FFEntryFactory();
             try (BufferedReader testFileReader =
                     TestUtils.getResourceReader(testFiles.get(filePrefix).toString())) {

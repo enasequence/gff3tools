@@ -12,9 +12,14 @@ package uk.ac.ebi.embl.converter.gff3;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
 
-public record GFF3Directives(List<GFF3Directive> directives) implements IGFF3Feature {
+@Getter
+public class GFF3Directives implements IGFF3Feature {
+    List<GFF3Directive> directives = new ArrayList<>();
+
     @Override
     public void writeGFF3String(Writer writer) throws IOException {
         for (GFF3Directive directive : directives) {
@@ -37,6 +42,10 @@ public record GFF3Directives(List<GFF3Directive> directives) implements IGFF3Fea
                 writer.write("##species %s\n".formatted(species));
             }
         }
+    }
+
+    public void add(GFF3Directive directive) {
+        directives.add(directive);
     }
 
     public interface GFF3Directive extends IGFF3Feature {}
