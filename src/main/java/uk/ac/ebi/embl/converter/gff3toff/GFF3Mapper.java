@@ -38,19 +38,19 @@ public class GFF3Mapper {
     private final SequenceFactory sequenceFactory = new SequenceFactory();
     final String resourceBundle = "uk.ac.ebi.embl.gff3.mapping.gffMapper";
 
-    public GFF3Mapper() {}
+    Map<String, GFF3Feature> parentFeatures;
 
-    private static List<GFF3Feature> getAnnotationFeatures(GFF3Annotation a) {
-        List<List<GFF3Feature>> features = new ArrayList<>(a.geneMap().values());
-        features.add(a.nonGeneFeatures());
-        return features.stream().flatMap(List::stream).toList();
+    public GFF3Mapper() {
+        parentFeatures = new HashMap<>();
     }
 
     public Entry mapGFF3ToEntry(GFF3Annotation annotation) {
 
+        parentFeatures.clear();
         Entry entry = entryFactory.createEntry();
         entry.setSequence(sequenceFactory.createSequence());
-        if (annotation.directives().directives().size() > 0) {
+
+        if (!annotation.directives().directives().isEmpty()) {
             SourceFeature sourceFeature = this.featureFactory.createSourceFeature();
             for (GFF3Directives.GFF3Directive directive :
                     annotation.directives().directives()) {
@@ -68,13 +68,16 @@ public class GFF3Mapper {
             entry.addFeature(sourceFeature);
         }
 
-        for (GFF3Feature feature : getAnnotationFeatures(annotation)) {
+        for (GFF3Feature feature : annotation.features()) {
+            if (feature.getId().isPresent()) {
+                parentFeatures.put(feature.getId().get(), feature);
+            }
+
             entry.addFeature(mapGFF3Feature(feature));
+
+
             for (GFF3Feature childFeature : feature.getChildren()) {
                 Feature ffChildFeature = mapGFF3Feature(childFeature);
-                if (feature.getAttributes().containsKey("gene")) {
-                    ffChildFeature.addQualifier("gene", feature.getAttributes().get("gene"));
-                }
                 entry.addFeature(ffChildFeature);
             }
         }
@@ -93,8 +96,25 @@ public class GFF3Mapper {
         Feature ffFeature = this.featureFactory.createFeature(featureType);
         ffFeature.setLocations(locations);
         ffFeature.addQualifiers(qualifiers);
+        if (ffFeature.getQualifiers("gene").isEmpty()) {
+            String gene = getGeneForFeature(gff3Feature);
+            if (gene != null) {
+                ffFeature.addQualifier("gene", gene);
+            }
+        }
 
         return ffFeature;
+    }
+
+    private String getGeneForFeature(GFF3Feature gff3Feature) {
+        if (gff3Feature.getAttributes().containsKey("gene")) {
+            return gff3Feature.getAttributes().get("gene");
+        } else if (gff3Feature.getParentId().isPresent()) {
+            GFF3Feature parent = parentFeatures.get(gff3Feature.getParentId().get());
+            return getGeneForFeature(parent);
+        } else {
+            return null;
+        }
     }
 
     private CompoundLocation<Location> mapGFF3Location(GFF3Feature gff3Feature) {

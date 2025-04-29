@@ -83,7 +83,10 @@ public class GFF3AnnotationFactory {
             }
             sortFeaturesAndAssignId();
 
-            return new GFF3Annotation(directives, geneMap, nonGeneFeatures);
+            List<GFF3Feature> features = geneMap.values().stream().flatMap(List::stream).collect(Collectors.toList());
+            features.addAll(nonGeneFeatures);
+
+            return new GFF3Annotation(directives, features);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

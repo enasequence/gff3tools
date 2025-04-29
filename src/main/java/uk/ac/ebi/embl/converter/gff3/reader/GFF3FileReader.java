@@ -16,6 +16,8 @@ import java.io.Reader;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
 import uk.ac.ebi.embl.converter.gff3.*;
 
 public class GFF3FileReader {
@@ -38,9 +40,7 @@ public class GFF3FileReader {
 
     private GFF3Annotation readAnnotation() throws IOException, GFF3ValidationError {
         List<GFF3Directives.GFF3Directive> directives = new ArrayList<>();
-        Map<String, List<GFF3Feature>> geneMap = new HashMap<>();
-        List<GFF3Feature> nonGeneFeatures = new ArrayList<>();
-        Map<String, GFF3Feature> featureIdx = new HashMap<>();
+        List<GFF3Feature> features = new ArrayList<>();
 
         String line;
         while ((line = readLine()) != null) {
@@ -92,31 +92,18 @@ public class GFF3FileReader {
 
                 GFF3Feature feature = new GFF3Feature(
                         id, parentId, accession, source, name, start, end, score, strand, phase, attributesMap);
-                id.ifPresent(s -> featureIdx.put(s, feature));
 
-                if (parentId.isPresent()) {
-                    if (featureIdx.containsKey(parentId.get())) {
-                        featureIdx.get(parentId.get()).addChild(feature);
-                    }
-                    // TODO: Validation check, no parent found
-                } else if (attributesMap.containsKey("gene")) {
-                    String gene = attributesMap.get("gene");
-                    geneMap.putIfAbsent(gene, new ArrayList<>());
-                    List<GFF3Feature> geneFeatures = geneMap.get(gene);
-                    geneFeatures.add(feature);
-                } else {
-                    nonGeneFeatures.add(feature);
-                }
-                // TODO: Validation check accession matches sequence region.
+                features.add(feature);
             } else {
                 throw new GFF3ValidationError(lineCount, "Invalid gff3 record \"" + line + "\"");
             }
         }
 
-        if (directives.isEmpty() && geneMap.isEmpty() && nonGeneFeatures.isEmpty()) {
+        if (directives.isEmpty() && features.isEmpty()) {
             return null;
         }
-        return new GFF3Annotation(new GFF3Directives(directives), geneMap, nonGeneFeatures);
+
+        return new GFF3Annotation(new GFF3Directives(directives), features);
     }
 
     private static Map<String, String> attributesFromString(String line) {

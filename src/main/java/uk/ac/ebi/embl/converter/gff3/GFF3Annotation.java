@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public record GFF3Annotation(
-        GFF3Directives directives, Map<String, List<GFF3Feature>> geneMap, List<GFF3Feature> nonGeneFeatures)
+        GFF3Directives directives, List<GFF3Feature> features)
         implements IGFF3Feature {
     private void writeFeature(Writer writer, GFF3Feature feature) throws IOException {
         writer.write(feature.getAccession());
@@ -39,12 +39,7 @@ public record GFF3Annotation(
     @Override
     public void writeGFF3String(Writer writer) throws IOException {
         this.directives.writeGFF3String(writer);
-        for (String geneName : geneMap.keySet()) {
-            for (GFF3Feature feature : geneMap.get(geneName)) {
-                writeFeature(writer, feature);
-            }
-        }
-        for (GFF3Feature feature : nonGeneFeatures) {
+        for (GFF3Feature feature : features) {
             writeFeature(writer, feature);
         }
         writer.write('\n');
