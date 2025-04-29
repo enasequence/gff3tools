@@ -10,8 +10,16 @@
  */
 package uk.ac.ebi.embl.converter.gff3.reader;
 
+import lombok.Getter;
+
+@Getter
 public class GFF3ValidationError extends Exception {
+    private final int line;
+    private final String message;
+
     public GFF3ValidationError(int line, String message) {
         super(String.format("Line: %d - %s", line, message));
+        this.line = line;
+        this.message = message;
     }
 }

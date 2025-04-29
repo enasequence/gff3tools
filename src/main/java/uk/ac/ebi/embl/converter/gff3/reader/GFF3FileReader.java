@@ -157,7 +157,8 @@ public class GFF3FileReader {
                 String version = m.group("version");
                 GFF3Header header = new GFF3Header(version);
                 return header;
-            } else {
+            } else if (!COMMENT.matcher(line).matches()) {
+                // If the line is not a comment throw, otherwise ignore it
                 throw new GFF3ValidationError(lineCount, "Invalid GFF3 header");
             }
         }

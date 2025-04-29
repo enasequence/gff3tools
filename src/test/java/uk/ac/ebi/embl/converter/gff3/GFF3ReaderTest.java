@@ -16,9 +16,11 @@ import static org.junit.jupiter.api.Assertions.fail;
 import java.io.*;
 import java.nio.file.Path;
 import java.util.Map;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
 
 public class GFF3ReaderTest {
     @Test
@@ -36,6 +38,24 @@ public class GFF3ReaderTest {
             } catch (Exception e) {
                 fail(String.format("Error parsing file: %s", filePrefix), e);
             }
+        }
+    }
+
+    @Test
+    void testMissingHeader() throws Exception {
+        File testFile = TestUtils.getResourceFile("validation_errors/empty_file.gff3");
+
+        FileReader filerReader = new FileReader(testFile);
+        BufferedReader reader = new BufferedReader(filerReader);
+        GFF3FileReader gff3Reader = new GFF3FileReader(reader);
+        try {
+            GFF3File gff3File = gff3Reader.read();
+            assertNotNull(gff3File);
+        } catch (GFF3ValidationError e) {
+            Assertions.assertTrue(e.getMessage().contains("GFF3 header not found"));
+            Assertions.assertEquals(1, e.getLine());
+        } catch (Exception e) {
+            fail(String.format("Error parsing file: %s", testFile.getPath()), e);
         }
     }
 }

@@ -40,4 +40,13 @@ public class TestUtils {
         }
         return inFiles;
     }
+
+    public static File getResourceFile(String resourceName) {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        URL resource = classLoader.getResource(resourceName);
+        if (resource != null) {
+            return new File(resource.getPath());
+        }
+        return null;
+    }
 }

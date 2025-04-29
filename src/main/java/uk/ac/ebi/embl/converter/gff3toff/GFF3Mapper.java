@@ -17,10 +17,7 @@ import uk.ac.ebi.embl.api.entry.EntryFactory;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.feature.FeatureFactory;
 import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
-import uk.ac.ebi.embl.api.entry.location.CompoundLocation;
-import uk.ac.ebi.embl.api.entry.location.Location;
-import uk.ac.ebi.embl.api.entry.location.LocationFactory;
-import uk.ac.ebi.embl.api.entry.location.Order;
+import uk.ac.ebi.embl.api.entry.location.*;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.qualifier.QualifierFactory;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
@@ -108,14 +105,15 @@ public class GFF3Mapper {
                         gff3Feature.getAttributes().getOrDefault("partial", "").split(","))
                 .toList();
 
-        Location location = this.locationFactory.createLocalRange(start, end, gff3Feature.getStrand().equals("-"));
+        Location location = this.locationFactory.createLocalRange(
+                start, end, gff3Feature.getStrand().equals("-"));
         if (partials.contains("start")) {
             location.setFivePrimePartial(true);
         }
         if (partials.contains("end")) {
             location.setThreePrimePartial(true);
         }
-        Order<Location> compoundJoin = new Order();
+        Join<Location> compoundJoin = new Join();
         compoundJoin.addLocation(location);
         return compoundJoin;
     }
@@ -125,25 +123,17 @@ public class GFF3Mapper {
 
         for (Object o : attributes.entrySet()) {
             Map.Entry<String, String> attributePairs = (Map.Entry) o;
-            Qualifier qualifier = this.mapGFF3Attribute(attributePairs);
-            if (qualifier != null) {
-                qualifierList.add(qualifier);
+            String attributeKey = attributePairs.getKey();
+            if (qmap.containsKey(attributeKey)) {
+                attributeKey = qmap.get(attributeKey);
+            }
+            if (!attributeKey.isBlank()) {
+                String attributeValue = attributePairs.getValue();
+                qualifierList.add(qualifierFactory.createQualifier(attributeKey, attributeValue));
             }
         }
 
         return qualifierList;
-    }
-
-    private Qualifier mapGFF3Attribute(Map.Entry<String, String> attributePairs) {
-        String attributeKey = attributePairs.getKey().toString();
-        if (qmap.containsKey(attributeKey)) {
-            attributeKey = qmap.get(attributeKey);
-        }
-        if (!attributeKey.isBlank()) {
-            String attributeValue = attributePairs.getValue().toString();
-            return this.qualifierFactory.createQualifier(attributeKey, attributeValue);
-        }
-        return null;
     }
 
     public List<Entry> mapGFF3ToEntry(GFF3FileReader gff3Reader) throws IOException, GFF3ValidationError {
