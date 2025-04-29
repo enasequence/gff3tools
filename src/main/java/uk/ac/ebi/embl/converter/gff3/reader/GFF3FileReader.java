@@ -108,11 +108,9 @@ public class GFF3FileReader {
                     nonGeneFeatures.add(feature);
                 }
                 // TODO: Validation check accession matches sequence region.
-
-                continue;
+            } else {
+                throw new GFF3ValidationError(lineCount, "Invalid gff3 record \"" + line + "\"");
             }
-            // TODO: Validation, cant match line to a valid GFF3Record
-            break;
         }
 
         if (directives.isEmpty() && geneMap.isEmpty() && nonGeneFeatures.isEmpty()) {
