@@ -16,9 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public record GFF3Annotation(
-        GFF3Directives directives, List<GFF3Feature> features)
-        implements IGFF3Feature {
+public record GFF3Annotation(GFF3Directives directives, List<GFF3Feature> features) implements IGFF3Feature {
     private void writeFeature(Writer writer, GFF3Feature feature) throws IOException {
         writer.write(feature.getAccession());
         writer.write('\t' + feature.getSource());

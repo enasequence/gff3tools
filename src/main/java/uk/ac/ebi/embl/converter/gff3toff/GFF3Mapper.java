@@ -75,7 +75,6 @@ public class GFF3Mapper {
 
             entry.addFeature(mapGFF3Feature(feature));
 
-
             for (GFF3Feature childFeature : feature.getChildren()) {
                 Feature ffChildFeature = mapGFF3Feature(childFeature);
                 entry.addFeature(ffChildFeature);

@@ -16,8 +16,6 @@ import java.io.Reader;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import uk.ac.ebi.embl.converter.gff3.*;
 
 public class GFF3FileReader {
@@ -38,7 +36,7 @@ public class GFF3FileReader {
         lineCount = 0;
     }
 
-    private GFF3Annotation readAnnotation() throws IOException, GFF3ValidationError {
+    public GFF3Annotation readAnnotation() throws IOException, GFF3ValidationError {
         List<GFF3Directives.GFF3Directive> directives = new ArrayList<>();
         List<GFF3Feature> features = new ArrayList<>();
 
@@ -50,6 +48,10 @@ public class GFF3FileReader {
             }
             Matcher m = DIRECTIVE_SEQUENCE.matcher(line);
             if (m.matches()) {
+                if (!directives.isEmpty()) {
+                    bufferedReader.reset();
+                    break;
+                }
                 String accession = m.group("accession");
                 long start = Long.parseLong(m.group("start"));
                 long end = Long.parseLong(m.group("end"));
@@ -58,6 +60,7 @@ public class GFF3FileReader {
                 GFF3Directives.GFF3SequenceRegion sequenceAccession =
                         new GFF3Directives.GFF3SequenceRegion(accession, start, end);
                 directives.add(sequenceAccession);
+                bufferedReader.mark(2048);
                 continue;
             }
             m = DIRECTIVE_SPECIES.matcher(line);
@@ -65,11 +68,13 @@ public class GFF3FileReader {
                 GFF3Directives.GFF3Species species = new GFF3Directives.GFF3Species(m.group("species"));
                 // TODO: Validation no multiple species
                 directives.add(species);
+                bufferedReader.mark(2048);
                 continue;
             }
             m = COMMENT.matcher(line);
             if (m.matches()) {
                 // Skip comment
+                bufferedReader.mark(2048);
                 continue;
             }
             m = GFF3_FEATURE.matcher(line);
@@ -94,6 +99,7 @@ public class GFF3FileReader {
                         id, parentId, accession, source, name, start, end, score, strand, phase, attributesMap);
 
                 features.add(feature);
+                bufferedReader.mark(2048);
             } else {
                 throw new GFF3ValidationError(lineCount, "Invalid gff3 record \"" + line + "\"");
             }

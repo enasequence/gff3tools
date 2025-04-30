@@ -1,0 +1,32 @@
+ID   CACUVO010000001; SV XXX; XXX; XXX; XXX; XXX; 0 BP.
+XX
+AC   CACUVO010000001;
+XX
+DE   .
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..59081
+FT   gene            345..822
+FT                   /gene="matK"
+FT   mRNA            345..822
+FT                   /gene="matK"
+XX
+//
+ID   CACUVO010000002; SV XXX; XXX; XXX; XXX; XXX; 0 BP.
+XX
+AC   CACUVO010000002;
+XX
+DE   .
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..266666
+FT   gene            666..888
+FT                   /gene="another"
+XX
+//
