@@ -26,7 +26,7 @@ public class Gff3ToFFCLI {
             Params params = Params.parse(args);
 
             // Convert Gff3 to FF
-            new Gff3ToFFConverter().convert(params);
+            new Gff3ToFFConverter().convert(params.inFile.toPath(), params.outFile.toPath());
 
         } catch (CommandLine.ParameterException | FFtoGFF3ConversionError e) {
             LOG.error(e.getMessage());

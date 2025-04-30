@@ -30,15 +30,15 @@ public class GFF3FileReader {
 
     BufferedReader bufferedReader;
     int lineCount;
+    GFF3Annotation gff3Annotation;
 
     public GFF3FileReader(Reader reader) {
         this.bufferedReader = new BufferedReader(reader);
         lineCount = 0;
+        gff3Annotation = null;
     }
 
-    private List<GFF3Annotation> readAnnotation() throws IOException, GFF3ValidationError {
-        List<GFF3Annotation> gff3Annotations = new ArrayList<>();
-        GFF3Annotation gff3Annotation = null;
+    public GFF3Annotation readAnnotation() throws IOException, GFF3ValidationError {
 
         String line;
         while ((line = readLine()) != null) {
@@ -48,6 +48,7 @@ public class GFF3FileReader {
             }
             Matcher m = DIRECTIVE_SEQUENCE.matcher(line);
             if (m.matches()) {
+                GFF3Annotation completedAnnotation = gff3Annotation;
                 // Create new gff3 annotation for each sequence directive
                 gff3Annotation = new GFF3Annotation();
 
@@ -60,16 +61,9 @@ public class GFF3FileReader {
                         new GFF3Directives.GFF3SequenceRegion(accession, start, end);
 
                 gff3Annotation.getDirectives().add(sequenceAccession);
-
-                // Add gff3Annotation to the list of annotations
-                gff3Annotations.add(gff3Annotation);
-                continue;
-            }
-            m = DIRECTIVE_SPECIES.matcher(line);
-            if (m.matches()) {
-                GFF3Directives.GFF3Species species = new GFF3Directives.GFF3Species(m.group("species"));
-                // TODO: Validation no multiple species
-                gff3Annotation.getDirectives().add(species);
+                if (completedAnnotation != null) {
+                    return completedAnnotation;
+                }
                 continue;
             }
             m = COMMENT.matcher(line);
@@ -104,12 +98,9 @@ public class GFF3FileReader {
             }
         }
 
-        if (gff3Annotation.getDirectives().getDirectives().isEmpty()
-                && gff3Annotation.getFeatures().isEmpty()) {
-            return null;
-        }
-
-        return gff3Annotations;
+        GFF3Annotation completedAnnotation = gff3Annotation;
+        gff3Annotation = null;
+        return completedAnnotation;
     }
 
     private static Map<String, String> attributesFromString(String line) {
@@ -140,13 +131,6 @@ public class GFF3FileReader {
             }
         }
         throw new GFF3ValidationError(lineCount, "GFF3 header not found");
-    }
-
-    public GFF3File read() throws IOException, GFF3ValidationError {
-        GFF3Header header = readHeader();
-        List<GFF3Annotation> annotations = this.readAnnotation();
-        GFF3File gff3File = new GFF3File(header, annotations);
-        return gff3File;
     }
 
     private String readLine() throws IOException {

@@ -27,14 +27,16 @@ public class GFF3ReaderTest {
     void canParseAllExamples() throws Exception {
         Map<String, Path> testFiles = TestUtils.getTestFiles("fftogff3_rules", ".gff3");
 
-        for (String filePrefix : new String[] {"gene_mrna_parents"}) {
+        for (String filePrefix : testFiles.keySet()) {
             File file = new File(testFiles.get(filePrefix).toUri());
             FileReader filerReader = new FileReader(file);
             BufferedReader reader = new BufferedReader(filerReader);
             GFF3FileReader gff3Reader = new GFF3FileReader(reader);
             try {
-                GFF3File gff3File = gff3Reader.read();
-                assertNotNull(gff3File);
+                gff3Reader.readHeader();
+                while(true) {
+                    if (gff3Reader.readAnnotation() == null) break;
+                }
             } catch (Exception e) {
                 fail(String.format("Error parsing file: %s", filePrefix), e);
             }
@@ -49,8 +51,7 @@ public class GFF3ReaderTest {
         BufferedReader reader = new BufferedReader(filerReader);
         GFF3FileReader gff3Reader = new GFF3FileReader(reader);
         try {
-            GFF3File gff3File = gff3Reader.read();
-            assertNotNull(gff3File);
+            gff3Reader.readHeader();
         } catch (GFF3ValidationError e) {
             Assertions.assertTrue(e.getMessage().contains("GFF3 header not found"));
             Assertions.assertEquals(1, e.getLine());

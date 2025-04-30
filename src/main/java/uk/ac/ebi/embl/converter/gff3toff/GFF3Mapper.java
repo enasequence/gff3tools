@@ -36,7 +36,6 @@ public class GFF3Mapper {
     private final QualifierFactory qualifierFactory = new QualifierFactory();
     private final LocationFactory locationFactory = new LocationFactory();
     private final SequenceFactory sequenceFactory = new SequenceFactory();
-    final String resourceBundle = "uk.ac.ebi.embl.gff3.mapping.gffMapper";
 
     Map<String, GFF3Feature> parentFeatures;
 
@@ -156,10 +155,4 @@ public class GFF3Mapper {
         return qualifierList;
     }
 
-    public List<Entry> mapGFF3ToEntry(GFF3FileReader gff3Reader) throws IOException, GFF3ValidationError {
-        GFF3File gff3File = gff3Reader.read();
-        ArrayList<Entry> entries = new ArrayList<>(
-                gff3File.annotations().stream().map(this::mapGFF3ToEntry).toList());
-        return entries;
-    }
 }
