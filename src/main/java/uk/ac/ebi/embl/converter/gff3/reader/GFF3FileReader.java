@@ -18,7 +18,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import uk.ac.ebi.embl.converter.gff3.*;
 
-public class GFF3FileReader {
+public class GFF3FileReader implements AutoCloseable {
     static Pattern DIRECTIVE_VERSION = Pattern.compile(
             "^##gff-version (?<version>(?<major>[0-9]+)(\\.(?<minor>[0-9]+)(:?\\.(?<patch>[0-9]+))?)?)\\s*$");
     static Pattern DIRECTIVE_SEQUENCE = Pattern.compile(
@@ -149,6 +149,11 @@ public class GFF3FileReader {
 
     private String readLine() throws IOException {
         this.lineCount++;
-        return this.bufferedReader.readLine();
+        return bufferedReader.readLine();
+    }
+
+    @Override
+    public void close() throws IOException {
+        bufferedReader.close();
     }
 }

@@ -15,10 +15,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.io.BufferedReader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.converter.cli.Params;
 import uk.ac.ebi.embl.converter.fftogff3.FFtoGFF3ConversionError;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.converter.gff3toff.EmblFlatFile;
@@ -33,20 +36,22 @@ class GFF3ToFFConverterTest {
 
          for (String filePrefix : testFiles.keySet()) {
              Gff3ToFFConverter converter = new Gff3ToFFConverter();
-             try (BufferedReader testFileReader =
-                     TestUtils.getResourceReader(testFiles.get(filePrefix).toString())) {
+             try {
 
-                 Writer flatFileWriter = new StringWriter();
-                 converter.convert(testFileReader, flatFileWriter);
+                 String inFile = testFiles.get(filePrefix).toString();
+                 String outFile = filePrefix+".embl";
+                 String[] args = { "-in", inFile , "-out", outFile };
+                 Params params = Params.parse(args);
+                 converter.convert(params);
 
                  String expected;
-                 String expectedFilePath = testFiles.get(filePrefix).toString().replace(".gff3", ".embl");
+                 String expectedFilePath = inFile.replace(".gff3", ".embl");
                  try (BufferedReader emblTestFileReader = TestUtils.getResourceReader(expectedFilePath)) {
                      expected = new BufferedReader(emblTestFileReader).lines().collect(Collectors.joining("\n"));
                  }
 
-                 assertEquals(expected.trim(), flatFileWriter.toString().trim(), "Error on test case: " + filePrefix);
-                 flatFileWriter.close();
+                 assertEquals(expected.trim(), Files.readString(Paths.get(outFile)).trim(), "Error on test case: " + filePrefix);
+                 Files.deleteIfExists(Paths.get(outFile));
              } catch (FFtoGFF3ConversionError e) {
                  //throw e;
                  fail("Error on test case: " + filePrefix + " - " + e.getMessage());
