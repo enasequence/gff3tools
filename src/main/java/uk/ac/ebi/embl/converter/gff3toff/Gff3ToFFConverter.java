@@ -41,7 +41,7 @@ public class Gff3ToFFConverter {
         } catch (IOException e) {
             throw new FFtoGFF3ConversionError("IO Error during conversion" , e);
         } catch (GFF3ValidationError e) {
-            throw new FFtoGFF3ConversionError(String.format("Validation Error on line %d: %s", e, e.getMessage()), e);
+            throw new FFtoGFF3ConversionError(String.format("Validation Error on line %d: %s", e.getLine(), e.getMessage()), e);
         }
     }
 }

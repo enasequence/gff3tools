@@ -56,7 +56,7 @@ public class GFF3FileReader implements AutoCloseable {
                 gff3Annotation = new GFF3Annotation();
                 gff3Annotation.getDirectives().add(sequenceDirective);
 
-                // return after constructing annotation
+                // return previous annotation
                 if (previousAnnotation != null) {
                     return previousAnnotation;
                 }
