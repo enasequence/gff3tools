@@ -30,7 +30,7 @@ public class GFF3Feature {
     final String score;
     final String strand;
     final String phase;
-    final Map<String, String> attributes;
+    final Map<String, Object> attributes;
 
     // Mutable members
     List<GFF3Feature> children = new ArrayList<>();

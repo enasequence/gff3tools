@@ -139,19 +139,41 @@ public class GFF3AnnotationFactory {
             parentId = Optional.ofNullable(parentFeatureName).map(name -> getId(name, geneName.get()));
         }
 
-        Map<String, String> baseAttributes = ffFeature.getQualifiers().stream()
+        /*Map<String, String> baseAttributes = ffFeature.getQualifiers().stream()
                 .filter(q -> !"gene".equals(q.getName())) // gene is filtered for handling overlapping gene
                 .collect(Collectors.toMap(
                         q -> qualifierMap.getOrDefault(q.getName(), q.getName()), // Rename if mapping exists
                         q -> q.isValue() ? q.getValue() : "true", // Ensure non-empty values
-                        (existing, replacement) -> existing));
+                        (existing, replacement) -> (existing+" "+ replacement).replace(";"," ")));*/
+
+        Map<String, Object> baseAttributes = new LinkedHashMap<>();
+
+        ffFeature.getQualifiers().stream()
+                .filter(q -> !"gene".equals(q.getName()))
+                .forEach(q -> {
+                    String key = qualifierMap.getOrDefault(q.getName(), q.getName());
+                    String value = q.isValue() ? q.getValue() : "true";
+                    value = value.replace(";",":");
+
+                    Object existing = baseAttributes.get(key);
+                    if (existing == null) {
+                        baseAttributes.put(key, value);
+                    } else if (existing instanceof String) {
+                        List<String> list = new ArrayList<>();
+                        list.add((String) existing);
+                        list.add(value);
+                        baseAttributes.put(key, list);
+                    } else if (existing instanceof List) {
+                        ((List<String>) existing).add(value);
+                    }
+                });
 
         geneName.ifPresent(v -> baseAttributes.put("gene", v));
         id.ifPresent(v -> baseAttributes.put("ID", v));
         parentId.ifPresent(v -> baseAttributes.put("Parent", v));
 
         for (Location location : ffFeature.getLocations().getLocations()) {
-            Map<String, String> attributes = new LinkedHashMap<>(baseAttributes);
+            Map<String, Object> attributes = new LinkedHashMap<>(baseAttributes);
 
             String partiality = getPartiality(location);
             if (!partiality.isBlank()) {
@@ -242,7 +264,7 @@ public class GFF3AnnotationFactory {
 
     public void orderRootAndChildren(List<GFF3Feature> gffFeatures, GFF3Feature root) {
 
-        String locusTag = root.getAttributes().get("locus_tag");
+        String locusTag = (String)root.getAttributes().get("locus_tag");
         gffFeatures.add(root);
 
         // Recursively process children
