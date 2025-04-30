@@ -48,59 +48,73 @@ public class GFF3FileReader {
             }
             Matcher m = DIRECTIVE_SEQUENCE.matcher(line);
             if (m.matches()) {
-                GFF3Annotation completedAnnotation = gff3Annotation;
-                // Create new gff3 annotation for each sequence directive
+                // Create directive
+                GFF3Directives.GFF3SequenceRegion sequenceDirective = getSequenceDirective(line);
+
+                GFF3Annotation previousAnnotation = gff3Annotation;
+                // New gff3 annotation for each sequence directive
                 gff3Annotation = new GFF3Annotation();
+                gff3Annotation.getDirectives().add(sequenceDirective);
 
-                String accession = m.group("accession");
-                long start = Long.parseLong(m.group("start"));
-                long end = Long.parseLong(m.group("end"));
-                // TODO: Validation no multiple sequence accession
-                // TODO: Validation Sequence accession is required!
-                GFF3Directives.GFF3SequenceRegion sequenceAccession =
-                        new GFF3Directives.GFF3SequenceRegion(accession, start, end);
-
-                gff3Annotation.getDirectives().add(sequenceAccession);
-                if (completedAnnotation != null) {
-                    return completedAnnotation;
+                // return after constructing annotation
+                if (previousAnnotation != null) {
+                    return previousAnnotation;
                 }
-                continue;
-            }
-            m = COMMENT.matcher(line);
-            if (m.matches()) {
+            } else if (COMMENT.matcher(line).matches()) {
                 // Skip comment
                 continue;
-            }
-            m = GFF3_FEATURE.matcher(line);
-            if (m.matches()) {
-                String accession = m.group("accession");
-                String source = m.group("source");
-                String name = m.group("name");
-                long start = Long.parseLong(m.group("start"));
-                long end = Long.parseLong(m.group("end"));
-                String score = m.group("score");
-                String strand = m.group("strand");
-                String phase = m.group("phase");
-                String attributes = m.group("attributes");
-                Map<String, String> attributesMap = attributesFromString(attributes);
-                Optional<String> id =
-                        attributesMap.containsKey("ID") ? Optional.of(attributesMap.get("ID")) : Optional.empty();
-                Optional<String> parentId = attributesMap.containsKey("Parent")
-                        ? Optional.of(attributesMap.get("Parent"))
-                        : Optional.empty();
-
-                GFF3Feature feature = new GFF3Feature(
-                        id, parentId, accession, source, name, start, end, score, strand, phase, attributesMap);
-
-                gff3Annotation.addFeature(feature);
+            } else if (GFF3_FEATURE.matcher(line).matches()) {
+                parseAndAddFeature(line);
             } else {
                 throw new GFF3ValidationError(lineCount, "Invalid gff3 record \"" + line + "\"");
             }
         }
 
-        GFF3Annotation completedAnnotation = gff3Annotation;
+        GFF3Annotation finalAnnotation = gff3Annotation;
         gff3Annotation = null;
-        return completedAnnotation;
+        return finalAnnotation;
+    }
+
+    private GFF3Directives.GFF3SequenceRegion getSequenceDirective(String line) {
+        // Extra check for line match
+        Matcher m = DIRECTIVE_SEQUENCE.matcher(line);
+        if (!m.matches()) return null;
+
+        String accession = m.group("accession");
+        long start = Long.parseLong(m.group("start"));
+        long end = Long.parseLong(m.group("end"));
+
+        // TODO: Validation no multiple sequence accession
+        // TODO: Validation Sequence accession is required!
+        return new GFF3Directives.GFF3SequenceRegion(accession, start, end);
+    }
+
+    private void parseAndAddFeature(String line) throws GFF3ValidationError {
+        // Extra check for line match
+        Matcher m = GFF3_FEATURE.matcher(line);
+        if (!m.matches()) {
+            throw new GFF3ValidationError(lineCount, "Invalid GFF3 feature line: \"" + line + "\"");
+        }
+
+        String accession = m.group("accession");
+        String source = m.group("source");
+        String name = m.group("name");
+        long start = Long.parseLong(m.group("start"));
+        long end = Long.parseLong(m.group("end"));
+        String score = m.group("score");
+        String strand = m.group("strand");
+        String phase = m.group("phase");
+        String attributes = m.group("attributes");
+
+        Map<String, String> attributesMap = attributesFromString(attributes);
+
+        Optional<String> id = Optional.ofNullable(attributesMap.get("ID"));
+        Optional<String> parentId = Optional.ofNullable(attributesMap.get("Parent"));
+
+        GFF3Feature feature =
+                new GFF3Feature(id, parentId, accession, source, name, start, end, score, strand, phase, attributesMap);
+
+        gff3Annotation.addFeature(feature);
     }
 
     private static Map<String, String> attributesFromString(String line) {
