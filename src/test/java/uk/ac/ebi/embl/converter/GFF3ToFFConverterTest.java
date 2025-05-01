@@ -23,8 +23,6 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.cli.Params;
 import uk.ac.ebi.embl.converter.fftogff3.FFtoGFF3ConversionError;
-import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.converter.gff3toff.EmblFlatFile;
 import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
 
 class GFF3ToFFConverterTest {
