@@ -13,20 +13,20 @@ package uk.ac.ebi.embl.converter.cli;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
-import uk.ac.ebi.embl.converter.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.converter.fftogff3.FFtoGFF3ConversionError;
+import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
 
-public class FFToGff3CLI {
+public class Gff3ToFFCLI {
 
-    private static final Logger LOG = LoggerFactory.getLogger(FFToGff3CLI.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Gff3ToFFCLI.class);
 
     public static void main(String[] args) {
         try {
             // Parse command line arguments
             Params params = Params.parse(args);
 
-            // Convert FF to Gff3
-            new FFToGff3Converter().convert(params);
+            // Convert Gff3 to FF
+            new Gff3ToFFConverter().convert(params);
 
         } catch (CommandLine.ParameterException | FFtoGFF3ConversionError e) {
             LOG.error(e.getMessage());

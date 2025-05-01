@@ -12,13 +12,21 @@ package uk.ac.ebi.embl.converter.gff3;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-public record GFF3Annotation(
-        GFF3Directives directives, Map<String, List<GFF3Feature>> geneMap, List<GFF3Feature> nonGeneFeatures)
-        implements IGFF3Feature {
+@NoArgsConstructor
+@Getter
+@Setter
+public class GFF3Annotation implements IGFF3Feature {
+    GFF3Directives directives = new GFF3Directives();
+    List<GFF3Feature> features = new ArrayList<>();
+
     private void writeFeature(Writer writer, GFF3Feature feature) throws IOException {
         writer.write(feature.getAccession());
         writer.write('\t' + feature.getSource());
@@ -39,14 +47,13 @@ public record GFF3Annotation(
     @Override
     public void writeGFF3String(Writer writer) throws IOException {
         this.directives.writeGFF3String(writer);
-        for (String geneName : geneMap.keySet()) {
-            for (GFF3Feature feature : geneMap.get(geneName)) {
-                writeFeature(writer, feature);
-            }
-        }
-        for (GFF3Feature feature : nonGeneFeatures) {
+        for (GFF3Feature feature : features) {
             writeFeature(writer, feature);
         }
         writer.write('\n');
+    }
+
+    public void addFeature(GFF3Feature feature) {
+        features.add(feature);
     }
 }

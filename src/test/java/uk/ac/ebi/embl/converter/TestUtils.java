@@ -24,20 +24,29 @@ public class TestUtils {
         return new BufferedReader(reader);
     }
 
-    public static Map<String, Path> getTestFiles(String resourceName) {
+    public static Map<String, Path> getTestFiles(String resourceName, String extension) {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         URL resource = classLoader.getResource(resourceName);
         Map<String, Path> inFiles = new LinkedHashMap<>();
         if (resource != null) {
             File folder = new File(resource.getPath());
             for (File file : Objects.requireNonNull(folder.listFiles())) {
-                if (file.getName().endsWith(".embl")) {
-                    inFiles.put(file.getName().replace(".embl", ""), file.toPath());
+                if (file.getName().endsWith(extension)) {
+                    inFiles.put(file.getName().replace(extension, ""), file.toPath());
                 }
             }
         } else {
             System.out.println("Directory not found!");
         }
         return inFiles;
+    }
+
+    public static File getResourceFile(String resourceName) {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        URL resource = classLoader.getResource(resourceName);
+        if (resource != null) {
+            return new File(resource.getPath());
+        }
+        return null;
     }
 }
