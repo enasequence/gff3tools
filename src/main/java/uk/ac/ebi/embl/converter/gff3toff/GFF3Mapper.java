@@ -10,10 +10,7 @@
  */
 package uk.ac.ebi.embl.converter.gff3toff;
 
-import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
-
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.EntryFactory;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
@@ -26,9 +23,6 @@ import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
-import uk.ac.ebi.embl.converter.gff3.GFF3File;
-import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
 public class GFF3Mapper {
@@ -76,7 +70,6 @@ public class GFF3Mapper {
 
             entry.addFeature(mapGFF3Feature(feature));
 
-
             for (GFF3Feature childFeature : feature.getChildren()) {
                 Feature ffChildFeature = mapGFF3Feature(childFeature);
                 entry.addFeature(ffChildFeature);
@@ -122,8 +115,11 @@ public class GFF3Mapper {
 
         long start = gff3Feature.getStart();
         long end = gff3Feature.getEnd();
-        List<String> partials = Arrays.stream(
-                        gff3Feature.getAttributes().getOrDefault("partial", "").toString().split(","))
+        List<String> partials = Arrays.stream(gff3Feature
+                        .getAttributes()
+                        .getOrDefault("partial", "")
+                        .toString()
+                        .split(","))
                 .toList();
 
         Location location = this.locationFactory.createLocalRange(
@@ -158,11 +154,9 @@ public class GFF3Mapper {
                 } else {
                     qualifierList.add(qualifierFactory.createQualifier(attributeKey, value.toString()));
                 }
-
             }
         }
 
         return qualifierList;
     }
-
 }

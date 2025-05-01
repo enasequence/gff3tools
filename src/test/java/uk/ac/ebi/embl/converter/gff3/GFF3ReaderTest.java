@@ -10,17 +10,18 @@
  */
 package uk.ac.ebi.embl.converter.gff3;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.fail;
-
 import java.io.*;
 import java.nio.file.Path;
 import java.util.Map;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class GFF3ReaderTest {
     @Test
@@ -34,7 +35,7 @@ public class GFF3ReaderTest {
             GFF3FileReader gff3Reader = new GFF3FileReader(reader);
             try {
                 gff3Reader.readHeader();
-                while(true) {
+                while (true) {
                     if (gff3Reader.readAnnotation() == null) break;
                 }
             } catch (Exception e) {
@@ -57,6 +58,34 @@ public class GFF3ReaderTest {
             Assertions.assertEquals(1, e.getLine());
         } catch (Exception e) {
             fail(String.format("Error parsing file: %s", testFile.getPath()), e);
+        }
+    }
+
+
+    @Test
+    void testAttributesFromAndToString() throws Exception {
+
+        test("ID=ID_TEST;qualifier1=test_1;qualifier2=test_2;");
+        test("ID=ID_TEST;qualifier1=test_1;qualifier1=test_2;qualifier1=test_3;");
+        test("ID=ID_TEST;qualifier1=test_1;qualifier1=test_3;qualifier2=test_2;");
+    }
+
+    private void test(String attributeLine) throws Exception {
+        GFF3FileReader gff3Reader = new GFF3FileReader(new StringReader(attributeLine));
+        Map<String,Object> attrMap = gff3Reader.attributesFromString(attributeLine);
+
+        assertEquals(attributeLine, getAttributeString(attrMap));
+    }
+
+    private String getAttributeString(Map<String, Object> attributes) throws IOException {
+        try(StringWriter gff3Writer = new StringWriter()){
+            GFF3Annotation annotation = new GFF3Annotation();
+            GFF3Feature gff3Feature = TestUtils.createGFF3Feature("ID","Parent",attributes);
+            annotation.addFeature(gff3Feature);
+            annotation.writeGFF3String(gff3Writer);
+
+            // retutn only attributes
+            return gff3Writer.toString().split("\t")[8].trim();
         }
     }
 }

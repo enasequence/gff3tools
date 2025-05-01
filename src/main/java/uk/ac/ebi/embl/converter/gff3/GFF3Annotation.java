@@ -36,12 +36,13 @@ public class GFF3Annotation implements IGFF3Feature {
         writer.write('\t' + feature.getScore());
         writer.write('\t' + feature.getStrand().toString());
         writer.write('\t' + feature.getPhase());
-        /*writer.write('\t'
-                + feature.getAttributes().entrySet().stream()
-                        .sorted(Map.Entry.comparingByKey()) // Sort by key
-                        .map(entry -> entry.getKey() + "=" + entry.getValue()) // Format k=v
-                        .collect(Collectors.joining(";", "", ";")));*/
-        writer.write('\t' + feature.getAttributes().entrySet().stream()
+        writeAttributes(writer, feature);
+        writer.write("\n");
+    }
+
+    private void writeAttributes(Writer writer, GFF3Feature feature) throws IOException {
+        writer.write('\t');
+        writer.write(feature.getAttributes().entrySet().stream()
                 .sorted(Map.Entry.comparingByKey()) // Sort by key
                 .map(entry -> {
                     String key = entry.getKey();
@@ -49,15 +50,12 @@ public class GFF3Annotation implements IGFF3Feature {
 
                     if (value instanceof List) {
                         List<String> values = (List<String>) value;
-                        return values.stream()
-                                .map(v -> key + "=" + v)
-                                .collect(Collectors.joining(";"));
+                        return values.stream().map(v -> key + "=" + v).collect(Collectors.joining(";"));
                     } else {
                         return key + "=" + value;
                     }
                 })
                 .collect(Collectors.joining(";", "", ";")));
-        writer.write("\n");
     }
 
     @Override

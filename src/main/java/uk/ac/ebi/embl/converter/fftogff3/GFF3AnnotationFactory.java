@@ -24,6 +24,7 @@ import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
+import uk.ac.ebi.embl.converter.utils.Gff3Utils;
 
 public class GFF3AnnotationFactory {
 
@@ -124,7 +125,6 @@ public class GFF3AnnotationFactory {
     }
 
     private List<GFF3Feature> transformFeature(String accession, Feature ffFeature, Optional<String> geneName) {
-        Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
         List<GFF3Feature> gff3Features = new ArrayList<>();
 
         String source = ".";
@@ -139,34 +139,7 @@ public class GFF3AnnotationFactory {
             parentId = Optional.ofNullable(parentFeatureName).map(name -> getId(name, geneName.get()));
         }
 
-        /*Map<String, String> baseAttributes = ffFeature.getQualifiers().stream()
-                .filter(q -> !"gene".equals(q.getName())) // gene is filtered for handling overlapping gene
-                .collect(Collectors.toMap(
-                        q -> qualifierMap.getOrDefault(q.getName(), q.getName()), // Rename if mapping exists
-                        q -> q.isValue() ? q.getValue() : "true", // Ensure non-empty values
-                        (existing, replacement) -> (existing+" "+ replacement).replace(";"," ")));*/
-
-        Map<String, Object> baseAttributes = new LinkedHashMap<>();
-
-        ffFeature.getQualifiers().stream()
-                .filter(q -> !"gene".equals(q.getName()))
-                .forEach(q -> {
-                    String key = qualifierMap.getOrDefault(q.getName(), q.getName());
-                    String value = q.isValue() ? q.getValue() : "true";
-                    value = value.replace(";",":");
-
-                    Object existing = baseAttributes.get(key);
-                    if (existing == null) {
-                        baseAttributes.put(key, value);
-                    } else if (existing instanceof String) {
-                        List<String> list = new ArrayList<>();
-                        list.add((String) existing);
-                        list.add(value);
-                        baseAttributes.put(key, list);
-                    } else if (existing instanceof List) {
-                        ((List<String>) existing).add(value);
-                    }
-                });
+        Map<String, Object> baseAttributes = getAttributeMap(ffFeature);
 
         geneName.ifPresent(v -> baseAttributes.put("gene", v));
         id.ifPresent(v -> baseAttributes.put("ID", v));
@@ -195,6 +168,22 @@ public class GFF3AnnotationFactory {
         }
 
         return gff3Features;
+    }
+
+    public Map<String, Object> getAttributeMap(Feature ffFeature) {
+        Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
+        Map<String, Object> attributes = new LinkedHashMap<>();
+
+        ffFeature.getQualifiers().stream()
+                .filter(q -> !"gene".equals(q.getName()))
+                .forEach(q -> {
+                    String key = qualifierMap.getOrDefault(q.getName(), q.getName());
+                    String value = q.isValue() ? q.getValue() : "true";
+                    value = value.replace(";", ":");
+
+                    Gff3Utils.addAttribute(attributes, key, value);
+                });
+        return attributes;
     }
 
     private void buildGeneFeatureMap(String accession, Feature ffFeature) throws FFtoGFF3ConversionError {
@@ -264,7 +253,7 @@ public class GFF3AnnotationFactory {
 
     public void orderRootAndChildren(List<GFF3Feature> gffFeatures, GFF3Feature root) {
 
-        String locusTag = (String)root.getAttributes().get("locus_tag");
+        String locusTag = (String) root.getAttributes().get("locus_tag");
         gffFeatures.add(root);
 
         // Recursively process children

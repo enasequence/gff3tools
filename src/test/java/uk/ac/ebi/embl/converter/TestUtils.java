@@ -10,12 +10,12 @@
  */
 package uk.ac.ebi.embl.converter;
 
+import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
+
 import java.io.*;
 import java.net.URL;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public class TestUtils {
 
@@ -48,5 +48,39 @@ public class TestUtils {
             return new File(resource.getPath());
         }
         return null;
+    }
+
+    public static GFF3Feature createGFF3Feature(Optional<String> featureName, Optional<String> parentFeatureName) {
+        String id = featureName.map(v -> v + "_gene").orElse("_gene");
+        String parent = parentFeatureName.map(v -> v + "_gene").orElse("_gene");
+
+        return new GFF3Feature(
+                featureName,
+                parentFeatureName,
+                "1234",
+                ".",
+                featureName.get(),
+                1,
+                800,
+                ".",
+                "+",
+                "",
+                new HashMap<>(Map.of("ID", id, "Parent", parent, "gene", "geneX")));
+    }
+
+    public static GFF3Feature createGFF3Feature(String featureName, String parentFeatureName,Map<String, Object> attributes) {
+
+        return new GFF3Feature(
+                Optional.of(featureName),
+                Optional.of(parentFeatureName),
+                "1234",
+                ".",
+                featureName,
+                1,
+                800,
+                ".",
+                "+",
+                "",
+                attributes);
     }
 }

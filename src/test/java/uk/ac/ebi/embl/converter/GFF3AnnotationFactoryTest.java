@@ -12,10 +12,17 @@ package uk.ac.ebi.embl.converter;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.IOException;
+import java.io.StringWriter;
 import java.util.*;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.api.entry.feature.Feature;
+import uk.ac.ebi.embl.api.entry.feature.FeatureFactory;
+import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
+import uk.ac.ebi.embl.api.entry.qualifier.QualifierFactory;
 import uk.ac.ebi.embl.converter.fftogff3.GFF3AnnotationFactory;
+import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
@@ -32,8 +39,8 @@ class GFF3AnnotationFactoryTest {
         GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
         featureRelationMap.forEach((child, parent) -> {
             List<GFF3Feature> featureList = new ArrayList<>();
-            GFF3Feature childFeature = createGFF3Feature(Optional.of(child), Optional.of(parent));
-            GFF3Feature parentFeature = createGFF3Feature(Optional.of(parent), Optional.empty());
+            GFF3Feature childFeature = TestUtils.createGFF3Feature(Optional.of(child), Optional.of(parent));
+            GFF3Feature parentFeature = TestUtils.createGFF3Feature(Optional.of(parent), Optional.empty());
             featureList.add(childFeature);
             featureList.add(parentFeature);
 
@@ -49,8 +56,8 @@ class GFF3AnnotationFactoryTest {
         GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
         List<GFF3Feature> featureList = new ArrayList<>();
         featureRelationMap.forEach((child, parent) -> {
-            GFF3Feature childFeature = createGFF3Feature(Optional.of(child), Optional.of(parent));
-            GFF3Feature parentFeature = createGFF3Feature(Optional.of(parent), Optional.empty());
+            GFF3Feature childFeature = TestUtils.createGFF3Feature(Optional.of(child), Optional.of(parent));
+            GFF3Feature parentFeature = TestUtils.createGFF3Feature(Optional.of(parent), Optional.empty());
             featureList.add(childFeature);
             featureList.add(parentFeature);
         });
@@ -90,21 +97,4 @@ class GFF3AnnotationFactoryTest {
         assertEquals(childrenCount, featureRelationMap.size());
     }
 
-    private GFF3Feature createGFF3Feature(Optional<String> featureName, Optional<String> parentFeatureName) {
-        String id = featureName.map(v -> v + "_gene").orElse("_gene");
-        String parent = parentFeatureName.map(v -> v + "_gene").orElse("_gene");
-
-        return new GFF3Feature(
-                featureName,
-                parentFeatureName,
-                "1234",
-                ".",
-                featureName.get(),
-                1,
-                800,
-                ".",
-                "+",
-                "",
-                new HashMap<>(Map.of("ID", id, "Parent", parent, "gene", "geneX")));
-    }
 }
