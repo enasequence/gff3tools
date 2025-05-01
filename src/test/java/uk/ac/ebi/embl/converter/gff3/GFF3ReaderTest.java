@@ -68,6 +68,7 @@ public class GFF3ReaderTest {
         test("ID=ID_TEST;qualifier1=test_1;qualifier2=test_2;");
         test("ID=ID_TEST;qualifier1=test_1;qualifier1=test_2;qualifier1=test_3;");
         test("ID=ID_TEST;qualifier1=test_1;qualifier1=test_3;qualifier2=test_2;");
+        test("ID=ID_TEST;qualifier1=test_1;qualifier1=test_3;");
     }
 
     private void test(String attributeLine) throws Exception {
