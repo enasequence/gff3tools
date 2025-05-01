@@ -66,10 +66,13 @@ public class GFF3DirectivesFactory {
     public GFF3Directives from(Entry entry) throws FFtoGFF3ConversionError {
 
         ArrayList<GFF3Directives.GFF3Directive> directives = new ArrayList<>();
-        if (!this.ignoreSpecies) directives.add(extractSpecies(entry));
-        directives.add(extractSequenceRegion(entry));
+        GFF3Directives gff3Directives = new GFF3Directives();
+        if (!this.ignoreSpecies) {
+            gff3Directives.add(extractSpecies(entry));
+        }
+        gff3Directives.add(extractSequenceRegion(entry));
 
-        return new GFF3Directives(directives);
+        return gff3Directives;
     }
 
     public static class NoSourcePresent extends FFtoGFF3ConversionError {

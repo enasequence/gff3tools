@@ -15,44 +15,47 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.io.BufferedReader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.converter.cli.Params;
 import uk.ac.ebi.embl.converter.fftogff3.FFtoGFF3ConversionError;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.converter.gff3toff.EmblFlatFile;
-import uk.ac.ebi.embl.converter.gff3toff.FFEntryFactory;
+import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
 
 class GFF3ToFFConverterTest {
 
     @Test
-    void testWriteGFF3() throws Exception {
+     void testWriteGFF3() throws Exception {
 
-        Map<String, Path> testFiles = TestUtils.getTestFiles("gff3toff_rules", ".gff3");
+         Map<String, Path> testFiles = TestUtils.getTestFiles("gff3toff_rules", ".gff3");
 
-        for (String filePrefix : testFiles.keySet()) {
-            FFEntryFactory rule = new FFEntryFactory();
-            try (BufferedReader testFileReader =
-                    TestUtils.getResourceReader(testFiles.get(filePrefix).toString())) {
+         for (String filePrefix : testFiles.keySet()) {
+             Gff3ToFFConverter converter = new Gff3ToFFConverter();
+             try {
 
-                GFF3FileReader gff3Reader = new GFF3FileReader(testFileReader);
-                Writer flatFileWriter = new StringWriter();
-                EmblFlatFile flatFile = rule.from(gff3Reader);
-                flatFile.writeFFString(flatFileWriter);
+                 String inFile = testFiles.get(filePrefix).toString();
+                 String outFile = filePrefix+".embl";
+                 String[] args = { "-in", inFile , "-out", outFile };
+                 Params params = Params.parse(args);
+                 converter.convert(params);
 
-                String expected;
-                String expectedFilePath = testFiles.get(filePrefix).toString().replace(".gff3", ".embl");
-                try (BufferedReader emblTestFileReader = TestUtils.getResourceReader(expectedFilePath)) {
-                    expected = new BufferedReader(emblTestFileReader).lines().collect(Collectors.joining("\n"));
-                }
+                 String expected;
+                 String expectedFilePath = inFile.replace(".gff3", ".embl");
+                 try (BufferedReader emblTestFileReader = TestUtils.getResourceReader(expectedFilePath)) {
+                     expected = new BufferedReader(emblTestFileReader).lines().collect(Collectors.joining("\n"));
+                 }
 
-                assertEquals(expected.trim(), flatFileWriter.toString().trim(), "Error on test case: " + filePrefix);
-                flatFileWriter.close();
-            } catch (FFtoGFF3ConversionError e) {
-                throw e;
-                // fail("Error on test case: " + filePrefix + " - " + e.getMessage());
-            }
-        }
-    }
+                 assertEquals(expected.trim(), Files.readString(Paths.get(outFile)).trim(), "Error on test case: " + filePrefix);
+                 Files.deleteIfExists(Paths.get(outFile));
+             } catch (FFtoGFF3ConversionError e) {
+                 //throw e;
+                 fail("Error on test case: " + filePrefix + " - " + e.getMessage());
+             }
+         }
+     }
 }

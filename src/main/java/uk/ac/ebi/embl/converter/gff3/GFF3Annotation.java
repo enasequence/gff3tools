@@ -12,13 +12,21 @@ package uk.ac.ebi.embl.converter.gff3;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-public record GFF3Annotation(
-        GFF3Directives directives, List<GFF3Feature> features)
-        implements IGFF3Feature {
+@NoArgsConstructor
+@Getter
+@Setter
+public class GFF3Annotation implements IGFF3Feature {
+    GFF3Directives directives = new GFF3Directives();
+    List<GFF3Feature> features = new ArrayList<>();
+
     private void writeFeature(Writer writer, GFF3Feature feature) throws IOException {
         writer.write(feature.getAccession());
         writer.write('\t' + feature.getSource());
@@ -43,5 +51,9 @@ public record GFF3Annotation(
             writeFeature(writer, feature);
         }
         writer.write('\n');
+    }
+
+    public void addFeature(GFF3Feature feature) {
+        features.add(feature);
     }
 }

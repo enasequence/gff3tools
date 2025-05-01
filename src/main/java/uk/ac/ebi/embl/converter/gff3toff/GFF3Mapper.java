@@ -36,7 +36,6 @@ public class GFF3Mapper {
     private final QualifierFactory qualifierFactory = new QualifierFactory();
     private final LocationFactory locationFactory = new LocationFactory();
     private final SequenceFactory sequenceFactory = new SequenceFactory();
-    final String resourceBundle = "uk.ac.ebi.embl.gff3.mapping.gffMapper";
 
     Map<String, GFF3Feature> parentFeatures;
 
@@ -50,10 +49,10 @@ public class GFF3Mapper {
         Entry entry = entryFactory.createEntry();
         entry.setSequence(sequenceFactory.createSequence());
 
-        if (!annotation.directives().directives().isEmpty()) {
+        if (!annotation.getDirectives().getDirectives().isEmpty()) {
             SourceFeature sourceFeature = this.featureFactory.createSourceFeature();
             for (GFF3Directives.GFF3Directive directive :
-                    annotation.directives().directives()) {
+                    annotation.getDirectives().getDirectives()) {
                 if (directive.getClass() == GFF3Directives.GFF3SequenceRegion.class) {
                     GFF3Directives.GFF3SequenceRegion reg = (GFF3Directives.GFF3SequenceRegion) directive;
                     String accession = reg.accession();
@@ -68,7 +67,7 @@ public class GFF3Mapper {
             entry.addFeature(sourceFeature);
         }
 
-        for (GFF3Feature feature : annotation.features()) {
+        for (GFF3Feature feature : annotation.getFeatures()) {
             if (feature.getId().isPresent()) {
                 parentFeatures.put(feature.getId().get(), feature);
             }
@@ -156,10 +155,4 @@ public class GFF3Mapper {
         return qualifierList;
     }
 
-    public List<Entry> mapGFF3ToEntry(GFF3FileReader gff3Reader) throws IOException, GFF3ValidationError {
-        GFF3File gff3File = gff3Reader.read();
-        ArrayList<Entry> entries = new ArrayList<>(
-                gff3File.annotations().stream().map(this::mapGFF3ToEntry).toList());
-        return entries;
-    }
 }
