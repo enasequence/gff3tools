@@ -14,4 +14,5 @@ EBI gitlab token in the following format.
 Conversion rules and Assumptions are added to the code under `// Rule: ` and `// Assumption:` comments for now. 
 
 
-
+# Running ff to gff3 converter
+```java -cp ./ff2gff3-1.0.jar uk.ac.ebi.embl.converter.cli.FFToGff3CLI -in in/OZ026791.ff -out out/OZ026791.gff3```
