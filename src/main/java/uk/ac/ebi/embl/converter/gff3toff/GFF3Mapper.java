@@ -24,9 +24,6 @@ import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
-import uk.ac.ebi.embl.converter.gff3.GFF3File;
-import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
 public class GFF3Mapper {
@@ -38,15 +35,20 @@ public class GFF3Mapper {
     private final SequenceFactory sequenceFactory = new SequenceFactory();
 
     Map<String, GFF3Feature> parentFeatures;
+    Map<String, Feature> ffFeatures;
+    Entry entry;
 
     public GFF3Mapper() {
         parentFeatures = new HashMap<>();
+        ffFeatures = new HashMap<>();
+        entry = null;
     }
 
     public Entry mapGFF3ToEntry(GFF3Annotation annotation) {
 
         parentFeatures.clear();
-        Entry entry = entryFactory.createEntry();
+        ffFeatures.clear();
+        entry = entryFactory.createEntry();
         entry.setSequence(sequenceFactory.createSequence());
 
         if (!annotation.getDirectives().getDirectives().isEmpty()) {
@@ -59,7 +61,7 @@ public class GFF3Mapper {
                     String accessionId = accession.substring(0, accession.lastIndexOf('.'));
                     entry.setPrimaryAccession(accessionId);
                     Location location = this.locationFactory.createLocalRange(reg.start(), reg.end());
-                    Order<Location> compoundJoin = new Order();
+                    Join<Location> compoundJoin = new Join<>();
                     compoundJoin.addLocation(location);
                     sourceFeature.setLocations(compoundJoin);
                 }
@@ -67,17 +69,16 @@ public class GFF3Mapper {
             entry.addFeature(sourceFeature);
         }
 
-        for (GFF3Feature feature : annotation.getFeatures()) {
-            if (feature.getId().isPresent()) {
-                parentFeatures.put(feature.getId().get(), feature);
+        for (GFF3Feature gff3Feature : annotation.getFeatures()) {
+            if (gff3Feature.getId().isPresent()) {
+                parentFeatures.put(gff3Feature.getId().get(), gff3Feature);
             }
 
-            entry.addFeature(mapGFF3Feature(feature));
+            mapGFF3Feature(gff3Feature);
 
 
-            for (GFF3Feature childFeature : feature.getChildren()) {
-                Feature ffChildFeature = mapGFF3Feature(childFeature);
-                entry.addFeature(ffChildFeature);
+            for (GFF3Feature childFeature : gff3Feature.getChildren()) {
+                mapGFF3Feature(childFeature);
             }
         }
 
@@ -89,12 +90,30 @@ public class GFF3Mapper {
         Map<String, String> attributes = gff3Feature.getAttributes();
         Collection<Qualifier> qualifiers = mapGFF3Attributes(attributes);
 
-        CompoundLocation<Location> locations = mapGFF3Location(gff3Feature);
 
         String featureType = gff3Feature.getName();
-        Feature ffFeature = this.featureFactory.createFeature(featureType);
-        ffFeature.setLocations(locations);
-        ffFeature.addQualifiers(qualifiers);
+
+        String featureHashId;
+         if (attributes.containsKey("ID")) {
+             featureHashId = attributes.get("ID");
+         } else {
+             featureHashId = gff3Feature.hashCode() + "";
+         }
+
+        Location location = mapGFF3Location(gff3Feature);
+        Feature ffFeature;
+        if (ffFeatures.containsKey(featureHashId)) {
+            ffFeature = ffFeatures.get(featureHashId);
+            ffFeature.getLocations().addLocation(location);
+        } else {
+            ffFeature = featureFactory.createFeature(featureType);
+            Join<Location> locations = new Join();
+            locations.addLocation(location);
+            ffFeature.setLocations(locations);
+            ffFeature.addQualifiers(qualifiers);
+            ffFeatures.put(featureHashId, ffFeature);
+            entry.addFeature(ffFeature);
+        }
         if (ffFeature.getQualifiers("gene").isEmpty()) {
             String gene = getGeneForFeature(gff3Feature);
             if (gene != null) {
@@ -116,7 +135,7 @@ public class GFF3Mapper {
         }
     }
 
-    private CompoundLocation<Location> mapGFF3Location(GFF3Feature gff3Feature) {
+    private Location mapGFF3Location(GFF3Feature gff3Feature) {
 
         long start = gff3Feature.getStart();
         long end = gff3Feature.getEnd();
@@ -132,9 +151,7 @@ public class GFF3Mapper {
         if (partials.contains("end")) {
             location.setThreePrimePartial(true);
         }
-        Join<Location> compoundJoin = new Join();
-        compoundJoin.addLocation(location);
-        return compoundJoin;
+        return location;
     }
 
     private Collection<Qualifier> mapGFF3Attributes(Map<String, String> attributes) {

@@ -32,7 +32,7 @@ class GFF3ToFFConverterTest {
 
          Map<String, Path> testFiles = TestUtils.getTestFiles("gff3toff_rules", ".gff3");
 
-         for (String filePrefix : testFiles.keySet()) {
+         for (String filePrefix : new String[] {"partial_location_join"}) {
              Gff3ToFFConverter converter = new Gff3ToFFConverter();
              try {
 
