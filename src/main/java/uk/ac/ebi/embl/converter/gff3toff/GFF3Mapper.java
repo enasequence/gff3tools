@@ -44,17 +44,17 @@ public class GFF3Mapper {
         entry = null;
     }
 
-    public Entry mapGFF3ToEntry(GFF3Annotation annotation) {
+    public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) {
 
         parentFeatures.clear();
         ffFeatures.clear();
         entry = entryFactory.createEntry();
         entry.setSequence(sequenceFactory.createSequence());
 
-        if (!annotation.getDirectives().getDirectives().isEmpty()) {
+        if (!gff3Annotation.getDirectives().getDirectives().isEmpty()) {
             SourceFeature sourceFeature = this.featureFactory.createSourceFeature();
             for (GFF3Directives.GFF3Directive directive :
-                    annotation.getDirectives().getDirectives()) {
+                    gff3Annotation.getDirectives().getDirectives()) {
                 if (directive.getClass() == GFF3Directives.GFF3SequenceRegion.class) {
                     GFF3Directives.GFF3SequenceRegion reg = (GFF3Directives.GFF3SequenceRegion) directive;
                     String accession = reg.accession();
@@ -69,7 +69,7 @@ public class GFF3Mapper {
             entry.addFeature(sourceFeature);
         }
 
-        for (GFF3Feature gff3Feature : annotation.getFeatures()) {
+        for (GFF3Feature gff3Feature : gff3Annotation.getFeatures()) {
             if (gff3Feature.getId().isPresent()) {
                 parentFeatures.put(gff3Feature.getId().get(), gff3Feature);
             }
