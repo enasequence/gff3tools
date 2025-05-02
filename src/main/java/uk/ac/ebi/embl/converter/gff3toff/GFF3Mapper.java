@@ -88,15 +88,8 @@ public class GFF3Mapper {
 
         Map<String, String> attributes = gff3Feature.getAttributes();
         Collection<Qualifier> qualifiers = mapGFF3Attributes(attributes);
-
+        String featureHashId = attributes.getOrDefault("ID", String.valueOf(gff3Feature.hashCode()));
         String featureType = gff3Feature.getName();
-
-        String featureHashId;
-         if (attributes.containsKey("ID")) {
-             featureHashId = attributes.get("ID");
-         } else {
-             featureHashId = gff3Feature.hashCode() + "";
-         }
 
         Location location = mapGFF3Location(gff3Feature);
         Feature ffFeature;
