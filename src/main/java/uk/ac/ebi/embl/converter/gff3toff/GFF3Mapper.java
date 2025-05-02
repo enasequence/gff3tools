@@ -92,10 +92,12 @@ public class GFF3Mapper {
         String featureType = gff3Feature.getName();
 
         Location location = mapGFF3Location(gff3Feature);
-        Feature ffFeature;
-        if (ffFeatures.containsKey(featureHashId)) {
-            ffFeature = ffFeatures.get(featureHashId);
+        Feature ffFeature = ffFeatures.get(featureHashId);
+        if (ffFeature != null) {
             CompoundLocation<Location> locations = ffFeature.getLocations();
+            // If the compoundlocation isComplement but the new location we are adding is not complement
+            // we need to restructure the locations that it contains
+            // QUESTION: Is this ever happen? AFAIK the syntax would allow this, but it is nonsensical.
             if (locations.isComplement() && !location.isComplement()) {
                 locations.getLocations().forEach((l) -> location.setComplement(true));
                 locations.setComplement(false);
