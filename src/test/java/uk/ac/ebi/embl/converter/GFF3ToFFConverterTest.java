@@ -46,15 +46,12 @@ class GFF3ToFFConverterTest {
                     expected = new BufferedReader(emblTestFileReader).lines().collect(Collectors.joining("\n"));
                 }
 
-                assertEquals(
-                        expected.trim(),
-                        Files.readString(Paths.get(outFile)).trim(),
-                        "Error on test case: " + filePrefix);
-                Files.deleteIfExists(Paths.get(outFile));
-            } catch (FFtoGFF3ConversionError e) {
-                // throw e;
-                fail("Error on test case: " + filePrefix + " - " + e.getMessage());
-            }
-        }
-    }
+                 assertEquals(expected.trim(), Files.readString(Paths.get(outFile)).trim(), "Error on test case: " + filePrefix);
+                 Files.deleteIfExists(Paths.get(outFile));
+             } catch (FFtoGFF3ConversionError e) {
+                 //throw e;
+                 fail("Error on test case: " + filePrefix + " - " + e.getMessage());
+             }
+         }
+     }
 }
