@@ -104,10 +104,21 @@ public class GFF3Mapper {
         Feature ffFeature;
         if (ffFeatures.containsKey(featureHashId)) {
             ffFeature = ffFeatures.get(featureHashId);
-            ffFeature.getLocations().addLocation(location);
+            CompoundLocation<Location> locations = ffFeature.getLocations();
+            if (locations.isComplement() && !location.isComplement()) {
+                locations.getLocations().forEach((l) -> location.setComplement(true));
+                locations.setComplement(false);
+            } else if (location.isComplement() && location.isComplement()) {
+                location.setComplement(false);
+            }
+            locations.addLocation(location);
         } else {
             ffFeature = featureFactory.createFeature(featureType);
-            Join<Location> locations = new Join();
+            CompoundLocation<Location> locations = new Join();
+            if (location.isComplement()) {
+                locations.setComplement(true);
+                location.setComplement(false);
+            }
             locations.addLocation(location);
             ffFeature.setLocations(locations);
             ffFeature.addQualifiers(qualifiers);
