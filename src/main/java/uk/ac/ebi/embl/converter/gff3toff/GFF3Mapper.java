@@ -10,7 +10,6 @@
  */
 package uk.ac.ebi.embl.converter.gff3toff;
 
-import java.io.IOException;
 import java.util.*;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.EntryFactory;
@@ -85,11 +84,10 @@ public class GFF3Mapper {
         return entry;
     }
 
-    private Feature mapGFF3Feature(GFF3Feature gff3Feature) {
+    private void mapGFF3Feature(GFF3Feature gff3Feature) {
 
         Map<String, String> attributes = gff3Feature.getAttributes();
         Collection<Qualifier> qualifiers = mapGFF3Attributes(attributes);
-
 
         String featureType = gff3Feature.getName();
 
@@ -132,7 +130,6 @@ public class GFF3Mapper {
             }
         }
 
-        return ffFeature;
     }
 
     private String getGeneForFeature(GFF3Feature gff3Feature) {
