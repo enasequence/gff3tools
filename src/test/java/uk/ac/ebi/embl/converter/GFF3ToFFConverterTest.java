@@ -13,8 +13,6 @@ package uk.ac.ebi.embl.converter;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.BufferedReader;
-import java.io.StringWriter;
-import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -28,32 +26,35 @@ import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
 class GFF3ToFFConverterTest {
 
     @Test
-     void testWriteGFF3() throws Exception {
+    void testWriteGFF3() throws Exception {
 
-         Map<String, Path> testFiles = TestUtils.getTestFiles("gff3toff_rules", ".gff3");
+        Map<String, Path> testFiles = TestUtils.getTestFiles("gff3toff_rules", ".gff3");
 
-         for (String filePrefix : testFiles.keySet()) {
-             Gff3ToFFConverter converter = new Gff3ToFFConverter();
-             try {
+        for (String filePrefix : testFiles.keySet()) {
+            Gff3ToFFConverter converter = new Gff3ToFFConverter();
+            try {
 
-                 String inFile = testFiles.get(filePrefix).toString();
-                 String outFile = filePrefix+".embl";
-                 String[] args = { "-in", inFile , "-out", outFile };
-                 Params params = Params.parse(args);
-                 converter.convert(params);
+                String inFile = testFiles.get(filePrefix).toString();
+                String outFile = filePrefix + ".embl";
+                String[] args = {"-in", inFile, "-out", outFile};
+                Params params = Params.parse(args);
+                converter.convert(params);
 
-                 String expected;
-                 String expectedFilePath = inFile.replace(".gff3", ".embl");
-                 try (BufferedReader emblTestFileReader = TestUtils.getResourceReader(expectedFilePath)) {
-                     expected = new BufferedReader(emblTestFileReader).lines().collect(Collectors.joining("\n"));
-                 }
+                String expected;
+                String expectedFilePath = inFile.replace(".gff3", ".embl");
+                try (BufferedReader emblTestFileReader = TestUtils.getResourceReader(expectedFilePath)) {
+                    expected = new BufferedReader(emblTestFileReader).lines().collect(Collectors.joining("\n"));
+                }
 
-                 assertEquals(expected.trim(), Files.readString(Paths.get(outFile)).trim(), "Error on test case: " + filePrefix);
-                 Files.deleteIfExists(Paths.get(outFile));
-             } catch (FFtoGFF3ConversionError e) {
-                 //throw e;
-                 fail("Error on test case: " + filePrefix + " - " + e.getMessage());
-             }
-         }
-     }
+                assertEquals(
+                        expected.trim(),
+                        Files.readString(Paths.get(outFile)).trim(),
+                        "Error on test case: " + filePrefix);
+                Files.deleteIfExists(Paths.get(outFile));
+            } catch (FFtoGFF3ConversionError e) {
+                // throw e;
+                fail("Error on test case: " + filePrefix + " - " + e.getMessage());
+            }
+        }
+    }
 }

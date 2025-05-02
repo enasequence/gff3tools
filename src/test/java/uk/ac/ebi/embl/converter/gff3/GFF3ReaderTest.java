@@ -10,7 +10,6 @@
  */
 package uk.ac.ebi.embl.converter.gff3;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.*;
@@ -34,7 +33,7 @@ public class GFF3ReaderTest {
             GFF3FileReader gff3Reader = new GFF3FileReader(reader);
             try {
                 gff3Reader.readHeader();
-                while(true) {
+                while (true) {
                     if (gff3Reader.readAnnotation() == null) break;
                 }
             } catch (Exception e) {

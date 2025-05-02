@@ -75,7 +75,6 @@ public class GFF3Mapper {
 
             mapGFF3Feature(gff3Feature);
 
-
             for (GFF3Feature childFeature : gff3Feature.getChildren()) {
                 mapGFF3Feature(childFeature);
             }
@@ -124,7 +123,6 @@ public class GFF3Mapper {
                 ffFeature.addQualifier("gene", gene);
             }
         }
-
     }
 
     private String getGeneForFeature(GFF3Feature gff3Feature) {
@@ -174,5 +172,4 @@ public class GFF3Mapper {
 
         return qualifierList;
     }
-
 }
