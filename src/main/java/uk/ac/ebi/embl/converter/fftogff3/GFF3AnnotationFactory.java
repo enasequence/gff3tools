@@ -38,6 +38,9 @@ public class GFF3AnnotationFactory {
     ///  List of features that do not belong to a gene.
     List<GFF3Feature> nonGeneFeatures;
 
+    // Map of Id with count, used for incrementing when same id is found.
+    Map<String,Integer> idMap = new HashMap<>();
+
     boolean ignoreSpecies;
 
     public GFF3AnnotationFactory(boolean ignoreSpecies) {
@@ -124,6 +127,7 @@ public class GFF3AnnotationFactory {
                 Map.of("ID", accession, "Is_circular", "true"));
     }
 
+
     private List<GFF3Feature> transformFeature(String accession, Feature ffFeature, Optional<String> geneName) {
         List<GFF3Feature> gff3Features = new ArrayList<>();
 
@@ -134,7 +138,7 @@ public class GFF3AnnotationFactory {
         Optional<String> parentId = Optional.empty();
 
         if (geneName.isPresent()) {
-            id = Optional.of(getId(ffFeature.getName(), geneName.get()));
+            id = Optional.of(getIncrementalId(ffFeature.getName(), geneName.get()));
             String parentFeatureName = getParentFeature(ffFeature.getName());
             parentId = Optional.ofNullable(parentFeatureName).map(name -> getId(name, geneName.get()));
         }
@@ -340,6 +344,14 @@ public class GFF3AnnotationFactory {
                 && gffFeatures.stream().anyMatch(f -> f.getId()
                         .map(id -> id.equalsIgnoreCase(parentId.get()))
                         .orElse(false));
+    }
+
+    public String getIncrementalId(String name, String geneName) {
+        String baseId = "%s_%s".formatted(name, geneName);
+        int count = idMap.getOrDefault(baseId, 0);
+        idMap.put(baseId, count + 1);
+
+        return count > 0 ? "%s_%d".formatted(baseId, count) : baseId;
     }
 
     private String getId(String name, String geneName) {

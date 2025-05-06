@@ -89,4 +89,19 @@ class GFF3AnnotationFactoryTest {
         // createGFF3Feature(Optional.of(child), Optional.of(parent));
         assertEquals(childrenCount, featureRelationMap.size());
     }
+
+    @Test
+    public void testGetIncrementalId(){
+        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
+        List<String> genes = Arrays.asList("tnpA","tnpB","tnpA","tnpA","tnpC","tnpB");
+        List<String> ids = Arrays.asList("CDS_tnpA","CDS_tnpB","CDS_tnpA_1","CDS_tnpA_2","CDS_tnpC","CDS_tnpB_1");
+        String featureName = "CDS";
+        int count=0;
+        for(String gene: genes){
+            String id = gFF3AnnotationFactory.getIncrementalId(featureName, gene);
+            assertEquals(ids.get(count),id);
+            count++;
+        }
+
+    }
 }
