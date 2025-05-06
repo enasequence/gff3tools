@@ -88,17 +88,17 @@ public class GFF3Mapper {
         Location location = mapGFF3Location(gff3Feature);
         Feature ffFeature = ffFeatures.get(featureHashId);
         if (ffFeature != null) {
-            CompoundLocation<Location> locations = ffFeature.getLocations();
+            CompoundLocation<Location> parentFeatureLocation = ffFeature.getLocations();
             // If the compoundlocation isComplement but the new location we are adding is not complement
             // we need to restructure the locations that it contains
-            // QUESTION: Is this ever happen? AFAIK the syntax would allow this, but it is nonsensical.
-            if (locations.isComplement() && !location.isComplement()) {
-                locations.getLocations().forEach((l) -> location.setComplement(true));
-                locations.setComplement(false);
-            } else if (location.isComplement() && location.isComplement()) {
+            // QUESTION: Does this ever happen? AFAIK the syntax would allow this, but it is nonsensical.
+            if (parentFeatureLocation.isComplement() && !location.isComplement()) {
+                parentFeatureLocation.getLocations().forEach((l) -> location.setComplement(true));
+                parentFeatureLocation.setComplement(false);
+            } else if (parentFeatureLocation.isComplement() && location.isComplement()) {
                 location.setComplement(false);
             }
-            locations.addLocation(location);
+            parentFeatureLocation.addLocation(location);
         } else {
             ffFeature = featureFactory.createFeature(featureType);
             CompoundLocation<Location> locations = new Join();
