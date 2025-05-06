@@ -10,8 +10,7 @@
  */
 package uk.ac.ebi.embl.converter.gff3;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.*;
 import java.nio.file.Path;

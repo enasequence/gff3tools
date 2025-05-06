@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.converter.gff3toff;
 
+import java.io.IOException;
 import java.util.*;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.EntryFactory;
@@ -23,6 +24,9 @@ import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
+import uk.ac.ebi.embl.converter.gff3.GFF3File;
+import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
 public class GFF3Mapper {
@@ -34,28 +38,33 @@ public class GFF3Mapper {
     private final SequenceFactory sequenceFactory = new SequenceFactory();
 
     Map<String, GFF3Feature> parentFeatures;
+    Map<String, Feature> ffFeatures;
+    Entry entry;
 
     public GFF3Mapper() {
         parentFeatures = new HashMap<>();
+        ffFeatures = new HashMap<>();
+        entry = null;
     }
 
-    public Entry mapGFF3ToEntry(GFF3Annotation annotation) {
+    public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) {
 
         parentFeatures.clear();
-        Entry entry = entryFactory.createEntry();
+        ffFeatures.clear();
+        entry = entryFactory.createEntry();
         entry.setSequence(sequenceFactory.createSequence());
 
-        if (!annotation.getDirectives().getDirectives().isEmpty()) {
+        if (!gff3Annotation.getDirectives().getDirectives().isEmpty()) {
             SourceFeature sourceFeature = this.featureFactory.createSourceFeature();
             for (GFF3Directives.GFF3Directive directive :
-                    annotation.getDirectives().getDirectives()) {
+                    gff3Annotation.getDirectives().getDirectives()) {
                 if (directive.getClass() == GFF3Directives.GFF3SequenceRegion.class) {
                     GFF3Directives.GFF3SequenceRegion reg = (GFF3Directives.GFF3SequenceRegion) directive;
                     String accession = reg.accession();
                     String accessionId = accession.substring(0, accession.lastIndexOf('.'));
                     entry.setPrimaryAccession(accessionId);
                     Location location = this.locationFactory.createLocalRange(reg.start(), reg.end());
-                    Order<Location> compoundJoin = new Order();
+                    Join<Location> compoundJoin = new Join<>();
                     compoundJoin.addLocation(location);
                     sourceFeature.setLocations(compoundJoin);
                 }
@@ -63,41 +72,56 @@ public class GFF3Mapper {
             entry.addFeature(sourceFeature);
         }
 
-        for (GFF3Feature feature : annotation.getFeatures()) {
-            if (feature.getId().isPresent()) {
-                parentFeatures.put(feature.getId().get(), feature);
+        for (GFF3Feature gff3Feature : gff3Annotation.getFeatures()) {
+            if (gff3Feature.getId().isPresent()) {
+                parentFeatures.put(gff3Feature.getId().get(), gff3Feature);
             }
 
-            entry.addFeature(mapGFF3Feature(feature));
-
-            for (GFF3Feature childFeature : feature.getChildren()) {
-                Feature ffChildFeature = mapGFF3Feature(childFeature);
-                entry.addFeature(ffChildFeature);
-            }
+            mapGFF3Feature(gff3Feature);
         }
 
         return entry;
     }
 
-    private Feature mapGFF3Feature(GFF3Feature gff3Feature) {
+    private void mapGFF3Feature(GFF3Feature gff3Feature) {
 
         Map<String, Object> attributes = gff3Feature.getAttributes();
-        Collection<Qualifier> qualifiers = mapGFF3Attributes(attributes);
-
-        CompoundLocation<Location> locations = mapGFF3Location(gff3Feature);
-
+        String featureHashId = (String)attributes.getOrDefault("ID", String.valueOf(gff3Feature.hashCode()));
         String featureType = gff3Feature.getName();
-        Feature ffFeature = this.featureFactory.createFeature(featureType);
-        ffFeature.setLocations(locations);
-        ffFeature.addQualifiers(qualifiers);
+
+        Location location = mapGFF3Location(gff3Feature);
+        Feature ffFeature = ffFeatures.get(featureHashId);
+        if (ffFeature != null) {
+            CompoundLocation<Location> parentFeatureLocation = ffFeature.getLocations();
+            // If the compoundlocation isComplement but the new location we are adding is not complement
+            // we need to restructure the locations that it contains
+            // QUESTION: Does this ever happen? AFAIK the syntax would allow this, but it is nonsensical.
+            if (parentFeatureLocation.isComplement() && !location.isComplement()) {
+                parentFeatureLocation.getLocations().forEach((l) -> location.setComplement(true));
+                parentFeatureLocation.setComplement(false);
+            } else if (parentFeatureLocation.isComplement() && location.isComplement()) {
+                location.setComplement(false);
+            }
+            parentFeatureLocation.addLocation(location);
+        } else {
+            ffFeature = featureFactory.createFeature(featureType);
+            CompoundLocation<Location> locations = new Join();
+            if (location.isComplement()) {
+                locations.setComplement(true);
+                location.setComplement(false);
+            }
+            locations.addLocation(location);
+            ffFeature.setLocations(locations);
+            ffFeature.addQualifiers(mapGFF3Attributes(attributes));
+            ffFeatures.put(featureHashId, ffFeature);
+            entry.addFeature(ffFeature);
+        }
         if (ffFeature.getQualifiers("gene").isEmpty()) {
             String gene = getGeneForFeature(gff3Feature);
             if (gene != null) {
                 ffFeature.addQualifier("gene", gene);
             }
         }
-
-        return ffFeature;
     }
 
     private String getGeneForFeature(GFF3Feature gff3Feature) {
@@ -111,7 +135,7 @@ public class GFF3Mapper {
         }
     }
 
-    private CompoundLocation<Location> mapGFF3Location(GFF3Feature gff3Feature) {
+    private Location mapGFF3Location(GFF3Feature gff3Feature) {
 
         long start = gff3Feature.getStart();
         long end = gff3Feature.getEnd();
@@ -130,9 +154,7 @@ public class GFF3Mapper {
         if (partials.contains("end")) {
             location.setThreePrimePartial(true);
         }
-        Join<Location> compoundJoin = new Join();
-        compoundJoin.addLocation(location);
-        return compoundJoin;
+        return location;
     }
 
     private Collection<Qualifier> mapGFF3Attributes(Map<String, Object> attributes) {
@@ -159,4 +181,5 @@ public class GFF3Mapper {
 
         return qualifierList;
     }
+
 }
