@@ -34,15 +34,21 @@ public class Gff3ToFFConverter {
             gff3Reader.readHeader();
             GFF3Annotation annotation;
             while ((annotation = gff3Reader.readAnnotation()) != null) {
+                LOG.info("Converting Gff3 entry: {}", getAccession(annotation));
                 EmblEntryWriter entryWriter = new EmblEntryWriter(mapper.mapGFF3ToEntry(annotation));
                 entryWriter.setShowAcStartLine(false);
                 entryWriter.write(fileWriter);
             }
+            LOG.info("Flat file is written in: {}", params.outFile.toPath());
         } catch (IOException e) {
             throw new FFtoGFF3ConversionError("IO Error during conversion", e);
         } catch (GFF3ValidationError e) {
             throw new FFtoGFF3ConversionError(
                     String.format("Validation Error on line %d: %s", e.getLine(), e.getMessage()), e);
         }
+    }
+
+    private String getAccession(GFF3Annotation gff3Annotation) {
+        return gff3Annotation.getFeatures().stream().findFirst().get().getAccession();
     }
 }

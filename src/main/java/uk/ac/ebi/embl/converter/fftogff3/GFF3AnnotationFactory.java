@@ -39,7 +39,7 @@ public class GFF3AnnotationFactory {
     List<GFF3Feature> nonGeneFeatures;
 
     // Map of Id with count, used for incrementing when same id is found.
-    Map<String,Integer> idMap = new HashMap<>();
+    Map<String, Integer> idMap = new HashMap<>();
 
     boolean ignoreSpecies;
 
@@ -126,7 +126,6 @@ public class GFF3AnnotationFactory {
                 ".",
                 Map.of("ID", accession, "Is_circular", "true"));
     }
-
 
     private List<GFF3Feature> transformFeature(String accession, Feature ffFeature, Optional<String> geneName) {
         List<GFF3Feature> gff3Features = new ArrayList<>();
