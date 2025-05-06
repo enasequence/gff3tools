@@ -17,6 +17,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import uk.ac.ebi.embl.converter.gff3.*;
+import uk.ac.ebi.embl.converter.utils.Gff3Utils;
 
 public class GFF3FileReader implements AutoCloseable {
     static Pattern DIRECTIVE_VERSION = Pattern.compile(
@@ -106,10 +107,10 @@ public class GFF3FileReader implements AutoCloseable {
         String phase = m.group("phase");
         String attributes = m.group("attributes");
 
-        Map<String, String> attributesMap = attributesFromString(attributes);
+        Map<String, Object> attributesMap = attributesFromString(attributes);
 
-        Optional<String> id = Optional.ofNullable(attributesMap.get("ID"));
-        Optional<String> parentId = Optional.ofNullable(attributesMap.get("Parent"));
+        Optional<String> id = Optional.ofNullable((String) attributesMap.get("ID"));
+        Optional<String> parentId = Optional.ofNullable((String) attributesMap.get("Parent"));
 
         GFF3Feature feature =
                 new GFF3Feature(id, parentId, accession, source, name, start, end, score, strand, phase, attributesMap);
@@ -117,12 +118,18 @@ public class GFF3FileReader implements AutoCloseable {
         gff3Annotation.addFeature(feature);
     }
 
-    private static Map<String, String> attributesFromString(String line) {
-        Map<String, String> attributes = new HashMap<>();
+    public Map<String, Object> attributesFromString(String line) {
+        Map<String, Object> attributes = new LinkedHashMap<>();
         String[] parts = line.split(";");
         for (String part : parts) {
-            String[] keyValue = part.split("=");
-            attributes.put(keyValue[0], keyValue[1]);
+            if(part.contains("=")) {
+                String[] keyValue = part.split("=");
+                if(keyValue.length==2) {
+                    String key = keyValue[0].trim();
+                    String value = keyValue[1].trim();
+                    Gff3Utils.addAttribute(attributes, key, value);
+                }
+            }
         }
         return attributes;
     }

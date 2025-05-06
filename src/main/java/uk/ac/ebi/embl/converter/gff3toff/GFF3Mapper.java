@@ -74,7 +74,6 @@ public class GFF3Mapper {
 
             entry.addFeature(mapGFF3Feature(feature));
 
-
             for (GFF3Feature childFeature : feature.getChildren()) {
                 Feature ffChildFeature = mapGFF3Feature(childFeature);
                 entry.addFeature(ffChildFeature);
@@ -86,7 +85,6 @@ public class GFF3Mapper {
 
     private Feature mapGFF3Feature(GFF3Feature gff3Feature) {
 
-        Map<String, String> attributes = gff3Feature.getAttributes();
         Collection<Qualifier> qualifiers = mapGFF3Attributes(attributes);
 
         CompoundLocation<Location> locations = mapGFF3Location(gff3Feature);
@@ -107,7 +105,6 @@ public class GFF3Mapper {
 
     private String getGeneForFeature(GFF3Feature gff3Feature) {
         if (gff3Feature.getAttributes().containsKey("gene")) {
-            return gff3Feature.getAttributes().get("gene");
         } else if (gff3Feature.getParentId().isPresent()) {
             GFF3Feature parent = parentFeatures.get(gff3Feature.getParentId().get());
             return getGeneForFeature(parent);
@@ -120,8 +117,11 @@ public class GFF3Mapper {
 
         long start = gff3Feature.getStart();
         long end = gff3Feature.getEnd();
-        List<String> partials = Arrays.stream(
-                        gff3Feature.getAttributes().getOrDefault("partial", "").split(","))
+        List<String> partials = Arrays.stream(gff3Feature
+                        .getAttributes()
+                        .getOrDefault("partial", "")
+                        .toString()
+                        .split(","))
                 .toList();
 
         Location location = this.locationFactory.createLocalRange(
@@ -137,7 +137,7 @@ public class GFF3Mapper {
         return compoundJoin;
     }
 
-    private Collection<Qualifier> mapGFF3Attributes(Map<String, String> attributes) {
+    private Collection<Qualifier> mapGFF3Attributes(Map<String, Object> attributes) {
         Collection<Qualifier> qualifierList = new ArrayList();
 
         for (Object o : attributes.entrySet()) {
@@ -147,12 +147,18 @@ public class GFF3Mapper {
                 attributeKey = qmap.get(attributeKey);
             }
             if (!attributeKey.isBlank()) {
-                String attributeValue = attributePairs.getValue();
-                qualifierList.add(qualifierFactory.createQualifier(attributeKey, attributeValue));
+                Object value = attributePairs.getValue();
+                if (value instanceof List) {
+                    List<String> values = (List<String>) value;
+                    for (String s : values) {
+                        qualifierList.add(qualifierFactory.createQualifier(attributeKey, s));
+                    }
+                } else {
+                    qualifierList.add(qualifierFactory.createQualifier(attributeKey, value.toString()));
+                }
             }
         }
 
         return qualifierList;
     }
-
 }
