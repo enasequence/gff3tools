@@ -10,7 +10,6 @@
  */
 package uk.ac.ebi.embl.converter.gff3toff;
 
-import java.io.IOException;
 import java.util.*;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.EntryFactory;
@@ -24,9 +23,6 @@ import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
-import uk.ac.ebi.embl.converter.gff3.GFF3File;
-import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
 public class GFF3Mapper {
@@ -86,7 +82,7 @@ public class GFF3Mapper {
     private void mapGFF3Feature(GFF3Feature gff3Feature) {
 
         Map<String, Object> attributes = gff3Feature.getAttributes();
-        String featureHashId = (String)attributes.getOrDefault("ID", String.valueOf(gff3Feature.hashCode()));
+        String featureHashId = (String) attributes.getOrDefault("ID", String.valueOf(gff3Feature.hashCode()));
         String featureType = gff3Feature.getName();
 
         Location location = mapGFF3Location(gff3Feature);
@@ -181,5 +177,4 @@ public class GFF3Mapper {
 
         return qualifierList;
     }
-
 }
