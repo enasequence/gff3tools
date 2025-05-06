@@ -82,7 +82,6 @@ public class GFF3Mapper {
     private void mapGFF3Feature(GFF3Feature gff3Feature) {
 
         Map<String, String> attributes = gff3Feature.getAttributes();
-        Collection<Qualifier> qualifiers = mapGFF3Attributes(attributes);
         String featureHashId = attributes.getOrDefault("ID", String.valueOf(gff3Feature.hashCode()));
         String featureType = gff3Feature.getName();
 
@@ -109,7 +108,7 @@ public class GFF3Mapper {
             }
             locations.addLocation(location);
             ffFeature.setLocations(locations);
-            ffFeature.addQualifiers(qualifiers);
+            ffFeature.addQualifiers(mapGFF3Attributes(attributes));
             ffFeatures.put(featureHashId, ffFeature);
             entry.addFeature(ffFeature);
         }
