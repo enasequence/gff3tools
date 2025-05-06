@@ -29,7 +29,7 @@ public class Gff3ToFFConverter {
     public void convert(Params params) throws FFtoGFF3ConversionError {
         Path filePath = params.inFile.toPath();
         try (GFF3FileReader gff3Reader = new GFF3FileReader(Files.newBufferedReader(filePath));
-            FileWriter fileWriter = new FileWriter(params.outFile)) {
+                FileWriter fileWriter = new FileWriter(params.outFile)) {
             GFF3Mapper mapper = new GFF3Mapper();
             gff3Reader.readHeader();
             GFF3Annotation annotation;
@@ -39,9 +39,10 @@ public class Gff3ToFFConverter {
                 entryWriter.write(fileWriter);
             }
         } catch (IOException e) {
-            throw new FFtoGFF3ConversionError("IO Error during conversion" , e);
+            throw new FFtoGFF3ConversionError("IO Error during conversion", e);
         } catch (GFF3ValidationError e) {
-            throw new FFtoGFF3ConversionError(String.format("Validation Error on line %d: %s", e.getLine(), e.getMessage()), e);
+            throw new FFtoGFF3ConversionError(
+                    String.format("Validation Error on line %d: %s", e.getLine(), e.getMessage()), e);
         }
     }
 }

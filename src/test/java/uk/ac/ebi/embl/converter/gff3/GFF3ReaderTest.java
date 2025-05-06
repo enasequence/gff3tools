@@ -10,6 +10,9 @@
  */
 package uk.ac.ebi.embl.converter.gff3;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.*;
 import java.nio.file.Path;
 import java.util.Map;
@@ -18,9 +21,6 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class GFF3ReaderTest {
     @Test
@@ -60,7 +60,6 @@ public class GFF3ReaderTest {
         }
     }
 
-
     @Test
     void testAttributesFromAndToString() throws Exception {
 
@@ -72,15 +71,15 @@ public class GFF3ReaderTest {
 
     private void test(String attributeLine) throws Exception {
         GFF3FileReader gff3Reader = new GFF3FileReader(new StringReader(attributeLine));
-        Map<String,Object> attrMap = gff3Reader.attributesFromString(attributeLine);
+        Map<String, Object> attrMap = gff3Reader.attributesFromString(attributeLine);
 
         assertEquals(attributeLine, getAttributeString(attrMap));
     }
 
     private String getAttributeString(Map<String, Object> attributes) throws IOException {
-        try(StringWriter gff3Writer = new StringWriter()){
+        try (StringWriter gff3Writer = new StringWriter()) {
             GFF3Annotation annotation = new GFF3Annotation();
-            GFF3Feature gff3Feature = TestUtils.createGFF3Feature("ID","Parent",attributes);
+            GFF3Feature gff3Feature = TestUtils.createGFF3Feature("ID", "Parent", attributes);
             annotation.addFeature(gff3Feature);
             annotation.writeGFF3String(gff3Writer);
 

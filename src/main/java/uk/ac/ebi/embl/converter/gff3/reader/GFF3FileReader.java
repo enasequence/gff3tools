@@ -122,9 +122,9 @@ public class GFF3FileReader implements AutoCloseable {
         Map<String, Object> attributes = new LinkedHashMap<>();
         String[] parts = line.split(";");
         for (String part : parts) {
-            if(part.contains("=")) {
+            if (part.contains("=")) {
                 String[] keyValue = part.split("=");
-                if(keyValue.length==2) {
+                if (keyValue.length == 2) {
                     String key = keyValue[0].trim();
                     String value = keyValue[1].trim();
                     Gff3Utils.addAttribute(attributes, key, value);

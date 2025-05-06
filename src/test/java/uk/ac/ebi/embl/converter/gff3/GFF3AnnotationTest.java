@@ -1,15 +1,24 @@
+/*
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package uk.ac.ebi.embl.converter.gff3;
 
 import static org.junit.jupiter.api.Assertions.*;
-
-import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.converter.TestUtils;
 
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.converter.TestUtils;
 
 public class GFF3AnnotationTest {
     @Test
@@ -31,15 +40,15 @@ public class GFF3AnnotationTest {
         attributes.put("ID", "ID_TEST");
         attributes.put("qualifier1", Arrays.asList("test_1", "test_2", "test_3"));
         attributes.put("qualifier2", Arrays.asList("1", "2", "3"));
-        expectedAttribute = "ID=ID_TEST;qualifier1=test_1;qualifier1=test_2;qualifier1=test_3;qualifier2=1;qualifier2=2;qualifier2=3;";
+        expectedAttribute =
+                "ID=ID_TEST;qualifier1=test_1;qualifier1=test_2;qualifier1=test_3;qualifier2=1;qualifier2=2;qualifier2=3;";
         test(attributes, expectedAttribute);
-
     }
 
     private void test(Map<String, Object> attributes, String expectedAttribute) throws IOException {
-        try(StringWriter gff3Writer = new StringWriter()){
+        try (StringWriter gff3Writer = new StringWriter()) {
             GFF3Annotation annotation = new GFF3Annotation();
-            GFF3Feature gff3Feature = TestUtils.createGFF3Feature("ID","Parent",attributes);
+            GFF3Feature gff3Feature = TestUtils.createGFF3Feature("ID", "Parent", attributes);
             annotation.addFeature(gff3Feature);
             annotation.writeGFF3String(gff3Writer);
             assertTrue(gff3Writer.toString().trim().endsWith(expectedAttribute));

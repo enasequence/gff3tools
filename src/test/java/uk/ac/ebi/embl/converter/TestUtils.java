@@ -10,13 +10,11 @@
  */
 package uk.ac.ebi.embl.converter;
 
-import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
-
-
 import java.io.*;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.*;
+import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 
 public class TestUtils {
 
@@ -69,7 +67,8 @@ public class TestUtils {
                 new HashMap<>(Map.of("ID", id, "Parent", parent, "gene", "geneX")));
     }
 
-    public static GFF3Feature createGFF3Feature(String featureName, String parentFeatureName,Map<String, Object> attributes) {
+    public static GFF3Feature createGFF3Feature(
+            String featureName, String parentFeatureName, Map<String, Object> attributes) {
 
         return new GFF3Feature(
                 Optional.of(featureName),

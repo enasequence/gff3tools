@@ -89,5 +89,4 @@ class GFF3AnnotationFactoryTest {
         // createGFF3Feature(Optional.of(child), Optional.of(parent));
         assertEquals(childrenCount, featureRelationMap.size());
     }
-
 }
