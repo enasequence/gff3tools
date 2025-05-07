@@ -39,8 +39,7 @@ public class FeatureComparator {
         options.setIgnoreLine("FT   region");
         options.setIgnoreLine("FT                   /circular_RNA=true");
 
-        FlatFileComparator flatfileComparator = new FlatFileComparator(options);
-        return flatfileComparator;
+        return  new FlatFileComparator(options);
     }
 
 }
