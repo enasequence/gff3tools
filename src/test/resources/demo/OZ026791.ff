@@ -50,7 +50,7 @@ FT                   /product="replication initiation protein"
 FT                   /note="WP_000130945.1 replication initiation protein
 FT                   (Escherichia coli O157:H7 str. Sakai) [pid:96.8%,
 FT                   q_cov:100.0%, s_cov:100.0%, Eval:0.0e+00]"
-FT                   /note="TIGR:TIGR03474; incFII_RepA: incFII family plasmid
+FT                   /note="TIGR:TIGR03474: incFII_RepA: incFII family plasmid
 FT                   replication initiator RepA [Name:TIGR03474, Eval:2.2e-178,
 FT                   score:589.2, bias:9.9]"
 FT                   /note="Prodigal_15"
@@ -608,7 +608,7 @@ FT                   /note="WP_000818915.1 sn-glycerol-3-phosphate ABC
 FT                   transporter ATP-binding protein UgpC (Staphylococcus aureus
 FT                   subsp. aureus N315) [pid:60.5%, q_cov:47.8%, s_cov:11.8%,
 FT                   Eval:6.4e-12, partial hit]"
-FT                   /note="TIGR:TIGR02315; ABC_phnC: phosphonate ABC
+FT                   /note="TIGR:TIGR02315: ABC_phnC: phosphonate ABC
 FT                   transporter, ATP-binding protein [Name:TIGR02315,
 FT                   Eval:3.6e-08, score:31.1, bias:0.0]"
 FT                   /note="Domain:cl28181:AAA ATPases associated with a variety
@@ -643,7 +643,7 @@ FT                   q_cov:100.0%, s_cov:100.0%, Eval:0.0e+00]"
 FT                   /note="ResFinder-amended:AB601890 23S rRNA
 FT                   (adenine(2058)-N(6))-methyltransferase Erm(42) [pid:99.3%,
 FT                   q_cov:100.0%, s_cov:100.0%, Eval:0.0e+00, low identity]"
-FT                   /note="TIGR:TIGR00755; ksgA: ribosomal RNA small subunit
+FT                   /note="TIGR:TIGR00755: ksgA: ribosomal RNA small subunit
 FT                   methyltransferase A [Name:TIGR00755, Eval:1.3e-37,
 FT                   score:127.5, bias:0.1]"
 FT                   /note="Domain:cl17173:AdoMet_MTases N/A. SAMBD is the
@@ -723,7 +723,7 @@ FT                   Eval:0.0e+00]"
 FT                   /note="ResFinder-amended:AF118107 phenicol resistance
 FT                   protein FloR [pid:98.3%, q_cov:100.0%, s_cov:100.0%,
 FT                   Eval:0.0e+00, low identity]"
-FT                   /note="TIGR:TIGR00710; efflux_Bcr_CflA: drug resistance
+FT                   /note="TIGR:TIGR00710: efflux_Bcr_CflA: drug resistance
 FT                   transporter, Bcr/CflA subfamily [Name:TIGR00710,
 FT                   Eval:1.2e-95, score:319.1, bias:37.3]"
 FT                   /note="COG:COG0477:ProP MFS family permease [Category:GEPR,
@@ -749,7 +749,7 @@ FT                   /product="hypothetical protein"
 FT                   /note="WP_014538233.1 LysR family transcriptional regulator
 FT                   (Ketogulonicigenium vulgare WSH-001) [pid:62.1%,
 FT                   q_cov:86.1%, s_cov:27.6%, Eval:3.9e-29, partial hit]"
-FT                   /note="TIGR:TIGR03418; chol_sulf_TF: putative choline
+FT                   /note="TIGR:TIGR03418: chol_sulf_TF: putative choline
 FT                   sulfate-utilization transcription factor [Name:TIGR03418,
 FT                   Eval:3.1e-19, score:67.0, bias:0.3]"
 FT                   /note="COG:COG0583:LysR DNA-binding transcriptional
@@ -846,7 +846,7 @@ FT                   /product="hypothetical protein"
 FT                   /note="WP_000243817.1 hypothetical protein (Escherichia
 FT                   coli O104:H4 str. 2011C-3493) [pid:98.9%, q_cov:81.8%,
 FT                   s_cov:100.0%, Eval:4.2e-61]"
-FT                   /note="TIGR:TIGR04366; cupin_WbuC: cupin fold
+FT                   /note="TIGR:TIGR04366: cupin_WbuC: cupin fold
 FT                   metalloprotein, WbuC family [Name:TIGR04366, Eval:3.4e-25,
 FT                   score:86.4, bias:0.0]"
 FT                   /note="Prodigal_97"
@@ -976,7 +976,7 @@ FT                   /note="resMGE:SPD98082.1 Plasmid segregation protein ParA
 FT                   (ParM-like protein) (Escherichia coli IncL/M plasmid)
 FT                   [pid:51.6%, q_cov:98.4%, s_cov:98.2%, Eval:1.3e-108, low
 FT                   identity]"
-FT                   /note="TIGR:TIGR03739; PRTRC_D: PRTRC system protein D
+FT                   /note="TIGR:TIGR03739: PRTRC_D: PRTRC system protein D
 FT                   [Name:TIGR03739, Eval:1.6e-07, score:28.6, bias:0.1]"
 FT                   /note="Prodigal_89"
 FT                   /inference="COORDINATES:ab initio
@@ -1180,7 +1180,7 @@ FT                   /product="putative adenine-specific DNA methylase"
 FT                   /note="resMGE:SPE00414.1 putative adenine-specific DNA
 FT                   methylase (Escherichia coli IncF plasmid) [pid:100.0%,
 FT                   q_cov:100.0%, s_cov:99.5%, Eval:1.8e-140]"
-FT                   /note="TIGR:TIGR00755; ksgA: ribosomal RNA small subunit
+FT                   /note="TIGR:TIGR00755: ksgA: ribosomal RNA small subunit
 FT                   methyltransferase A [Name:TIGR00755, Eval:8.0e-08,
 FT                   score:29.8, bias:0.0]"
 FT                   /note="Domain:cl17173:AdoMet_MTases N/A. SAMBD is the
@@ -1234,7 +1234,7 @@ FT                   /product="single-stranded DNA-binding protein"
 FT                   /note="B7LJ72 single-stranded DNA-binding protein
 FT                   (Escherichia coli UMN026) [pid:98.9%, q_cov:100.0%,
 FT                   s_cov:93.1%, Eval:4.9e-125]"
-FT                   /note="TIGR:TIGR00621; ssb: single-stranded DNA-binding
+FT                   /note="TIGR:TIGR00621: ssb: single-stranded DNA-binding
 FT                   protein [Name:TIGR00621, Eval:1.6e-56, score:189.2,
 FT                   bias:0.9]"
 FT                   /note="COG:COG0629:Ssb Single-stranded DNA-binding protein
@@ -1275,7 +1275,7 @@ FT                   plasmid partitioning (ParB-like partition protein)
 FT                   (Escherichia coli IncI-Complex plasmid) [pid:92.2%,
 FT                   q_cov:97.5%, s_cov:67.5%, Eval:0.0e+00]"
 FT                   /note="frameshifted, insertion at around 62906,62931"
-FT                   /note="TIGR:TIGR04285; nucleoid_noc: nucleoid occlusion
+FT                   /note="TIGR:TIGR04285: nucleoid_noc: nucleoid occlusion
 FT                   protein [Name:TIGR04285, Eval:3.1e-16, score:57.5,
 FT                   bias:0.0]"
 FT                   /note="COG:COG1475:Spo0J Chromosome segregation protein
@@ -1568,7 +1568,7 @@ FT                   /product="conjugal Fimbrial protein precursor TraA (Pilin)"
 FT                   /note="resMGE:SPE00397.1 conjugal Fimbrial protein
 FT                   precursor TraA (Pilin) (Escherichia coli IncF plasmid)
 FT                   [pid:100.0%, q_cov:100.0%, s_cov:99.2%, Eval:1.5e-82]"
-FT                   /note="TIGR:TIGR02758; TraA_TIGR: type IV conjugative
+FT                   /note="TIGR:TIGR02758: TraA_TIGR: type IV conjugative
 FT                   transfer system pilin TraA [Name:TIGR02758, Eval:8.0e-38,
 FT                   score:126.6, bias:8.5]"
 FT                   /note="Prodigal_56"
@@ -1588,7 +1588,7 @@ FT                   /product="conjugal F pilus assembly protein TraL"
 FT                   /note="resMGE:SPD90608.1 conjugal F pilus assembly protein
 FT                   TraL (Escherichia coli IncF plasmid) [pid:99.0%,
 FT                   q_cov:100.0%, s_cov:98.1%, Eval:6.5e-76]"
-FT                   /note="TIGR:TIGR02762; TraL_TIGR: type IV conjugative
+FT                   /note="TIGR:TIGR02762: TraL_TIGR: type IV conjugative
 FT                   transfer system protein TraL [Name:TIGR02762, Eval:5.0e-22,
 FT                   score:76.4, bias:0.1]"
 FT                   /note="Prodigal_55"
@@ -1607,7 +1607,7 @@ FT                   /product="conjugal F pilus assembly protein TraE"
 FT                   /note="resMGE:SPE00395.1 conjugal F pilus assembly protein
 FT                   TraE (Escherichia coli IncF plasmid) [pid:100.0%,
 FT                   q_cov:100.0%, s_cov:99.5%, Eval:1.6e-142]"
-FT                   /note="TIGR:TIGR02761; TraE_TIGR: type IV conjugative
+FT                   /note="TIGR:TIGR02761: TraE_TIGR: type IV conjugative
 FT                   transfer system protein TraE [Name:TIGR02761, Eval:2.3e-62,
 FT                   score:208.1, bias:0.3]"
 FT                   /note="Prodigal_54"
@@ -1628,7 +1628,7 @@ FT                   /product="conjugal F pilus assembly protein TraK"
 FT                   /note="resMGE:SPE00394.1 conjugal F pilus assembly protein
 FT                   TraK (Escherichia coli IncF plasmid) [pid:100.0%,
 FT                   q_cov:100.0%, s_cov:99.6%, Eval:0.0e+00]"
-FT                   /note="TIGR:TIGR02756; TraK_Ftype: type-F conjugative
+FT                   /note="TIGR:TIGR02756: TraK_Ftype: type-F conjugative
 FT                   transfer system secretin TraK [Name:TIGR02756,
 FT                   Eval:1.3e-73, score:245.2, bias:0.0]"
 FT                   /note="Prodigal_53"
@@ -1707,7 +1707,7 @@ FT                   /product="conjugal F pilus assembly protein TraV"
 FT                   /note="resMGE:SPE00390.1 conjugal F pilus assembly protein
 FT                   TraV (Escherichia coli IncF plasmid) [pid:100.0%,
 FT                   q_cov:100.0%, s_cov:99.4%, Eval:8.4e-128]"
-FT                   /note="TIGR:TIGR02747; TraV: type IV conjugative transfer
+FT                   /note="TIGR:TIGR02747: TraV: type IV conjugative transfer
 FT                   system protein TraV [Name:TIGR02747, Eval:3.0e-41,
 FT                   score:139.5, bias:0.1]"
 FT                   /note="Prodigal_49"
@@ -1728,7 +1728,7 @@ FT                   /product="conjugal transfer protein TraR"
 FT                   /note="WP_001278694.1 conjugal transfer protein TraR
 FT                   (Escherichia coli UMN026) [pid:97.3%, q_cov:100.0%,
 FT                   s_cov:100.0%, Eval:2.0e-49]"
-FT                   /note="TIGR:TIGR02419; C4_traR_proteo: phage/conjugal
+FT                   /note="TIGR:TIGR02419: C4_traR_proteo: phage/conjugal
 FT                   plasmid C-4 type zinc finger protein, TraR family
 FT                   [Name:TIGR02419, Eval:3.9e-23, score:79.8, bias:0.2]"
 FT                   /note="COG:COG1734:DksA RNA polymerase-binding
@@ -1797,7 +1797,7 @@ FT                   /product="conjugal F pilus assembly protein TraC"
 FT                   /note="resMGE:SPE00386.1 conjugal F pilus assembly protein
 FT                   TraC (Escherichia coli IncF plasmid) [pid:100.0%,
 FT                   q_cov:100.0%, s_cov:99.9%, Eval:0.0e+00]"
-FT                   /note="TIGR:TIGR02746; TraC-F-type: type-IV secretion
+FT                   /note="TIGR:TIGR02746: TraC-F-type: type-IV secretion
 FT                   system protein TraC [Name:TIGR02746, Eval:8.2e-293,
 FT                   score:971.1, bias:0.0]"
 FT                   /note="COG:COG3451:VirB4 Type IV secretory pathway, VirB4
@@ -1835,7 +1835,7 @@ FT                   /note="resMGE:SPE00385.1 conjugal F pilus
 FT                   extension/retraction protein TrbI (Escherichia coli IncF
 FT                   plasmid) [pid:100.0%, q_cov:100.0%, s_cov:99.2%,
 FT                   Eval:1.1e-94]"
-FT                   /note="TIGR:TIGR02744; TrbI_Ftype: type-F conjugative
+FT                   /note="TIGR:TIGR02744: TrbI_Ftype: type-F conjugative
 FT                   transfer system protein TrbI [Name:TIGR02744, Eval:8.3e-57,
 FT                   score:188.1, bias:0.8]"
 FT                   /note="Prodigal_43"
@@ -1855,7 +1855,7 @@ FT                   /product="conjugal F pilus assembly protein TraW"
 FT                   /note="resMGE:SPE00384.1 conjugal F pilus assembly protein
 FT                   TraW (Escherichia coli IncF plasmid) [pid:100.0%,
 FT                   q_cov:100.0%, s_cov:99.5%, Eval:8.3e-158]"
-FT                   /note="TIGR:TIGR02743; TraW: type-F conjugative transfer
+FT                   /note="TIGR:TIGR02743: TraW: type-F conjugative transfer
 FT                   system protein TraW [Name:TIGR02743, Eval:3.4e-75,
 FT                   score:250.1, bias:0.0]"
 FT                   /note="Prodigal_42"
@@ -1911,7 +1911,7 @@ FT                   /product="conjugal F pilus assembly protein TrbC"
 FT                   /note="resMGE:CRH08513.1 conjugal F pilus assembly protein
 FT                   TrbC (Escherichia coli IncF plasmid) [pid:92.5%,
 FT                   q_cov:100.0%, s_cov:99.1%, Eval:6.5e-147]"
-FT                   /note="TIGR:TIGR02742; TrbC_Ftype: type-F conjugative
+FT                   /note="TIGR:TIGR02742: TrbC_Ftype: type-F conjugative
 FT                   transfer system pilin assembly protein TrbC
 FT                   [Name:TIGR02742, Eval:2.8e-37, score:125.4, bias:0.0]"
 FT                   /note="Prodigal_39"
@@ -1933,7 +1933,7 @@ FT                   TraN"
 FT                   /note="resMGE:SPE00380.1 conjugal mating contact
 FT                   stabilization protein TraN (Escherichia coli IncF plasmid)
 FT                   [pid:100.0%, q_cov:100.0%, s_cov:99.8%, Eval:0.0e+00]"
-FT                   /note="TIGR:TIGR02750; TraN_Ftype: type-F conjugative
+FT                   /note="TIGR:TIGR02750: TraN_Ftype: type-F conjugative
 FT                   transfer system mating-pair stabilization protein TraN
 FT                   [Name:TIGR02750, Eval:8.8e-186, score:617.3, bias:11.0]"
 FT                   /note="Prodigal_38"
@@ -1977,7 +1977,7 @@ FT                   /product="conjugal F pilus assembly protein TraF"
 FT                   /note="resMGE:SPE01034.1 conjugal F pilus assembly protein
 FT                   TraF (Escherichia coli IncF plasmid) [pid:100.0%,
 FT                   q_cov:100.0%, s_cov:95.4%, Eval:0.0e+00]"
-FT                   /note="TIGR:TIGR02739; TraF: type-F conjugative transfer
+FT                   /note="TIGR:TIGR02739: TraF: type-F conjugative transfer
 FT                   system pilin assembly protein TraF [Name:TIGR02739,
 FT                   Eval:1.3e-101, score:337.2, bias:0.1]"
 FT                   /note="Prodigal_36"
@@ -2011,7 +2011,7 @@ FT                   /product="conjugal F pilin synthesis protein TraQ"
 FT                   /note="resMGE:SPE00378.1 conjugal F pilin synthesis protein
 FT                   TraQ (Escherichia coli IncF plasmid) [pid:100.0%,
 FT                   q_cov:100.0%, s_cov:98.9%, Eval:4.4e-67]"
-FT                   /note="TIGR:TIGR02741; TraQ: type-F conjugative transfer
+FT                   /note="TIGR:TIGR02741: TraQ: type-F conjugative transfer
 FT                   system pilin chaperone TraQ [Name:TIGR02741, Eval:6.0e-54,
 FT                   score:178.3, bias:0.6]"
 FT                   /note="Prodigal_34"
@@ -2030,7 +2030,7 @@ FT                   /product="Thiol-disulfide bond isomerase TrbB"
 FT                   /note="resMGE:CRH08519.1 Thiol-disulfide bond isomerase
 FT                   TrbB (Escherichia coli IncF plasmid) [pid:94.0%,
 FT                   q_cov:100.0%, s_cov:99.5%, Eval:3.6e-121]"
-FT                   /note="TIGR:TIGR02738; TrbB: type-F conjugative transfer
+FT                   /note="TIGR:TIGR02738: TrbB: type-F conjugative transfer
 FT                   system pilin assembly thiol-disulfide isomerase TrbB
 FT                   [Name:TIGR02738, Eval:1.5e-63, score:211.0, bias:0.1]"
 FT                   /note="Prodigal_33"
@@ -2178,7 +2178,7 @@ FT                   /product="conjugal transfer coupling protein TraD"
 FT                   /note="resMGE:SPD94302.1 conjugal transfer coupling protein
 FT                   TraD (Escherichia coli IncF plasmid) [pid:94.7%,
 FT                   q_cov:100.0%, s_cov:99.9%, Eval:0.0e+00]"
-FT                   /note="TIGR:TIGR02759; TraD_Ftype: type IV conjugative
+FT                   /note="TIGR:TIGR02759: TraD_Ftype: type IV conjugative
 FT                   transfer system coupling protein TraD [Name:TIGR02759,
 FT                   Eval:7.8e-252, score:835.0, bias:0.0]"
 FT                   /note="COG:COG3505:VirD4 Type IV secretory pathway, VirD4
@@ -2212,7 +2212,7 @@ FT                   helicase I)"
 FT                   /note="resMGE:SPE00369.1 OriT nicking and unwinding protein
 FT                   TraI (DNA helicase I) (Escherichia coli IncF plasmid)
 FT                   [pid:100.0%, q_cov:100.0%, s_cov:99.9%, Eval:0.0e+00]"
-FT                   /note="TIGR:TIGR02760; TraI_TIGR: conjugative transfer
+FT                   /note="TIGR:TIGR02760: TraI_TIGR: conjugative transfer
 FT                   relaxase protein TraI [Name:TIGR02760, Eval:0.0e+00,
 FT                   score:2032.2, bias:0.0]"
 FT                   /note="Domain:cl26262:RecD ATP-dependent exoDNAse
@@ -2270,7 +2270,7 @@ FT                   /product="F pilin acetylase traX"
 FT                   /note="resMGE:CBX35964.1 F pilin acetylase traX
 FT                   (Escherichia coli IncF plasmid) [pid:97.2%, q_cov:100.0%,
 FT                   s_cov:92.5%, Eval:4.7e-179]"
-FT                   /note="TIGR:TIGR02755; TraX_Ftype: type-F conjugative
+FT                   /note="TIGR:TIGR02755: TraX_Ftype: type-F conjugative
 FT                   transfer system pilin acetylase TraX [Name:TIGR02755,
 FT                   Eval:1.5e-125, score:415.6, bias:15.3]"
 FT                   /note="Prodigal_24"
@@ -2291,7 +2291,7 @@ FT                   /product="alpha/beta hydrolase"
 FT                   /note="WP_000704523.1 alpha/beta hydrolase (Escherichia
 FT                   coli UMN026) [pid:100.0%, q_cov:100.0%, s_cov:100.0%,
 FT                   Eval:0.0e+00]"
-FT                   /note="TIGR:TIGR00976; /NonD: hydrolase CocE/NonD family
+FT                   /note="TIGR:TIGR00976: /NonD: hydrolase CocE/NonD family
 FT                   protein [Name:TIGR00976, Eval:7.4e-09, score:33.1,
 FT                   bias:0.0]"
 FT                   /note="Domain:cl27026:AXE1 Acetyl xylan esterase (AXE1).
@@ -2302,7 +2302,7 @@ FT                   position 2 and/or 3 of the xylose moieties of natural
 FT                   acetylated xylan from hardwood. These enzymes are one of
 FT                   the accessory enzymes which are part of the xylanolytic
 FT                   system, together with xylanases, beta-xylosidases,
-FT                   alpha-arabinofuranosidases and methylglucuronidases; these
+FT                   alpha-arabinofuranosidases and methylglucuronidases: these
 FT                   are all required for the complete hydrolysis of xylan.
 FT                   [Superfamily, Aligned:24-286, Eval:8.8e-13, score:65.2,
 FT                   N-term missing]"
