@@ -217,10 +217,6 @@ public class GFF3AnnotationFactory {
         for (String geneName : geneMap.keySet()) {
             List<GFF3Feature> gffFeatures = geneMap.get(geneName);
 
-            // Sort gffFeatures by start asc, end desc
-            gffFeatures.sort(Comparator.comparingLong(GFF3Feature::getStart)
-                    .thenComparing(GFF3Feature::getEnd, Comparator.reverseOrder()));
-
             // build a tree of parent node and its children
             List<GFF3Feature> rootNode = buildFeatureTree(gffFeatures);
 
