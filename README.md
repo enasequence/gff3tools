@@ -1,6 +1,6 @@
-# ff2gff3
+# gff3tools
 
-ff2gff3 is a Java library for converting EMBL flat files to GFF3 format. 
+gff3tools is a Java library for converting EMBL flat files to GFF3 format. 
 It uses [sequencetools](https://github.com/enasequence/sequencetools) to read the flat file.
 
 # Compiling
@@ -15,4 +15,4 @@ Conversion rules and Assumptions are added to the code under `// Rule: ` and `//
 
 
 # Running ff to gff3 converter
-```java -cp ./ff2gff3-1.0.jar uk.ac.ebi.embl.converter.cli.FFToGff3CLI -in in/OZ026791.ff -out out/OZ026791.gff3```
+```java -cp ./gff3tools-1.0.jar uk.ac.ebi.embl.converter.cli.FFToGff3CLI -in in/OZ026791.ff -out out/OZ026791.gff3```
