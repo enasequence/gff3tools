@@ -6,9 +6,9 @@ import uk.ac.ebi.embl.api.validation.helper.FlatFileComparator;
 import uk.ac.ebi.embl.api.validation.helper.FlatFileComparatorException;
 import uk.ac.ebi.embl.api.validation.helper.FlatFileComparatorOptions;
 
-public class FeatureComparer {
+public class FeatureComparator {
 
-    private static final Logger LOG = LoggerFactory.getLogger(FeatureComparer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(FeatureComparator.class);
     public static void main(String[] args) {
         try {
 
@@ -30,7 +30,7 @@ public class FeatureComparer {
     }
 
     private static FlatFileComparator getFeatureComparator() {
-        FeatureComparerOption options = new FeatureComparerOption();
+        FeatureComparatorOption options = new FeatureComparatorOption();
         options.setIgnoreLine("FT   source");
         options.setIgnoreLine("FT                   /organism");
         options.setIgnoreLine("FT                   /plasmid");
@@ -45,7 +45,7 @@ public class FeatureComparer {
 
 }
 
-class FeatureComparerOption extends FlatFileComparatorOptions {
+class FeatureComparatorOption extends FlatFileComparatorOptions {
     @Override
     public boolean isIgnoreLine(String line) {
         return ! line.startsWith("FT") || super.isIgnoreLine(line);
