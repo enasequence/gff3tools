@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.converter.utils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import io.vavr.Tuple2;
 import java.lang.reflect.InvocationTargetException;
@@ -31,5 +32,14 @@ public class ConversionEntryTest {
 
         Object res2 = method.invoke(entry, "/q1");
         assertEquals(new Tuple2<>("q1", "true"), res2);
+
+        try {
+            Object res3 = method.invoke(entry, "one=two=three");
+            fail();
+        } catch (InvocationTargetException e) {
+            assertEquals(
+                    "Invalid qualifier format: one=two=three",
+                    e.getTargetException().getMessage());
+        }
     }
 }
