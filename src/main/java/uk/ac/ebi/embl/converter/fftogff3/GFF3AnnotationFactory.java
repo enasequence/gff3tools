@@ -341,10 +341,13 @@ public class GFF3AnnotationFactory {
         List<ConversionEntry> maps = ConversionUtils.getFF2GFF3FeatureMap().get(ffFeature.getName());
         if (maps != null) {
             String term = null;
+            // qualifierNumber is used to assess which of the matching mapping entries is more specific.
+            // We must use the mapping that matches with the highest number of qualifiers.
             int qualifierNumber = 0;
             for (ConversionEntry entry : maps) {
                 if (entry.getFeature().equalsIgnoreCase(ffFeature.getName()) && hasAllQualifiers(ffFeature, entry)) {
                     int thisNumber = entry.getQualifiers().size();
+                    // Check if this mapping entry has more qualifiers than the previous matching one.
                     if (term == null || thisNumber > qualifierNumber) {
                         term = entry.getSOTerm();
                         qualifierNumber = thisNumber;
@@ -355,6 +358,7 @@ public class GFF3AnnotationFactory {
                 return term;
             }
         }
+        // Default to the embl feature name if no mapping matched.
         return ffFeature.getName();
     }
 
