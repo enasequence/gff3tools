@@ -79,7 +79,7 @@ public class GFF3AnnotationFactory {
             if (isCircularTopology(entry) && lacksCircularAttribute()) {
                 nonGeneFeatures.add(createLandmarkFeature(accession, entry));
             }
-            //sortFeaturesAndAssignId();
+            // sortFeaturesAndAssignId();
 
             List<GFF3Feature> features =
                     geneMap.values().stream().flatMap(List::stream).collect(Collectors.toList());
@@ -141,7 +141,7 @@ public class GFF3AnnotationFactory {
         Map<String, Object> baseAttributes = getAttributeMap(ffFeature);
 
         geneName.ifPresent(v -> baseAttributes.put("gene", v));
-        id.ifPresent(v ->  {
+        id.ifPresent(v -> {
             emblIDtoGFF3ID.put(getId(ffFeature.getName(), geneName.get()), v);
             baseAttributes.put("ID", v);
         });

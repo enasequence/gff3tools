@@ -109,7 +109,8 @@ class GFF3AnnotationFactoryTest {
     }
 
     @Test
-    public void testGetGFF3FeatureName() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    public void testGetGFF3FeatureName()
+            throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
         Method method = GFF3AnnotationFactory.class.getDeclaredMethod("getGFF3FeatureName", Feature.class);
         method.setAccessible(true);

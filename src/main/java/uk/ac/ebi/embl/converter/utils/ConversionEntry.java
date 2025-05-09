@@ -50,8 +50,7 @@ public class ConversionEntry {
                 key = parts[0];
                 value = "true";
             }
-            default ->
-                throw new RuntimeException("Invalid qualifier format: " + str);
+            default -> throw new RuntimeException("Invalid qualifier format: " + str);
         }
         // Remove starting / character on qualifiers
         if (key.startsWith("/")) {
