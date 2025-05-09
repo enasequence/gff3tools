@@ -330,28 +330,19 @@ public class GFF3AnnotationFactory {
     }
 
     private String getGFF3FeatureName(Feature ffFeature) {
-        List<ConversionEntry> maps = ConversionUtils.getFF2GFF3FeatureMap().get(ffFeature.getName());
-        if (maps != null) {
-            String term = null;
-            // qualifierNumber is used to assess which of the matching mapping entries is more specific.
-            // We must use the mapping that matches with the highest number of qualifiers.
-            int qualifierNumber = 0;
-            for (ConversionEntry entry : maps) {
-                if (entry.getFeature().equalsIgnoreCase(ffFeature.getName()) && hasAllQualifiers(ffFeature, entry)) {
-                    int thisNumber = entry.getQualifiers().size();
-                    // Check if this mapping entry has more qualifiers than the previous matching one.
-                    if (term == null || thisNumber > qualifierNumber) {
-                        term = entry.getSOTerm();
-                        qualifierNumber = thisNumber;
-                    }
-                }
-            }
-            if (term != null) {
-                return term;
-            }
+
+        List<ConversionEntry> mappings = ConversionUtils.getFF2GFF3FeatureMap().get(ffFeature.getName());
+        if (mappings == null) {
+            return ffFeature.getName();
         }
-        // Default to the embl feature name if no mapping matched.
-        return ffFeature.getName();
+
+        // return the soTerm of the max qualifier mapping
+        return mappings.stream()
+                .filter(entry -> entry.getFeature().equalsIgnoreCase(ffFeature.getName()))
+                .filter(entry -> hasAllQualifiers(ffFeature, entry))
+                .max(Comparator.comparingInt(entry -> entry.getQualifiers().size()))
+                .map(ConversionEntry::getSOTerm)
+                .orElse(ffFeature.getName());
     }
 
     private boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {

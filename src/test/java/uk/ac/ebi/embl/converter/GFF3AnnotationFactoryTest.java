@@ -12,9 +12,13 @@ package uk.ac.ebi.embl.converter;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.api.entry.feature.Feature;
+import uk.ac.ebi.embl.api.entry.feature.FeatureFactory;
 import uk.ac.ebi.embl.converter.fftogff3.GFF3AnnotationFactory;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
@@ -102,5 +106,32 @@ class GFF3AnnotationFactoryTest {
             assertEquals(ids.get(count), id);
             count++;
         }
+    }
+
+    @Test
+    public void testGetGFF3FeatureName() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
+        Method method = GFF3AnnotationFactory.class.getDeclaredMethod("getGFF3FeatureName", Feature.class);
+        method.setAccessible(true);
+        FeatureFactory featureFactory = new FeatureFactory();
+
+        Feature mappedFeature = featureFactory.createFeature("gene");
+        Object mappedFeatureResult = method.invoke(gFF3AnnotationFactory, mappedFeature);
+        assertEquals("ncRNA_gene", mappedFeatureResult);
+
+        Feature mappedFeatureWithQualifiers1 = featureFactory.createFeature("ncRNA");
+        mappedFeatureWithQualifiers1.addQualifier("ncRNA_class", "snoRNA");
+        mappedFeatureWithQualifiers1.addQualifier("note", "C_D_box_snoRNA");
+        Object mappedFeatureWithQualifiersResult1 = method.invoke(gFF3AnnotationFactory, mappedFeatureWithQualifiers1);
+        assertEquals("C_D_box_snoRNA", mappedFeatureWithQualifiersResult1);
+
+        Feature mappedFeatureWithQualifiers2 = featureFactory.createFeature("ncRNA");
+        mappedFeatureWithQualifiers2.addQualifier("ncRNA_class", "snoRNA");
+        Object mappedFeatureWithQualifiersResult2 = method.invoke(gFF3AnnotationFactory, mappedFeatureWithQualifiers2);
+        assertEquals("snoRNA", mappedFeatureWithQualifiersResult2);
+
+        Feature unmappedFeature = featureFactory.createFeature("unmapped");
+        Object unmappedFeatureResult = method.invoke(gFF3AnnotationFactory, unmappedFeature);
+        assertEquals("unmapped", unmappedFeatureResult);
     }
 }
