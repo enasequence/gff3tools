@@ -130,7 +130,7 @@ public class GFF3AnnotationFactory {
 
         if (geneName.isPresent()) {
             id = Optional.of(getIncrementalId(featureName, geneName.get()));
-            String parentFeatureName = getParentFeature(featureName);
+            String parentFeatureName = getParentFeature(ffFeature.getName());
             parentId = Optional.ofNullable(parentFeatureName).map(name -> getId(name, geneName.get()));
         }
 
@@ -333,8 +333,8 @@ public class GFF3AnnotationFactory {
         return "%s_%s".formatted(name, geneName);
     }
 
-    private String getParentFeature(String featureName) {
-        return featureRelationMap.get(featureName);
+    private String getParentFeature(String emblFeatureName) {
+        return featureRelationMap.get(emblFeatureName);
     }
 
     private String getGFF3FeatureName(Feature ffFeature) {
