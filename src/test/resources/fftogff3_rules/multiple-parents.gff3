@@ -1,6 +1,6 @@
 ##gff-version 3.1.26
 ##sequence-region TEST01.1 1 822
 TEST01.1	.	mRNA	1	822	.	+	.	ID=mRNA_matK;gene=matK;
-TEST01.1	.	intron	1	822	.	+	.	Parent=mRNA_matK;
+TEST01.1	.	intron	1	822	.	+	.	ID=intron_matK;Parent=mRNA_matK;gene=matK;
 TEST01.1	.	mRNA	1	822	.	+	.	ID=mRNA_trnK;gene=trnK;
-TEST01.1	.	intron	1	822	.	+	.	Parent=mRNA_trnK;
+TEST01.1	.	intron	1	822	.	+	.	ID=intron_trnK;Parent=mRNA_trnK;gene=trnK;

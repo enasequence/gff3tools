@@ -1,7 +1,7 @@
 ##gff-version 3.1.26
 ##sequence-region CACUVO010000001.1 1 59081
 CACUVO010000001.1	.	ncRNA_gene	345	822	.	+	.	ID=ncRNA_gene_matK;gene=matK;
-CACUVO010000001.1	.	mRNA	345	822	.	+	.	ID=mRNA_matK;gene=matK;
+CACUVO010000001.1	.	mRNA	345	822	.	+	.	ID=mRNA_matK;Parent=ncRNA_gene_matK;gene=matK;
 
 ##sequence-region CACUVO010000002.1 1 266666
 CACUVO010000002.1	.	ncRNA_gene	666	888	.	+	.	ID=ncRNA_gene_another;gene=another;

@@ -38,6 +38,9 @@ public class GFF3AnnotationFactory {
     ///  List of features that do not belong to a gene.
     List<GFF3Feature> nonGeneFeatures;
 
+    // Keeps track of the GFF3 ID given to EMBL features; Used to find the parent of a feature
+    // key: emblfeature_gene, value: gff3 ID
+    Map<String, String> emblIDtoGFF3ID;
     // Map of Id with count, used for incrementing when same id is found.
     Map<String, Integer> idMap = new HashMap<>();
 
@@ -51,6 +54,7 @@ public class GFF3AnnotationFactory {
 
         geneMap = new LinkedHashMap<>();
         nonGeneFeatures = new ArrayList<>();
+        emblIDtoGFF3ID = new HashMap<>();
 
         String accession = entry.getSequence().getAccession();
         LOG.info("Converting FF entry: {}", accession);
@@ -75,7 +79,7 @@ public class GFF3AnnotationFactory {
             if (isCircularTopology(entry) && lacksCircularAttribute()) {
                 nonGeneFeatures.add(createLandmarkFeature(accession, entry));
             }
-            sortFeaturesAndAssignId();
+            //sortFeaturesAndAssignId();
 
             List<GFF3Feature> features =
                     geneMap.values().stream().flatMap(List::stream).collect(Collectors.toList());
@@ -130,14 +134,17 @@ public class GFF3AnnotationFactory {
 
         if (geneName.isPresent()) {
             id = Optional.of(getIncrementalId(featureName, geneName.get()));
-            String parentFeatureName = getParentFeature(ffFeature.getName());
-            parentId = Optional.ofNullable(parentFeatureName).map(name -> getId(name, geneName.get()));
+            String parentFeature = emblIDtoGFF3ID.get(getId(getParentFeature(ffFeature.getName()), geneName.get()));
+            parentId = Optional.ofNullable(parentFeature);
         }
 
         Map<String, Object> baseAttributes = getAttributeMap(ffFeature);
 
         geneName.ifPresent(v -> baseAttributes.put("gene", v));
-        id.ifPresent(v -> baseAttributes.put("ID", v));
+        id.ifPresent(v ->  {
+            emblIDtoGFF3ID.put(getId(ffFeature.getName(), geneName.get()), v);
+            baseAttributes.put("ID", v);
+        });
         parentId.ifPresent(v -> baseAttributes.put("Parent", v));
 
         for (Location location : ffFeature.getLocations().getLocations()) {
@@ -202,21 +209,6 @@ public class GFF3AnnotationFactory {
             }
         } catch (Exception e) {
             throw new FFtoGFF3ConversionError(e.getMessage());
-        }
-    }
-
-    private void sortFeaturesAndAssignId() {
-        for (String geneName : geneMap.keySet()) {
-            List<GFF3Feature> gffFeatures = geneMap.get(geneName);
-
-            // build a tree of parent node and its children
-            List<GFF3Feature> rootNode = buildFeatureTree(gffFeatures);
-
-            // Clear and re-add in correct order
-            gffFeatures.clear();
-            for (GFF3Feature root : rootNode) {
-                orderRootAndChildren(gffFeatures, root);
-            }
         }
     }
 
