@@ -29,12 +29,11 @@ public class ConversionEntry {
         this.definition = tokens[2];
         this.feature = tokens[3];
         this.qualifiers = new HashMap<>();
-        List<String> remainingTokens = Arrays.stream(tokens).skip(4).toList();
-        for (String token : remainingTokens) {
+        // Splitting only Qualifier1 and Qualifier2 values
+        List<String> qualifiersTokens = Arrays.stream(tokens).skip(4).toList();
+        for (String token : qualifiersTokens) {
             Tuple2<String, String> parsed = parseQualifier(token);
-            if (parsed != null) {
-                qualifiers.put(parsed._1, parsed._2);
-            }
+            qualifiers.put(parsed._1, parsed._2);
         }
     }
 
@@ -43,15 +42,15 @@ public class ConversionEntry {
         String key;
         String value;
         switch (parts.length) {
-            case 2:
+            case 2 -> {
                 key = parts[0];
                 value = parts[1].substring(1, parts[1].length() - 1);
-                break;
-            case 1:
+            }
+            case 1 -> {
                 key = parts[0];
                 value = "true";
-                break;
-            default:
+            }
+            default ->
                 throw new RuntimeException("Invalid qualifier format: " + str);
         }
         // Remove starting / character on qualifiers
