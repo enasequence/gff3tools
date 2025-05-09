@@ -1,7 +1,7 @@
 ##gff-version 3.1.26
 ##sequence-region TEST01.1 1 822
-TEST01.1	.	gene	1	822	.	+	.	ID=gene_matK;gene=matK;
-TEST01.1	.	mRNA	1	822	.	+	.	ID=mRNA_matK;Parent=gene_matK;
-TEST01.1	.	exon	1	50	.	+	.	ID=exon_matK;Parent=mRNA_matK;
-TEST01.1	.	5'UTR	20	30	.	+	.	Parent=exon_matK;
+TEST01.1	.	ncRNA_gene	1	822	.	+	.	ID=ncRNA_gene_matK;gene=matK;
+TEST01.1	.	mRNA	1	822	.	+	.	ID=mRNA_matK;gene=matK;
+TEST01.1	.	exon	1	50	.	+	.	Parent=mRNA_matK;
 TEST01.1	.	intron	100	150	.	+	.	Parent=mRNA_matK;
+TEST01.1	.	five_prime_UTR	20	30	.	+	.	ID=five_prime_UTR_matK;gene=matK;

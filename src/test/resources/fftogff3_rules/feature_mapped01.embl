@@ -1,0 +1,17 @@
+ID   TEST01; XXX; XXX; XXX; XXX; XXX; XXX.
+XX
+AC   TEST01;
+XX
+CC   Test overlapping /gene qualifiers.
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..9430
+FT                   /mol_type="genomic DNA"
+FT   ncRNA           160..6865
+FT                   /ncRNA_class="snoRNA"
+FT                   /note="C_D_box_snoRNA"
+XX
+//

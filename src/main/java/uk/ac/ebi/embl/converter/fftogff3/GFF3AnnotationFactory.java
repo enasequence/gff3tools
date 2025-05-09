@@ -60,22 +60,12 @@ public class GFF3AnnotationFactory {
 
         GFF3Directives directives = new GFF3DirectivesFactory(this.ignoreSpecies).from(entry);
         try {
-            Map<String, List<ConversionEntry>> featureMap = ConversionUtils.getFF2GFF3FeatureMap();
 
             for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
 
                 if (feature.getName().equalsIgnoreCase("source")) {
                     continue; // early exit
                 }
-
-                // TODO: insert a gene feature if/where appropriate
-                Optional<ConversionEntry> first = Optional.ofNullable(featureMap.get(feature.getName())).stream()
-                        .flatMap(List::stream)
-                        .filter(conversionEntry -> hasAllQualifiers(feature, conversionEntry))
-                        .findFirst();
-
-                // Rule: Throw an error if we find an unmapped feature
-                if (first.isEmpty()) throw new Exception("Mapping not found for " + feature.getName());
 
                 buildGeneFeatureMap(entry.getPrimaryAccession(), feature);
             }
@@ -136,9 +126,11 @@ public class GFF3AnnotationFactory {
         Optional<String> id = Optional.empty();
         Optional<String> parentId = Optional.empty();
 
+        String featureName = getGFF3FeatureName(ffFeature);
+
         if (geneName.isPresent()) {
-            id = Optional.of(getIncrementalId(ffFeature.getName(), geneName.get()));
-            String parentFeatureName = getParentFeature(ffFeature.getName());
+            id = Optional.of(getIncrementalId(featureName, geneName.get()));
+            String parentFeatureName = getParentFeature(featureName);
             parentId = Optional.ofNullable(parentFeatureName).map(name -> getId(name, geneName.get()));
         }
 
@@ -161,7 +153,7 @@ public class GFF3AnnotationFactory {
                     parentId,
                     accession,
                     source,
-                    ffFeature.getName(),
+                    featureName,
                     location.getBeginPosition(),
                     location.getEndPosition(),
                     score,
@@ -320,18 +312,6 @@ public class GFF3AnnotationFactory {
         return partiality.length() > 1 ? partiality.toString() : "";
     }
 
-    private boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {
-        boolean firstQualifierMatches = conversionEntry.getQualifier1() == null;
-        boolean secondQualifierMatches = conversionEntry.getQualifier2() == null;
-
-        for (Qualifier qualifier : feature.getQualifiers()) {
-            String formatted = "/%s=%s".formatted(qualifier.getName(), qualifier.getValue());
-            firstQualifierMatches |= formatted.equalsIgnoreCase(conversionEntry.getQualifier1());
-            secondQualifierMatches |= formatted.equalsIgnoreCase(conversionEntry.getQualifier2());
-        }
-        return firstQualifierMatches && secondQualifierMatches;
-    }
-
     private boolean hasParent(GFF3Feature feature, List<GFF3Feature> gffFeatures) {
         Optional<String> parentId = feature.getParentId();
         // Check if gffFeatures has the parent
@@ -355,5 +335,47 @@ public class GFF3AnnotationFactory {
 
     private String getParentFeature(String featureName) {
         return featureRelationMap.get(featureName);
+    }
+
+    private String getGFF3FeatureName(Feature ffFeature) {
+        List<ConversionEntry> maps = ConversionUtils.getFF2GFF3FeatureMap().get(ffFeature.getName());
+        if (maps != null) {
+            String term = null;
+            int qualifierNumber = 0;
+            for (ConversionEntry entry : maps) {
+                if (entry.getFeature().equalsIgnoreCase(ffFeature.getName()) && hasAllQualifiers(ffFeature, entry)) {
+                    int thisNumber = entry.getQualifiers().size();
+                    if (term == null || thisNumber > qualifierNumber) {
+                        term = entry.getSOTerm();
+                        qualifierNumber = thisNumber;
+                    }
+                }
+            }
+            if (term != null) {
+                return term;
+            }
+        }
+        return ffFeature.getName();
+    }
+
+    private boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {
+        Map<String, String> requiredQualifiers = conversionEntry.getQualifiers();
+
+        boolean matchesAllQualifiers = true;
+        for (String expectedQualifierName: requiredQualifiers.keySet()) {
+            boolean qualifierMatches = false;
+            for (Qualifier featureQualifier: feature.getQualifiers(expectedQualifierName)) {
+                 qualifierMatches = featureQualifier.getValue().equalsIgnoreCase(requiredQualifiers.get(expectedQualifierName));
+                 if (qualifierMatches) {
+                     break;
+                 }
+            }
+            matchesAllQualifiers = qualifierMatches;
+            if (!matchesAllQualifiers) {
+                break;
+            }
+        }
+
+        return matchesAllQualifiers;
     }
 }

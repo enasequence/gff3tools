@@ -1,6 +1,6 @@
 ##gff-version 3.1.26
 ##sequence-region TEST01.1 1 822
-TEST01.1	.	gene	1	500	.	+	.	ID=gene_matK;gene=matK;partial=start;
-TEST01.1	.	gene	600	700	.	+	.	ID=gene_matK;gene=matK;
-TEST01.1	.	gene	800	822	.	+	.	ID=gene_matK;gene=matK;partial=end;
-TEST01.1	.	mRNA	100	122	.	+	.	Parent=gene_matK;
+TEST01.1	.	ncRNA_gene	1	500	.	+	.	ID=ncRNA_gene_matK;gene=matK;partial=start;
+TEST01.1	.	ncRNA_gene	600	700	.	+	.	ID=ncRNA_gene_matK;gene=matK;
+TEST01.1	.	ncRNA_gene	800	822	.	+	.	ID=ncRNA_gene_matK;gene=matK;partial=end;
+TEST01.1	.	mRNA	100	122	.	+	.	ID=mRNA_matK;gene=matK;
