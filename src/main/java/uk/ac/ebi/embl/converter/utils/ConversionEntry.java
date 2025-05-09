@@ -32,8 +32,7 @@ public class ConversionEntry {
         // Splitting only Qualifier1 and Qualifier2 values
         List<String> qualifiersTokens = Arrays.stream(tokens).skip(4).toList();
         for (String token : qualifiersTokens) {
-            Tuple2<String, String> parsed = parseQualifier(token);
-            qualifiers.put(parsed._1, parsed._2);
+            qualifiers.putAll(parseQualifier(token).apply(Map::of));
         }
     }
 
