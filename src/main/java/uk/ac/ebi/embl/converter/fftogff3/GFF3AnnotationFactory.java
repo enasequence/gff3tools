@@ -362,13 +362,14 @@ public class GFF3AnnotationFactory {
         Map<String, String> requiredQualifiers = conversionEntry.getQualifiers();
 
         boolean matchesAllQualifiers = true;
-        for (String expectedQualifierName: requiredQualifiers.keySet()) {
+        for (String expectedQualifierName : requiredQualifiers.keySet()) {
             boolean qualifierMatches = false;
-            for (Qualifier featureQualifier: feature.getQualifiers(expectedQualifierName)) {
-                 qualifierMatches = featureQualifier.getValue().equalsIgnoreCase(requiredQualifiers.get(expectedQualifierName));
-                 if (qualifierMatches) {
-                     break;
-                 }
+            for (Qualifier featureQualifier : feature.getQualifiers(expectedQualifierName)) {
+                qualifierMatches =
+                        featureQualifier.getValue().equalsIgnoreCase(requiredQualifiers.get(expectedQualifierName));
+                if (qualifierMatches) {
+                    break;
+                }
             }
             matchesAllQualifiers = qualifierMatches;
             if (!matchesAllQualifiers) {
