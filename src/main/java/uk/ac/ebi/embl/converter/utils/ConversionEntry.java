@@ -39,23 +39,13 @@ public class ConversionEntry {
 
     private Tuple2<String, String> parseQualifier(String str) {
         String[] parts = str.split("=");
-        String key;
         String value;
         switch (parts.length) {
-            case 2 -> {
-                key = parts[0];
-                value = parts[1].substring(1, parts[1].length() - 1);
-            }
-            case 1 -> {
-                key = parts[0];
-                value = "true";
-            }
+            case 2 -> value = parts[1].replaceAll("^\"|\"$", "");
+            case 1 -> value = "true";
             default -> throw new RuntimeException("Invalid qualifier format: " + str);
         }
-        // Remove starting / character on qualifiers
-        if (key.startsWith("/")) {
-            key = key.substring(1);
-        }
+        String key = parts[0].replaceFirst("/", "");
         return new Tuple2<>(key, value);
     }
 
