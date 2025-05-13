@@ -6,6 +6,11 @@ import uk.ac.ebi.embl.api.validation.helper.FlatFileComparator;
 import uk.ac.ebi.embl.api.validation.helper.FlatFileComparatorException;
 import uk.ac.ebi.embl.api.validation.helper.FlatFileComparatorOptions;
 
+/**
+ * This class is not a part of converter, this is added here for testing purpose only.
+ * We must remove this once the conversion testing is over.
+ * */
+
 public class FeatureComparator {
 
     private static final Logger LOG = LoggerFactory.getLogger(FeatureComparator.class);
@@ -31,6 +36,7 @@ public class FeatureComparator {
 
     private static FlatFileComparator getFeatureComparator() {
         FeatureComparatorOption options = new FeatureComparatorOption();
+        // Ignore the below FT lines
         options.setIgnoreLine("FT   source");
         options.setIgnoreLine("FT                   /organism");
         options.setIgnoreLine("FT                   /plasmid");
@@ -47,6 +53,7 @@ public class FeatureComparator {
 class FeatureComparatorOption extends FlatFileComparatorOptions {
     @Override
     public boolean isIgnoreLine(String line) {
+        // Ignore non FT and selected FT lines
         return ! line.startsWith("FT") || super.isIgnoreLine(line);
     }
 }
