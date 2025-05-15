@@ -1,0 +1,21 @@
+ID   TEST01; XXX; XXX; XXX; XXX; XXX; XXX.
+XX
+AC   TEST01;
+XX
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..822
+FT                   /mol_type="genomic DNA"
+FT   gene            1..822
+FT                   /gene="matK"
+FT   exon            1..50
+FT                   /gene="matK"
+FT   5'UTR           20..30
+FT                   /gene="matK"
+FT   mRNA            1..822
+FT                   /gene="matK"
+XX
+//
