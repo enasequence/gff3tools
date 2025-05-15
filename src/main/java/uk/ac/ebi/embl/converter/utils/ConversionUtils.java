@@ -24,6 +24,7 @@ public enum ConversionUtils {
     private Map<String, String> ff2gff3Qualifiers = null;
     private Map<String, String> gff32ffQualifiers = null;
     // Map of child : list of possible parents
+    // Uses sOTerms (gff3 feature names)
     private Map<String, Set<String>> featureRelations = null;
 
     private ConversionUtils() {
