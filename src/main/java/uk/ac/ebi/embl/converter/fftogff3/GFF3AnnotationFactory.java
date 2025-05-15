@@ -31,16 +31,13 @@ public class GFF3AnnotationFactory {
     Logger LOG = LoggerFactory.getLogger(GFF3AnnotationFactory.class);
 
     // Map of features with parent-child relation
-    static final Map<String, String> featureRelationMap = ConversionUtils.getFeatureRelationMap();
+    static final Map<String, Set<String>> featureRelationMap = ConversionUtils.getFeatureRelationMap();
 
     ///  Keeps track of all the features belonging to a gene.
     Map<String, List<GFF3Feature>> geneMap;
     ///  List of features that do not belong to a gene.
     List<GFF3Feature> nonGeneFeatures;
 
-    // Keeps track of the GFF3 ID given to EMBL features; Used to find the parent of a feature
-    // key: emblfeature_gene, value: gff3 ID
-    Map<String, String> emblIDtoGFF3ID;
     // Map of Id with count, used for incrementing when same id is found.
     Map<String, Integer> idMap = new HashMap<>();
 
@@ -54,7 +51,6 @@ public class GFF3AnnotationFactory {
 
         geneMap = new LinkedHashMap<>();
         nonGeneFeatures = new ArrayList<>();
-        emblIDtoGFF3ID = new HashMap<>();
 
         String accession = entry.getSequence().getAccession();
         LOG.info("Converting FF entry: {}", accession);
@@ -79,7 +75,7 @@ public class GFF3AnnotationFactory {
             if (isCircularTopology(entry) && lacksCircularAttribute()) {
                 nonGeneFeatures.add(createLandmarkFeature(accession, entry));
             }
-            // sortFeaturesAndAssignId();
+            sortFeaturesAndAssignId();
 
             List<GFF3Feature> features =
                     geneMap.values().stream().flatMap(List::stream).collect(Collectors.toList());
@@ -134,17 +130,13 @@ public class GFF3AnnotationFactory {
 
         if (geneName.isPresent()) {
             id = Optional.of(getIncrementalId(featureName, geneName.get()));
-            String parentFeature = emblIDtoGFF3ID.get(getId(getParentFeature(ffFeature.getName()), geneName.get()));
-            parentId = Optional.ofNullable(parentFeature);
+            parentId = Optional.of(getParentFeature(featureName,geneName));
         }
 
         Map<String, Object> baseAttributes = getAttributeMap(ffFeature);
 
         geneName.ifPresent(v -> baseAttributes.put("gene", v));
-        id.ifPresent(v -> {
-            emblIDtoGFF3ID.put(getId(ffFeature.getName(), geneName.get()), v);
-            baseAttributes.put("ID", v);
-        });
+        id.ifPresent(v -> baseAttributes.put("ID", v));
         parentId.ifPresent(v -> baseAttributes.put("Parent", v));
 
         for (Location location : ffFeature.getLocations().getLocations()) {
@@ -209,6 +201,21 @@ public class GFF3AnnotationFactory {
             }
         } catch (Exception e) {
             throw new FFtoGFF3ConversionError(e.getMessage());
+        }
+    }
+
+    private void sortFeaturesAndAssignId() {
+        for (String geneName : geneMap.keySet()) {
+            List<GFF3Feature> gffFeatures = geneMap.get(geneName);
+
+            // build a tree of parent node and its children
+            List<GFF3Feature> rootNode = buildFeatureTree(gffFeatures);
+
+            // Clear and re-add in correct order
+            gffFeatures.clear();
+            for (GFF3Feature root : rootNode) {
+                orderRootAndChildren(gffFeatures, root);
+            }
         }
     }
 
@@ -325,8 +332,20 @@ public class GFF3AnnotationFactory {
         return "%s_%s".formatted(name, geneName);
     }
 
-    private String getParentFeature(String emblFeatureName) {
-        return featureRelationMap.get(emblFeatureName);
+    private String getParentFeature(String emblFeatureName, Optional geneName) {
+
+        if (!geneName.isPresent()) {
+            return "";
+        }
+
+        List<GFF3Feature> gffFeatures = geneMap.getOrDefault(geneName.get(), Collections.emptyList());
+        Set<String> definedParents = featureRelationMap.getOrDefault(emblFeatureName, Collections.emptySet());
+        for (GFF3Feature feature : gffFeatures) {
+            if (definedParents.contains(feature.getName())) {
+                return feature.getId().orElse("");
+            }
+        }
+        return "";
     }
 
     private String getGFF3FeatureName(Feature ffFeature) {
