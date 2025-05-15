@@ -130,7 +130,7 @@ public class GFF3AnnotationFactory {
 
         if (geneName.isPresent()) {
             id = Optional.of(getIncrementalId(featureName, geneName.get()));
-            parentId = Optional.of(getParentFeature(featureName,geneName));
+            parentId = Optional.of(getParentFeature(featureName, geneName));
         }
 
         Map<String, Object> baseAttributes = getAttributeMap(ffFeature);

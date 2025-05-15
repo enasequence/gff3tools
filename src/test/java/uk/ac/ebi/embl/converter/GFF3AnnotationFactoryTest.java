@@ -16,7 +16,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
-
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
@@ -35,12 +34,12 @@ class GFF3AnnotationFactoryTest {
 
     @Test
     public void buildFeatureTreeFullMapTest() {
-        //TODO: need to fix test
+        // TODO: need to fix test
         GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
         featureRelationMap.forEach((childName, parentSet) -> {
             List<GFF3Feature> featureList = new ArrayList<>();
             parentSet.forEach(parentName -> {
-                GFF3Feature childFeature = TestUtils.createGFF3Feature(Optional.of(childName),Optional.of(parentName));
+                GFF3Feature childFeature = TestUtils.createGFF3Feature(Optional.of(childName), Optional.of(parentName));
                 GFF3Feature parentFeature = TestUtils.createGFF3Feature(Optional.of(parentName), Optional.empty());
                 featureList.add(childFeature);
                 featureList.add(parentFeature);
@@ -48,22 +47,25 @@ class GFF3AnnotationFactoryTest {
 
             List<GFF3Feature> gff3Features = gFF3AnnotationFactory.buildFeatureTree(featureList);
 
-            List<GFF3Feature> parentList = gff3Features.stream().filter(f->!f.getChildren().isEmpty()).collect(Collectors.toList());
+            List<GFF3Feature> parentList = gff3Features.stream()
+                    .filter(f -> !f.getChildren().isEmpty())
+                    .collect(Collectors.toList());
 
             // Assert parent list
             assertEquals(parentList.size(), parentSet.size());
 
             // Assert children
-            parentList.forEach(parent->{
+            parentList.forEach(parent -> {
                 assertTrue(parent.getChildren().stream().findFirst().isPresent());
-                assertEquals(parent.getChildren().stream().findFirst().get().getId().get(),childName);
+                assertEquals(
+                        parent.getChildren().stream().findFirst().get().getId().get(), childName);
             });
         });
     }
 
     @Test
     public void orderRootAndChildrenTest() {
-        //TODO: need to fix test
+        // TODO: need to fix test
         GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
         List<GFF3Feature> featureList = new ArrayList<>();
         List<GFF3Feature> parentList = new ArrayList<>();
@@ -80,7 +82,6 @@ class GFF3AnnotationFactoryTest {
 
                 childList.add(childFeature);
                 parentList.add(parentFeature);
-
             }
         }
 
@@ -95,16 +96,17 @@ class GFF3AnnotationFactoryTest {
         for (GFF3Feature root : rootNode) {
             gFF3AnnotationFactory.orderRootAndChildren(featureList, root);
         }
-        assertEquals(featureList.size(), childList.size()+parentList.size());
+        assertEquals(featureList.size(), childList.size() + parentList.size());
 
         // parent feature will not have parentId
-        long parentCount = featureList.stream().filter(f->!f.getParentId().isPresent()).count();
+        long parentCount =
+                featureList.stream().filter(f -> !f.getParentId().isPresent()).count();
         // child feature will have parentId
-        long childCount = featureList.stream().filter(f->f.getParentId().isPresent()).count();
+        long childCount =
+                featureList.stream().filter(f -> f.getParentId().isPresent()).count();
 
         assertEquals(parentCount, parentList.size());
         assertEquals(childCount, childList.size());
-
     }
 
     @Test

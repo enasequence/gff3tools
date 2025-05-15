@@ -106,7 +106,7 @@ public enum ConversionUtils {
                 featureRelations.put(childFeatureStr, parentList);
             }
 
-System.out.println(featureRelations);
+            System.out.println(featureRelations);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
