@@ -328,10 +328,6 @@ public class GFF3AnnotationFactory {
         return count > 0 ? "%s_%d".formatted(baseId, count) : baseId;
     }
 
-    private String getId(String name, String geneName) {
-        return "%s_%s".formatted(name, geneName);
-    }
-
     private String getParentFeature(String emblFeatureName, Optional geneName) {
 
         if (!geneName.isPresent()) {
