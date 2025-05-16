@@ -10,30 +10,46 @@
  */
 package uk.ac.ebi.embl.converter.utils;
 
+import io.vavr.Tuple2;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 public class ConversionEntry {
     String sOID;
     String sOTerm;
     String definition;
     String feature;
-    String qualifier1;
-    String qualifier2;
+    Map<String, String> qualifiers;
 
     ConversionEntry(String[] tokens) {
         this.sOID = tokens[0];
         this.sOTerm = tokens[1];
         this.definition = tokens[2];
         this.feature = tokens[3];
-        for (String token : tokens)
-            if (tokens.length > 4) this.qualifier1 = tokens[4].equalsIgnoreCase("null") ? null : tokens[4];
-        if (tokens.length > 5) this.qualifier2 = tokens[5].equalsIgnoreCase("null") ? null : tokens[5];
+        this.qualifiers = new HashMap<>();
+        // Splitting only Qualifier1 and Qualifier2 values
+        List<String> qualifiersTokens = Arrays.stream(tokens).skip(4).toList();
+        for (String token : qualifiersTokens) {
+            qualifiers.putAll(parseQualifier(token).apply(Map::of));
+        }
     }
 
-    public String getQualifier1() {
-        return qualifier1;
+    private Tuple2<String, String> parseQualifier(String str) {
+        String[] parts = str.split("=");
+        String value;
+        switch (parts.length) {
+            case 2 -> value = parts[1].replaceAll("^\"|\"$", "");
+            case 1 -> value = "true";
+            default -> throw new RuntimeException("Invalid qualifier format: " + str);
+        }
+        String key = parts[0].replaceFirst("/", "");
+        return new Tuple2<>(key, value);
     }
 
-    public String getQualifier2() {
-        return qualifier2;
+    public Map<String, String> getQualifiers() {
+        return qualifiers;
     }
 
     public String getSOID() {
@@ -53,8 +69,7 @@ public class ConversionEntry {
         final StringBuffer sb = new StringBuffer("ConversionEntry{");
         sb.append(", sOTerm='").append(sOTerm).append('\'');
         sb.append(", feature='").append(feature).append('\'');
-        sb.append(", qualifier1='").append(qualifier1).append('\'');
-        sb.append(", qualifier2='").append(qualifier2).append('\'');
+        sb.append(", qualifiers='").append(qualifiers).append('\'');
         sb.append('}');
         return sb.toString();
     }

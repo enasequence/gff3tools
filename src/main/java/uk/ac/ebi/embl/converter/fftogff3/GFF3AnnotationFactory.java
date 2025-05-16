@@ -31,7 +31,7 @@ public class GFF3AnnotationFactory {
     Logger LOG = LoggerFactory.getLogger(GFF3AnnotationFactory.class);
 
     // Map of features with parent-child relation
-    static final Map<String, String> featureRelationMap = ConversionUtils.getFeatureRelationMap();
+    static final Map<String, Set<String>> featureRelationMap = ConversionUtils.getFeatureRelationMap();
 
     ///  Keeps track of all the features belonging to a gene.
     Map<String, List<GFF3Feature>> geneMap;
@@ -60,22 +60,12 @@ public class GFF3AnnotationFactory {
 
         GFF3Directives directives = new GFF3DirectivesFactory(this.ignoreSpecies).from(entry);
         try {
-            Map<String, List<ConversionEntry>> featureMap = ConversionUtils.getFF2GFF3FeatureMap();
 
             for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
 
                 if (feature.getName().equalsIgnoreCase("source")) {
                     continue; // early exit
                 }
-
-                // TODO: insert a gene feature if/where appropriate
-                Optional<ConversionEntry> first = Optional.ofNullable(featureMap.get(feature.getName())).stream()
-                        .flatMap(List::stream)
-                        .filter(conversionEntry -> hasAllQualifiers(feature, conversionEntry))
-                        .findFirst();
-
-                // Rule: Throw an error if we find an unmapped feature
-                if (first.isEmpty()) throw new Exception("Mapping not found for " + feature.getName());
 
                 buildGeneFeatureMap(entry.getPrimaryAccession(), feature);
             }
@@ -136,10 +126,11 @@ public class GFF3AnnotationFactory {
         Optional<String> id = Optional.empty();
         Optional<String> parentId = Optional.empty();
 
+        String featureName = getGFF3FeatureName(ffFeature);
+
         if (geneName.isPresent()) {
-            id = Optional.of(getIncrementalId(ffFeature.getName(), geneName.get()));
-            String parentFeatureName = getParentFeature(ffFeature.getName());
-            parentId = Optional.ofNullable(parentFeatureName).map(name -> getId(name, geneName.get()));
+            id = Optional.of(getIncrementalId(featureName, geneName.get()));
+            parentId = Optional.of(getParentFeature(featureName, geneName));
         }
 
         Map<String, Object> baseAttributes = getAttributeMap(ffFeature);
@@ -161,7 +152,7 @@ public class GFF3AnnotationFactory {
                     parentId,
                     accession,
                     source,
-                    ffFeature.getName(),
+                    featureName,
                     location.getBeginPosition(),
                     location.getEndPosition(),
                     score,
@@ -320,18 +311,6 @@ public class GFF3AnnotationFactory {
         return partiality.length() > 1 ? partiality.toString() : "";
     }
 
-    private boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {
-        boolean firstQualifierMatches = conversionEntry.getQualifier1() == null;
-        boolean secondQualifierMatches = conversionEntry.getQualifier2() == null;
-
-        for (Qualifier qualifier : feature.getQualifiers()) {
-            String formatted = "/%s=%s".formatted(qualifier.getName(), qualifier.getValue());
-            firstQualifierMatches |= formatted.equalsIgnoreCase(conversionEntry.getQualifier1());
-            secondQualifierMatches |= formatted.equalsIgnoreCase(conversionEntry.getQualifier2());
-        }
-        return firstQualifierMatches && secondQualifierMatches;
-    }
-
     private boolean hasParent(GFF3Feature feature, List<GFF3Feature> gffFeatures) {
         Optional<String> parentId = feature.getParentId();
         // Check if gffFeatures has the parent
@@ -349,11 +328,57 @@ public class GFF3AnnotationFactory {
         return count > 0 ? "%s_%d".formatted(baseId, count) : baseId;
     }
 
-    private String getId(String name, String geneName) {
-        return "%s_%s".formatted(name, geneName);
+    private String getParentFeature(String emblFeatureName, Optional geneName) {
+
+        if (!geneName.isPresent()) {
+            return "";
+        }
+
+        List<GFF3Feature> gffFeatures = geneMap.getOrDefault(geneName.get(), Collections.emptyList());
+        Set<String> definedParents = featureRelationMap.getOrDefault(emblFeatureName, Collections.emptySet());
+        for (GFF3Feature feature : gffFeatures) {
+            if (definedParents.contains(feature.getName())) {
+                return feature.getId().orElse("");
+            }
+        }
+        return "";
     }
 
-    private String getParentFeature(String featureName) {
-        return featureRelationMap.get(featureName);
+    private String getGFF3FeatureName(Feature ffFeature) {
+
+        List<ConversionEntry> mappings = ConversionUtils.getFF2GFF3FeatureMap().get(ffFeature.getName());
+        if (mappings == null) {
+            return ffFeature.getName();
+        }
+
+        // return the soTerm of the max qualifier mapping
+        return mappings.stream()
+                .filter(entry -> entry.getFeature().equalsIgnoreCase(ffFeature.getName()))
+                .filter(entry -> hasAllQualifiers(ffFeature, entry))
+                .max(Comparator.comparingInt(entry -> entry.getQualifiers().size()))
+                .map(ConversionEntry::getSOTerm)
+                .orElse(ffFeature.getName());
+    }
+
+    private boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {
+        Map<String, String> requiredQualifiers = conversionEntry.getQualifiers();
+
+        boolean matchesAllQualifiers = true;
+        for (String expectedQualifierName : requiredQualifiers.keySet()) {
+            boolean qualifierMatches = false;
+            for (Qualifier featureQualifier : feature.getQualifiers(expectedQualifierName)) {
+                qualifierMatches =
+                        featureQualifier.getValue().equalsIgnoreCase(requiredQualifiers.get(expectedQualifierName));
+                if (qualifierMatches) {
+                    break;
+                }
+            }
+            matchesAllQualifiers = qualifierMatches;
+            if (!matchesAllQualifiers) {
+                break;
+            }
+        }
+
+        return matchesAllQualifiers;
     }
 }

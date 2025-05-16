@@ -1,0 +1,4 @@
+##gff-version 3.1.26
+##species https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?name=Lactococcus sp.
+##sequence-region TEST01.1 1 9430
+TEST01.1	.	operon	160	6865	.	+	.	ID=operon_galA;gene=galA;operon=gal;

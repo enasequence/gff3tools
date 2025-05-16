@@ -23,7 +23,9 @@ public enum ConversionUtils {
     private Map<String, ConversionEntry> gff32ff = null;
     private Map<String, String> ff2gff3Qualifiers = null;
     private Map<String, String> gff32ffQualifiers = null;
-    private Map<String, String> featureRelations = null;
+    // Map of child : list of possible parents
+    // Uses sOTerms (gff3 feature names)
+    private Map<String, Set<String>> featureRelations = null;
 
     private ConversionUtils() {
         this.loadMaps();
@@ -37,7 +39,7 @@ public enum ConversionUtils {
         return INSTANCE.ff2gff3Qualifiers;
     }
 
-    public static Map<String, String> getFeatureRelationMap() {
+    public static Map<String, Set<String>> getFeatureRelationMap() {
         return INSTANCE.featureRelations;
     }
 
@@ -78,9 +80,34 @@ public enum ConversionUtils {
             lines.remove(0);
             for (String line : lines) {
                 String[] words = line.split("\t");
-                featureRelations.put(words[0], words[1]);
+                String childFeatureStr = words[0];
+                String parentFeatureStr = words[1];
+                Set<String> parentList = featureRelations.getOrDefault(childFeatureStr, new HashSet<>());
+                parentList.add(parentFeatureStr);
+
+                List<ConversionEntry> parentConversions = ff2gff3.get(parentFeatureStr);
+                if (parentConversions != null) {
+                    // Add all sOTerms from parentConversions that match the parentFeatureStr
+                    for (ConversionEntry entry : parentConversions) {
+                        if (entry.feature.equals(parentFeatureStr)) {
+                            parentList.add(entry.sOTerm);
+                        }
+                    }
+                }
+
+                List<ConversionEntry> childConversions = ff2gff3.get(childFeatureStr);
+                if (childConversions != null) {
+                    // For each matching childConversions, map its sOTerm to the parent list
+                    for (ConversionEntry entry : childConversions) {
+                        if (entry.feature.equals(childFeatureStr)) {
+                            featureRelations.put(entry.sOTerm, parentList);
+                        }
+                    }
+                }
+                featureRelations.put(childFeatureStr, parentList);
             }
 
+            System.out.println(featureRelations);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

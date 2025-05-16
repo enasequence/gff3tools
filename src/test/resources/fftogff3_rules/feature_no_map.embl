@@ -1,0 +1,19 @@
+ID   TEST01; XXX; XXX; XXX; XXX; XXX; XXX.
+XX
+AC   TEST01;
+XX
+CC   Test overlapping /gene qualifiers.
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..9430
+FT                   /organism="Lactococcus sp."
+FT                   /strain="MG1234"
+FT                   /mol_type="genomic DNA"
+FT   operon          160..6865
+FT                   /operon="gal"
+FT                   /gene="galA"
+XX
+//
