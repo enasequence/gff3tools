@@ -30,9 +30,6 @@ class FFToGFF3ConverterTest {
         Map<String, Path> testFiles = TestUtils.getTestFiles("fftogff3_rules", ".embl");
 
         for (String filePrefix : testFiles.keySet()) {
-            /*if(!filePrefix.startsWith("parent-child")){
-                continue;
-            }*/
             GFF3FileFactory rule = new GFF3FileFactory();
             try (BufferedReader testFileReader =
                     TestUtils.getResourceReader(testFiles.get(filePrefix).toString())) {
