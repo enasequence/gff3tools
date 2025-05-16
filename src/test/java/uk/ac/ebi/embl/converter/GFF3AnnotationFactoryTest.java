@@ -18,8 +18,15 @@ import java.util.*;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.api.entry.Entry;
+import uk.ac.ebi.embl.api.entry.EntryFactory;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.feature.FeatureFactory;
+import uk.ac.ebi.embl.api.entry.location.Join;
+import uk.ac.ebi.embl.api.entry.location.Location;
+import uk.ac.ebi.embl.api.entry.location.LocationFactory;
+import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
+import uk.ac.ebi.embl.converter.fftogff3.FFtoGFF3ConversionError;
 import uk.ac.ebi.embl.converter.fftogff3.GFF3AnnotationFactory;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
@@ -129,6 +136,7 @@ class GFF3AnnotationFactoryTest {
         GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
         Method method = GFF3AnnotationFactory.class.getDeclaredMethod("getGFF3FeatureName", Feature.class);
         method.setAccessible(true);
+
         FeatureFactory featureFactory = new FeatureFactory();
 
         Feature mappedFeature = featureFactory.createFeature("gene");
@@ -149,5 +157,71 @@ class GFF3AnnotationFactoryTest {
         Feature unmappedFeature = featureFactory.createFeature("unmapped");
         Object unmappedFeatureResult = method.invoke(gFF3AnnotationFactory, unmappedFeature);
         assertEquals("unmapped", unmappedFeatureResult);
+    }
+
+    @Test
+    public void testGetParentFeature()
+            throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, FFtoGFF3ConversionError {
+        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
+
+        EntryFactory entryFactory = new EntryFactory();
+        Entry entry = entryFactory.createEntry();
+
+        SequenceFactory sequenceFactory = new SequenceFactory();
+        entry.setSequence(sequenceFactory.createSequence());
+
+        FeatureFactory featureFactory = new FeatureFactory();
+        LocationFactory locationFactory = new LocationFactory();
+
+        Feature sourceFeature = featureFactory.createFeature("source");
+        Join<Location> sourceLocation = new Join<>();
+        sourceLocation.addLocation(locationFactory.createLocalRange(1L, 822L));
+        sourceFeature.setLocations(sourceLocation);
+        entry.addFeature(sourceFeature);
+
+        Feature geneFeature = featureFactory.createFeature("gene");
+        geneFeature.addQualifier("gene", "matK");
+        Join<Location> geneLocation = new Join<>();
+        geneLocation.addLocation(locationFactory.createLocalRange(1L, 822L));
+        geneFeature.setLocations(geneLocation);
+        entry.addFeature(geneFeature);
+
+        Feature mRNAFeature = featureFactory.createFeature("mRNA");
+        mRNAFeature.addQualifier("gene", "matK");
+        Join<Location> mRNALocation = new Join<>();
+        mRNALocation.addLocation(locationFactory.createLocalRange(1L, 822L));
+        mRNAFeature.setLocations(mRNALocation);
+        entry.addFeature(mRNAFeature);
+
+        Feature intronFeature = featureFactory.createFeature("intron");
+        intronFeature.addQualifier("gene", "matK");
+        Join<Location> intronLocation = new Join<>();
+        intronLocation.addLocation(locationFactory.createLocalRange(100L, 150L));
+        intronFeature.setLocations(intronLocation);
+        entry.addFeature(intronFeature);
+
+        Feature repeatRegionFeature = featureFactory.createFeature("repeat_region");
+        entry.addFeature(repeatRegionFeature);
+        Join<Location> repeatLocation = new Join<>();
+        repeatLocation.addLocation(locationFactory.createLocalRange(100L, 150L));
+        repeatRegionFeature.setLocations(repeatLocation);
+        entry.addFeature(repeatRegionFeature);
+
+        gFF3AnnotationFactory.from(entry);
+
+        Method method = GFF3AnnotationFactory.class.getDeclaredMethod("getParentFeature", String.class, Optional.class);
+        method.setAccessible(true);
+
+        Object noExistingFeature = method.invoke(gFF3AnnotationFactory, "boop", Optional.of("matK"));
+        assertEquals("", noExistingFeature);
+
+        Object noGeneFeature = method.invoke(gFF3AnnotationFactory, "repeat_region", Optional.empty());
+        assertEquals("", noGeneFeature);
+
+        Object firstDegreeParent = method.invoke(gFF3AnnotationFactory, "mRNA", Optional.of("matK"));
+        assertEquals("ncRNA_gene_matK", firstDegreeParent);
+
+        Object secondDegreeparent = method.invoke(gFF3AnnotationFactory, "intron", Optional.of("matK"));
+        assertEquals("mRNA_matK", secondDegreeparent);
     }
 }
