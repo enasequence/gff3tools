@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -164,12 +165,7 @@ public class GFF3FileReader implements AutoCloseable {
     }
 
     private static String urlDecode(String s) {
-        try {
-            return URLDecoder.decode(s, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            // We know for a fact that UTF-8 is supported. This branch won't be executed.
-            throw new RuntimeException(e);
-        }
+        return URLDecoder.decode(s, StandardCharsets.UTF_8);
     }
 
     @Override

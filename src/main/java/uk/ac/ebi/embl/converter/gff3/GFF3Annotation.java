@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import uk.ac.ebi.embl.converter.utils.Gff3Utils;
 
 @NoArgsConstructor
 @Getter
@@ -63,12 +65,7 @@ public class GFF3Annotation implements IGFF3Feature {
     }
 
     private static String urlEncode(String s) {
-        try {
-            return URLEncoder.encode(s, "UTF-8").replace("+", " ");
-        } catch (UnsupportedEncodingException e) {
-            // We know for a fact that UTF-8 is supported. This branch won't be executed.
-            throw new RuntimeException(e);
-        }
+        return URLEncoder.encode(s, StandardCharsets.UTF_8).replace("+", " ");
     }
 
     @Override

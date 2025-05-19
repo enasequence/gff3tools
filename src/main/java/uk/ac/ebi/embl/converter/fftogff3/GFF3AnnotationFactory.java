@@ -173,7 +173,6 @@ public class GFF3AnnotationFactory {
                 .forEach(q -> {
                     String key = qualifierMap.getOrDefault(q.getName(), q.getName());
                     String value = q.isValue() ? q.getValue() : "true";
-                    value = value.replace(";", ":");
 
                     Gff3Utils.addAttribute(attributes, key, value);
                 });
