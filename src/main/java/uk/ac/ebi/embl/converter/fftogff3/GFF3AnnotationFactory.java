@@ -142,8 +142,8 @@ public class GFF3AnnotationFactory {
         for (Location location : ffFeature.getLocations().getLocations()) {
             Map<String, Object> attributes = new LinkedHashMap<>(baseAttributes);
 
-            String partiality = getPartiality(location);
-            if (!partiality.isBlank()) {
+            List<String> partiality = getPartiality(location);
+            if (!partiality.isEmpty()) {
                 attributes.put("partial", partiality);
             }
 
@@ -297,9 +297,9 @@ public class GFF3AnnotationFactory {
         return ".";
     }
 
-    private String getPartiality(Location location) {
+    private List<String> getPartiality(Location location) {
 
-        StringJoiner partiality = new StringJoiner(",");
+        List<String> partiality = new ArrayList<>();
 
         if (location.isFivePrimePartial()) {
             partiality.add("start");
@@ -307,8 +307,7 @@ public class GFF3AnnotationFactory {
         if (location.isThreePrimePartial()) {
             partiality.add("end");
         }
-        // Returns empty string if non partial location
-        return partiality.length() > 1 ? partiality.toString() : "";
+        return partiality;
     }
 
     private boolean hasParent(GFF3Feature feature, List<GFF3Feature> gffFeatures) {

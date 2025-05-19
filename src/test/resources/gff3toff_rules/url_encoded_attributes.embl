@@ -1,0 +1,16 @@
+ID   TEST01; SV XXX; XXX; XXX; XXX; XXX; 0 BP.
+XX
+AC   TEST01;
+XX
+DE   .
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..822
+FT   gene            1..822
+FT                   /gene="matK"
+FT                   /notes= one,two=three&four;five
+XX
+//

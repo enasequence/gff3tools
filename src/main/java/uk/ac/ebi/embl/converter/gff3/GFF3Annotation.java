@@ -11,7 +11,9 @@
 package uk.ac.ebi.embl.converter.gff3;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.io.Writer;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -50,12 +52,23 @@ public class GFF3Annotation implements IGFF3Feature {
 
                     if (value instanceof List) {
                         List<String> values = (List<String>) value;
-                        return values.stream().map(v -> key + "=" + v).collect(Collectors.joining(";"));
+                        String joinedValue =
+                                values.stream().map(GFF3Annotation::urlEncode).collect(Collectors.joining(","));
+                        return urlEncode(key) + "=" + joinedValue;
                     } else {
-                        return key + "=" + value;
+                        return urlEncode(key) + "=" + urlEncode((String) value);
                     }
                 })
                 .collect(Collectors.joining(";", "", ";")));
+    }
+
+    private static String urlEncode(String s) {
+        try {
+            return URLEncoder.encode(s, "UTF-8").replace("+", " ");
+        } catch (UnsupportedEncodingException e) {
+            // We know for a fact that UTF-8 is supported. This branch won't be executed.
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

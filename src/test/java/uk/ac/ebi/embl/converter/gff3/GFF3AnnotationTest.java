@@ -33,15 +33,14 @@ public class GFF3AnnotationTest {
         attributes = new HashMap<>();
         attributes.put("ID", "ID_TEST");
         attributes.put("qualifier", "test_2;value");
-        expectedAttribute = "ID=ID_TEST;qualifier=test_2;value;";
+        expectedAttribute = "ID=ID_TEST;qualifier=test_2%3Bvalue;";
         test(attributes, expectedAttribute);
 
         attributes = new HashMap<>();
         attributes.put("ID", "ID_TEST");
         attributes.put("qualifier1", Arrays.asList("test_1", "test_2", "test_3"));
         attributes.put("qualifier2", Arrays.asList("1", "2", "3"));
-        expectedAttribute =
-                "ID=ID_TEST;qualifier1=test_1;qualifier1=test_2;qualifier1=test_3;qualifier2=1;qualifier2=2;qualifier2=3;";
+        expectedAttribute = "ID=ID_TEST;qualifier1=test_1,test_2,test_3;qualifier2=1,2,3;";
         test(attributes, expectedAttribute);
     }
 
@@ -51,7 +50,8 @@ public class GFF3AnnotationTest {
             GFF3Feature gff3Feature = TestUtils.createGFF3Feature("ID", "Parent", attributes);
             annotation.addFeature(gff3Feature);
             annotation.writeGFF3String(gff3Writer);
-            assertTrue(gff3Writer.toString().trim().endsWith(expectedAttribute));
+            String attr = gff3Writer.toString().trim();
+            assertTrue(attr.endsWith(expectedAttribute));
         }
     }
 }
