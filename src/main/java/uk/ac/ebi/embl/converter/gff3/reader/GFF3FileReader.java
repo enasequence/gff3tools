@@ -13,7 +13,6 @@ package uk.ac.ebi.embl.converter.gff3.reader;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
