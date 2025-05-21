@@ -135,12 +135,9 @@ public class GFF3Mapper {
 
         long start = gff3Feature.getStart();
         long end = gff3Feature.getEnd();
-        List<String> partials = Arrays.stream(gff3Feature
-                        .getAttributes()
-                        .getOrDefault("partial", "")
-                        .toString()
-                        .split(","))
-                .toList();
+        Object partialsRaw = gff3Feature.getAttributes().getOrDefault("partial", new ArrayList<>());
+        List<String> partials =
+                partialsRaw instanceof String ? List.of((String) partialsRaw) : (List<String>) partialsRaw;
 
         Location location = this.locationFactory.createLocalRange(
                 start, end, gff3Feature.getStrand().equals("-"));

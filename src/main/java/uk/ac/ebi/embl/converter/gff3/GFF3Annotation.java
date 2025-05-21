@@ -12,6 +12,8 @@ package uk.ac.ebi.embl.converter.gff3;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -44,18 +46,31 @@ public class GFF3Annotation implements IGFF3Feature {
         writer.write('\t');
         writer.write(feature.getAttributes().entrySet().stream()
                 .sorted(Map.Entry.comparingByKey()) // Sort by key
-                .map(entry -> {
-                    String key = entry.getKey();
-                    Object value = entry.getValue();
-
-                    if (value instanceof List) {
-                        List<String> values = (List<String>) value;
-                        return values.stream().map(v -> key + "=" + v).collect(Collectors.joining(";"));
-                    } else {
-                        return key + "=" + value;
-                    }
-                })
+                .map(GFF3Annotation::encodeAttribute)
                 .collect(Collectors.joining(";", "", ";")));
+    }
+
+    private static String encodeAttribute(Map.Entry<String, Object> entry) {
+        String encodedKey = urlEncode(entry.getKey());
+        Object value = entry.getValue();
+
+        String encodedValue;
+        if (value instanceof List<?> valueList) {
+            // Convert each item in the list to string and URL-encode it
+            encodedValue = valueList.stream()
+                    .map(Object::toString)
+                    .map(GFF3Annotation::urlEncode)
+                    .collect(Collectors.joining(","));
+        } else {
+            // Convert single value to string and URL-encode it
+            encodedValue = urlEncode(value.toString());
+        }
+
+        return "%s=%s".formatted(encodedKey, encodedValue);
+    }
+
+    private static String urlEncode(String s) {
+        return URLEncoder.encode(s, StandardCharsets.UTF_8).replace("+", " ");
     }
 
     @Override

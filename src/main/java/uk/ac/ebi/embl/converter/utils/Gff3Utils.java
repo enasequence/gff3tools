@@ -30,4 +30,10 @@ public class Gff3Utils {
             ((List<String>) attributeValue).add(value);
         }
     }
+
+    public static void addAttributes(Map<String, Object> attributes, String key, List<String> value) {
+        for (String v : value) {
+            addAttribute(attributes, key, v);
+        }
+    }
 }

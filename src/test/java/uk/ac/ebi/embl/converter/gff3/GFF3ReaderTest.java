@@ -64,9 +64,10 @@ public class GFF3ReaderTest {
     void testAttributesFromAndToString() throws Exception {
 
         test("ID=ID_TEST;qualifier1=test_1;qualifier2=test_2;");
-        test("ID=ID_TEST;qualifier1=test_1;qualifier1=test_2;qualifier1=test_3;");
-        test("ID=ID_TEST;qualifier1=test_1;qualifier1=test_3;qualifier2=test_2;");
-        test("ID=ID_TEST;qualifier1=test_1;qualifier1=test_3;");
+        test("ID=ID_TEST;qualifier1=test_1,test_2,test_3;");
+        test("ID=ID_TEST;qualifier1=test_1,test_3;qualifier2=test_2;");
+        test("ID=ID_TEST;qualifier1=test_1,test_3;");
+        test("ID=ID_TEST;qualifier1=%00%09%25%3B%2C;");
     }
 
     private void test(String attributeLine) throws Exception {

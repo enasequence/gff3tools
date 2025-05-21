@@ -13,6 +13,8 @@ package uk.ac.ebi.embl.converter.gff3.reader;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -126,8 +128,10 @@ public class GFF3FileReader implements AutoCloseable {
                 String[] keyValue = part.split("=");
                 if (keyValue.length == 2) {
                     String key = keyValue[0].trim();
-                    String value = keyValue[1].trim();
-                    Gff3Utils.addAttribute(attributes, key, value);
+                    List<String> values = Arrays.stream(keyValue[1].trim().split(","))
+                            .map(GFF3FileReader::urlDecode)
+                            .toList();
+                    Gff3Utils.addAttributes(attributes, key, values);
                 }
             }
         }
@@ -157,6 +161,10 @@ public class GFF3FileReader implements AutoCloseable {
     private String readLine() throws IOException {
         this.lineCount++;
         return bufferedReader.readLine();
+    }
+
+    private static String urlDecode(String s) {
+        return URLDecoder.decode(s, StandardCharsets.UTF_8);
     }
 
     @Override
