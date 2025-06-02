@@ -28,9 +28,29 @@ Checkout the project
 
 The jar file will be found in /build/lib/gff3tools*.jar. You can use this jar to run the converter.
 
+# Usage 
 
-# Running ff to gff3 converter
-```java -cp ./gff3tools-1.0.jar uk.ac.ebi.embl.converter.cli.FFToGff3CLI -in OZ026791.ff -out OZ026791.gff3```
+```java -jar gff3tools-1.0.jar help```
 
-# Running gff3 to ff converter
-```java -cp ./gff3tools-1.0.jar uk.ac.ebi.embl.converter.cli.Gff3ToFFCLI -in OZ026791.gff3 -out OZ026791.ff```
+
+### Defaults and conventions
+
+- The conversion tool will identify file formats using the file extension. Only `gff3` and `ff` are recognised file extensions
+- The parameters `-f` (from) and `-t` (to)  can be used to specify the file format if the extension is not recognised or if using std-in/std-out
+- If not provided the parameter `-t` (to) will default to `gff3`
+
+## Converter
+
+**FF to GFF3**
+```java -jar gff3tools-1.0.jar conversion OZ026791.ff OZ026791.gff3```
+
+**GFF3 to FF**
+```java -jar gff3tools-1.0.jar conversion OZ026791.gff3 OZ026791.ff```
+
+### Using unix pipes
+
+The converter supports unix pipes, input and output using std-in and std-out.
+
+**From gff3 stdin to ff stdout**
+
+```cat OZ026791.gff3 | java -jar gff3tools-1.0.jar conversion -f gff3 -t ff > OZ026791.ff```
