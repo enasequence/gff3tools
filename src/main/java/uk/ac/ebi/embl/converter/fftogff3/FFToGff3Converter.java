@@ -11,13 +11,10 @@
 package uk.ac.ebi.embl.converter.fftogff3;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.StringWriter;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.ac.ebi.embl.converter.cli.Params;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
@@ -26,23 +23,16 @@ public class FFToGff3Converter {
 
     private static final Logger LOG = LoggerFactory.getLogger(FFToGff3Converter.class);
 
-    public void convert(Params params) throws FFtoGFF3ConversionError {
-        Path filePath = params.inFile.toPath();
-        try (BufferedReader bufferedReader = Files.newBufferedReader(filePath);
-                StringWriter gff3Writer = new StringWriter()) {
-            EmblEntryReader entryReader = new EmblEntryReader(
-                    bufferedReader,
-                    EmblEntryReader.Format.EMBL_FORMAT,
-                    params.inFile.getAbsolutePath(),
-                    getReaderOptions());
+    public void convert(BufferedReader reader, BufferedWriter writer) throws FFtoGFF3ConversionError {
+        try {
+            EmblEntryReader entryReader =
+                    new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
             GFF3FileFactory fftogff3 = new GFF3FileFactory();
             GFF3File file = fftogff3.from(entryReader);
-            file.writeGFF3String(gff3Writer);
-            Files.write(params.outFile.toPath(), gff3Writer.toString().getBytes());
-            LOG.info("Gff3 file is written in: {}", params.outFile.toPath());
+            file.writeGFF3String(writer);
         } catch (IOException e) {
-            throw new FFtoGFF3ConversionError("Error reading file " + filePath, e);
+            throw new FFtoGFF3ConversionError("Error writing gff3 file", e);
         }
     }
 

@@ -1,3 +1,13 @@
+/*
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package uk.ac.ebi.embl.converter.cli;
 
 import org.slf4j.Logger;
@@ -10,14 +20,14 @@ import uk.ac.ebi.embl.api.validation.helper.FlatFileComparatorOptions;
  * This class is not a part of converter, this is added here for testing purpose only.
  * We must remove this once the conversion testing is over.
  * */
-
 public class FeatureComparator {
 
     private static final Logger LOG = LoggerFactory.getLogger(FeatureComparator.class);
+
     public static void main(String[] args) {
         try {
 
-            compare(args[0],args[1]);
+            compare(args[0], args[1]);
 
         } catch (FlatFileComparatorException e) {
             LOG.error(e.getMessage());
@@ -45,15 +55,14 @@ public class FeatureComparator {
         options.setIgnoreLine("FT   region");
         options.setIgnoreLine("FT                   /circular_RNA=true");
 
-        return  new FlatFileComparator(options);
+        return new FlatFileComparator(options);
     }
-
 }
 
 class FeatureComparatorOption extends FlatFileComparatorOptions {
     @Override
     public boolean isIgnoreLine(String line) {
         // Ignore non FT and selected FT lines
-        return ! line.startsWith("FT") || super.isIgnoreLine(line);
+        return !line.startsWith("FT") || super.isIgnoreLine(line);
     }
 }

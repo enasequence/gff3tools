@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.*;
 import picocli.CommandLine.Model.CommandSpec;
+import uk.ac.ebi.embl.converter.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.converter.fftogff3.FFtoGFF3ConversionError;
 import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
 
@@ -134,6 +135,13 @@ class CommandConversion implements Runnable {
 
         if (fromFileType == FileFormat.gff3 && toFileType == FileFormat.ff) {
             Gff3ToFFConverter converter = new Gff3ToFFConverter();
+            try {
+                converter.convert(inputReader, outputWriter);
+            } catch (FFtoGFF3ConversionError e) {
+                throw new Error(e.getMessage(), e);
+            }
+        } else if (fromFileType == FileFormat.ff && toFileType == FileFormat.gff3) {
+            FFToGff3Converter converter = new FFToGff3Converter();
             try {
                 converter.convert(inputReader, outputWriter);
             } catch (FFtoGFF3ConversionError e) {
