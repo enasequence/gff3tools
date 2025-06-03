@@ -13,17 +13,18 @@ package uk.ac.ebi.embl.converter.gff3toff;
 import java.io.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.ac.ebi.embl.converter.fftogff3.FFtoGFF3ConversionError;
+import uk.ac.ebi.embl.converter.ConversionError;
+import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
 import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 
-public class Gff3ToFFConverter {
+public class Gff3ToFFConverter implements Converter {
 
     private static final Logger LOG = LoggerFactory.getLogger(Gff3ToFFConverter.class);
 
-    public void convert(BufferedReader reader, BufferedWriter writer) throws FFtoGFF3ConversionError {
+    public void convert(BufferedReader reader, BufferedWriter writer) throws ConversionError {
         try (GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
             GFF3Mapper mapper = new GFF3Mapper();
             gff3Reader.readHeader();
@@ -35,9 +36,9 @@ public class Gff3ToFFConverter {
                 entryWriter.write(writer);
             }
         } catch (IOException e) {
-            throw new FFtoGFF3ConversionError("IO Error during conversion", e);
+            throw new ConversionError("IO Error during conversion", e);
         } catch (GFF3ValidationError e) {
-            throw new FFtoGFF3ConversionError(
+            throw new ConversionError(
                     String.format("Validation Error on line %d: %s", e.getLine(), e.getMessage()), e);
         }
     }

@@ -12,13 +12,15 @@ package uk.ac.ebi.embl.converter.fftogff3;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import uk.ac.ebi.embl.converter.ConversionError;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
 import uk.ac.ebi.embl.converter.gff3.GFF3Header;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 public class GFF3FileFactory {
-    public GFF3File from(EmblEntryReader entryReader) throws FFtoGFF3ConversionError {
+    public GFF3File from(EmblEntryReader entryReader) throws ConversionError {
         GFF3Header header = new GFF3Header("3.1.26");
         List<GFF3Annotation> annotations = new ArrayList<>();
         try {

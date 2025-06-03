@@ -23,8 +23,9 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.*;
 import picocli.CommandLine.Model.CommandSpec;
+import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.fftogff3.FFToGff3Converter;
-import uk.ac.ebi.embl.converter.fftogff3.FFtoGFF3ConversionError;
+import uk.ac.ebi.embl.converter.ConversionError;
 import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
 
 @Command(
@@ -92,19 +93,21 @@ class CommandConversion implements Runnable {
                 },
                 outputFilePath);
 
-        // Disable info logs if we pipe to stdout
         try {
-            if (fromFileType == FileFormat.gff3 && toFileType == FileFormat.ff) {
-                Gff3ToFFConverter converter = new Gff3ToFFConverter();
-                converter.convert(inputReader, outputWriter);
-            } else if (fromFileType == FileFormat.ff && toFileType == FileFormat.gff3) {
-                FFToGff3Converter converter = new FFToGff3Converter();
-                converter.convert(inputReader, outputWriter);
-            } else {
-                throw new Error("Conversion from " + fromFileType + " to " + toFileType + " is not supported");
-            }
-        } catch (FFtoGFF3ConversionError e) {
+            Converter converter = getConverter(fromFileType, toFileType);
+            converter.convert(inputReader, outputWriter);
+        } catch (ConversionError e) {
             throw new Error(e.getMessage(), e);
+        }
+    }
+
+    private Converter getConverter(FileFormat inputFileType, FileFormat outputFileType) throws ConversionError {
+        if (inputFileType == FileFormat.gff3 && outputFileType == FileFormat.ff) {
+            return new Gff3ToFFConverter();
+        } else if (inputFileType == FileFormat.ff && outputFileType == FileFormat.gff3) {
+            return new FFToGff3Converter();
+        } else {
+            throw new ConversionError("Conversion from " + fromFileType + " to " + toFileType + " is not supported");
         }
     }
 
