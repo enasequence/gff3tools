@@ -41,7 +41,12 @@ public class Main {
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
-        System.exit(exitCode);
+        exit(exitCode);
+    }
+
+    public static int exit(int code) {
+        System.exit(code);
+        return code;
     }
 }
 
