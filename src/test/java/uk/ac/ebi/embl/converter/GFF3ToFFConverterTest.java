@@ -32,27 +32,25 @@ class GFF3ToFFConverterTest {
         for (String filePrefix : testFiles.keySet()) {
             Gff3ToFFConverter converter = new Gff3ToFFConverter();
 
-                String inFile = testFiles.get(filePrefix).toString();
-                String outFile = filePrefix + ".embl";
-                String[] args = {"conversion", "-t", "ff", inFile, outFile};
-                try  {
-                    int exitCode = new CommandLine(new Main()).execute(args);
-                    assertEquals(0, exitCode,  "Wrong exit code on test file: " + filePrefix);
-                } catch (Exception e) {
-                    fail("Error on test file: " + filePrefix + " - " + e.getMessage());
-                }
+            String inFile = testFiles.get(filePrefix).toString();
+            String outFile = filePrefix + ".embl";
+            String[] args = {"conversion", "-t", "ff", inFile, outFile};
+            try {
+                int exitCode = new CommandLine(new Main()).execute(args);
+                assertEquals(0, exitCode, "Wrong exit code on test file: " + filePrefix);
+            } catch (Exception e) {
+                fail("Error on test file: " + filePrefix + " - " + e.getMessage());
+            }
 
-                String expected;
-                String expectedFilePath = inFile.replace(".gff3", ".embl");
-                try (BufferedReader emblTestFileReader = TestUtils.getResourceReader(expectedFilePath)) {
-                    expected = new BufferedReader(emblTestFileReader).lines().collect(Collectors.joining("\n"));
-                }
+            String expected;
+            String expectedFilePath = inFile.replace(".gff3", ".embl");
+            try (BufferedReader emblTestFileReader = TestUtils.getResourceReader(expectedFilePath)) {
+                expected = new BufferedReader(emblTestFileReader).lines().collect(Collectors.joining("\n"));
+            }
 
-                assertEquals(
-                        expected.trim(),
-                        Files.readString(Paths.get(outFile)).trim(),
-                        "Error on test case: " + filePrefix);
-                Files.deleteIfExists(Paths.get(outFile));
+            assertEquals(
+                    expected.trim(), Files.readString(Paths.get(outFile)).trim(), "Error on test case: " + filePrefix);
+            Files.deleteIfExists(Paths.get(outFile));
         }
     }
 }

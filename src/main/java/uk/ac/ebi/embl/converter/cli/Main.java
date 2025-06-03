@@ -12,7 +12,10 @@ package uk.ac.ebi.embl.converter.cli;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
+import io.vavr.Function0;
 import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.slf4j.Logger;
@@ -54,6 +57,7 @@ public class Main {
 @Command(name = "conversion", description = "Performs format conversions to or from gff3")
 class CommandConversion implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(CommandConversion.class);
+    private static final Path EMPTY_PATH = Path.of("");
 
     public enum FileFormat {
         ff,
@@ -74,86 +78,72 @@ class CommandConversion implements Runnable {
 
     @Override
     public void run() {
-        Path emptyPath = Path.of("");
-        if (fromFileType == null) {
-            if (!inputFilePath.equals(emptyPath)) {
+        fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
+        toFileType = validateFileType(toFileType, outputFilePath, "-t");
+
+        BufferedReader inputReader = getPipe(
+                Files::newBufferedReader, () -> new BufferedReader(new InputStreamReader(System.in)), inputFilePath);
+        BufferedWriter outputWriter = getPipe(
+                Files::newBufferedWriter,
+                () -> {
+                    LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
+                    ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
+                    return new BufferedWriter(new OutputStreamWriter(System.out));
+                },
+                outputFilePath);
+
+        // Disable info logs if we pipe to stdout
+        try {
+            if (fromFileType == FileFormat.gff3 && toFileType == FileFormat.ff) {
+                Gff3ToFFConverter converter = new Gff3ToFFConverter();
+                converter.convert(inputReader, outputWriter);
+            } else if (fromFileType == FileFormat.ff && toFileType == FileFormat.gff3) {
+                FFToGff3Converter converter = new FFToGff3Converter();
+                converter.convert(inputReader, outputWriter);
+            } else {
+                throw new Error("Conversion from " + fromFileType + " to " + toFileType + " is not supported");
+            }
+        } catch (FFtoGFF3ConversionError e) {
+            throw new Error(e.getMessage(), e);
+        }
+    }
+
+    private FileFormat validateFileType(FileFormat fileFormat, Path filePath, String cliOption) {
+        if (fileFormat == null) {
+            if (!filePath.equals(EMPTY_PATH)) {
                 String fileExtension = getFileExtension(inputFilePath);
                 if (fileExtension != null) {
                     try {
-                        fromFileType = FileFormat.valueOf(fileExtension);
+                        fileFormat = FileFormat.valueOf(fileExtension);
                     } catch (IllegalArgumentException e) {
-                        throw new Error("Unrecognized file format: " + fileExtension
-                                + " use the -f option to specify the format manually or update the file extension");
+                        throw new Error("Unrecognized file format: " + fileExtension + " use the " + cliOption
+                                + " option to specify the format manually or update the file extension");
                     }
                 } else {
-                    throw new Error(
-                            "No file extension present, use the -f option to specify the format manually or set the file extension");
+                    throw new Error("No file extension present, use the " + cliOption
+                            + " option to specify the format manually or set the file extension");
                 }
             } else {
-                throw new Error("When using stdin -f must be specified");
+                throw new Error("When using stdin " + cliOption + " must be specified");
             }
         }
+        return fileFormat;
+    }
 
-        if (toFileType == null) {
-            if (!outputFilePath.equals(emptyPath)) {
-                String fileExtension = getFileExtension(outputFilePath);
-                if (fileExtension != null) {
-                    try {
-                        toFileType = FileFormat.valueOf(fileExtension);
-                    } catch (IllegalArgumentException e) {
-                        throw new Error("Unrecognized file format: " + fileExtension
-                                + " use the -t option to specify the format manually or update the file extension");
-                    }
-                } else {
-                    throw new Error(
-                            "No file extension present, use the -t option to specify the format manually or set the file extension");
-                }
-            } else {
-                toFileType = FileFormat.gff3;
-            }
-        }
+    @FunctionalInterface
+    interface NewPipeFunction<T> {
+        T apply(Path p, Charset c) throws IOException;
+    }
 
-        BufferedReader inputReader;
-        if (!inputFilePath.equals(emptyPath)) {
+    private <T> T getPipe(NewPipeFunction<T> newFilePipe, Function0<T> newStdPipe, Path filePath) {
+        if (!filePath.equals(EMPTY_PATH)) {
             try {
-                inputReader = Files.newBufferedReader(inputFilePath);
+                return newFilePipe.apply(filePath, StandardCharsets.UTF_8);
             } catch (IOException e) {
-                throw new Error("Error opening file: " + inputFilePath + " for reading", e);
+                throw new Error("Error opening file: " + filePath, e);
             }
         } else {
-            inputReader = new BufferedReader(new InputStreamReader(System.in));
-        }
-
-        BufferedWriter outputWriter;
-        if (!outputFilePath.equals(emptyPath)) {
-            try {
-                outputWriter = Files.newBufferedWriter(outputFilePath);
-            } catch (IOException e) {
-                throw new Error("Error opening file: " + outputFilePath + " for writing", e);
-            }
-        } else {
-            // Disable info logs if we pipe to stdout
-            LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
-            ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
-            outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
-        }
-
-        if (fromFileType == FileFormat.gff3 && toFileType == FileFormat.ff) {
-            Gff3ToFFConverter converter = new Gff3ToFFConverter();
-            try {
-                converter.convert(inputReader, outputWriter);
-            } catch (FFtoGFF3ConversionError e) {
-                throw new Error(e.getMessage(), e);
-            }
-        } else if (fromFileType == FileFormat.ff && toFileType == FileFormat.gff3) {
-            FFToGff3Converter converter = new FFToGff3Converter();
-            try {
-                converter.convert(inputReader, outputWriter);
-            } catch (FFtoGFF3ConversionError e) {
-                throw new Error(e.getMessage(), e);
-            }
-        } else {
-            throw new Error("Conversion from " + fromFileType + " to " + toFileType + " is not supported");
+            return newStdPipe.apply();
         }
     }
 
