@@ -1,12 +1,18 @@
 plugins {
     id 'java'
     id 'application'
+    id 'maven-publish'
+    id "org.hidetake.ssh" version "2.2.0"
     id "com.diffplug.spotless" version "6.11.0"
     id 'com.github.johnrengelman.shadow' version '5.2.0'
 }
 
+archivesBaseName = 'gff3tools'
 group = 'uk.ac.ebi.ena'
 version = '1.0'
+
+ext.codonDeployBaseDir = "/hps/software/users/tburdett/ena/jar/$archivesBaseName"
+ext.codonDeployArtifactDir = codonDeployBaseDir
 
 spotless {
     encoding 'UTF-8'
@@ -60,6 +66,15 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter'
 }
 
+remotes {
+    codon {
+        host = 'codon-login'
+        user = 'datalib'
+        identity = file("${System.properties['user.home']}/.ssh/id_rsa")
+        knownHosts = allowAnyHosts
+    }
+}
+
 test {
     useJUnitPlatform()
 }
@@ -71,4 +86,99 @@ shadowJar {
 
 application {
     mainClassName = 'uk.ac.ebi.embl.converter.cli.FFToGff3CLI'
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url "https://gitlab.ebi.ac.uk/api/v4/projects/965/packages/maven"
+            credentials(HttpHeaderCredentials) {
+                name = "Private-Token"
+                value = gitlab_private_token
+            }
+            authentication {
+                header(HttpHeaderAuthentication)
+            }
+        }
+    }
+}
+
+
+task deploy() {
+    dependsOn shadowJar
+
+    doLast {
+        deployToRemote(remotes.codon, codonDeployBaseDir, codonDeployArtifactDir)
+    }
+}
+
+def deployToRemote(remote, deployBaseDir, deployArtifactDir) {
+    def assemble = jar
+
+    uploadAssembleAndCreateSymlink(assemble, deployBaseDir , deployArtifactDir,remote)
+
+    displaySymlink(getSymlinkFullName(deployBaseDir , assemble ), remote)
+}
+
+def uploadAssembleAndCreateSymlink(assemble, symlinkDir, codonDeployArtifactDir, remote) {
+
+    def symlinkFullName = getSymlinkFullName(symlinkDir , assemble)
+    def symlinkTarget = getSymlinkTarget(codonDeployArtifactDir,  assemble)
+
+
+    printSeparationLine()
+    println("\tsymlinkDir:'$symlinkDir'\tuploadAssembleDir:'$codonDeployArtifactDir'")
+    println("\tsymlinkName:'$symlinkFullName'\tsymlinkTargetName:'$symlinkTarget'")
+    printSeparationLine()
+
+    uploadAssemble(assemble , codonDeployArtifactDir , remote)
+    createSymlink(symlinkFullName , symlinkTarget , remote)
+}
+
+def displaySymlink(symlink , remote){
+    ssh.run {
+        session(remote) {
+            def result = execute "ls -l $symlink", ignoreError: true
+            println "Current symlink: $result"
+        }
+    }
+}
+
+def uploadAssemble(assemble , uploadDir , remote){
+    ssh.run {
+        session(remote) {
+            println "Uploading assembly:'$assemble.archiveName' to $remote.host:$uploadDir"
+            put(assemble.archivePath.absolutePath, uploadDir)
+        }
+    }
+}
+
+def createSymlink(symlink , symlinkTarget , remote){
+    ssh.run {
+        session(remote) {
+            println ("Creating symbolic link:'$symlink', target:'$symlinkTarget', remote:'$remote.host'")
+            execute "ln -s -f $symlinkTarget $symlink"
+        }
+    }
+}
+
+static String getAssembleBaseName(assemble){
+    return assemble.getBaseName() + "." + assemble.getExtension()
+}
+
+static String getSymlinkFullName(symlinkDir, assemble){
+    return "$symlinkDir/" + getAssembleBaseName(assemble)
+}
+
+static String getSymlinkTarget(uploadAssembleDir, assemble){
+    return "$uploadAssembleDir/$assemble.archiveName"
+}
+
+def printSeparationLine(){
+    println("*" * 100)
 }
