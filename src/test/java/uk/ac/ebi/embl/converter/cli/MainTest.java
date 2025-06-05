@@ -22,14 +22,14 @@ public class MainTest {
 
         Object validate = null;
 
-        validate = method.invoke(command, CommandConversion.FileFormat.ff, Path.of("foo"), "-f");
-        assertEquals(CommandConversion.FileFormat.ff, validate, "If format is provided returns the same format");
+        validate = method.invoke(command, CommandConversion.FileFormat.embl, Path.of("foo"), "-f");
+        assertEquals(CommandConversion.FileFormat.embl, validate, "If format is provided returns the same format");
 
         validate = method.invoke(command, CommandConversion.FileFormat.gff3, Path.of("foo"), "-f");
         assertEquals(CommandConversion.FileFormat.gff3, validate, "If format is provided returns the same format");
 
-        validate = method.invoke(command, null, Path.of("foo.ff"), "-f");
-        assertEquals(CommandConversion.FileFormat.ff, validate, "If format in path extension, use it");
+        validate = method.invoke(command, null, Path.of("foo.embl"), "-f");
+        assertEquals(CommandConversion.FileFormat.embl, validate, "If format in path extension, use it");
 
         validate = method.invoke(command, null, Path.of("foo.gff3"), "-f");
         assertEquals(CommandConversion.FileFormat.gff3, validate, "If format in path extension, use it");

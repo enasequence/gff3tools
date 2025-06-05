@@ -45,12 +45,7 @@ public class Main {
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
-        exit(exitCode);
-    }
-
-    public static int exit(int code) {
-        System.exit(code);
-        return code;
+        System.exit(exitCode);
     }
 }
 
@@ -64,10 +59,9 @@ class CLIError extends Exception {
 @Command(name = "conversion", description = "Performs format conversions to or from gff3")
 class CommandConversion implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(CommandConversion.class);
-    private static final Path EMPTY_PATH = Path.of("");
 
     public enum FileFormat {
-        ff,
+        embl,
         gff3
     }
 
@@ -112,9 +106,9 @@ class CommandConversion implements Runnable {
     }
 
     private Converter getConverter(FileFormat inputFileType, FileFormat outputFileType) throws ConversionError {
-        if (inputFileType == FileFormat.gff3 && outputFileType == FileFormat.ff) {
+        if (inputFileType == FileFormat.gff3 && outputFileType == FileFormat.embl) {
             return new Gff3ToFFConverter();
-        } else if (inputFileType == FileFormat.ff && outputFileType == FileFormat.gff3) {
+        } else if (inputFileType == FileFormat.embl && outputFileType == FileFormat.gff3) {
             return new FFToGff3Converter();
         } else {
             throw new ConversionError("Conversion from " + fromFileType + " to " + toFileType + " is not supported");
@@ -123,7 +117,7 @@ class CommandConversion implements Runnable {
 
     private FileFormat validateFileType(FileFormat fileFormat, Path filePath, String cliOption) throws CLIError{
         if (fileFormat == null) {
-            if (!filePath.equals(EMPTY_PATH)) {
+            if (!filePath.toString().isEmpty()) {
                 String fileExtension = getFileExtension(filePath);
                 if (fileExtension != null) {
                     try {
@@ -149,7 +143,7 @@ class CommandConversion implements Runnable {
     }
 
     private <T> T getPipe(NewPipeFunction<T> newFilePipe, Function0<T> newStdPipe, Path filePath) {
-        if (!filePath.equals(EMPTY_PATH)) {
+        if (!filePath.toString().isEmpty()) {
             try {
                 return newFilePipe.apply(filePath, StandardCharsets.UTF_8);
             } catch (IOException e) {

@@ -34,7 +34,7 @@ class GFF3ToFFConverterTest {
 
             String inFile = testFiles.get(filePrefix).toString();
             String outFile = filePrefix + ".embl";
-            String[] args = {"conversion", "-t", "ff", inFile, outFile};
+            String[] args = {"conversion", inFile, outFile};
             try {
                 int exitCode = new CommandLine(new Main()).execute(args);
                 assertEquals(0, exitCode, "Wrong exit code on test file: " + filePrefix);
