@@ -38,8 +38,7 @@ public class Gff3ToFFConverter implements Converter {
         } catch (IOException e) {
             throw new ConversionError("IO Error during conversion", e);
         } catch (GFF3ValidationError e) {
-            throw new ConversionError(
-                    String.format("Validation Error on line %d: %s", e.getLine(), e.getMessage()), e);
+            throw new ConversionError(String.format("Validation Error on line %d: %s", e.getLine(), e.getMessage()), e);
         }
     }
 

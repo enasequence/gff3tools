@@ -12,7 +12,6 @@ package uk.ac.ebi.embl.converter.fftogff3;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import uk.ac.ebi.embl.converter.ConversionError;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;

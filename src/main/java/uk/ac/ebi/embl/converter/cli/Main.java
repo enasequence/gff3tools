@@ -23,9 +23,9 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.*;
 import picocli.CommandLine.Model.CommandSpec;
+import uk.ac.ebi.embl.converter.ConversionError;
 import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.fftogff3.FFToGff3Converter;
-import uk.ac.ebi.embl.converter.ConversionError;
 import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
 
 @Command(
@@ -115,7 +115,7 @@ class CommandConversion implements Runnable {
         }
     }
 
-    private FileFormat validateFileType(FileFormat fileFormat, Path filePath, String cliOption) throws CLIError{
+    private FileFormat validateFileType(FileFormat fileFormat, Path filePath, String cliOption) throws CLIError {
         if (fileFormat == null) {
             if (!filePath.toString().isEmpty()) {
                 String fileExtension = getFileExtension(filePath);
