@@ -54,6 +54,12 @@ public class Main {
     }
 }
 
+class CLIError extends Exception {
+    public CLIError(String message) {
+        super(message);
+    }
+}
+
 // Using pandoc CLI interface conventions
 @Command(name = "conversion", description = "Performs format conversions to or from gff3")
 class CommandConversion implements Runnable {
@@ -79,8 +85,12 @@ class CommandConversion implements Runnable {
 
     @Override
     public void run() {
-        fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
-        toFileType = validateFileType(toFileType, outputFilePath, "-t");
+        try {
+            fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
+            toFileType = validateFileType(toFileType, outputFilePath, "-t");
+        } catch (CLIError e) {
+            throw new Error(e);
+        }
 
         BufferedReader inputReader = getPipe(
                 Files::newBufferedReader, () -> new BufferedReader(new InputStreamReader(System.in)), inputFilePath);
@@ -111,23 +121,23 @@ class CommandConversion implements Runnable {
         }
     }
 
-    private FileFormat validateFileType(FileFormat fileFormat, Path filePath, String cliOption) {
+    private FileFormat validateFileType(FileFormat fileFormat, Path filePath, String cliOption) throws CLIError{
         if (fileFormat == null) {
             if (!filePath.equals(EMPTY_PATH)) {
-                String fileExtension = getFileExtension(inputFilePath);
+                String fileExtension = getFileExtension(filePath);
                 if (fileExtension != null) {
                     try {
                         fileFormat = FileFormat.valueOf(fileExtension);
                     } catch (IllegalArgumentException e) {
-                        throw new Error("Unrecognized file format: " + fileExtension + " use the " + cliOption
+                        throw new CLIError("Unrecognized file format: " + fileExtension + " use the " + cliOption
                                 + " option to specify the format manually or update the file extension");
                     }
                 } else {
-                    throw new Error("No file extension present, use the " + cliOption
+                    throw new CLIError("No file extension present, use the " + cliOption
                             + " option to specify the format manually or set the file extension");
                 }
             } else {
-                throw new Error("When using stdin " + cliOption + " must be specified");
+                throw new CLIError("When using stdin " + cliOption + " must be specified");
             }
         }
         return fileFormat;
