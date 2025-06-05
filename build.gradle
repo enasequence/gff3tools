@@ -85,7 +85,7 @@ shadowJar {
 }
 
 application {
-    mainClassName = 'uk.ac.ebi.embl.converter.cli.FFToGff3CLI'
+    mainClassName = 'uk.ac.ebi.embl.converter.cli.Main'
 }
 
 publishing {

@@ -11,25 +11,21 @@
 package uk.ac.ebi.embl.converter.gff3toff;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.ac.ebi.embl.converter.cli.Params;
-import uk.ac.ebi.embl.converter.fftogff3.FFtoGFF3ConversionError;
+import uk.ac.ebi.embl.converter.ConversionError;
+import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
 import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 
-public class Gff3ToFFConverter {
+public class Gff3ToFFConverter implements Converter {
 
     private static final Logger LOG = LoggerFactory.getLogger(Gff3ToFFConverter.class);
 
-    public void convert(Params params) throws FFtoGFF3ConversionError {
-        Path filePath = params.inFile.toPath();
-        try (GFF3FileReader gff3Reader = new GFF3FileReader(Files.newBufferedReader(filePath));
-                FileWriter fileWriter = new FileWriter(params.outFile)) {
+    public void convert(BufferedReader reader, BufferedWriter writer) throws ConversionError {
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
             GFF3Mapper mapper = new GFF3Mapper();
             gff3Reader.readHeader();
             GFF3Annotation annotation;
@@ -37,14 +33,12 @@ public class Gff3ToFFConverter {
                 LOG.info("Converting Gff3 entry: {}", getAccession(annotation));
                 EmblEntryWriter entryWriter = new EmblEntryWriter(mapper.mapGFF3ToEntry(annotation));
                 entryWriter.setShowAcStartLine(false);
-                entryWriter.write(fileWriter);
+                entryWriter.write(writer);
             }
-            LOG.info("Flat file is written in: {}", params.outFile.toPath());
         } catch (IOException e) {
-            throw new FFtoGFF3ConversionError("IO Error during conversion", e);
+            throw new ConversionError("IO Error during conversion", e);
         } catch (GFF3ValidationError e) {
-            throw new FFtoGFF3ConversionError(
-                    String.format("Validation Error on line %d: %s", e.getLine(), e.getMessage()), e);
+            throw new ConversionError(String.format("Validation Error on line %d: %s", e.getLine(), e.getMessage()), e);
         }
     }
 

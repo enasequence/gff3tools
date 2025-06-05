@@ -98,7 +98,6 @@ public class FeatureComparator {
         options.setIgnoreLine("FT                   /tissue_type");
         options.setIgnoreLine("FT                   /type_material");
         options.setIgnoreLine("FT                   /variety");
-
         return new FlatFileComparator(options);
     }
 }

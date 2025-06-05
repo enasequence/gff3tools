@@ -19,42 +19,38 @@ import java.nio.file.Paths;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.converter.cli.Params;
-import uk.ac.ebi.embl.converter.fftogff3.FFtoGFF3ConversionError;
+import picocli.CommandLine;
+import uk.ac.ebi.embl.converter.cli.Main;
 import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
 
 class GFF3ToFFConverterTest {
 
     @Test
     void testWriteGFF3() throws Exception {
-
         Map<String, Path> testFiles = TestUtils.getTestFiles("gff3toff_rules", ".gff3");
 
         for (String filePrefix : testFiles.keySet()) {
             Gff3ToFFConverter converter = new Gff3ToFFConverter();
+
+            String inFile = testFiles.get(filePrefix).toString();
+            String outFile = filePrefix + ".embl";
+            String[] args = {"conversion", inFile, outFile};
             try {
-
-                String inFile = testFiles.get(filePrefix).toString();
-                String outFile = filePrefix + ".embl";
-                String[] args = {"-in", inFile, "-out", outFile};
-                Params params = Params.parse(args);
-                converter.convert(params);
-
-                String expected;
-                String expectedFilePath = inFile.replace(".gff3", ".embl");
-                try (BufferedReader emblTestFileReader = TestUtils.getResourceReader(expectedFilePath)) {
-                    expected = new BufferedReader(emblTestFileReader).lines().collect(Collectors.joining("\n"));
-                }
-
-                assertEquals(
-                        expected.trim(),
-                        Files.readString(Paths.get(outFile)).trim(),
-                        "Error on test case: " + filePrefix);
-                Files.deleteIfExists(Paths.get(outFile));
-            } catch (FFtoGFF3ConversionError e) {
-                // throw e;
-                fail("Error on test case: " + filePrefix + " - " + e.getMessage());
+                int exitCode = new CommandLine(new Main()).execute(args);
+                assertEquals(0, exitCode, "Wrong exit code on test file: " + filePrefix);
+            } catch (Exception e) {
+                fail("Error on test file: " + filePrefix + " - " + e.getMessage());
             }
+
+            String expected;
+            String expectedFilePath = inFile.replace(".gff3", ".embl");
+            try (BufferedReader emblTestFileReader = TestUtils.getResourceReader(expectedFilePath)) {
+                expected = new BufferedReader(emblTestFileReader).lines().collect(Collectors.joining("\n"));
+            }
+
+            assertEquals(
+                    expected.trim(), Files.readString(Paths.get(outFile)).trim(), "Error on test case: " + filePrefix);
+            Files.deleteIfExists(Paths.get(outFile));
         }
     }
 }

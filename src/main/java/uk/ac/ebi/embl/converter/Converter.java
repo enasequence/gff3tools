@@ -8,14 +8,11 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.fftogff3;
+package uk.ac.ebi.embl.converter;
 
-public class FFtoGFF3ConversionError extends Exception {
-    public FFtoGFF3ConversionError(final String message, final Exception cause) {
-        super(message, cause);
-    }
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 
-    public FFtoGFF3ConversionError(String message) {
-        super(message);
-    }
+public interface Converter {
+    public void convert(BufferedReader reader, BufferedWriter writer) throws ConversionError;
 }

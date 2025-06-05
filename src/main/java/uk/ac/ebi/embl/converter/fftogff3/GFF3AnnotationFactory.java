@@ -21,6 +21,7 @@ import uk.ac.ebi.embl.api.entry.location.CompoundLocation;
 import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
+import uk.ac.ebi.embl.converter.ConversionError;
 import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
@@ -47,7 +48,7 @@ public class GFF3AnnotationFactory {
         this.ignoreSpecies = ignoreSpecies;
     }
 
-    public GFF3Annotation from(Entry entry) throws FFtoGFF3ConversionError {
+    public GFF3Annotation from(Entry entry) throws ConversionError {
 
         geneMap = new LinkedHashMap<>();
         nonGeneFeatures = new ArrayList<>();
@@ -179,7 +180,7 @@ public class GFF3AnnotationFactory {
         return attributes;
     }
 
-    private void buildGeneFeatureMap(String accession, Feature ffFeature) throws FFtoGFF3ConversionError {
+    private void buildGeneFeatureMap(String accession, Feature ffFeature) throws ConversionError {
 
         List<Qualifier> genes = ffFeature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
 
@@ -199,7 +200,7 @@ public class GFF3AnnotationFactory {
                 }
             }
         } catch (Exception e) {
-            throw new FFtoGFF3ConversionError(e.getMessage());
+            throw new ConversionError(e.getMessage());
         }
     }
 
