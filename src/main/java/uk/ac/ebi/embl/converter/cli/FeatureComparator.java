@@ -1,3 +1,13 @@
+/*
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package uk.ac.ebi.embl.converter.cli;
 
 import org.slf4j.Logger;
@@ -10,14 +20,14 @@ import uk.ac.ebi.embl.api.validation.helper.FlatFileComparatorOptions;
  * This class is not a part of converter, this is added here for testing purpose only.
  * We must remove this once the conversion testing is over.
  * */
-
 public class FeatureComparator {
 
     private static final Logger LOG = LoggerFactory.getLogger(FeatureComparator.class);
+
     public static void main(String[] args) {
         try {
 
-            compare(args[0],args[1]);
+            compare(args[0], args[1]);
 
         } catch (FlatFileComparatorException e) {
             LOG.error(e.getMessage());
@@ -45,15 +55,58 @@ public class FeatureComparator {
         options.setIgnoreLine("FT   region");
         options.setIgnoreLine("FT                   /circular_RNA=true");
 
-        return  new FlatFileComparator(options);
-    }
+        // Added from feature table
+        options.setIgnoreLine("FT                   /altitude");
+        options.setIgnoreLine("FT                   /bio_material");
+        options.setIgnoreLine("FT                   /cell_line");
+        options.setIgnoreLine("FT                   /cell_type");
+        options.setIgnoreLine("FT                   /chromosome");
+        options.setIgnoreLine("FT                   /clone");
+        options.setIgnoreLine("FT                   /collected_by");
+        options.setIgnoreLine("FT                   /collection_date");
+        options.setIgnoreLine("FT                   /cultivar");
+        options.setIgnoreLine("FT                   /culture_collection");
+        options.setIgnoreLine("FT                   /dev_stage");
+        options.setIgnoreLine("FT                   /ecotype");
+        options.setIgnoreLine("FT                   /environmental_sample");
+        options.setIgnoreLine("FT                   /focus");
+        options.setIgnoreLine("FT                   /geo_loc_name");
+        options.setIgnoreLine("FT                   /germline");
+        options.setIgnoreLine("FT                   /haplogroup");
+        options.setIgnoreLine("FT                   /haplotype");
+        options.setIgnoreLine("FT                   /host");
+        options.setIgnoreLine("FT                   /isolate");
+        options.setIgnoreLine("FT                   /isolation_source");
+        options.setIgnoreLine("FT                   /lab_host");
+        options.setIgnoreLine("FT                   /lat_lon");
+        options.setIgnoreLine("FT                   /macronuclear");
+        options.setIgnoreLine("FT                   /mating_type");
+        options.setIgnoreLine("FT                   /metagenome_source");
+        options.setIgnoreLine("FT                   /note");
+        options.setIgnoreLine("FT                   /PCR_primers");
+        options.setIgnoreLine("FT                   /plasmid");
+        options.setIgnoreLine("FT                   /proviral");
+        options.setIgnoreLine("FT                   /rearranged");
+        options.setIgnoreLine("FT                   /segment");
+        options.setIgnoreLine("FT                   /serotype");
+        options.setIgnoreLine("FT                   /serovar");
+        options.setIgnoreLine("FT                   /sex");
+        options.setIgnoreLine("FT                   /specimen_voucher");
+        options.setIgnoreLine("FT                   /strain");
+        options.setIgnoreLine("FT                   /submitter_seqid");
+        options.setIgnoreLine("FT                   /sub_species");
+        options.setIgnoreLine("FT                   /tissue_type");
+        options.setIgnoreLine("FT                   /type_material");
+        options.setIgnoreLine("FT                   /variety");
 
+        return new FlatFileComparator(options);
+    }
 }
 
 class FeatureComparatorOption extends FlatFileComparatorOptions {
     @Override
     public boolean isIgnoreLine(String line) {
         // Ignore non FT and selected FT lines
-        return ! line.startsWith("FT") || super.isIgnoreLine(line);
+        return !line.startsWith("FT") || super.isIgnoreLine(line);
     }
 }
