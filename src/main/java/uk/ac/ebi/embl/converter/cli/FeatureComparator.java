@@ -55,6 +55,49 @@ public class FeatureComparator {
         options.setIgnoreLine("FT   region");
         options.setIgnoreLine("FT                   /circular_RNA=true");
 
+        // Added from feature table
+        options.setIgnoreLine("FT                   /altitude");
+        options.setIgnoreLine("FT                   /bio_material");
+        options.setIgnoreLine("FT                   /cell_line");
+        options.setIgnoreLine("FT                   /cell_type");
+        options.setIgnoreLine("FT                   /chromosome");
+        options.setIgnoreLine("FT                   /clone");
+        options.setIgnoreLine("FT                   /collected_by");
+        options.setIgnoreLine("FT                   /collection_date");
+        options.setIgnoreLine("FT                   /cultivar");
+        options.setIgnoreLine("FT                   /culture_collection");
+        options.setIgnoreLine("FT                   /dev_stage");
+        options.setIgnoreLine("FT                   /ecotype");
+        options.setIgnoreLine("FT                   /environmental_sample");
+        options.setIgnoreLine("FT                   /focus");
+        options.setIgnoreLine("FT                   /geo_loc_name");
+        options.setIgnoreLine("FT                   /germline");
+        options.setIgnoreLine("FT                   /haplogroup");
+        options.setIgnoreLine("FT                   /haplotype");
+        options.setIgnoreLine("FT                   /host");
+        options.setIgnoreLine("FT                   /isolate");
+        options.setIgnoreLine("FT                   /isolation_source");
+        options.setIgnoreLine("FT                   /lab_host");
+        options.setIgnoreLine("FT                   /lat_lon");
+        options.setIgnoreLine("FT                   /macronuclear");
+        options.setIgnoreLine("FT                   /mating_type");
+        options.setIgnoreLine("FT                   /metagenome_source");
+        options.setIgnoreLine("FT                   /note");
+        options.setIgnoreLine("FT                   /PCR_primers");
+        options.setIgnoreLine("FT                   /plasmid");
+        options.setIgnoreLine("FT                   /proviral");
+        options.setIgnoreLine("FT                   /rearranged");
+        options.setIgnoreLine("FT                   /segment");
+        options.setIgnoreLine("FT                   /serotype");
+        options.setIgnoreLine("FT                   /serovar");
+        options.setIgnoreLine("FT                   /sex");
+        options.setIgnoreLine("FT                   /specimen_voucher");
+        options.setIgnoreLine("FT                   /strain");
+        options.setIgnoreLine("FT                   /submitter_seqid");
+        options.setIgnoreLine("FT                   /sub_species");
+        options.setIgnoreLine("FT                   /tissue_type");
+        options.setIgnoreLine("FT                   /type_material");
+        options.setIgnoreLine("FT                   /variety");
         return new FlatFileComparator(options);
     }
 }
