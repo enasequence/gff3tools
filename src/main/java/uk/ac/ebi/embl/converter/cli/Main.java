@@ -86,21 +86,23 @@ class CommandConversion implements Runnable {
             throw new Error(e);
         }
 
-        BufferedReader inputReader = getPipe(
-                Files::newBufferedReader, () -> new BufferedReader(new InputStreamReader(System.in)), inputFilePath);
-        BufferedWriter outputWriter = getPipe(
-                Files::newBufferedWriter,
-                () -> {
-                    LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
-                    ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
-                    return new BufferedWriter(new OutputStreamWriter(System.out));
-                },
-                outputFilePath);
-
-        try {
+        try (BufferedReader inputReader = getPipe(
+                        Files::newBufferedReader,
+                        () -> new BufferedReader(new InputStreamReader(System.in)),
+                        inputFilePath);
+                BufferedWriter outputWriter = getPipe(
+                        Files::newBufferedWriter,
+                        () -> {
+                            // Set the log level to ERROR while writing the file to an output stream to ignore INFO,
+                            // WARN logs
+                            LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
+                            ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
+                            return new BufferedWriter(new OutputStreamWriter(System.out));
+                        },
+                        outputFilePath)) {
             Converter converter = getConverter(fromFileType, toFileType);
             converter.convert(inputReader, outputWriter);
-        } catch (ConversionError e) {
+        } catch (ConversionError | IOException e) {
             throw new Error(e.getMessage(), e);
         }
     }

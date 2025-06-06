@@ -22,15 +22,12 @@ import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 
 public class Gff3ToFFConverter implements Converter {
 
-    private static final Logger LOG = LoggerFactory.getLogger(Gff3ToFFConverter.class);
-
     public void convert(BufferedReader reader, BufferedWriter writer) throws ConversionError {
         try (GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
             GFF3Mapper mapper = new GFF3Mapper();
             gff3Reader.readHeader();
             GFF3Annotation annotation;
             while ((annotation = gff3Reader.readAnnotation()) != null) {
-                LOG.info("Converting Gff3 entry: {}", getAccession(annotation));
                 EmblEntryWriter entryWriter = new EmblEntryWriter(mapper.mapGFF3ToEntry(annotation));
                 entryWriter.setShowAcStartLine(false);
                 entryWriter.write(writer);
@@ -40,9 +37,5 @@ public class Gff3ToFFConverter implements Converter {
         } catch (GFF3ValidationError e) {
             throw new ConversionError(String.format("Validation Error on line %d: %s", e.getLine(), e.getMessage()), e);
         }
-    }
-
-    private String getAccession(GFF3Annotation gff3Annotation) {
-        return gff3Annotation.getFeatures().stream().findFirst().get().getAccession();
     }
 }

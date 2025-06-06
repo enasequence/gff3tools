@@ -68,8 +68,8 @@ dependencies {
 
 remotes {
     codon {
-        host = 'codon-login'
-        user = 'datalib'
+        host = 'codon-ena-slurm.ebi.ac.uk'
+        user = 'esa'
         identity = file("${System.properties['user.home']}/.ssh/id_rsa")
         knownHosts = allowAnyHosts
     }
@@ -96,7 +96,7 @@ publishing {
     }
     repositories {
         maven {
-            url "https://gitlab.ebi.ac.uk/api/v4/projects/965/packages/maven"
+            url "https://gitlab.ebi.ac.uk/api/v4/projects/5502/packages/maven"
             credentials(HttpHeaderCredentials) {
                 name = "Private-Token"
                 value = gitlab_private_token
