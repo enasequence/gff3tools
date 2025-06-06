@@ -11,8 +11,6 @@
 package uk.ac.ebi.embl.converter.gff3toff;
 
 import java.io.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.converter.ConversionError;
 import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
