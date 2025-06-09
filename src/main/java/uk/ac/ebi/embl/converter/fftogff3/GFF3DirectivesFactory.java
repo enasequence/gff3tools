@@ -43,7 +43,7 @@ public class GFF3DirectivesFactory {
                 .orElseGet(getOrganism);
     }
 
-    public GFF3Directives.GFF3Species extractSpecies(Entry entry) throws ConversionError {
+    public GFF3Directives.GFF3Species extractSpecies(Entry entry) throws NoSourcePresent {
 
         Feature feature = Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresent::new);
 
@@ -53,7 +53,7 @@ public class GFF3DirectivesFactory {
         return new GFF3Directives.GFF3Species(buildTaxonomyUrl(qualifier));
     }
 
-    public GFF3Directives.GFF3SequenceRegion extractSequenceRegion(Entry entry) throws ConversionError {
+    public GFF3Directives.GFF3SequenceRegion extractSequenceRegion(Entry entry) throws NoSourcePresent {
 
         String accession = entry.getPrimaryAccession();
         Feature feature = Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresent::new);
@@ -64,7 +64,7 @@ public class GFF3DirectivesFactory {
         return new GFF3Directives.GFF3SequenceRegion(accession, start, end);
     }
 
-    public GFF3Directives from(Entry entry) throws ConversionError {
+    public GFF3Directives from(Entry entry) throws NoSourcePresent {
 
         ArrayList<GFF3Directives.GFF3Directive> directives = new ArrayList<>();
         GFF3Directives gff3Directives = new GFF3Directives();
@@ -81,5 +81,4 @@ public class GFF3DirectivesFactory {
             super("No source found");
         }
     }
-    ;
 }
