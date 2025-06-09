@@ -10,6 +10,8 @@
  */
 package uk.ac.ebi.embl.converter.fftogff3;
 
+import static uk.ac.ebi.embl.converter.validation.ValidationRule.*;
+
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -114,7 +116,8 @@ public class GFF3AnnotationFactory {
                 Map.of("ID", accession, "Is_circular", "true"));
     }
 
-    private List<GFF3Feature> transformFeature(String accession, Feature ffFeature, Optional<String> geneName) {
+    private List<GFF3Feature> transformFeature(String accession, Feature ffFeature, Optional<String> geneName)
+            throws UnmappedFFFeature {
         List<GFF3Feature> gff3Features = new ArrayList<>();
 
         String source = ".";
@@ -176,7 +179,7 @@ public class GFF3AnnotationFactory {
         return attributes;
     }
 
-    private void buildGeneFeatureMap(String accession, Feature ffFeature) throws ConversionError {
+    private void buildGeneFeatureMap(String accession, Feature ffFeature) throws UnmappedFFFeature {
 
         List<Qualifier> genes = ffFeature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
 
@@ -334,20 +337,38 @@ public class GFF3AnnotationFactory {
         return "";
     }
 
-    private String getGFF3FeatureName(Feature ffFeature) {
+    private String getGFF3FeatureName(Feature ffFeature) throws UnmappedFFFeature {
 
-        List<ConversionEntry> mappings = ConversionUtils.getFF2GFF3FeatureMap().get(ffFeature.getName());
+        String featureName = ffFeature.getName();
+        List<ConversionEntry> mappings = ConversionUtils.getFF2GFF3FeatureMap().get(featureName);
         if (mappings == null) {
-            return ffFeature.getName();
+            return validatedMissingFeatureName(featureName);
         }
 
         // return the soTerm of the max qualifier mapping
-        return mappings.stream()
+        Optional<String> soTerm = mappings.stream()
                 .filter(entry -> entry.getFeature().equalsIgnoreCase(ffFeature.getName()))
                 .filter(entry -> hasAllQualifiers(ffFeature, entry))
                 .max(Comparator.comparingInt(entry -> entry.getQualifiers().size()))
-                .map(ConversionEntry::getSOTerm)
-                .orElse(ffFeature.getName());
+                .map(ConversionEntry::getSOTerm);
+
+        if (soTerm.isEmpty()) {
+            return validatedMissingFeatureName(featureName);
+        } else {
+            return soTerm.get();
+        }
+    }
+
+    private String validatedMissingFeatureName(String featureName) throws UnmappedFFFeature {
+        UnmappedFFFeature error = new UnmappedFFFeature(featureName);
+        switch (VALIDATION_SEVERITIES.get(unmapped_flatfile_feature)) {
+            case WARN:
+                LOG.warn(error.getMessage());
+            case OFF:
+                return featureName;
+            default:
+                throw error;
+        }
     }
 
     private boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {
@@ -371,5 +392,12 @@ public class GFF3AnnotationFactory {
         }
 
         return matchesAllQualifiers;
+    }
+
+    public static class UnmappedFFFeature extends ConversionError {
+
+        public UnmappedFFFeature(String featureName) {
+            super("The feature \"%s\" does not have a valid gff3 equivalent".formatted(featureName));
+        }
     }
 }

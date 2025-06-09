@@ -11,7 +11,6 @@
 package uk.ac.ebi.embl.converter.fftogff3;
 
 import io.vavr.Function0;
-import java.util.ArrayList;
 import java.util.Optional;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
@@ -66,7 +65,6 @@ public class GFF3DirectivesFactory {
 
     public GFF3Directives from(Entry entry) throws NoSourcePresent {
 
-        ArrayList<GFF3Directives.GFF3Directive> directives = new ArrayList<>();
         GFF3Directives gff3Directives = new GFF3Directives();
         if (!this.ignoreSpecies) {
             gff3Directives.add(extractSpecies(entry));
