@@ -25,17 +25,13 @@ public class FFToGff3Converter implements Converter {
 
     private static final Logger LOG = LoggerFactory.getLogger(FFToGff3Converter.class);
 
-    public void convert(BufferedReader reader, BufferedWriter writer) throws ConversionError {
-        try {
-            EmblEntryReader entryReader =
-                    new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
+    public void convert(BufferedReader reader, BufferedWriter writer) throws ConversionError, IOException {
+        EmblEntryReader entryReader =
+                new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
-            GFF3FileFactory fftogff3 = new GFF3FileFactory();
-            GFF3File file = fftogff3.from(entryReader);
-            file.writeGFF3String(writer);
-        } catch (IOException e) {
-            throw new ConversionError("Error writing gff3 file", e);
-        }
+        GFF3FileFactory fftogff3 = new GFF3FileFactory();
+        GFF3File file = fftogff3.from(entryReader);
+        file.writeGFF3String(writer);
     }
 
     private ReaderOptions getReaderOptions() {
