@@ -366,11 +366,14 @@ public class GFF3AnnotationFactory {
         for (String expectedQualifierName : requiredQualifiers.keySet()) {
             boolean qualifierMatches = false;
             for (Qualifier featureQualifier : feature.getQualifiers(expectedQualifierName)) {
-                qualifierMatches =
-                        featureQualifier.getValue().equalsIgnoreCase(requiredQualifiers.get(expectedQualifierName));
-                if (qualifierMatches) {
-                    break;
-                }
+                // When qualifier value is not found the value is considered "true"
+                String qualifierValue = featureQualifier.getValue() == null ? "true" : featureQualifier.getValue();
+                    qualifierMatches =
+                            qualifierValue.equalsIgnoreCase(requiredQualifiers.get(expectedQualifierName));
+                    if (qualifierMatches) {
+                        break;
+                    }
+
             }
             matchesAllQualifiers = qualifierMatches;
             if (!matchesAllQualifiers) {
