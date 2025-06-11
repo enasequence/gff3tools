@@ -12,9 +12,18 @@ package uk.ac.ebi.embl.converter.cli;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.validation.helper.FlatFileComparator;
 import uk.ac.ebi.embl.api.validation.helper.FlatFileComparatorException;
 import uk.ac.ebi.embl.api.validation.helper.FlatFileComparatorOptions;
+import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
+import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
+import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
+
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 /**
  * This class is not a part of converter, this is added here for testing purpose only.
@@ -32,27 +41,33 @@ public class FeatureComparator {
         } catch (FlatFileComparatorException e) {
             LOG.error(e.getMessage());
             System.exit(1);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
-    public static void compare(String file1, String file2) throws FlatFileComparatorException {
+    public static void compare(String expectedFile, String actualFile) throws FlatFileComparatorException, IOException {
+        removeSourceFeatureFromExpected(expectedFile);
+
         FlatFileComparator flatfileComparator = getFeatureComparator();
 
-        if (!flatfileComparator.compare(file1, file2)) {
-            throw new FlatFileComparatorException("File comparison failed:  \n" + file1 + "\n" + file2);
+        if (!flatfileComparator.compare(expectedFile, actualFile)) {
+            throw new FlatFileComparatorException("File comparison failed:  \n" + expectedFile + "\n" + actualFile);
         }
-        LOG.info("\n\nFeatures are identical for files: \n" + file1 + "\n" + file2);
+        LOG.info("\n\nFeatures are identical for files: \n" + expectedFile + "\n" + actualFile);
     }
 
     private static FlatFileComparator getFeatureComparator() {
         FeatureComparatorOption options = new FeatureComparatorOption();
         // Ignore the below FT lines
-        options.setIgnoreLine("FT   source");
-        options.setIgnoreLine("FT                   /organism");
+        options.setIgnoreLine("FT   source"); // This has to be done as converter adds source featire
+        options.setIgnoreLine("FT   region");
+        options.setIgnoreLine("FT                   /circular_RNA=true");
+        /*options.setIgnoreLine("FT                   /organism");
         options.setIgnoreLine("FT                   /plasmid");
         options.setIgnoreLine("FT                   /isolate");
         options.setIgnoreLine("FT                   /mol_type");
-        options.setIgnoreLine("FT   region");
+
         options.setIgnoreLine("FT                   /circular_RNA=true");
 
         // Added from feature table
@@ -98,8 +113,34 @@ public class FeatureComparator {
         options.setIgnoreLine("FT                   /tissue_type");
         options.setIgnoreLine("FT                   /type_material");
         options.setIgnoreLine("FT                   /variety");
-        options.setIgnoreLine("FT                   /country");
+        options.setIgnoreLine("FT                   /country");*/
         return new FlatFileComparator(options);
+    }
+
+    public static void removeSourceFeatureFromExpected(String file) throws IOException {
+
+        String fileWithoutSource = file+"_no_source";
+        try (BufferedReader reader = new BufferedReader(new FileReader(file));
+             BufferedWriter writer = new BufferedWriter(new FileWriter(fileWithoutSource))) {
+            EmblEntryReader entryReader =
+                    new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
+            while (entryReader.read() != null && entryReader.isEntry()) {
+                Entry entry = entryReader.getEntry();
+                entry.removeFeature(entry.getPrimarySourceFeature());
+
+                EmblEntryWriter entryWriter = new EmblEntryWriter(entry);
+                entryWriter.setShowAcStartLine(false);
+                entryWriter.write(writer);
+            }
+            Files.move(Paths.get(fileWithoutSource),Paths.get(file), StandardCopyOption.REPLACE_EXISTING);
+        }
+
+    }
+
+    private static ReaderOptions getReaderOptions() {
+        ReaderOptions readerOptions = new ReaderOptions();
+        readerOptions.setIgnoreSequence(true);
+        return readerOptions;
     }
 }
 
