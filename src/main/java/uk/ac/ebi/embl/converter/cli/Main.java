@@ -100,22 +100,24 @@ class CommandConversion implements Runnable {
         ValidationRule.VALIDATION_SEVERITIES.putAll(rules.rules());
 
         try (BufferedReader inputReader = getPipe(
-                        Files::newBufferedReader,
-                        () -> new BufferedReader(new InputStreamReader(System.in)),
-                        inputFilePath);
-                BufferedWriter outputWriter = getPipe(
-                        Files::newBufferedWriter,
-                        () -> {
-                            // Set the log level to ERROR while writing the file to an output stream to ignore INFO,
-                            // WARN logs
-                            LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
-                            ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
-                            return new BufferedWriter(new OutputStreamWriter(System.out));
-                        },
-                        outputFilePath)) {
+                Files::newBufferedReader,
+                () -> new BufferedReader(new InputStreamReader(System.in)),
+                inputFilePath);
+             BufferedWriter outputWriter = getPipe(
+                     Files::newBufferedWriter,
+                     () -> {
+                         // Set the log level to ERROR while writing the file to an output stream to ignore INFO,
+                         // WARN logs
+                         LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
+                         ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
+                         return new BufferedWriter(new OutputStreamWriter(System.out));
+                     },
+                     outputFilePath)) {
             Converter converter = getConverter(fromFileType, toFileType);
             converter.convert(inputReader, outputWriter);
-        } catch (ConversionError | IOException e) {
+        } catch (ConversionError e) {
+            LOG.error(e.getMessage());
+        } catch (IOException e) {
             throw new Error(e.getMessage(), e);
         }
     }
