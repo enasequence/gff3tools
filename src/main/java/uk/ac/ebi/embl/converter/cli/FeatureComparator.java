@@ -10,6 +10,10 @@
  */
 package uk.ac.ebi.embl.converter.cli;
 
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -19,11 +23,6 @@ import uk.ac.ebi.embl.api.validation.helper.FlatFileComparatorOptions;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
-
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 
 /**
  * This class is not a part of converter, this is added here for testing purpose only.
@@ -119,9 +118,9 @@ public class FeatureComparator {
 
     public static void removeSourceFeatureFromExpected(String file) throws IOException {
 
-        String fileWithoutSource = file+"_no_source";
+        String fileWithoutSource = file + "_no_source";
         try (BufferedReader reader = new BufferedReader(new FileReader(file));
-             BufferedWriter writer = new BufferedWriter(new FileWriter(fileWithoutSource))) {
+                BufferedWriter writer = new BufferedWriter(new FileWriter(fileWithoutSource))) {
             EmblEntryReader entryReader =
                     new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
             while (entryReader.read() != null && entryReader.isEntry()) {
@@ -132,9 +131,8 @@ public class FeatureComparator {
                 entryWriter.setShowAcStartLine(false);
                 entryWriter.write(writer);
             }
-            Files.move(Paths.get(fileWithoutSource),Paths.get(file), StandardCopyOption.REPLACE_EXISTING);
+            Files.move(Paths.get(fileWithoutSource), Paths.get(file), StandardCopyOption.REPLACE_EXISTING);
         }
-
     }
 
     private static ReaderOptions getReaderOptions() {

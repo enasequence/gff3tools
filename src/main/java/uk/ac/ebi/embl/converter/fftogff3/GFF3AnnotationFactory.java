@@ -368,12 +368,10 @@ public class GFF3AnnotationFactory {
             for (Qualifier featureQualifier : feature.getQualifiers(expectedQualifierName)) {
                 // When qualifier value is not found the value is considered "true"
                 String qualifierValue = featureQualifier.getValue() == null ? "true" : featureQualifier.getValue();
-                    qualifierMatches =
-                            qualifierValue.equalsIgnoreCase(requiredQualifiers.get(expectedQualifierName));
-                    if (qualifierMatches) {
-                        break;
-                    }
-
+                qualifierMatches = qualifierValue.equalsIgnoreCase(requiredQualifiers.get(expectedQualifierName));
+                if (qualifierMatches) {
+                    break;
+                }
             }
             matchesAllQualifiers = qualifierMatches;
             if (!matchesAllQualifiers) {
