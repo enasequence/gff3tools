@@ -18,6 +18,8 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -27,6 +29,8 @@ import uk.ac.ebi.embl.converter.ConversionError;
 import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
+import uk.ac.ebi.embl.converter.validation.RuleSeverity;
+import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 @Command(
         name = "gff3tools",
@@ -65,6 +69,13 @@ class CommandConversion implements Runnable {
         gff3
     }
 
+    @Option(
+            names = "--rules",
+            paramLabel = "<key:value>,<key:value>",
+            description = "Specify rules in the format key:value",
+            converter = RuleConverter.class)
+    public CliRulesOption rules;
+
     @Option(names = "-f", description = "The type of the file to be converted")
     public FileFormat fromFileType;
 
@@ -85,6 +96,8 @@ class CommandConversion implements Runnable {
         } catch (CLIError e) {
             throw new Error(e);
         }
+
+        ValidationRule.VALIDATION_SEVERITIES.putAll(rules.rules());
 
         try (BufferedReader inputReader = getPipe(
                         Files::newBufferedReader,
@@ -163,5 +176,24 @@ class CommandConversion implements Runnable {
             return fileName.substring(lastIndexOfDot + 1);
         }
         return null; // No extension found
+    }
+}
+
+record CliRulesOption(Map<ValidationRule, RuleSeverity> rules) {}
+
+class RuleConverter implements ITypeConverter<CliRulesOption> {
+    CliRulesOption map = new CliRulesOption(new HashMap<>());
+
+    @Override
+    public CliRulesOption convert(String args) throws Exception {
+        String[] entries = args.split(",");
+
+        for (String entry : entries) {
+            String[] pairs = entry.trim().split(":");
+            ValidationRule key = ValidationRule.valueOf(pairs[0]);
+            RuleSeverity value = RuleSeverity.valueOf(pairs[1].toUpperCase());
+            this.map.rules().put(key, value);
+        }
+        return this.map;
     }
 }
