@@ -63,7 +63,13 @@ public class GFF3Mapper {
                     GFF3Directives.GFF3SequenceRegion reg = (GFF3Directives.GFF3SequenceRegion) directive;
                     String accession = reg.accession();
                     LOG.info("Converting Gff3 entry: {}", accession);
-                    String accessionId = accession.substring(0, accession.lastIndexOf('.'));
+                    String accessionId = accession;
+
+                    int lastIndex = accession.lastIndexOf('.');
+                    if (lastIndex != -1) {
+                        accessionId = accession.substring(0, lastIndex);
+                    }
+
                     entry.setPrimaryAccession(accessionId);
                     Location location = this.locationFactory.createLocalRange(reg.start(), reg.end());
                     Join<Location> compoundJoin = new Join<>();

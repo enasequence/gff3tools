@@ -1,0 +1,6 @@
+##gff-version 3.1.26
+##sequence-region 1 1 315242
+
+1	.	gene	1	315242	.	+	.	ID=gene_RHD;gene=RHD;
+1	.	mRNA	133806	191728	.	+	.	Parent=gene_RHD;
+1	.	rRNA	133970	145841	.	+	.	Parent=gene_RHD;number=1;
