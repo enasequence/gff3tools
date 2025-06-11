@@ -71,7 +71,7 @@ class CommandConversion implements Runnable {
 
     @Option(
             names = "--rules",
-            paramLabel = "<key:value>,<key:value>",
+            paramLabel = "<key:value,key:value>",
             description = "Specify rules in the format key:value",
             converter = RuleConverter.class)
     public CliRulesOption rules;
@@ -97,7 +97,9 @@ class CommandConversion implements Runnable {
             throw new Error(e);
         }
 
-        ValidationRule.VALIDATION_SEVERITIES.putAll(rules.rules());
+        if (rules != null) {
+            ValidationRule.VALIDATION_SEVERITIES.putAll(rules.rules());
+        }
 
         try (BufferedReader inputReader = getPipe(
                 Files::newBufferedReader,
