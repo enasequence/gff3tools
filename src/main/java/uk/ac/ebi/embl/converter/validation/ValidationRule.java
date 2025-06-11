@@ -15,7 +15,7 @@ import java.util.Map;
 
 public enum ValidationRule {
     unmapped_flatfile_feature("The flatfile feature does not exist on the ontology."),
-    ;
+    test_feature("Just a feature for testing purposes.");
 
     private String description;
 
