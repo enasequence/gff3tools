@@ -13,8 +13,6 @@ package uk.ac.ebi.embl.converter.cli;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
@@ -29,18 +27,12 @@ public class MainTest {
 
     @Test
     void testParseRules() {
-        String[] args = new String[] {"--rules=unmapped_flatfile_feature:off, test_feature:error"};
+        String[] args = new String[] {"--rules=unmapped_flatfile_featur:off"};
         Map<ValidationRule, RuleSeverity> expected = new HashMap<>() {
             {
-                put(ValidationRule.unmapped_flatfile_feature, RuleSeverity.OFF);
-                put(ValidationRule.test_feature, RuleSeverity.ERROR);
+                put(ValidationRule.UNMAPPED_FLATFILE_FEATURE, RuleSeverity.OFF);
             }
         };
-
-        // Capture the output
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        PrintStream originalOut = System.out;
-        System.setOut(new PrintStream(outputStream));
 
         CommandConversion cc = new CommandConversion();
         CommandLine commandLine = new CommandLine(cc);

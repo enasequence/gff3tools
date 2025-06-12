@@ -14,14 +14,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 public enum ValidationRule {
-    unmapped_flatfile_feature("The flatfile feature does not exist on the ontology."),
-    test_feature("Just a feature for testing purposes.");
+    UNMAPPED_FLATFILE_FEATURE("The flatfile feature does not exist on the ontology.");
 
     private String description;
 
     public static Map<ValidationRule, RuleSeverity> VALIDATION_SEVERITIES = new HashMap<>() {
         {
-            put(unmapped_flatfile_feature, RuleSeverity.WARN);
+            put(UNMAPPED_FLATFILE_FEATURE, RuleSeverity.WARN);
         }
     };
 
