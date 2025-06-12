@@ -8,11 +8,26 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter;
+package uk.ac.ebi.embl.converter.cli;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+public enum CLIExitCode {
+    GENERAL(1),
+    // User input errors
+    USAGE(2),
+    UNSUPPORTED_FORMAT_CONVERSION(3),
+    // IO errors
+    READ_ERROR(10),
+    WRITE_ERROR(11),
+    // Validation errors
+    VALIDATION_ERROR(20);
 
-public interface Converter {
-    public void convert(BufferedReader reader, BufferedWriter writer) throws ConversionError;
+    private final int exitCode;
+
+    CLIExitCode(final int code) {
+        this.exitCode = code;
+    }
+
+    public int asInt() {
+        return exitCode;
+    }
 }

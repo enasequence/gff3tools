@@ -11,8 +11,7 @@
 package uk.ac.ebi.embl.converter.gff3toff;
 
 import java.io.*;
-import uk.ac.ebi.embl.converter.ConversionError;
-import uk.ac.ebi.embl.converter.Converter;
+import uk.ac.ebi.embl.converter.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
@@ -28,12 +27,16 @@ public class Gff3ToFFConverter implements Converter {
             while ((annotation = gff3Reader.readAnnotation()) != null) {
                 EmblEntryWriter entryWriter = new EmblEntryWriter(mapper.mapGFF3ToEntry(annotation));
                 entryWriter.setShowAcStartLine(false);
-                entryWriter.write(writer);
+                try {
+                    entryWriter.write(writer);
+                } catch (IOException e) {
+                    throw new ConversionWriteError(e);
+                }
             }
-        } catch (IOException e) {
-            throw new ConversionError("IO Error during conversion", e);
         } catch (GFF3ValidationError e) {
-            throw new ConversionError(String.format("Validation Error on line %d: %s", e.getLine(), e.getMessage()), e);
+            throw new ConversionValidationError(e);
+        } catch (IOException e) {
+            throw new ConversionReadError(e);
         }
     }
 }

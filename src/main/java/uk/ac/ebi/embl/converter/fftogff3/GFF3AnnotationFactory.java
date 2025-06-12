@@ -24,6 +24,7 @@ import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.converter.ConversionError;
+import uk.ac.ebi.embl.converter.cli.CLIExitCode;
 import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
@@ -398,6 +399,11 @@ public class GFF3AnnotationFactory {
 
         public UnmappedFFFeature(String featureName) {
             super("The feature \"%s\" does not have a valid gff3 equivalent".formatted(featureName));
+        }
+
+        @Override
+        public CLIExitCode exitCode() {
+            return CLIExitCode.VALIDATION_ERROR;
         }
     }
 }

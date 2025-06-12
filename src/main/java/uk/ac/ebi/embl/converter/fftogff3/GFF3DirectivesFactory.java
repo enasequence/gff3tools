@@ -16,6 +16,7 @@ import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.OrganismQualifier;
 import uk.ac.ebi.embl.converter.ConversionError;
+import uk.ac.ebi.embl.converter.cli.CLIExitCode;
 import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
@@ -77,6 +78,11 @@ public class GFF3DirectivesFactory {
     public static class NoSourcePresent extends ConversionError {
         public NoSourcePresent() {
             super("No source found");
+        }
+
+        @Override
+        public CLIExitCode exitCode() {
+            return CLIExitCode.VALIDATION_ERROR;
         }
     }
 }

@@ -10,9 +10,16 @@
  */
 package uk.ac.ebi.embl.converter;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.IOException;
+import uk.ac.ebi.embl.converter.cli.CLIExitCode;
 
-public interface Converter {
-    public void convert(BufferedReader reader, BufferedWriter writer) throws ConversionError;
+public class ConversionReadError extends ConversionError {
+    public ConversionReadError(IOException cause) {
+        super("Error reading from input", cause);
+    }
+
+    @Override
+    public CLIExitCode exitCode() {
+        return CLIExitCode.READ_ERROR;
+    }
 }
