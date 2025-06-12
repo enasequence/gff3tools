@@ -44,4 +44,12 @@ public class GFF3Feature {
     public boolean hasChildren() {
         return !children.isEmpty();
     }
+
+    @Override
+    public int hashCode() {
+        Map<String, Object> hashAttributes = new HashMap<>(attributes);
+        // Removing partial from the attribute as it can change for the first and last location in a compound Join
+        hashAttributes.remove("partial");
+        return Objects.hash(id, parentId, accession, source, name, score, strand, phase, hashAttributes);
+    }
 }
