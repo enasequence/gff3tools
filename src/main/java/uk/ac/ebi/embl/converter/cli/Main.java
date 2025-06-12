@@ -94,7 +94,7 @@ class CommandConversion implements Runnable {
             fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
             toFileType = validateFileType(toFileType, outputFilePath, "-t");
         } catch (CLIError e) {
-            throw new Error(e);
+           LOG.error(e.getMessage());
         }
 
         if (rules != null) {
@@ -119,7 +119,8 @@ class CommandConversion implements Runnable {
             converter.convert(inputReader, outputWriter);
         } catch (ConversionError e) {
             LOG.error(e.getMessage());
-        } catch (IOException e) {
+        } catch (Exception e) {
+            // This should never happen, all exceptions must be handled and transformed to logs when possible.
             throw new Error(e.getMessage(), e);
         }
     }
@@ -194,8 +195,21 @@ class RuleConverter implements ITypeConverter<CliRulesOption> {
 
         for (String entry : entries) {
             String[] pairs = entry.trim().split(":");
-            ValidationRule key = ValidationRule.valueOf(pairs[0]);
-            RuleSeverity value = RuleSeverity.valueOf(pairs[1].toUpperCase());
+            if (pairs.length != 2) {
+                throw new CLIError("Invalid rule: " + entry);
+            }
+            ValidationRule key;
+            try {
+                key = ValidationRule.valueOf(pairs[0].toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new CLIError("The rule: \"" + pairs[0] + "\" is invalid");
+            }
+            RuleSeverity value;
+            try {
+                value = RuleSeverity.valueOf(pairs[1].toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new CLIError("The rule severity: \"" + pairs[1] + "\" is invalid");
+            }
             this.map.rules().put(key, value);
         }
         return this.map;

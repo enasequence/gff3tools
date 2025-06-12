@@ -361,7 +361,7 @@ public class GFF3AnnotationFactory {
 
     private String validatedMissingFeatureName(String featureName) throws UnmappedFFFeature {
         UnmappedFFFeature error = new UnmappedFFFeature(featureName);
-        switch (VALIDATION_SEVERITIES.get(unmapped_flatfile_feature)) {
+        switch (VALIDATION_SEVERITIES.get(UNMAPPED_FLATFILE_FEATURE)) {
             case WARN:
                 LOG.warn(error.getMessage());
             case OFF:
