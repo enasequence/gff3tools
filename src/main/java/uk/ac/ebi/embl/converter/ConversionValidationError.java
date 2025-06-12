@@ -10,9 +10,15 @@
  */
 package uk.ac.ebi.embl.converter;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import uk.ac.ebi.embl.converter.cli.CLIExitCode;
 
-public interface Converter {
-    public void convert(BufferedReader reader, BufferedWriter writer) throws ConversionError;
+public class ConversionValidationError extends ConversionError {
+    public ConversionValidationError(final Exception cause) {
+        super(cause.getMessage(), cause);
+    }
+
+    @Override
+    public CLIExitCode exitCode() {
+        return CLIExitCode.VALIDATION_ERROR;
+    }
 }

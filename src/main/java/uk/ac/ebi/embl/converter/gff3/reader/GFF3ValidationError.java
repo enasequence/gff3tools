@@ -15,11 +15,9 @@ import lombok.Getter;
 @Getter
 public class GFF3ValidationError extends Exception {
     private final int line;
-    private final String message;
 
     public GFF3ValidationError(int line, String message) {
-        super(String.format("Line: %d - %s", line, message));
+        super(String.format("GFF3 validation error on line %d: %s", line, message));
         this.line = line;
-        this.message = message;
     }
 }

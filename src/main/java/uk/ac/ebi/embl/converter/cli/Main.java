@@ -20,12 +20,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.*;
 import picocli.CommandLine.Model.CommandSpec;
-import uk.ac.ebi.embl.converter.ConversionError;
 import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
@@ -43,24 +43,31 @@ public class Main {
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 
     public static void main(String[] args) {
-        int exitCode = -1;
+        int exitCode = 1;
         try {
-            exitCode = new CommandLine(new Main()).execute(args);
-        } catch (Exception e) {
+            exitCode = new CommandLine(new Main())
+                    .setExecutionExceptionHandler(new ExecutionExceptionHandler())
+                    .execute(args);
+        } catch (Throwable e) {
             LOG.error(e.getMessage(), e);
         }
         System.exit(exitCode);
     }
 }
 
-class CLIError extends Exception {
+class CLIError extends ExitException {
+    @Override
+    public CLIExitCode exitCode() {
+        return CLIExitCode.USAGE;
+    }
+
     public CLIError(String message) {
         super(message);
     }
 }
 
 // Using pandoc CLI interface conventions
-@Command(name = "conversion", description = "Performs format conversions to or from gff3")
+@CommandLine.Command(name = "conversion", description = "Performs format conversions to or from gff3")
 class CommandConversion implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(CommandConversion.class);
 
@@ -69,69 +76,67 @@ class CommandConversion implements Runnable {
         gff3
     }
 
-    @Option(
+    @CommandLine.Option(
             names = "--rules",
             paramLabel = "<key:value,key:value>",
             description = "Specify rules in the format key:value",
             converter = RuleConverter.class)
     public CliRulesOption rules;
 
-    @Option(names = "-f", description = "The type of the file to be converted")
+    @CommandLine.Option(names = "-f", description = "The type of the file to be converted")
     public FileFormat fromFileType;
 
-    @Option(names = "-t", description = "The type of the file to convert to")
+    @CommandLine.Option(names = "-t", description = "The type of the file to convert to")
     public FileFormat toFileType;
 
-    @Parameters(paramLabel = "[input-file]", defaultValue = "", showDefaultValue = Help.Visibility.NEVER)
+    @CommandLine.Parameters(
+            paramLabel = "[input-file]",
+            defaultValue = "",
+            showDefaultValue = CommandLine.Help.Visibility.NEVER)
     public Path inputFilePath;
 
-    @Parameters(paramLabel = "[output-file]", defaultValue = "", showDefaultValue = Help.Visibility.NEVER)
+    @CommandLine.Parameters(
+            paramLabel = "[output-file]",
+            defaultValue = "",
+            showDefaultValue = CommandLine.Help.Visibility.NEVER)
     public Path outputFilePath;
 
+    @SneakyThrows
     @Override
     public void run() {
-        try {
-            fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
-            toFileType = validateFileType(toFileType, outputFilePath, "-t");
-        } catch (CLIError e) {
-           LOG.error(e.getMessage());
-        }
+        fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
+        toFileType = validateFileType(toFileType, outputFilePath, "-t");
 
         if (rules != null) {
             ValidationRule.VALIDATION_SEVERITIES.putAll(rules.rules());
         }
 
         try (BufferedReader inputReader = getPipe(
-                Files::newBufferedReader,
-                () -> new BufferedReader(new InputStreamReader(System.in)),
-                inputFilePath);
-             BufferedWriter outputWriter = getPipe(
-                     Files::newBufferedWriter,
-                     () -> {
-                         // Set the log level to ERROR while writing the file to an output stream to ignore INFO,
-                         // WARN logs
-                         LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
-                         ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
-                         return new BufferedWriter(new OutputStreamWriter(System.out));
-                     },
-                     outputFilePath)) {
+                        Files::newBufferedReader,
+                        () -> new BufferedReader(new InputStreamReader(System.in)),
+                        inputFilePath);
+                BufferedWriter outputWriter = getPipe(
+                        Files::newBufferedWriter,
+                        () -> {
+                            // Set the log level to ERROR while writing the file to an output stream to ignore INFO,
+                            // WARN logs
+                            LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
+                            ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
+                            return new BufferedWriter(new OutputStreamWriter(System.out));
+                        },
+                        outputFilePath)) {
             Converter converter = getConverter(fromFileType, toFileType);
             converter.convert(inputReader, outputWriter);
-        } catch (ConversionError e) {
-            LOG.error(e.getMessage());
-        } catch (Exception e) {
-            // This should never happen, all exceptions must be handled and transformed to logs when possible.
-            throw new Error(e.getMessage(), e);
         }
     }
 
-    private Converter getConverter(FileFormat inputFileType, FileFormat outputFileType) throws ConversionError {
+    private Converter getConverter(FileFormat inputFileType, FileFormat outputFileType) throws FormatSupportError {
         if (inputFileType == FileFormat.gff3 && outputFileType == FileFormat.embl) {
             return new Gff3ToFFConverter();
         } else if (inputFileType == FileFormat.embl && outputFileType == FileFormat.gff3) {
             return new FFToGff3Converter();
         } else {
-            throw new ConversionError("Conversion from " + fromFileType + " to " + toFileType + " is not supported");
+            throw new FormatSupportError(fromFileType, toFileType);
         }
     }
 
@@ -151,7 +156,7 @@ class CommandConversion implements Runnable {
                             + " option to specify the format manually or set the file extension");
                 }
             } else {
-                throw new CLIError("When using stdin " + cliOption + " must be specified");
+                throw new CLIError("When streaming " + cliOption + " must be specified");
             }
         }
         return fileFormat;
@@ -181,6 +186,17 @@ class CommandConversion implements Runnable {
             return fileName.substring(lastIndexOfDot + 1);
         }
         return null; // No extension found
+    }
+
+    static class FormatSupportError extends ExitException {
+        public FormatSupportError(final FileFormat fromFt, final FileFormat toFt) {
+            super("Conversion from \"" + fromFt + "\" to \"" + toFt + "\" is not supported");
+        }
+
+        @Override
+        public CLIExitCode exitCode() {
+            return CLIExitCode.UNSUPPORTED_FORMAT_CONVERSION;
+        }
     }
 }
 
@@ -213,5 +229,19 @@ class RuleConverter implements ITypeConverter<CliRulesOption> {
             this.map.rules().put(key, value);
         }
         return this.map;
+    }
+}
+
+class ExecutionExceptionHandler implements IExecutionExceptionHandler {
+
+    // Tried to use LOG.error instead of println here but would not pipe anything to stderr.
+    @Override
+    public int handleExecutionException(Exception e, CommandLine commandLine, ParseResult parseResult)
+            throws Exception {
+        if (e instanceof ExitException) {
+            System.err.println(e.getMessage());
+            return ((ExitException) e).exitCode().asInt();
+        }
+        throw e;
     }
 }

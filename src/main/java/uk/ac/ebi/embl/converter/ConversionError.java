@@ -10,12 +10,15 @@
  */
 package uk.ac.ebi.embl.converter;
 
-public class ConversionError extends Exception {
+import uk.ac.ebi.embl.converter.cli.ExitException;
+
+public abstract class ConversionError extends ExitException {
+
     public ConversionError(final String message, final Exception cause) {
         super(message, cause);
     }
 
-    public ConversionError(String message) {
+    public ConversionError(final String message) {
         super(message);
     }
 }
