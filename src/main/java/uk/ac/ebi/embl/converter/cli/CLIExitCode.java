@@ -8,17 +8,26 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter;
+package uk.ac.ebi.embl.converter.cli;
 
-import uk.ac.ebi.embl.converter.cli.ExitException;
+public enum CLIExitCode {
+    GENERAL(1),
+    // User input errors
+    USAGE(2),
+    UNSUPPORTED_FORMAT_CONVERSION(3),
+    // IO errors
+    READ_ERROR(10),
+    WRITE_ERROR(11),
+    // Validation errors
+    VALIDATION_ERROR(20);
 
-public abstract class ConversionError extends ExitException {
+    private final int exitCode;
 
-    public ConversionError(final String message, final Exception cause) {
-        super(message, cause);
+    CLIExitCode(final int code) {
+        this.exitCode = code;
     }
 
-    public ConversionError(final String message) {
-        super(message);
+    public int asInt() {
+        return exitCode;
     }
 }

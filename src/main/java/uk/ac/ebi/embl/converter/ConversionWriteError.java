@@ -10,15 +10,16 @@
  */
 package uk.ac.ebi.embl.converter;
 
-import uk.ac.ebi.embl.converter.cli.ExitException;
+import java.io.IOException;
+import uk.ac.ebi.embl.converter.cli.CLIExitCode;
 
-public abstract class ConversionError extends ExitException {
-
-    public ConversionError(final String message, final Exception cause) {
-        super(message, cause);
+public class ConversionWriteError extends ConversionError {
+    public ConversionWriteError(IOException cause) {
+        super("Error writing to output", cause);
     }
 
-    public ConversionError(final String message) {
-        super(message);
+    @Override
+    public CLIExitCode exitCode() {
+        return CLIExitCode.WRITE_ERROR;
     }
 }

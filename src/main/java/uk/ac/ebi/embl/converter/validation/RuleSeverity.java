@@ -8,17 +8,20 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter;
+package uk.ac.ebi.embl.converter.validation;
 
-import uk.ac.ebi.embl.converter.cli.ExitException;
+public enum RuleSeverity {
+    OFF(0),
+    WARN(1),
+    ERROR(2);
 
-public abstract class ConversionError extends ExitException {
+    private int severity;
 
-    public ConversionError(final String message, final Exception cause) {
-        super(message, cause);
+    RuleSeverity(int severity) {
+        this.severity = severity;
     }
 
-    public ConversionError(final String message) {
-        super(message);
+    public int getSeverity() {
+        return severity;
     }
 }

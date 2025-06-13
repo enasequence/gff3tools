@@ -8,17 +8,27 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter;
+package uk.ac.ebi.embl.converter.validation;
 
-import uk.ac.ebi.embl.converter.cli.ExitException;
+import java.util.HashMap;
+import java.util.Map;
 
-public abstract class ConversionError extends ExitException {
+public enum ValidationRule {
+    UNMAPPED_FLATFILE_FEATURE("The flatfile feature does not exist on the ontology.");
 
-    public ConversionError(final String message, final Exception cause) {
-        super(message, cause);
+    private String description;
+
+    public static Map<ValidationRule, RuleSeverity> VALIDATION_SEVERITIES = new HashMap<>() {
+        {
+            put(UNMAPPED_FLATFILE_FEATURE, RuleSeverity.WARN);
+        }
+    };
+
+    ValidationRule(String description) {
+        this.description = description;
     }
 
-    public ConversionError(final String message) {
-        super(message);
+    public String getDescription() {
+        return description;
     }
 }
