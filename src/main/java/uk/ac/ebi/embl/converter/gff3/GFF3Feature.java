@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.converter.gff3;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -50,6 +51,30 @@ public class GFF3Feature {
         Map<String, Object> hashAttributes = new HashMap<>(attributes);
         // Removing partial from the attribute as it can change for the first and last location in a compound Join
         hashAttributes.remove("partial");
-        return Objects.hash(id, parentId, accession, source, name, score, strand, phase, hashAttributes);
+        // return Objects.hash(id, parentId, accession, source, name, score, strand, phase, hashAttributes);
+        return Objects.hash(
+                id,
+                parentId,
+                accession,
+                source,
+                name,
+                score,
+                strand,
+                phase,
+                hashAttributes.entrySet().stream()
+                        .sorted(Map.Entry.comparingByKey())
+                        .map(entry -> {
+                            String key = entry.getKey();
+                            Object value = entry.getValue();
+
+                            if (value instanceof List) {
+                                List<?> list = new ArrayList<>((List<?>) value);
+                                Collections.sort((List) list);
+                                return key + "=" + list.toString();
+                            } else {
+                                return key + "=" + value;
+                            }
+                        })
+                        .collect(Collectors.toList()));
     }
 }

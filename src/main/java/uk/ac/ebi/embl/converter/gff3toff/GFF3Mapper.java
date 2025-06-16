@@ -169,15 +169,24 @@ public class GFF3Mapper {
                 Object value = attributePairs.getValue();
                 if (value instanceof List) {
                     List<String> values = (List<String>) value;
-                    for (String s : values) {
-                        qualifierList.add(qualifierFactory.createQualifier(attributeKey, s));
+                    for (String val : values) {
+                        qualifierList.add(createQualifier(attributeKey, val));
                     }
                 } else {
-                    qualifierList.add(qualifierFactory.createQualifier(attributeKey, value.toString()));
+                    qualifierList.add(createQualifier(attributeKey, value.toString()));
                 }
             }
         }
 
         return qualifierList;
+    }
+
+    private Qualifier createQualifier(String name, String value) {
+        if ("true".equals(value)) {
+            // Create qualifier without value when value is "true"
+            return qualifierFactory.createQualifier(name);
+        } else {
+            return qualifierFactory.createQualifier(name, value);
+        }
     }
 }
