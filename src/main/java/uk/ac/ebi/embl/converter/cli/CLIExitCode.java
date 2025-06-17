@@ -18,6 +18,7 @@ public enum CLIExitCode {
     // IO errors
     READ_ERROR(10),
     WRITE_ERROR(11),
+    NON_EXISTENT_FILE(12),
     // Validation errors
     VALIDATION_ERROR(20);
 

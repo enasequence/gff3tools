@@ -14,6 +14,10 @@ import java.io.IOException;
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
 
 public class ConversionReadError extends ConversionError {
+    public ConversionReadError(String msg, IOException cause) {
+        super(msg, cause);
+    }
+
     public ConversionReadError(IOException cause) {
         super("Error reading from input", cause);
     }
