@@ -22,9 +22,11 @@ import uk.ac.ebi.embl.api.entry.location.*;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.qualifier.QualifierFactory;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
+import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
+import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
 public class GFF3Mapper {
@@ -89,7 +91,7 @@ public class GFF3Mapper {
 
         Map<String, Object> attributes = gff3Feature.getAttributes();
         String featureHashId = (String) attributes.getOrDefault("ID", String.valueOf(gff3Feature.hashCode()));
-        String featureType = gff3Feature.getName();
+
 
         Location location = mapGFF3Location(gff3Feature);
         Feature ffFeature = ffFeatures.get(featureHashId);
@@ -106,6 +108,13 @@ public class GFF3Mapper {
             }
             parentFeatureLocation.addLocation(location);
         } else {
+            String featureType = gff3Feature.getName();
+
+            Map<String, ConversionEntry> gff32ff = ConversionUtils.getGFF32FFFeatureMap();
+            if (gff32ff.containsKey(gff3Feature.getName())) {
+                ConversionEntry entry = gff32ff.get(gff3Feature.getName());
+                featureType = entry.getFeature();
+            }
             ffFeature = featureFactory.createFeature(featureType);
             CompoundLocation<Location> locations = new Join();
             if (location.isComplement()) {
