@@ -25,6 +25,7 @@ import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
+import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
 public class GFF3Mapper {
@@ -89,7 +90,6 @@ public class GFF3Mapper {
 
         Map<String, Object> attributes = gff3Feature.getAttributes();
         String featureHashId = (String) attributes.getOrDefault("ID", String.valueOf(gff3Feature.hashCode()));
-        String featureType = gff3Feature.getName();
 
         Location location = mapGFF3Location(gff3Feature);
         Feature ffFeature = ffFeatures.get(featureHashId);
@@ -106,7 +106,13 @@ public class GFF3Mapper {
             }
             parentFeatureLocation.addLocation(location);
         } else {
-            ffFeature = featureFactory.createFeature(featureType);
+            String gff3FeatureName = gff3Feature.getName();
+            // Get featureName from Anthology map if it exists.
+            ConversionEntry conversionEntry =
+                    ConversionUtils.getGFF32FFFeatureMap().get(gff3FeatureName);
+            String featureName = (conversionEntry != null) ? conversionEntry.getFeature() : gff3FeatureName;
+
+            ffFeature = featureFactory.createFeature(featureName);
             CompoundLocation<Location> locations = new Join();
             if (location.isComplement()) {
                 locations.setComplement(true);
