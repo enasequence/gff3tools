@@ -29,6 +29,7 @@ import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 import uk.ac.ebi.embl.converter.utils.Gff3Utils;
+import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
 
 public class GFF3AnnotationFactory {
 
@@ -362,7 +363,7 @@ public class GFF3AnnotationFactory {
 
     private String validatedMissingFeatureName(String featureName) throws UnmappedFFFeature {
         UnmappedFFFeature error = new UnmappedFFFeature(featureName);
-        switch (VALIDATION_SEVERITIES.get(UNMAPPED_FLATFILE_FEATURE)) {
+        switch (RuleSeverityState.INSTANCE.getSeverity(UNMAPPED_FLATFILE_FEATURE)) {
             case WARN:
                 LOG.warn(error.getMessage());
             case OFF:

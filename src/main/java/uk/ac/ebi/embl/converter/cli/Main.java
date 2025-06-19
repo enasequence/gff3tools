@@ -17,7 +17,6 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -26,11 +25,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.*;
-import picocli.CommandLine.Model.CommandSpec;
 import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.converter.validation.RuleSeverity;
+import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
 import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 @Command(
@@ -38,9 +37,6 @@ import uk.ac.ebi.embl.converter.validation.ValidationRule;
         subcommands = {CommandConversion.class, CommandLine.HelpCommand.class},
         description = "Utility to convert and validate gff3 files")
 public class Main {
-    @Spec
-    CommandSpec spec;
-
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 
     public static void main(String[] args) {
@@ -109,7 +105,7 @@ class CommandConversion implements Runnable {
         toFileType = validateFileType(toFileType, outputFilePath, "-t");
 
         if (rules != null) {
-            ValidationRule.VALIDATION_SEVERITIES.putAll(rules.rules());
+            RuleSeverityState.INSTANCE.putAll(rules.rules());
         }
 
         try (BufferedReader inputReader = getPipe(

@@ -10,19 +10,10 @@
  */
 package uk.ac.ebi.embl.converter.validation;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public enum ValidationRule {
     UNMAPPED_FLATFILE_FEATURE("The flatfile feature does not exist on the ontology.");
 
     private String description;
-
-    public static Map<ValidationRule, RuleSeverity> VALIDATION_SEVERITIES = new HashMap<>() {
-        {
-            put(UNMAPPED_FLATFILE_FEATURE, RuleSeverity.WARN);
-        }
-    };
 
     ValidationRule(String description) {
         this.description = description;
