@@ -11,13 +11,12 @@
 package uk.ac.ebi.embl.converter.gff3.reader;
 
 import lombok.Getter;
+import uk.ac.ebi.embl.converter.validation.ValidationError;
+import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 @Getter
-public class GFF3ValidationError extends Exception {
-    private final int line;
-
-    public GFF3ValidationError(int line, String message) {
-        super(String.format("GFF3 validation error on line %d: %s", line, message));
-        this.line = line;
+public class InvalidGFF3HeaderError extends ValidationError {
+    public InvalidGFF3HeaderError(int line, String message) {
+        super(ValidationRule.GFF3_INVALID_HEADER, line, message);
     }
 }

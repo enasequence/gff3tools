@@ -8,17 +8,15 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter;
+package uk.ac.ebi.embl.converter.gff3.reader;
 
-import uk.ac.ebi.embl.converter.cli.ExitException;
+import lombok.Getter;
+import uk.ac.ebi.embl.converter.validation.ValidationError;
+import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
-public abstract class ConversionError extends ExitException {
-
-    public ConversionError(final String message, final Exception cause) {
-        super(message, cause);
-    }
-
-    public ConversionError(final String message) {
-        super(message);
+@Getter
+public class InvalidGFF3RecordError extends ValidationError {
+    public InvalidGFF3RecordError(int line, String message) {
+        super(ValidationRule.GFF3_INVALID_RECORD, line, message);
     }
 }

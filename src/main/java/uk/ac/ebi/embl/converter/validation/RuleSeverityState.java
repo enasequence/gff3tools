@@ -29,6 +29,10 @@ public enum RuleSeverityState {
         this.severityMap.putAll(map);
     }
 
+    public void set(ValidationRule rule, RuleSeverity severity) {
+        this.severityMap.put(rule, severity);
+    }
+
     public RuleSeverity getSeverity(ValidationRule rule) {
         return severityMap.get(rule);
     }

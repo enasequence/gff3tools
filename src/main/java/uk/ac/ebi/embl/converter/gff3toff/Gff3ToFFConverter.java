@@ -14,12 +14,12 @@ import java.io.*;
 import uk.ac.ebi.embl.converter.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
+import uk.ac.ebi.embl.converter.validation.ValidationError;
 import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 
 public class Gff3ToFFConverter implements Converter {
 
-    public void convert(BufferedReader reader, BufferedWriter writer) throws ConversionError {
+    public void convert(BufferedReader reader, BufferedWriter writer) throws ReadError, WriteError, ValidationError {
         try (GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
             GFF3Mapper mapper = new GFF3Mapper();
             gff3Reader.readHeader();
@@ -30,13 +30,11 @@ public class Gff3ToFFConverter implements Converter {
                 try {
                     entryWriter.write(writer);
                 } catch (IOException e) {
-                    throw new ConversionWriteError(e);
+                    throw new WriteError(e);
                 }
             }
-        } catch (GFF3ValidationError e) {
-            throw new ConversionValidationError(e);
         } catch (IOException e) {
-            throw new ConversionReadError(e);
+            throw new ReadError(e);
         }
     }
 }

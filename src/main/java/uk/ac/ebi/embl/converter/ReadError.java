@@ -12,13 +12,14 @@ package uk.ac.ebi.embl.converter;
 
 import java.io.IOException;
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
+import uk.ac.ebi.embl.converter.cli.ExitException;
 
-public class ConversionReadError extends ConversionError {
-    public ConversionReadError(String msg, IOException cause) {
+public class ReadError extends ExitException {
+    public ReadError(String msg, IOException cause) {
         super(msg, cause);
     }
 
-    public ConversionReadError(IOException cause) {
+    public ReadError(IOException cause) {
         super("Error reading from input", cause);
     }
 

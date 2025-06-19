@@ -23,13 +23,12 @@ import uk.ac.ebi.embl.api.entry.location.CompoundLocation;
 import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
-import uk.ac.ebi.embl.converter.ConversionError;
-import uk.ac.ebi.embl.converter.cli.CLIExitCode;
 import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 import uk.ac.ebi.embl.converter.utils.Gff3Utils;
 import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
+import uk.ac.ebi.embl.converter.validation.ValidationError;
 
 public class GFF3AnnotationFactory {
 
@@ -52,7 +51,7 @@ public class GFF3AnnotationFactory {
         this.ignoreSpecies = ignoreSpecies;
     }
 
-    public GFF3Annotation from(Entry entry) throws ConversionError {
+    public GFF3Annotation from(Entry entry) throws ValidationError {
 
         geneMap = new LinkedHashMap<>();
         nonGeneFeatures = new ArrayList<>();
@@ -363,7 +362,7 @@ public class GFF3AnnotationFactory {
 
     private String handleMissingFeatureError(String featureName) throws UnmappedFFFeature {
         UnmappedFFFeature error = new UnmappedFFFeature(featureName);
-        switch (RuleSeverityState.INSTANCE.getSeverity(UNMAPPED_FLATFILE_FEATURE)) {
+        switch (RuleSeverityState.INSTANCE.getSeverity(FLATFILE_NO_ONTOLOGY_FEATURE)) {
             case WARN:
                 LOG.warn(error.getMessage());
             case OFF:
@@ -396,15 +395,10 @@ public class GFF3AnnotationFactory {
         return matchesAllQualifiers;
     }
 
-    public static class UnmappedFFFeature extends ConversionError {
+    public static class UnmappedFFFeature extends ValidationError {
 
         public UnmappedFFFeature(String featureName) {
-            super("The feature \"%s\" does not have a valid gff3 equivalent".formatted(featureName));
-        }
-
-        @Override
-        public CLIExitCode exitCode() {
-            return CLIExitCode.VALIDATION_ERROR;
+            super(FLATFILE_NO_ONTOLOGY_FEATURE, featureName);
         }
     }
 }

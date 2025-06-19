@@ -12,9 +12,10 @@ package uk.ac.ebi.embl.converter;
 
 import java.io.IOException;
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
+import uk.ac.ebi.embl.converter.cli.ExitException;
 
-public class ConversionWriteError extends ConversionError {
-    public ConversionWriteError(IOException cause) {
+public class WriteError extends ExitException {
+    public WriteError(IOException cause) {
         super("Error writing to output", cause);
     }
 

@@ -27,10 +27,10 @@ public class MainTest {
 
     @Test
     void testParseRules() {
-        String[] args = new String[] {"--rules=unmapped_flatfile_feature:off"};
+        String[] args = new String[] {"--rules=flatfile_no_ontology_feature:off"};
         Map<ValidationRule, RuleSeverity> expected = new HashMap<>() {
             {
-                put(ValidationRule.UNMAPPED_FLATFILE_FEATURE, RuleSeverity.OFF);
+                put(ValidationRule.FLATFILE_NO_ONTOLOGY_FEATURE, RuleSeverity.OFF);
             }
         };
 

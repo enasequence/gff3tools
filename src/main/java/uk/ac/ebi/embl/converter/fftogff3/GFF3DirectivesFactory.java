@@ -15,9 +15,9 @@ import java.util.Optional;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.OrganismQualifier;
-import uk.ac.ebi.embl.converter.ConversionError;
-import uk.ac.ebi.embl.converter.cli.CLIExitCode;
 import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
+import uk.ac.ebi.embl.converter.validation.ValidationError;
+import uk.ac.ebi.embl.converter.validation.ValidationRule;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 public class GFF3DirectivesFactory {
@@ -75,14 +75,9 @@ public class GFF3DirectivesFactory {
         return gff3Directives;
     }
 
-    public static class NoSourcePresent extends ConversionError {
+    public static class NoSourcePresent extends ValidationError {
         public NoSourcePresent() {
-            super("No source found");
-        }
-
-        @Override
-        public CLIExitCode exitCode() {
-            return CLIExitCode.VALIDATION_ERROR;
+            super(ValidationRule.FLATFILE_NO_SOURCE, "No source present");
         }
     }
 }

@@ -15,11 +15,11 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.ac.ebi.embl.converter.ConversionError;
-import uk.ac.ebi.embl.converter.ConversionReadError;
-import uk.ac.ebi.embl.converter.ConversionWriteError;
 import uk.ac.ebi.embl.converter.Converter;
+import uk.ac.ebi.embl.converter.ReadError;
+import uk.ac.ebi.embl.converter.WriteError;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
+import uk.ac.ebi.embl.converter.validation.ValidationError;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
@@ -27,7 +27,7 @@ public class FFToGff3Converter implements Converter {
 
     private static final Logger LOG = LoggerFactory.getLogger(FFToGff3Converter.class);
 
-    public void convert(BufferedReader reader, BufferedWriter writer) throws ConversionError {
+    public void convert(BufferedReader reader, BufferedWriter writer) throws ReadError, WriteError, ValidationError {
         EmblEntryReader entryReader =
                 new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
@@ -36,12 +36,12 @@ public class FFToGff3Converter implements Converter {
         try {
             file = fftogff3.from(entryReader);
         } catch (IOException e) {
-            throw new ConversionReadError(e);
+            throw new ReadError(e);
         }
         try {
             file.writeGFF3String(writer);
         } catch (IOException e) {
-            throw new ConversionWriteError(e);
+            throw new WriteError(e);
         }
     }
 

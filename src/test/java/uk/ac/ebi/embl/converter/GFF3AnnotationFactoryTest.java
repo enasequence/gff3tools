@@ -29,6 +29,7 @@ import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.converter.fftogff3.GFF3AnnotationFactory;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
+import uk.ac.ebi.embl.converter.validation.ValidationError;
 
 class GFF3AnnotationFactoryTest {
     static Map<String, Set<String>> featureRelationMap;
@@ -160,7 +161,7 @@ class GFF3AnnotationFactoryTest {
 
     @Test
     public void testGetParentFeature()
-            throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, ConversionError {
+            throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, ValidationError {
         GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
 
         EntryFactory entryFactory = new EntryFactory();
