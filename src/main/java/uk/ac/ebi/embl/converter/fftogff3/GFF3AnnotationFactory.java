@@ -344,7 +344,7 @@ public class GFF3AnnotationFactory {
         String featureName = ffFeature.getName();
         List<ConversionEntry> mappings = ConversionUtils.getFF2GFF3FeatureMap().get(featureName);
         if (mappings == null) {
-            return validatedMissingFeatureName(featureName);
+            return handleMissingFeatureError(featureName);
         }
 
         // return the soTerm of the max qualifier mapping
@@ -355,13 +355,13 @@ public class GFF3AnnotationFactory {
                 .map(ConversionEntry::getSOTerm);
 
         if (soTerm.isEmpty()) {
-            return validatedMissingFeatureName(featureName);
+            return handleMissingFeatureError(featureName);
         } else {
             return soTerm.get();
         }
     }
 
-    private String validatedMissingFeatureName(String featureName) throws UnmappedFFFeature {
+    private String handleMissingFeatureError(String featureName) throws UnmappedFFFeature {
         UnmappedFFFeature error = new UnmappedFFFeature(featureName);
         switch (RuleSeverityState.INSTANCE.getSeverity(UNMAPPED_FLATFILE_FEATURE)) {
             case WARN:
