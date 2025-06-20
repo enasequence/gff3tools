@@ -9,7 +9,7 @@ XX
 FH   Key             Location/Qualifiers
 FH
 FT   source          1..822
-FT   gene            join(<1..500,600..700,complement(800..>822))
+FT   gene            complement(join(<1..500,600..700,800..>822))
 FT                   /gene="matK"
 XX
 //

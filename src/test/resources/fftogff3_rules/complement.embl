@@ -1,0 +1,14 @@
+ID   BN000065; SV XXX; XXX; XXX; XXX; XXX; 0 BP.
+XX
+AC   BN000065;
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..315242
+FT   gene            1..315242
+FT                   /gene="RHD"
+FT   CDS             complement(<4348..4518)
+XX
+//
