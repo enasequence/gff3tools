@@ -59,7 +59,6 @@ public class GFF3Feature {
                 source,
                 name,
                 score,
-                strand,
                 phase,
                 getAttributeString(hashAttributes));
 
