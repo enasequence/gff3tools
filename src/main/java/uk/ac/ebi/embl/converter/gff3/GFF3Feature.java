@@ -51,8 +51,19 @@ public class GFF3Feature {
         // Removing partial from the attribute as it can change for the first and last location in a compound Join
         hashAttributes.remove("partial");
 
-        return Objects.hash(
-                id, parentId, accession, source, name, score, strand, phase, getAttributeString(hashAttributes));
+        String hashCodeStr = String.join(
+                "|",
+                id.orElse(""),
+                parentId.orElse(""),
+                accession,
+                source,
+                name,
+                score,
+                strand,
+                phase,
+                getAttributeString(hashAttributes));
+
+        return hashCodeStr.hashCode();
     }
 
     private String getAttributeString(Map<String, Object> attributes) {
@@ -69,7 +80,7 @@ public class GFF3Feature {
                 list.sort(Comparator.comparing(Object::toString));
                 attrBuilder.append(list);
             } else {
-                attrBuilder.append(value);
+                attrBuilder.append(value.toString());
             }
 
             attrBuilder.append(";");
