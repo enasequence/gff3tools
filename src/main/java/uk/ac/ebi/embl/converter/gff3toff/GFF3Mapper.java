@@ -11,6 +11,8 @@
 package uk.ac.ebi.embl.converter.gff3toff;
 
 import java.util.*;
+import java.util.Set;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -31,6 +33,9 @@ import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 public class GFF3Mapper {
 
     private static final Logger LOG = LoggerFactory.getLogger(GFF3Mapper.class);
+
+    private static final Set<String> EXCLUDED_FEATURE_TYPES =
+            Set.of("protein_bind", "repeat_region", "assembly_gap", "misc_feature");
 
     private final Map<String, String> qmap = ConversionUtils.getGFF32FFQualifierMap();
     private final EntryFactory entryFactory = new EntryFactory();
@@ -91,6 +96,16 @@ public class GFF3Mapper {
         Map<String, Object> attributes = gff3Feature.getAttributes();
         String featureHashId = (String) attributes.getOrDefault("ID", String.valueOf(gff3Feature.hashCode()));
 
+        String gff3FeatureName = gff3Feature.getName();
+        // Get featureName from Ontology map if it exists.
+        ConversionEntry conversionEntry = ConversionUtils.getGFF32FFFeatureMap().get(gff3FeatureName);
+        String featureName = (conversionEntry != null) ? conversionEntry.getFeature() : gff3FeatureName;
+
+        // Check if the feature should be excluded from location joins
+        if (EXCLUDED_FEATURE_TYPES.contains(featureName)) {
+            featureHashId = UUID.randomUUID().toString(); // Ensure unique ID for excluded types
+        }
+
         Location location = mapGFF3Location(gff3Feature);
         Feature ffFeature = ffFeatures.get(featureHashId);
         if (ffFeature != null) {
@@ -106,12 +121,6 @@ public class GFF3Mapper {
             }
             parentFeatureLocation.addLocation(location);
         } else {
-            String gff3FeatureName = gff3Feature.getName();
-            // Get featureName from Anthology map if it exists.
-            ConversionEntry conversionEntry =
-                    ConversionUtils.getGFF32FFFeatureMap().get(gff3FeatureName);
-            String featureName = (conversionEntry != null) ? conversionEntry.getFeature() : gff3FeatureName;
-
             ffFeature = featureFactory.createFeature(featureName);
             CompoundLocation<Location> locations = new Join();
             if (location.isComplement()) {
