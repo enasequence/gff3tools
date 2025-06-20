@@ -302,22 +302,11 @@ public class GFF3AnnotationFactory {
     private List<String> getPartiality(Location location) {
 
         List<String> partiality = new ArrayList<>();
-        boolean overallComplement = location.isComplement();
-
-        if (overallComplement) {
-            if (location.isFivePrimePartial()) {
-                partiality.add("end");
-            }
-            if (location.isThreePrimePartial()) {
-                partiality.add("start");
-            }
-        } else {
-            if (location.isFivePrimePartial()) {
-                partiality.add("start");
-            }
-            if (location.isThreePrimePartial()) {
-                partiality.add("end");
-            }
+        if (location.isFivePrimePartial()) {
+            partiality.add(location.isComplement() ? "end" : "start");
+        }
+        if (location.isThreePrimePartial()) {
+            partiality.add(location.isComplement() ? "start" : "end");
         }
         return partiality;
     }
