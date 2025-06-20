@@ -140,6 +140,8 @@ public class GFF3AnnotationFactory {
         id.ifPresent(v -> baseAttributes.put("ID", v));
         parentId.ifPresent(v -> baseAttributes.put("Parent", v));
 
+        boolean isFeatureComplement = ffFeature.getLocations().isComplement();
+
         for (Location location : ffFeature.getLocations().getLocations()) {
             Map<String, Object> attributes = new LinkedHashMap<>(baseAttributes);
 
@@ -157,7 +159,7 @@ public class GFF3AnnotationFactory {
                     location.getBeginPosition(),
                     location.getEndPosition(),
                     score,
-                    getStrand(ffFeature),
+                    getStrand(location, isFeatureComplement),
                     getPhase(ffFeature),
                     attributes));
         }
@@ -270,8 +272,9 @@ public class GFF3AnnotationFactory {
         }
     }
 
-    private String getStrand(Feature feature) {
-        return feature.getLocations().isComplement() ? "-" : "+";
+    private String getStrand(Location location, boolean isFeatureComplement) {
+        boolean effectivelyComplemented = location.isComplement() || isFeatureComplement;
+        return effectivelyComplemented ? "-" : "+";
     }
 
     private String getPhase(Feature feature) {
@@ -300,12 +303,22 @@ public class GFF3AnnotationFactory {
     private List<String> getPartiality(Location location) {
 
         List<String> partiality = new ArrayList<>();
+        boolean overallComplement = location.isComplement();
 
-        if (location.isFivePrimePartial()) {
-            partiality.add("start");
-        }
-        if (location.isThreePrimePartial()) {
-            partiality.add("end");
+        if (overallComplement) {
+            if (location.isFivePrimePartial()) {
+                partiality.add("end");
+            }
+            if (location.isThreePrimePartial()) {
+                partiality.add("start");
+            }
+        } else {
+            if (location.isFivePrimePartial()) {
+                partiality.add("start");
+            }
+            if (location.isThreePrimePartial()) {
+                partiality.add("end");
+            }
         }
         return partiality;
     }
