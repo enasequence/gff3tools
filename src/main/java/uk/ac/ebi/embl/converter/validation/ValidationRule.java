@@ -8,12 +8,21 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter;
+package uk.ac.ebi.embl.converter.validation;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import uk.ac.ebi.embl.converter.validation.ValidationError;
+public enum ValidationRule {
+    FLATFILE_NO_SOURCE("The flatfile contains no source feature"),
+    FLATFILE_NO_ONTOLOGY_FEATURE("The flatfile feature does not exist on the ontology."),
+    GFF3_INVALID_RECORD("The record does not conform with the expected gff3 format"),
+    GFF3_INVALID_HEADER("Invalid gff3 header"),;
 
-public interface Converter {
-    public void convert(BufferedReader reader, BufferedWriter writer) throws ReadError, WriteError, ValidationError;
+    private String description;
+
+    ValidationRule(String description) {
+        this.description = description;
+    }
+
+    public String getDescription() {
+        return description;
+    }
 }

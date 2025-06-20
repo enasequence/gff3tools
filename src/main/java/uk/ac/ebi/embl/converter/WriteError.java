@@ -10,10 +10,17 @@
  */
 package uk.ac.ebi.embl.converter;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import uk.ac.ebi.embl.converter.validation.ValidationError;
+import java.io.IOException;
+import uk.ac.ebi.embl.converter.cli.CLIExitCode;
+import uk.ac.ebi.embl.converter.cli.ExitException;
 
-public interface Converter {
-    public void convert(BufferedReader reader, BufferedWriter writer) throws ReadError, WriteError, ValidationError;
+public class WriteError extends ExitException {
+    public WriteError(IOException cause) {
+        super("Error writing to output", cause);
+    }
+
+    @Override
+    public CLIExitCode exitCode() {
+        return CLIExitCode.WRITE_ERROR;
+    }
 }

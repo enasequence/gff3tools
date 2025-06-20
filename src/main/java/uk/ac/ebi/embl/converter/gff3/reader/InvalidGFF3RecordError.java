@@ -8,12 +8,15 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter;
+package uk.ac.ebi.embl.converter.gff3.reader;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import lombok.Getter;
 import uk.ac.ebi.embl.converter.validation.ValidationError;
+import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
-public interface Converter {
-    public void convert(BufferedReader reader, BufferedWriter writer) throws ReadError, WriteError, ValidationError;
+@Getter
+public class InvalidGFF3RecordError extends ValidationError {
+    public InvalidGFF3RecordError(int line, String message) {
+        super(ValidationRule.GFF3_INVALID_RECORD, line, message);
+    }
 }

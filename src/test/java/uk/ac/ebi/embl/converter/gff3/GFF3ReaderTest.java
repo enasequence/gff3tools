@@ -20,7 +20,11 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
+import uk.ac.ebi.embl.converter.gff3.reader.InvalidGFF3HeaderError;
+import uk.ac.ebi.embl.converter.gff3.reader.InvalidGFF3RecordError;
+import uk.ac.ebi.embl.converter.validation.RuleSeverity;
+import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
+import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 public class GFF3ReaderTest {
     @Test
@@ -52,12 +56,12 @@ public class GFF3ReaderTest {
         GFF3FileReader gff3Reader = new GFF3FileReader(reader);
         try {
             gff3Reader.readHeader();
-        } catch (GFF3ValidationError e) {
+        } catch (InvalidGFF3HeaderError e) {
             Assertions.assertTrue(e.getMessage().contains("GFF3 header not found"));
             Assertions.assertEquals(1, e.getLine());
-        } catch (Exception e) {
-            fail(String.format("Error parsing file: %s", testFile.getPath()), e);
+            return;
         }
+        fail(String.format("Expected exception when parsing file: %s", testFile.getPath()));
     }
 
     @Test

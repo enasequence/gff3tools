@@ -8,18 +8,23 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.gff3.reader;
+package uk.ac.ebi.embl.converter;
 
-import lombok.Getter;
+import java.io.IOException;
+import uk.ac.ebi.embl.converter.cli.CLIExitCode;
+import uk.ac.ebi.embl.converter.cli.ExitException;
 
-@Getter
-public class GFF3ValidationError extends Exception {
-    private final int line;
-    private final String message;
+public class ReadError extends ExitException {
+    public ReadError(String msg, IOException cause) {
+        super(msg, cause);
+    }
 
-    public GFF3ValidationError(int line, String message) {
-        super(String.format("Line: %d - %s", line, message));
-        this.line = line;
-        this.message = message;
+    public ReadError(IOException cause) {
+        super("Error reading from input", cause);
+    }
+
+    @Override
+    public CLIExitCode exitCode() {
+        return CLIExitCode.READ_ERROR;
     }
 }

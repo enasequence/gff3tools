@@ -10,6 +10,8 @@
  */
 package uk.ac.ebi.embl.converter.fftogff3;
 
+import static uk.ac.ebi.embl.converter.validation.ValidationRule.*;
+
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -21,11 +23,12 @@ import uk.ac.ebi.embl.api.entry.location.CompoundLocation;
 import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
-import uk.ac.ebi.embl.converter.ConversionError;
 import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 import uk.ac.ebi.embl.converter.utils.Gff3Utils;
+import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
+import uk.ac.ebi.embl.converter.validation.ValidationError;
 
 public class GFF3AnnotationFactory {
 
@@ -48,7 +51,7 @@ public class GFF3AnnotationFactory {
         this.ignoreSpecies = ignoreSpecies;
     }
 
-    public GFF3Annotation from(Entry entry) throws ConversionError {
+    public GFF3Annotation from(Entry entry) throws ValidationError {
 
         geneMap = new LinkedHashMap<>();
         nonGeneFeatures = new ArrayList<>();
@@ -60,37 +63,33 @@ public class GFF3AnnotationFactory {
         entry.getSequence().setAccession(accession + ".1");
 
         GFF3Directives directives = new GFF3DirectivesFactory(this.ignoreSpecies).from(entry);
-        try {
 
-            for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
+        for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
 
-                if (feature.getName().equalsIgnoreCase("source")) {
-                    continue; // early exit
-                }
-
-                buildGeneFeatureMap(entry.getPrimaryAccession(), feature);
+            if (feature.getName().equalsIgnoreCase("source")) {
+                continue; // early exit
             }
 
-            // For circular topologies; We have not found a circular feature so we must include a region
-            // encompasing all source.
-            if (isCircularTopology(entry) && lacksCircularAttribute()) {
-                nonGeneFeatures.add(createLandmarkFeature(accession, entry));
-            }
-            sortFeaturesAndAssignId();
-
-            List<GFF3Feature> features =
-                    geneMap.values().stream().flatMap(List::stream).collect(Collectors.toList());
-            features.addAll(nonGeneFeatures);
-
-            // Create annotation and set values
-            GFF3Annotation annotation = new GFF3Annotation();
-            annotation.setFeatures(features);
-            annotation.setDirectives(directives);
-
-            return annotation;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            buildGeneFeatureMap(entry.getPrimaryAccession(), feature);
         }
+
+        // For circular topologies; We have not found a circular feature so we must include a region
+        // encompasing all source.
+        if (isCircularTopology(entry) && lacksCircularAttribute()) {
+            nonGeneFeatures.add(createLandmarkFeature(accession, entry));
+        }
+        sortFeaturesAndAssignId();
+
+        List<GFF3Feature> features =
+                geneMap.values().stream().flatMap(List::stream).collect(Collectors.toList());
+        features.addAll(nonGeneFeatures);
+
+        // Create annotation and set values
+        GFF3Annotation annotation = new GFF3Annotation();
+        annotation.setFeatures(features);
+        annotation.setDirectives(directives);
+
+        return annotation;
     }
 
     private boolean lacksCircularAttribute() {
@@ -118,7 +117,8 @@ public class GFF3AnnotationFactory {
                 Map.of("ID", accession, "Is_circular", "true"));
     }
 
-    private List<GFF3Feature> transformFeature(String accession, Feature ffFeature, Optional<String> geneName) {
+    private List<GFF3Feature> transformFeature(String accession, Feature ffFeature, Optional<String> geneName)
+            throws UnmappedFFFeature {
         List<GFF3Feature> gff3Features = new ArrayList<>();
 
         String source = ".";
@@ -181,27 +181,22 @@ public class GFF3AnnotationFactory {
         return attributes;
     }
 
-    private void buildGeneFeatureMap(String accession, Feature ffFeature) throws ConversionError {
+    private void buildGeneFeatureMap(String accession, Feature ffFeature) throws UnmappedFFFeature {
 
         List<Qualifier> genes = ffFeature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
 
-        try {
+        if (genes.isEmpty()) {
+            nonGeneFeatures.addAll(transformFeature(accession, ffFeature, Optional.empty()));
+        } else {
 
-            if (genes.isEmpty()) {
-                nonGeneFeatures.addAll(transformFeature(accession, ffFeature, Optional.empty()));
-            } else {
+            for (Qualifier gene : genes) {
+                String geneName = gene.getValue();
 
-                for (Qualifier gene : genes) {
-                    String geneName = gene.getValue();
+                List<GFF3Feature> gfFeatures = geneMap.getOrDefault(geneName, new ArrayList<>());
 
-                    List<GFF3Feature> gfFeatures = geneMap.getOrDefault(geneName, new ArrayList<>());
-
-                    gfFeatures.addAll(transformFeature(accession, ffFeature, Optional.of(geneName)));
-                    geneMap.put(geneName, gfFeatures);
-                }
+                gfFeatures.addAll(transformFeature(accession, ffFeature, Optional.of(geneName)));
+                geneMap.put(geneName, gfFeatures);
             }
-        } catch (Exception e) {
-            throw new ConversionError(e.getMessage());
         }
     }
 
@@ -344,20 +339,38 @@ public class GFF3AnnotationFactory {
         return "";
     }
 
-    private String getGFF3FeatureName(Feature ffFeature) {
+    private String getGFF3FeatureName(Feature ffFeature) throws UnmappedFFFeature {
 
-        List<ConversionEntry> mappings = ConversionUtils.getFF2GFF3FeatureMap().get(ffFeature.getName());
+        String featureName = ffFeature.getName();
+        List<ConversionEntry> mappings = ConversionUtils.getFF2GFF3FeatureMap().get(featureName);
         if (mappings == null) {
-            return ffFeature.getName();
+            return handleMissingFeatureError(featureName);
         }
 
         // return the soTerm of the max qualifier mapping
-        return mappings.stream()
+        Optional<String> soTerm = mappings.stream()
                 .filter(entry -> entry.getFeature().equalsIgnoreCase(ffFeature.getName()))
                 .filter(entry -> hasAllQualifiers(ffFeature, entry))
                 .max(Comparator.comparingInt(entry -> entry.getQualifiers().size()))
-                .map(ConversionEntry::getSOTerm)
-                .orElse(ffFeature.getName());
+                .map(ConversionEntry::getSOTerm);
+
+        if (soTerm.isEmpty()) {
+            return handleMissingFeatureError(featureName);
+        } else {
+            return soTerm.get();
+        }
+    }
+
+    private String handleMissingFeatureError(String featureName) throws UnmappedFFFeature {
+        UnmappedFFFeature error = new UnmappedFFFeature(featureName);
+        switch (RuleSeverityState.INSTANCE.getSeverity(FLATFILE_NO_ONTOLOGY_FEATURE)) {
+            case WARN:
+                LOG.warn(error.getMessage());
+            case OFF:
+                return featureName;
+            default:
+                throw error;
+        }
     }
 
     private boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {
@@ -381,5 +394,12 @@ public class GFF3AnnotationFactory {
         }
 
         return matchesAllQualifiers;
+    }
+
+    public static class UnmappedFFFeature extends ValidationError {
+
+        public UnmappedFFFeature(String featureName) {
+            super(FLATFILE_NO_ONTOLOGY_FEATURE, featureName);
+        }
     }
 }
