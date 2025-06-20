@@ -140,7 +140,8 @@ public class GFF3AnnotationFactory {
         id.ifPresent(v -> baseAttributes.put("ID", v));
         parentId.ifPresent(v -> baseAttributes.put("Parent", v));
 
-        for (Location location : ffFeature.getLocations().getLocations()) {
+        CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
+        for (Location location : compoundLocation.getLocations()) {
             Map<String, Object> attributes = new LinkedHashMap<>(baseAttributes);
 
             List<String> partiality = getPartiality(location);
@@ -157,7 +158,7 @@ public class GFF3AnnotationFactory {
                     location.getBeginPosition(),
                     location.getEndPosition(),
                     score,
-                    getStrand(ffFeature),
+                    getStrand(location, compoundLocation),
                     getPhase(ffFeature),
                     attributes));
         }
@@ -270,8 +271,9 @@ public class GFF3AnnotationFactory {
         }
     }
 
-    private String getStrand(Feature feature) {
-        return feature.getLocations().isComplement() ? "-" : "+";
+    private String getStrand(Location location, CompoundLocation<Location> compoundLocation) {
+        boolean effectivelyComplemented = location.isComplement() || compoundLocation.isComplement();
+        return effectivelyComplemented ? "-" : "+";
     }
 
     private String getPhase(Feature feature) {
@@ -300,12 +302,11 @@ public class GFF3AnnotationFactory {
     private List<String> getPartiality(Location location) {
 
         List<String> partiality = new ArrayList<>();
-
         if (location.isFivePrimePartial()) {
-            partiality.add("start");
+            partiality.add(location.isComplement() ? "end" : "start");
         }
         if (location.isThreePrimePartial()) {
-            partiality.add("end");
+            partiality.add(location.isComplement() ? "start" : "end");
         }
         return partiality;
     }
