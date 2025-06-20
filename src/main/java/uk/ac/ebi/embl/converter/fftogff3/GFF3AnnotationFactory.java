@@ -140,9 +140,8 @@ public class GFF3AnnotationFactory {
         id.ifPresent(v -> baseAttributes.put("ID", v));
         parentId.ifPresent(v -> baseAttributes.put("Parent", v));
 
-        boolean isFeatureComplement = ffFeature.getLocations().isComplement();
-
-        for (Location location : ffFeature.getLocations().getLocations()) {
+        CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
+        for (Location location : compoundLocation.getLocations()) {
             Map<String, Object> attributes = new LinkedHashMap<>(baseAttributes);
 
             List<String> partiality = getPartiality(location);
@@ -159,7 +158,7 @@ public class GFF3AnnotationFactory {
                     location.getBeginPosition(),
                     location.getEndPosition(),
                     score,
-                    getStrand(location, isFeatureComplement),
+                    getStrand(location, compoundLocation),
                     getPhase(ffFeature),
                     attributes));
         }
@@ -272,8 +271,8 @@ public class GFF3AnnotationFactory {
         }
     }
 
-    private String getStrand(Location location, boolean isFeatureComplement) {
-        boolean effectivelyComplemented = location.isComplement() || isFeatureComplement;
+    private String getStrand(Location location, CompoundLocation<Location> compoundLocation) {
+        boolean effectivelyComplemented = location.isComplement() || compoundLocation.isComplement();
         return effectivelyComplemented ? "-" : "+";
     }
 
