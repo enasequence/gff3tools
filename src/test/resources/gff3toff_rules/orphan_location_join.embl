@@ -9,7 +9,7 @@ XX
 FH   Key             Location/Qualifiers
 FH
 FT   source          83884..84383
-FT   CDS             complement(join(<109279..109392,109953..>110048))
+FT   CDS             complement(join(109279..>109392,<109953..110048))
 FT                   /transl_table=1
 FT                   /locus_tag="MABUR_10.1"
 FT                   /protein_id="CAL9769022.1"

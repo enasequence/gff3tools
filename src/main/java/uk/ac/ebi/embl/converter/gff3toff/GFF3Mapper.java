@@ -151,14 +151,19 @@ public class GFF3Mapper {
         List<String> partials =
                 partialsRaw instanceof String ? List.of((String) partialsRaw) : (List<String>) partialsRaw;
 
+        boolean isComplement = gff3Feature.getStrand().equals("-");
         Location location = this.locationFactory.createLocalRange(
-                start, end, gff3Feature.getStrand().equals("-"));
-        if (partials.contains("start")) {
-            location.setFivePrimePartial(true);
+                start, end, isComplement);
+
+        // Set location partiality
+        if (!partials.isEmpty()) {
+            boolean fivePrimePartial = partials.contains("start");
+            boolean threePrimePartial = partials.contains("end");
+
+            location.setFivePrimePartial(isComplement ? !fivePrimePartial : fivePrimePartial);
+            location.setThreePrimePartial(isComplement ? !threePrimePartial : threePrimePartial);
         }
-        if (partials.contains("end")) {
-            location.setThreePrimePartial(true);
-        }
+
         return location;
     }
 
