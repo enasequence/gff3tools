@@ -33,7 +33,7 @@ public class GFF3Mapper {
 
     private static final Logger LOG = LoggerFactory.getLogger(GFF3Mapper.class);
 
-    private static final Set<String> EXCLUDED_FEATURE_TYPES =
+    private static final Set<String> JOIN_EXCLUDED_FEATURES =
             Set.of("protein_bind", "repeat_region", "assembly_gap", "misc_feature");
 
     private final Map<String, String> qmap = ConversionUtils.getGFF32FFQualifierMap();
@@ -44,19 +44,20 @@ public class GFF3Mapper {
     private final SequenceFactory sequenceFactory = new SequenceFactory();
 
     Map<String, GFF3Feature> parentFeatures;
-    Map<String, Feature> ffFeatures;
+    // Used to keep track of features that will be merged using a location join
+    Map<String, Feature> joinableFeatureMap;
     Entry entry;
 
     public GFF3Mapper() {
         parentFeatures = new HashMap<>();
-        ffFeatures = new HashMap<>();
+        joinableFeatureMap = new HashMap<>();
         entry = null;
     }
 
     public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) {
 
         parentFeatures.clear();
-        ffFeatures.clear();
+        joinableFeatureMap.clear();
         entry = entryFactory.createEntry();
         entry.setSequence(sequenceFactory.createSequence());
 
@@ -96,7 +97,7 @@ public class GFF3Mapper {
         String featureHashId = (String) attributes.getOrDefault("ID", String.valueOf(gff3Feature.hashCode()));
 
         Location location = mapGFF3Location(gff3Feature);
-        Feature ffFeature = ffFeatures.get(featureHashId);
+        Feature ffFeature = joinableFeatureMap.get(featureHashId);
         if (ffFeature != null) {
             CompoundLocation<Location> parentFeatureLocation = ffFeature.getLocations();
             // If the compoundlocation isComplement but the new location we are adding is not complement
@@ -126,8 +127,8 @@ public class GFF3Mapper {
             ffFeature.addQualifiers(mapGFF3Attributes(attributes));
             // Only adds this feature to the map if is not one of the excluded features.
             // This is so locations won't be merged on joins for the excluded features.
-            if (!EXCLUDED_FEATURE_TYPES.contains(featureName)) {
-                ffFeatures.put(featureHashId, ffFeature);
+            if (!JOIN_EXCLUDED_FEATURES.contains(featureName)) {
+                joinableFeatureMap.put(featureHashId, ffFeature);
             }
             entry.addFeature(ffFeature);
         }
