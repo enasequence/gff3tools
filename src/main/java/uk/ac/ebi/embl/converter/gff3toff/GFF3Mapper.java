@@ -12,7 +12,6 @@ package uk.ac.ebi.embl.converter.gff3toff;
 
 import java.util.*;
 import java.util.Set;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -101,11 +100,6 @@ public class GFF3Mapper {
         ConversionEntry conversionEntry = ConversionUtils.getGFF32FFFeatureMap().get(gff3FeatureName);
         String featureName = (conversionEntry != null) ? conversionEntry.getFeature() : gff3FeatureName;
 
-        // Check if the feature should be excluded from location joins
-        if (EXCLUDED_FEATURE_TYPES.contains(featureName)) {
-            featureHashId = UUID.randomUUID().toString(); // Ensure unique ID for excluded types
-        }
-
         Location location = mapGFF3Location(gff3Feature);
         Feature ffFeature = ffFeatures.get(featureHashId);
         if (ffFeature != null) {
@@ -130,7 +124,11 @@ public class GFF3Mapper {
             locations.addLocation(location);
             ffFeature.setLocations(locations);
             ffFeature.addQualifiers(mapGFF3Attributes(attributes));
-            ffFeatures.put(featureHashId, ffFeature);
+            // Only adds this feature to the map if is not one of the excluded features.
+            // This is so locations won't be merged on joins for the excluded features.
+            if (!EXCLUDED_FEATURE_TYPES.contains(featureName)) {
+                ffFeatures.put(featureHashId, ffFeature);
+            }
             entry.addFeature(ffFeature);
         }
         if (ffFeature.getQualifiers("gene").isEmpty()) {
