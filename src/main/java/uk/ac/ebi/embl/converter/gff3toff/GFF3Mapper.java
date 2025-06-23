@@ -160,8 +160,7 @@ public class GFF3Mapper {
                 partialsRaw instanceof String ? List.of((String) partialsRaw) : (List<String>) partialsRaw;
 
         boolean isComplement = gff3Feature.getStrand().equals("-");
-        Location location = this.locationFactory.createLocalRange(
-                start, end, isComplement);
+        Location location = this.locationFactory.createLocalRange(start, end, isComplement);
 
         // Set location partiality
         if (!partials.isEmpty()) {

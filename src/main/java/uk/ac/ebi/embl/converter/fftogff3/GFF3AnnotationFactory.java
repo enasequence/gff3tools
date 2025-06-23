@@ -253,7 +253,7 @@ public class GFF3AnnotationFactory {
                 orderRootAndChildren(gffFeatures, child);
             } else {
                 // Leaf node processing
-                if (locusTag != null && child.getAttributes().get("locus_tag")==null) {
+                if (locusTag != null && child.getAttributes().get("locus_tag") == null) {
                     // Add parent's locus_tag only when it is not present in children
                     child.getAttributes().put("locus_tag", locusTag);
                 }
