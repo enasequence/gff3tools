@@ -1,0 +1,11 @@
+##gff-version 3.1.26
+##sequence-region TEST01.1 1 1000
+TEST01.1	.	gene	1	1000	.	+	.	ID=gene_matK;gene=matK;
+TEST01.1	.	protein_bind	1	500	.	+	.	gene=matK;
+TEST01.1	.	protein_bind	100	150	.	+	.	gene=matK;
+TEST01.1	.	repeat_region	200	250	.	+	.	gene=matK;
+TEST01.1	.	repeat_region	300	350	.	+	.	gene=matK;
+TEST01.1	.	assembly_gap	400	450	.	+	.	gene=matK;
+TEST01.1	.	assembly_gap	500	550	.	+	.	gene=matK;
+TEST01.1	.	misc_feature	600	650	.	+	.	gene=matk;
+TEST01.1	.	misc_feature	700	750	.	+	.	gene=matK;

@@ -1,0 +1,31 @@
+ID   TEST01; SV XXX; XXX; XXX; XXX; XXX; 0 BP.
+XX
+AC   TEST01;
+XX
+DE   .
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..1000
+FT   gene            1..1000
+FT                   /gene="matK"
+FT   protein_bind    1..500
+FT                   /gene="matK"
+FT   protein_bind    100..150
+FT                   /gene="matK"
+FT   repeat_region   200..250
+FT                   /gene="matK"
+FT   repeat_region   300..350
+FT                   /gene="matK"
+FT   assembly_gap    400..450
+FT                   /gene="matK"
+FT   assembly_gap    500..550
+FT                   /gene="matK"
+FT   misc_feature    600..650
+FT                   /gene="matk"
+FT   misc_feature    700..750
+FT                   /gene="matK"
+XX
+//

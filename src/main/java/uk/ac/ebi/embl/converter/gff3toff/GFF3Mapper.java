@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.converter.gff3toff;
 
 import java.util.*;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -32,6 +33,9 @@ public class GFF3Mapper {
 
     private static final Logger LOG = LoggerFactory.getLogger(GFF3Mapper.class);
 
+    private static final Set<String> JOIN_EXCLUDED_FEATURES =
+            Set.of("protein_bind", "repeat_region", "assembly_gap", "misc_feature");
+
     private final Map<String, String> qmap = ConversionUtils.getGFF32FFQualifierMap();
     private final EntryFactory entryFactory = new EntryFactory();
     private final FeatureFactory featureFactory = new FeatureFactory();
@@ -40,19 +44,20 @@ public class GFF3Mapper {
     private final SequenceFactory sequenceFactory = new SequenceFactory();
 
     Map<String, GFF3Feature> parentFeatures;
-    Map<String, Feature> ffFeatures;
+    // Used to keep track of features that will be merged using a location join
+    Map<String, Feature> joinableFeatureMap;
     Entry entry;
 
     public GFF3Mapper() {
         parentFeatures = new HashMap<>();
-        ffFeatures = new HashMap<>();
+        joinableFeatureMap = new HashMap<>();
         entry = null;
     }
 
     public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) {
 
         parentFeatures.clear();
-        ffFeatures.clear();
+        joinableFeatureMap.clear();
         entry = entryFactory.createEntry();
         entry.setSequence(sequenceFactory.createSequence());
 
@@ -92,7 +97,7 @@ public class GFF3Mapper {
         String featureHashId = (String) attributes.getOrDefault("ID", String.valueOf(gff3Feature.hashCode()));
 
         Location location = mapGFF3Location(gff3Feature);
-        Feature ffFeature = ffFeatures.get(featureHashId);
+        Feature ffFeature = joinableFeatureMap.get(featureHashId);
         if (ffFeature != null) {
             CompoundLocation<Location> parentFeatureLocation = ffFeature.getLocations();
             // If the compoundlocation isComplement but the new location we are adding is not complement
@@ -107,11 +112,10 @@ public class GFF3Mapper {
             parentFeatureLocation.addLocation(location);
         } else {
             String gff3FeatureName = gff3Feature.getName();
-            // Get featureName from Anthology map if it exists.
+            // Get featureName from Ontology map if it exists.
             ConversionEntry conversionEntry =
                     ConversionUtils.getGFF32FFFeatureMap().get(gff3FeatureName);
             String featureName = (conversionEntry != null) ? conversionEntry.getFeature() : gff3FeatureName;
-
             ffFeature = featureFactory.createFeature(featureName);
             CompoundLocation<Location> locations = new Join();
             if (location.isComplement()) {
@@ -121,7 +125,11 @@ public class GFF3Mapper {
             locations.addLocation(location);
             ffFeature.setLocations(locations);
             ffFeature.addQualifiers(mapGFF3Attributes(attributes));
-            ffFeatures.put(featureHashId, ffFeature);
+            // Only adds this feature to the map if is not one of the excluded features.
+            // This is so locations won't be merged on joins for the excluded features.
+            if (!JOIN_EXCLUDED_FEATURES.contains(featureName)) {
+                joinableFeatureMap.put(featureHashId, ffFeature);
+            }
             entry.addFeature(ffFeature);
         }
         if (ffFeature.getQualifiers("gene").isEmpty()) {
