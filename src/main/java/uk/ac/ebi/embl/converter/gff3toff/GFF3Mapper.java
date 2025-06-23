@@ -95,11 +95,6 @@ public class GFF3Mapper {
         Map<String, Object> attributes = gff3Feature.getAttributes();
         String featureHashId = (String) attributes.getOrDefault("ID", String.valueOf(gff3Feature.hashCode()));
 
-        String gff3FeatureName = gff3Feature.getName();
-        // Get featureName from Ontology map if it exists.
-        ConversionEntry conversionEntry = ConversionUtils.getGFF32FFFeatureMap().get(gff3FeatureName);
-        String featureName = (conversionEntry != null) ? conversionEntry.getFeature() : gff3FeatureName;
-
         Location location = mapGFF3Location(gff3Feature);
         Feature ffFeature = ffFeatures.get(featureHashId);
         if (ffFeature != null) {
@@ -115,6 +110,11 @@ public class GFF3Mapper {
             }
             parentFeatureLocation.addLocation(location);
         } else {
+            String gff3FeatureName = gff3Feature.getName();
+            // Get featureName from Ontology map if it exists.
+            ConversionEntry conversionEntry =
+                    ConversionUtils.getGFF32FFFeatureMap().get(gff3FeatureName);
+            String featureName = (conversionEntry != null) ? conversionEntry.getFeature() : gff3FeatureName;
             ffFeature = featureFactory.createFeature(featureName);
             CompoundLocation<Location> locations = new Join();
             if (location.isComplement()) {
