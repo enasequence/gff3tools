@@ -13,6 +13,9 @@ FT                   /gene="matK"
 FT                   /locus_tag="test"
 FT   mRNA            1..822
 FT                   /gene="matK"
+FT   mRNA            1000..8220
+FT                   /gene="matK"
+FT                   /locus_tag="different-locus"
 XX
 //
 
