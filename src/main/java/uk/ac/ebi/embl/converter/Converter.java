@@ -15,5 +15,6 @@ import java.io.BufferedWriter;
 import uk.ac.ebi.embl.converter.validation.ValidationError;
 
 public interface Converter {
-    public void convert(BufferedReader reader, BufferedWriter writer) throws ReadError, WriteException, ValidationError;
+    public void convert(BufferedReader reader, BufferedWriter writer)
+            throws ReadException, WriteException, ValidationError;
 }

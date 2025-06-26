@@ -14,12 +14,12 @@ import java.io.IOException;
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
 import uk.ac.ebi.embl.converter.cli.ExitException;
 
-public class ReadError extends ExitException {
-    public ReadError(String msg, IOException cause) {
+public class ReadException extends ExitException {
+    public ReadException(String msg, IOException cause) {
         super(msg, cause);
     }
 
-    public ReadError(IOException cause) {
+    public ReadException(IOException cause) {
         super("Error reading from input", cause);
     }
 

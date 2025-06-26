@@ -20,7 +20,7 @@ import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 public class Gff3ToFFConverter implements Converter {
 
     public void convert(BufferedReader reader, BufferedWriter writer)
-            throws ReadError, WriteException, ValidationError {
+            throws ReadException, WriteException, ValidationError {
         try (GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
             GFF3Mapper mapper = new GFF3Mapper();
             gff3Reader.readHeader();
@@ -35,7 +35,7 @@ public class Gff3ToFFConverter implements Converter {
                 }
             }
         } catch (IOException e) {
-            throw new ReadError(e);
+            throw new ReadException(e);
         }
     }
 }
