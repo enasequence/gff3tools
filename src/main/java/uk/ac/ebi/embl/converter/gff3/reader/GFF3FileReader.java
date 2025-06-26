@@ -18,8 +18,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import jdk.jfr.RecordingState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.converter.gff3.*;
@@ -78,7 +76,8 @@ public class GFF3FileReader implements AutoCloseable {
                 parseAndAddFeature(line);
             } else {
 
-                InvalidGFF3RecordError error = new InvalidGFF3RecordError(lineCount, "Invalid gff3 record \"" + line + "\"");
+                InvalidGFF3RecordError error =
+                        new InvalidGFF3RecordError(lineCount, "Invalid gff3 record \"" + line + "\"");
                 switch (RuleSeverityState.INSTANCE.getSeverity(ValidationRule.GFF3_INVALID_RECORD)) {
                     case OFF -> {}
                     case WARN -> {

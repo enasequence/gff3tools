@@ -14,8 +14,8 @@ import java.io.IOException;
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
 import uk.ac.ebi.embl.converter.cli.ExitException;
 
-public class WriteError extends ExitException {
-    public WriteError(IOException cause) {
+public class WriteException extends ExitException {
+    public WriteException(IOException cause) {
         super("Error writing to output", cause);
     }
 

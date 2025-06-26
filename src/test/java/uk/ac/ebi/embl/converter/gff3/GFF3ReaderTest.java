@@ -21,10 +21,6 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.converter.gff3.reader.InvalidGFF3HeaderError;
-import uk.ac.ebi.embl.converter.gff3.reader.InvalidGFF3RecordError;
-import uk.ac.ebi.embl.converter.validation.RuleSeverity;
-import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
-import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 public class GFF3ReaderTest {
     @Test
