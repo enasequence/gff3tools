@@ -20,7 +20,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
-import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -46,6 +45,7 @@ public class Main {
                     .setExecutionExceptionHandler(new ExecutionExceptionHandler())
                     .execute(args);
         } catch (Throwable e) {
+            // Non-zero exit code (1) is returned in case of an Exception in run() method.
             LOG.error(e.getMessage(), e);
         }
         System.exit(exitCode);
@@ -98,11 +98,14 @@ class CommandConversion implements Runnable {
             showDefaultValue = CommandLine.Help.Visibility.NEVER)
     public Path outputFilePath;
 
-    @SneakyThrows
     @Override
     public void run() {
-        fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
-        toFileType = validateFileType(toFileType, outputFilePath, "-t");
+        try {
+            fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
+            toFileType = validateFileType(toFileType, outputFilePath, "-t");
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage(), e);
+        }
 
         if (rules != null) {
             RuleSeverityState.INSTANCE.putAll(rules.rules());
@@ -115,7 +118,8 @@ class CommandConversion implements Runnable {
                 BufferedWriter outputWriter = getPipe(
                         Files::newBufferedWriter,
                         () -> {
-                            // Set the log level to ERROR while writing the file to an output stream to ignore INFO,
+                            // Set the log level to ERROR while writing the file to an output stream to
+                            // ignore INFO,
                             // WARN logs
                             LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
                             ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
@@ -124,6 +128,8 @@ class CommandConversion implements Runnable {
                         outputFilePath)) {
             Converter converter = getConverter(fromFileType, toFileType);
             converter.convert(inputReader, outputWriter);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage(), e);
         }
     }
 
@@ -231,13 +237,14 @@ class RuleConverter implements ITypeConverter<CliRulesOption> {
 
 class ExecutionExceptionHandler implements IExecutionExceptionHandler {
 
-    // Tried to use LOG.error instead of println here but would not pipe anything to stderr.
+    // Tried to use LOG.error instead of println here but would not pipe anything to
+    // stderr.
     @Override
     public int handleExecutionException(Exception e, CommandLine commandLine, ParseResult parseResult)
             throws Exception {
-        if (e instanceof ExitException) {
+        if (e.getCause() instanceof ExitException) {
             System.err.println(e.getMessage());
-            return ((ExitException) e).exitCode().asInt();
+            return ((ExitException) e.getCause()).exitCode().asInt();
         }
         throw e;
     }
