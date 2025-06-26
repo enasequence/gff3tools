@@ -8,23 +8,19 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter;
+package uk.ac.ebi.embl.converter.exception;
 
 import java.io.IOException;
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
 import uk.ac.ebi.embl.converter.cli.ExitException;
 
-public class ReadException extends ExitException {
-    public ReadException(String msg, IOException cause) {
-        super(msg, cause);
-    }
-
-    public ReadException(IOException cause) {
-        super("Error reading from input", cause);
+public class WriteException extends ExitException {
+    public WriteException(IOException cause) {
+        super("Error writing to output", cause);
     }
 
     @Override
     public CLIExitCode exitCode() {
-        return CLIExitCode.READ_ERROR;
+        return CLIExitCode.WRITE_ERROR;
     }
 }

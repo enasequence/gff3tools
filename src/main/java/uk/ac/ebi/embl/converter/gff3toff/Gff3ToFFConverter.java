@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.converter.gff3toff;
 
 import java.io.*;
 import uk.ac.ebi.embl.converter.*;
+import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.converter.validation.ValidationError;
