@@ -15,9 +15,14 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import uk.ac.ebi.embl.converter.exception.ValidationException;
 
 public enum RuleSeverityState {
     INSTANCE;
+
+    private static Logger LOG = LoggerFactory.getLogger(RuleSeverityState.class);
 
     private Map<ValidationRule, RuleSeverity> severityMap = new HashMap<>();
 
@@ -31,6 +36,18 @@ public enum RuleSeverityState {
 
     public RuleSeverity getSeverity(ValidationRule rule) {
         return severityMap.get(rule);
+    }
+
+    public static void handleValidationException(ValidationException exception) throws ValidationException {
+        switch (INSTANCE.getSeverity(exception.getValidationRule())) {
+            case OFF -> {}
+            case WARN -> {
+                LOG.warn(exception.getMessage());
+            }
+            case ERROR -> {
+                throw exception;
+            }
+        }
     }
 
     private void loadProps() {

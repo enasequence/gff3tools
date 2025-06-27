@@ -16,19 +16,26 @@ import uk.ac.ebi.embl.converter.validation.ValidationRule;
 public class ValidationException extends ExitException {
 
     private int line;
+    private ValidationRule rule;
 
     public ValidationException(ValidationRule rule, String message) {
         super("Violation of rule %s: %s (%s)".formatted(rule.toString(), rule.getDescription(), message));
+        this.rule = rule;
     }
 
     public ValidationException(ValidationRule rule, int line, String message) {
         super("Violation of rule %s on line %d: %s (%s)"
                 .formatted(rule.toString(), line, rule.getDescription(), message));
         this.line = line;
+        this.rule = rule;
     }
 
     public int getLine() {
         return line;
+    }
+
+    public ValidationRule getValidationRule() {
+        return this.rule;
     }
 
     @Override

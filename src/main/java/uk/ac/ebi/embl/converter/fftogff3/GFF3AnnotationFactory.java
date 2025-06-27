@@ -120,7 +120,7 @@ public class GFF3AnnotationFactory {
     }
 
     private List<GFF3Feature> transformFeature(String accession, Feature ffFeature, Optional<String> geneName)
-            throws UnmappedFFFeatureException {
+            throws ValidationException {
         List<GFF3Feature> gff3Features = new ArrayList<>();
 
         String source = ".";
@@ -182,7 +182,7 @@ public class GFF3AnnotationFactory {
         return attributes;
     }
 
-    private void buildGeneFeatureMap(String accession, Feature ffFeature) throws UnmappedFFFeatureException {
+    private void buildGeneFeatureMap(String accession, Feature ffFeature) throws ValidationException {
 
         List<Qualifier> genes = ffFeature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
 
@@ -340,12 +340,13 @@ public class GFF3AnnotationFactory {
         return "";
     }
 
-    private String getGFF3FeatureName(Feature ffFeature) throws UnmappedFFFeatureException {
+    private String getGFF3FeatureName(Feature ffFeature) throws ValidationException {
 
         String featureName = ffFeature.getName();
         List<ConversionEntry> mappings = ConversionUtils.getFF2GFF3FeatureMap().get(featureName);
         if (mappings == null) {
-            return handleMissingFeatureError(featureName);
+            RuleSeverityState.handleValidationException(new UnmappedFFFeatureException(featureName));
+            return featureName;
         }
 
         // return the soTerm of the max qualifier mapping
@@ -356,21 +357,10 @@ public class GFF3AnnotationFactory {
                 .map(ConversionEntry::getSOTerm);
 
         if (soTerm.isEmpty()) {
-            return handleMissingFeatureError(featureName);
+            RuleSeverityState.handleValidationException(new UnmappedFFFeatureException(featureName));
+            return featureName;
         } else {
             return soTerm.get();
-        }
-    }
-
-    private String handleMissingFeatureError(String featureName) throws UnmappedFFFeatureException {
-        UnmappedFFFeatureException error = new UnmappedFFFeatureException(featureName);
-        switch (RuleSeverityState.INSTANCE.getSeverity(FLATFILE_NO_ONTOLOGY_FEATURE)) {
-            case WARN:
-                LOG.warn(error.getMessage());
-            case OFF:
-                return featureName;
-            default:
-                throw error;
         }
     }
 
