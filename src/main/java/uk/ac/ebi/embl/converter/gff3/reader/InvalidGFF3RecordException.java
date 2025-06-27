@@ -11,12 +11,12 @@
 package uk.ac.ebi.embl.converter.gff3.reader;
 
 import lombok.Getter;
-import uk.ac.ebi.embl.converter.validation.ValidationError;
+import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 @Getter
-public class InvalidGFF3RecordError extends ValidationError {
-    public InvalidGFF3RecordError(int line, String message) {
+public class InvalidGFF3RecordException extends ValidationException {
+    public InvalidGFF3RecordException(int line, String message) {
         super(ValidationRule.GFF3_INVALID_RECORD, line, message);
     }
 }

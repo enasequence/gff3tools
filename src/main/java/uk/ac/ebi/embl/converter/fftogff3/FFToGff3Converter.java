@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
-import uk.ac.ebi.embl.converter.validation.ValidationError;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
@@ -27,7 +26,7 @@ public class FFToGff3Converter implements Converter {
     private static final Logger LOG = LoggerFactory.getLogger(FFToGff3Converter.class);
 
     public void convert(BufferedReader reader, BufferedWriter writer)
-            throws ReadException, WriteException, ValidationError {
+            throws ReadException, WriteException, ValidationException {
         EmblEntryReader entryReader =
                 new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 

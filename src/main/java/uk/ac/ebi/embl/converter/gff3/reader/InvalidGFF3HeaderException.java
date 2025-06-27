@@ -8,13 +8,15 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter;
+package uk.ac.ebi.embl.converter.gff3.reader;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import uk.ac.ebi.embl.converter.exception.*;
+import lombok.Getter;
+import uk.ac.ebi.embl.converter.exception.ValidationException;
+import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
-public interface Converter {
-    public void convert(BufferedReader reader, BufferedWriter writer)
-            throws ReadException, WriteException, ValidationException;
+@Getter
+public class InvalidGFF3HeaderException extends ValidationException {
+    public InvalidGFF3HeaderException(int line, String message) {
+        super(ValidationRule.GFF3_INVALID_HEADER, line, message);
+    }
 }

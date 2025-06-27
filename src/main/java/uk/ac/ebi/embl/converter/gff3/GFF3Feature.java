@@ -48,7 +48,8 @@ public class GFF3Feature {
     @Override
     public int hashCode() {
         Map<String, Object> hashAttributes = new HashMap<>(attributes);
-        // Removing partial from the attribute as it can change for the first and last location in a compound Join
+        // Removing partial from the attribute as it can change for the first and last
+        // location in a compound Join
         hashAttributes.remove("partial");
 
         return Objects.hash(

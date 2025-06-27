@@ -8,15 +8,12 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.gff3.reader;
+package uk.ac.ebi.embl.converter.exception;
 
-import lombok.Getter;
-import uk.ac.ebi.embl.converter.validation.ValidationError;
 import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
-@Getter
-public class InvalidGFF3HeaderError extends ValidationError {
-    public InvalidGFF3HeaderError(int line, String message) {
-        super(ValidationRule.GFF3_INVALID_HEADER, line, message);
+public class NoSourcePresentException extends ValidationException {
+    public NoSourcePresentException() {
+        super(ValidationRule.FLATFILE_NO_SOURCE, "No source present");
     }
 }

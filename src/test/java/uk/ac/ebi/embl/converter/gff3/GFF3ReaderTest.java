@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.converter.gff3.reader.InvalidGFF3HeaderError;
+import uk.ac.ebi.embl.converter.gff3.reader.InvalidGFF3HeaderException;
 
 public class GFF3ReaderTest {
     @Test
@@ -52,7 +52,7 @@ public class GFF3ReaderTest {
         GFF3FileReader gff3Reader = new GFF3FileReader(reader);
         try {
             gff3Reader.readHeader();
-        } catch (InvalidGFF3HeaderError e) {
+        } catch (InvalidGFF3HeaderException e) {
             Assertions.assertTrue(e.getMessage().contains("GFF3 header not found"));
             Assertions.assertEquals(1, e.getLine());
             return;

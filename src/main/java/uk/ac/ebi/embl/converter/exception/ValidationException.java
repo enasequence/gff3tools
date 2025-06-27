@@ -8,20 +8,21 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.validation;
+package uk.ac.ebi.embl.converter.exception;
 
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
 import uk.ac.ebi.embl.converter.cli.ExitException;
+import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
-public class ValidationError extends ExitException {
+public class ValidationException extends ExitException {
 
     private int line;
 
-    public ValidationError(ValidationRule rule, String message) {
+    public ValidationException(ValidationRule rule, String message) {
         super("Violation of rule %s: %s (%s)".formatted(rule.toString(), rule.getDescription(), message));
     }
 
-    public ValidationError(ValidationRule rule, int line, String message) {
+    public ValidationException(ValidationRule rule, int line, String message) {
         super("Violation of rule %s on line %d: %s (%s)"
                 .formatted(rule.toString(), line, rule.getDescription(), message));
         this.line = line;

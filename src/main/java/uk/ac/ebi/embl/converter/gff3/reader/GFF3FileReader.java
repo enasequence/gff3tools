@@ -47,7 +47,7 @@ public class GFF3FileReader implements AutoCloseable {
         gff3Annotation = null;
     }
 
-    public GFF3Annotation readAnnotation() throws IOException, InvalidGFF3RecordError {
+    public GFF3Annotation readAnnotation() throws IOException, InvalidGFF3RecordException {
 
         String line;
         while ((line = readLine()) != null) {
@@ -76,8 +76,8 @@ public class GFF3FileReader implements AutoCloseable {
                 parseAndAddFeature(line);
             } else {
 
-                InvalidGFF3RecordError error =
-                        new InvalidGFF3RecordError(lineCount, "Invalid gff3 record \"" + line + "\"");
+                InvalidGFF3RecordException error =
+                        new InvalidGFF3RecordException(lineCount, "Invalid gff3 record \"" + line + "\"");
                 switch (RuleSeverityState.INSTANCE.getSeverity(ValidationRule.GFF3_INVALID_RECORD)) {
                     case OFF -> {}
                     case WARN -> {
@@ -109,11 +109,11 @@ public class GFF3FileReader implements AutoCloseable {
         return new GFF3Directives.GFF3SequenceRegion(accession, start, end);
     }
 
-    private void parseAndAddFeature(String line) throws InvalidGFF3RecordError {
+    private void parseAndAddFeature(String line) throws InvalidGFF3RecordException {
         // Extra check for line match
         Matcher m = GFF3_FEATURE.matcher(line);
         if (!m.matches()) {
-            InvalidGFF3RecordError error = new InvalidGFF3RecordError(lineCount, line);
+            InvalidGFF3RecordException error = new InvalidGFF3RecordException(lineCount, line);
             switch (RuleSeverityState.INSTANCE.getSeverity(ValidationRule.GFF3_INVALID_RECORD)) {
                 case OFF -> {
                     return;
@@ -167,7 +167,7 @@ public class GFF3FileReader implements AutoCloseable {
         return attributes;
     }
 
-    public GFF3Header readHeader() throws IOException, InvalidGFF3HeaderError {
+    public GFF3Header readHeader() throws IOException, InvalidGFF3HeaderException {
         String line;
         while ((line = readLine()) != null) {
             if (line.isBlank()) {
@@ -180,7 +180,7 @@ public class GFF3FileReader implements AutoCloseable {
                 return new GFF3Header(version);
             } else if (!COMMENT.matcher(line).matches()) {
                 // If the line is not a comment throw, otherwise ignore it
-                InvalidGFF3HeaderError error = new InvalidGFF3HeaderError(lineCount, line);
+                InvalidGFF3HeaderException error = new InvalidGFF3HeaderException(lineCount, line);
                 switch (RuleSeverityState.INSTANCE.getSeverity(ValidationRule.GFF3_INVALID_HEADER)) {
                     case ERROR -> {
                         throw error;
@@ -192,7 +192,7 @@ public class GFF3FileReader implements AutoCloseable {
                 }
             }
         }
-        InvalidGFF3HeaderError error = new InvalidGFF3HeaderError(lineCount, "GFF3 header not found");
+        InvalidGFF3HeaderException error = new InvalidGFF3HeaderException(lineCount, "GFF3 header not found");
         switch (RuleSeverityState.INSTANCE.getSeverity(ValidationRule.GFF3_INVALID_HEADER)) {
             case OFF -> {}
             case WARN -> {

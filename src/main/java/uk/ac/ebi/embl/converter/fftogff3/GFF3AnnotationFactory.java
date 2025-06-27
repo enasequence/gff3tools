@@ -23,12 +23,12 @@ import uk.ac.ebi.embl.api.entry.location.CompoundLocation;
 import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
+import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 import uk.ac.ebi.embl.converter.utils.Gff3Utils;
 import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
-import uk.ac.ebi.embl.converter.validation.ValidationError;
 
 public class GFF3AnnotationFactory {
 
@@ -37,9 +37,9 @@ public class GFF3AnnotationFactory {
     // Map of features with parent-child relation
     static final Map<String, Set<String>> featureRelationMap = ConversionUtils.getFeatureRelationMap();
 
-    ///  Keeps track of all the features belonging to a gene.
+    /// Keeps track of all the features belonging to a gene.
     Map<String, List<GFF3Feature>> geneMap;
-    ///  List of features that do not belong to a gene.
+    /// List of features that do not belong to a gene.
     List<GFF3Feature> nonGeneFeatures;
 
     // Map of Id with count, used for incrementing when same id is found.
@@ -51,7 +51,7 @@ public class GFF3AnnotationFactory {
         this.ignoreSpecies = ignoreSpecies;
     }
 
-    public GFF3Annotation from(Entry entry) throws ValidationError {
+    public GFF3Annotation from(Entry entry) throws ValidationException {
 
         geneMap = new LinkedHashMap<>();
         nonGeneFeatures = new ArrayList<>();
@@ -73,7 +73,8 @@ public class GFF3AnnotationFactory {
             buildGeneFeatureMap(entry.getPrimaryAccession(), feature);
         }
 
-        // For circular topologies; We have not found a circular feature so we must include a region
+        // For circular topologies; We have not found a circular feature so we must
+        // include a region
         // encompasing all source.
         if (isCircularTopology(entry) && lacksCircularAttribute()) {
             nonGeneFeatures.add(createLandmarkFeature(accession, entry));
@@ -395,7 +396,7 @@ public class GFF3AnnotationFactory {
         return matchesAllQualifiers;
     }
 
-    public static class UnmappedFFFeature extends ValidationError {
+    public static class UnmappedFFFeature extends ValidationException {
 
         public UnmappedFFFeature(String featureName) {
             super(FLATFILE_NO_ONTOLOGY_FEATURE, featureName);
