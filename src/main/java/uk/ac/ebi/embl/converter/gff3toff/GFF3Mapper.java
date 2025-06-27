@@ -147,7 +147,7 @@ public class GFF3Mapper {
                 ffFeature.addQualifier("gene", gene);
             }
         }
-        System.out.println(FeatureLocationWriter.getLocationString(ffFeature.getLocations()));
+
     }
 
     private String getGeneForFeature(GFF3Feature gff3Feature) {
