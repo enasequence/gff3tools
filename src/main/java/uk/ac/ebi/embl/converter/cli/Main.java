@@ -67,7 +67,7 @@ class RuleConverter implements ITypeConverter<CliRulesOption> {
         for (String entry : entries) {
             String[] pairs = entry.trim().split(":");
             if (pairs.length != 2) {
-                throw new CLIException("Invalid rule: " + entry);
+                throw new CLIException("Invalid rule: '" + entry + "' There must be 2 values separated by ':' ");
             }
             ValidationRule key;
             try {
