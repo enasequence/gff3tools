@@ -28,7 +28,6 @@ import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
-import uk.ac.ebi.embl.flatfile.writer.FeatureLocationWriter;
 
 public class GFF3Mapper {
 
@@ -95,7 +94,7 @@ public class GFF3Mapper {
     private void mapGFF3Feature(GFF3Feature gff3Feature) {
 
         Map<String, Object> attributes = gff3Feature.getAttributes();
-        String featureHashId = (String) attributes.getOrDefault("ID", String.valueOf(gff3Feature.hashCodeString()));
+        String featureHashId = (String) attributes.getOrDefault("ID", gff3Feature.hashCodeString());
 
         Location location = mapGFF3Location(gff3Feature);
         Feature ffFeature = joinableFeatureMap.get(featureHashId);
@@ -110,7 +109,8 @@ public class GFF3Mapper {
             } else if (parentFeatureLocation.isComplement() && location.isComplement()) {
                 location.setComplement(false);
             } else if (!parentFeatureLocation.isComplement() && location.isComplement()) {
-                // Swap partiality in case of individual location complement. This should be done because the location writer
+                // Swap partiality in case of individual location complement. This should be done because the location
+                // writer
                 // swaps partiality in case of the complement of the inner location.
                 boolean fivePrime = location.isThreePrimePartial();
                 boolean threePrime = location.isFivePrimePartial();
@@ -147,7 +147,6 @@ public class GFF3Mapper {
                 ffFeature.addQualifier("gene", gene);
             }
         }
-
     }
 
     private String getGeneForFeature(GFF3Feature gff3Feature) {
