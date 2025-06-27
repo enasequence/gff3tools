@@ -27,6 +27,8 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.*;
 import uk.ac.ebi.embl.converter.Converter;
+import uk.ac.ebi.embl.converter.exception.CLIException;
+import uk.ac.ebi.embl.converter.exception.ExitException;
 import uk.ac.ebi.embl.converter.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.converter.validation.RuleSeverity;
@@ -62,17 +64,6 @@ public class Main {
         }
 
         System.exit(exitCode);
-    }
-}
-
-class CLIError extends ExitException {
-    @Override
-    public CLIExitCode exitCode() {
-        return CLIExitCode.USAGE;
-    }
-
-    public CLIError(String message) {
-        super(message);
     }
 }
 
@@ -156,7 +147,7 @@ class CommandConversion implements Runnable {
         }
     }
 
-    private FileFormat validateFileType(FileFormat fileFormat, Path filePath, String cliOption) throws CLIError {
+    private FileFormat validateFileType(FileFormat fileFormat, Path filePath, String cliOption) throws CLIException {
         if (fileFormat == null) {
             if (!filePath.toString().isEmpty()) {
                 String fileExtension = getFileExtension(filePath);
@@ -164,15 +155,15 @@ class CommandConversion implements Runnable {
                     try {
                         fileFormat = FileFormat.valueOf(fileExtension);
                     } catch (IllegalArgumentException e) {
-                        throw new CLIError("Unrecognized file format: " + fileExtension + " use the " + cliOption
+                        throw new CLIException("Unrecognized file format: " + fileExtension + " use the " + cliOption
                                 + " option to specify the format manually or update the file extension");
                     }
                 } else {
-                    throw new CLIError("No file extension present, use the " + cliOption
+                    throw new CLIException("No file extension present, use the " + cliOption
                             + " option to specify the format manually or set the file extension");
                 }
             } else {
-                throw new CLIError("When streaming " + cliOption + " must be specified");
+                throw new CLIException("When streaming " + cliOption + " must be specified");
             }
         }
         return fileFormat;
@@ -228,19 +219,19 @@ class RuleConverter implements ITypeConverter<CliRulesOption> {
         for (String entry : entries) {
             String[] pairs = entry.trim().split(":");
             if (pairs.length != 2) {
-                throw new CLIError("Invalid rule: " + entry);
+                throw new CLIException("Invalid rule: " + entry);
             }
             ValidationRule key;
             try {
                 key = ValidationRule.valueOf(pairs[0].toUpperCase());
             } catch (IllegalArgumentException e) {
-                throw new CLIError("The rule: \"" + pairs[0] + "\" is invalid");
+                throw new CLIException("The rule: \"" + pairs[0] + "\" is invalid");
             }
             RuleSeverity value;
             try {
                 value = RuleSeverity.valueOf(pairs[1].toUpperCase());
             } catch (IllegalArgumentException e) {
-                throw new CLIError("The rule severity: \"" + pairs[1] + "\" is invalid");
+                throw new CLIException("The rule severity: \"" + pairs[1] + "\" is invalid");
             }
             this.map.rules().put(key, value);
         }

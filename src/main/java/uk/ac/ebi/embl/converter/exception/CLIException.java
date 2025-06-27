@@ -8,16 +8,17 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.cli;
+package uk.ac.ebi.embl.converter.exception;
 
-public abstract class ExitException extends Exception {
-    public ExitException(final String message, final Exception cause) {
-        super(message, cause);
+import uk.ac.ebi.embl.converter.cli.CLIExitCode;
+
+public class CLIException extends ExitException {
+    @Override
+    public CLIExitCode exitCode() {
+        return CLIExitCode.USAGE;
     }
 
-    public ExitException(final String message) {
+    public CLIException(String message) {
         super(message);
     }
-
-    public abstract CLIExitCode exitCode();
 }

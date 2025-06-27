@@ -12,7 +12,6 @@ package uk.ac.ebi.embl.converter.exception;
 
 import java.io.IOException;
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
-import uk.ac.ebi.embl.converter.cli.ExitException;
 
 public class ReadException extends ExitException {
     public ReadException(String msg, IOException cause) {

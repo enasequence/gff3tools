@@ -11,7 +11,6 @@
 package uk.ac.ebi.embl.converter.exception;
 
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
-import uk.ac.ebi.embl.converter.cli.ExitException;
 import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 public class ValidationException extends ExitException {

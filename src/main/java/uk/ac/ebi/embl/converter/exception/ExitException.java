@@ -10,16 +10,16 @@
  */
 package uk.ac.ebi.embl.converter.exception;
 
-import java.io.IOException;
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
 
-public class WriteException extends ExitException {
-    public WriteException(IOException cause) {
-        super("Error writing to output", cause);
+public abstract class ExitException extends Exception {
+    public ExitException(final String message, final Exception cause) {
+        super(message, cause);
     }
 
-    @Override
-    public CLIExitCode exitCode() {
-        return CLIExitCode.WRITE_ERROR;
+    public ExitException(final String message) {
+        super(message);
     }
+
+    public abstract CLIExitCode exitCode();
 }
