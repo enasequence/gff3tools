@@ -10,6 +10,9 @@
  */
 package uk.ac.ebi.embl.converter.gff3;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -45,8 +48,7 @@ public class GFF3Feature {
         return !children.isEmpty();
     }
 
-    @Override
-    public int hashCode() {
+    public String hashCodeString() {
         Map<String, Object> hashAttributes = new HashMap<>(attributes);
         // Removing partial from the attribute as it can change for the first and last location in a compound Join
         hashAttributes.remove("partial");
@@ -62,7 +64,17 @@ public class GFF3Feature {
                 phase,
                 getAttributeString(hashAttributes));
 
-        return hashCodeStr.hashCode();
+        return getSHA256Hash(hashCodeStr);
+    }
+
+    private String getSHA256Hash(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private String getAttributeString(Map<String, Object> attributes) {
