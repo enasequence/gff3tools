@@ -10,12 +10,16 @@
  */
 package uk.ac.ebi.embl.converter.exception;
 
-import lombok.Getter;
-import uk.ac.ebi.embl.converter.validation.ValidationRule;
+import uk.ac.ebi.embl.converter.cli.CLIExitCode;
+import uk.ac.ebi.embl.converter.cli.CommandConversionFileFormat;
 
-@Getter
-public class InvalidGFF3HeaderException extends ValidationException {
-    public InvalidGFF3HeaderException(int line, String message) {
-        super(ValidationRule.GFF3_INVALID_HEADER, line, message);
+public class FormatSupportException extends ExitException {
+    public FormatSupportException(final CommandConversionFileFormat fromFt, final CommandConversionFileFormat toFt) {
+        super("Conversion from \"" + fromFt + "\" to \"" + toFt + "\" is not supported");
+    }
+
+    @Override
+    public CLIExitCode exitCode() {
+        return CLIExitCode.UNSUPPORTED_FORMAT_CONVERSION;
     }
 }

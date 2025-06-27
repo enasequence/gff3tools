@@ -8,10 +8,9 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.gff3.reader;
+package uk.ac.ebi.embl.converter.exception;
 
 import lombok.Getter;
-import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 @Getter

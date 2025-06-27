@@ -8,14 +8,9 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.exception;
+package uk.ac.ebi.embl.converter.cli;
 
-import lombok.Getter;
-import uk.ac.ebi.embl.converter.validation.ValidationRule;
-
-@Getter
-public class InvalidGFF3HeaderException extends ValidationException {
-    public InvalidGFF3HeaderException(int line, String message) {
-        super(ValidationRule.GFF3_INVALID_HEADER, line, message);
-    }
+public enum CommandConversionFileFormat {
+    embl,
+    gff3
 }
