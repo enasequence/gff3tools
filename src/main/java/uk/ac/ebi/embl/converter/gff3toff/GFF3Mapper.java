@@ -94,7 +94,7 @@ public class GFF3Mapper {
     private void mapGFF3Feature(GFF3Feature gff3Feature) {
 
         Map<String, Object> attributes = gff3Feature.getAttributes();
-        String featureHashId = (String) attributes.getOrDefault("ID", String.valueOf(gff3Feature.hashCode()));
+        String featureHashId = (String) attributes.getOrDefault("ID", gff3Feature.hashCodeString());
 
         Location location = mapGFF3Location(gff3Feature);
         Feature ffFeature = joinableFeatureMap.get(featureHashId);
@@ -108,6 +108,15 @@ public class GFF3Mapper {
                 parentFeatureLocation.setComplement(false);
             } else if (parentFeatureLocation.isComplement() && location.isComplement()) {
                 location.setComplement(false);
+            } else if (!parentFeatureLocation.isComplement() && location.isComplement()) {
+                // Swap partiality in case of individual location complement. This should be done because the location
+                // writer
+                // swaps partiality in case of the complement of the inner location.
+                boolean fivePrime = location.isThreePrimePartial();
+                boolean threePrime = location.isFivePrimePartial();
+
+                location.setFivePrimePartial(fivePrime);
+                location.setThreePrimePartial(threePrime);
             }
             parentFeatureLocation.addLocation(location);
         } else {
@@ -163,14 +172,12 @@ public class GFF3Mapper {
         Location location = this.locationFactory.createLocalRange(start, end, isComplement);
 
         // Set location partiality
-        if (!partials.isEmpty()) {
-            boolean fivePrimePartial = partials.contains("start");
-            boolean threePrimePartial = partials.contains("end");
-
-            location.setFivePrimePartial(isComplement ? !fivePrimePartial : fivePrimePartial);
-            location.setThreePrimePartial(isComplement ? !threePrimePartial : threePrimePartial);
+        if (partials.contains("start")) {
+            location.setFivePrimePartial(true);
         }
-
+        if (partials.contains("end")) {
+            location.setThreePrimePartial(true);
+        }
         return location;
     }
 
