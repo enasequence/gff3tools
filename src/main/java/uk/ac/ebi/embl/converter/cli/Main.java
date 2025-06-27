@@ -18,8 +18,10 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -44,10 +46,21 @@ public class Main {
             exitCode = new CommandLine(new Main())
                     .setExecutionExceptionHandler(new ExecutionExceptionHandler())
                     .execute(args);
+        } catch (OutOfMemoryError e) {
+            String filename = new java.io.File(Main.class
+                            .getProtectionDomain()
+                            .getCodeSource()
+                            .getLocation()
+                            .getPath())
+                    .getName();
+            System.err.println(
+                    "The conversion needs more memory please increase the memory using the -Xmx java argument.\neg. java -jar -Xmx2G %s %s"
+                            .formatted(filename, Arrays.stream(args).collect(Collectors.joining(" "))));
         } catch (Throwable e) {
             // Non-zero exit code (1) is returned in case of an Exception in run() method.
             LOG.error(e.getMessage(), e);
         }
+
         System.exit(exitCode);
     }
 }
