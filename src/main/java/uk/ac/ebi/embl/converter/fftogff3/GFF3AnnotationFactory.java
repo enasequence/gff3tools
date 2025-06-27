@@ -23,6 +23,7 @@ import uk.ac.ebi.embl.api.entry.location.CompoundLocation;
 import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
+import uk.ac.ebi.embl.converter.exception.UnmappedFFFeatureException;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
@@ -119,7 +120,7 @@ public class GFF3AnnotationFactory {
     }
 
     private List<GFF3Feature> transformFeature(String accession, Feature ffFeature, Optional<String> geneName)
-            throws UnmappedFFFeature {
+            throws UnmappedFFFeatureException {
         List<GFF3Feature> gff3Features = new ArrayList<>();
 
         String source = ".";
@@ -181,7 +182,7 @@ public class GFF3AnnotationFactory {
         return attributes;
     }
 
-    private void buildGeneFeatureMap(String accession, Feature ffFeature) throws UnmappedFFFeature {
+    private void buildGeneFeatureMap(String accession, Feature ffFeature) throws UnmappedFFFeatureException {
 
         List<Qualifier> genes = ffFeature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
 
@@ -339,7 +340,7 @@ public class GFF3AnnotationFactory {
         return "";
     }
 
-    private String getGFF3FeatureName(Feature ffFeature) throws UnmappedFFFeature {
+    private String getGFF3FeatureName(Feature ffFeature) throws UnmappedFFFeatureException {
 
         String featureName = ffFeature.getName();
         List<ConversionEntry> mappings = ConversionUtils.getFF2GFF3FeatureMap().get(featureName);
@@ -361,8 +362,8 @@ public class GFF3AnnotationFactory {
         }
     }
 
-    private String handleMissingFeatureError(String featureName) throws UnmappedFFFeature {
-        UnmappedFFFeature error = new UnmappedFFFeature(featureName);
+    private String handleMissingFeatureError(String featureName) throws UnmappedFFFeatureException {
+        UnmappedFFFeatureException error = new UnmappedFFFeatureException(featureName);
         switch (RuleSeverityState.INSTANCE.getSeverity(FLATFILE_NO_ONTOLOGY_FEATURE)) {
             case WARN:
                 LOG.warn(error.getMessage());
@@ -394,12 +395,5 @@ public class GFF3AnnotationFactory {
         }
 
         return matchesAllQualifiers;
-    }
-
-    public static class UnmappedFFFeature extends ValidationException {
-
-        public UnmappedFFFeature(String featureName) {
-            super(FLATFILE_NO_ONTOLOGY_FEATURE, featureName);
-        }
     }
 }
