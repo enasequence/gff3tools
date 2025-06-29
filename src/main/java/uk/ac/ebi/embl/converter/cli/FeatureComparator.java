@@ -61,7 +61,7 @@ public class FeatureComparator {
         // Ignore the below FT lines
         options.setIgnoreLine("FT   source"); // This has to be done as converter adds source featire
         options.setIgnoreLine("FT   region");
-        options.setIgnoreLine("FT                   /circular_RNA=true");
+        options.setIgnoreLine("FT                   /circular_RNA");
         /*options.setIgnoreLine("FT                   /organism");
         options.setIgnoreLine("FT                   /plasmid");
         options.setIgnoreLine("FT                   /isolate");

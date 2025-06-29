@@ -110,8 +110,7 @@ public class GFF3Mapper {
                 location.setComplement(false);
             } else if (!parentFeatureLocation.isComplement() && location.isComplement()) {
                 // Swap partiality in case of individual location complement. This should be done because the location
-                // writer
-                // swaps partiality in case of the complement of the inner location.
+                // writer swaps partiality in case of the complement of the inner location.
                 boolean fivePrime = location.isThreePrimePartial();
                 boolean threePrime = location.isFivePrimePartial();
 
