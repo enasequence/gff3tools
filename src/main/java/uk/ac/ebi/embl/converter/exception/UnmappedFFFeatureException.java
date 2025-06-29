@@ -8,13 +8,13 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter;
+package uk.ac.ebi.embl.converter.exception;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import uk.ac.ebi.embl.converter.exception.*;
+import static uk.ac.ebi.embl.converter.validation.ValidationRule.FLATFILE_NO_ONTOLOGY_FEATURE;
 
-public interface Converter {
-    public void convert(BufferedReader reader, BufferedWriter writer)
-            throws ReadException, WriteException, ValidationException;
+public class UnmappedFFFeatureException extends ValidationException {
+
+    public UnmappedFFFeatureException(String featureName) {
+        super(FLATFILE_NO_ONTOLOGY_FEATURE, featureName);
+    }
 }

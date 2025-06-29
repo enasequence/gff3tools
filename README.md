@@ -54,3 +54,18 @@ The converter supports unix pipes, input and output using std-in and std-out.
 **From gff3 stdin to ff stdout**
 
 ```cat OZ026791.gff3 | java -jar gff3tools-1.0.jar conversion -f gff3 -t ff > OZ026791.ff```
+
+# Exit codes
+
+The CLI will exit with status code `0` on success. If an error occur the following error codes will be used:
+
+- `1` Is used for general unexpected errors, that were not properly handled. This will likely be a bug of the application 
+    and will be accompanied by a stacktrace
+- `2` Are errors thrown because the user is not using the command line with the correct arguments. Use `--help` to see 
+    the valid parameters for your command.
+-  `10` Error reading from input.  
+      WRITE_ERROR(11),
+      // Validation errors
+      VALIDATION_ERROR(20);
+
+If using bash, you can see the exit code of the last command using `echo $?`

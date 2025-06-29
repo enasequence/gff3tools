@@ -8,13 +8,18 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter;
+package uk.ac.ebi.embl.converter.exception;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import uk.ac.ebi.embl.converter.exception.*;
+import uk.ac.ebi.embl.converter.cli.CLIExitCode;
+import uk.ac.ebi.embl.converter.cli.CommandConversionFileFormat;
 
-public interface Converter {
-    public void convert(BufferedReader reader, BufferedWriter writer)
-            throws ReadException, WriteException, ValidationException;
+public class FormatSupportException extends ExitException {
+    public FormatSupportException(final CommandConversionFileFormat fromFt, final CommandConversionFileFormat toFt) {
+        super("Conversion from \"" + fromFt + "\" to \"" + toFt + "\" is not supported");
+    }
+
+    @Override
+    public CLIExitCode exitCode() {
+        return CLIExitCode.UNSUPPORTED_FORMAT_CONVERSION;
+    }
 }

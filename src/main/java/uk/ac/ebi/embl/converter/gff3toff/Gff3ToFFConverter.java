@@ -11,16 +11,16 @@
 package uk.ac.ebi.embl.converter.gff3toff;
 
 import java.io.*;
-import uk.ac.ebi.embl.converter.ConversionError;
-import uk.ac.ebi.embl.converter.Converter;
+import uk.ac.ebi.embl.converter.*;
+import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
 import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 
 public class Gff3ToFFConverter implements Converter {
 
-    public void convert(BufferedReader reader, BufferedWriter writer) throws ConversionError {
+    public void convert(BufferedReader reader, BufferedWriter writer)
+            throws ReadException, WriteException, ValidationException {
         try (GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
             GFF3Mapper mapper = new GFF3Mapper();
             gff3Reader.readHeader();
@@ -28,12 +28,14 @@ public class Gff3ToFFConverter implements Converter {
             while ((annotation = gff3Reader.readAnnotation()) != null) {
                 EmblEntryWriter entryWriter = new EmblEntryWriter(mapper.mapGFF3ToEntry(annotation));
                 entryWriter.setShowAcStartLine(false);
-                entryWriter.write(writer);
+                try {
+                    entryWriter.write(writer);
+                } catch (IOException e) {
+                    throw new WriteException(e);
+                }
             }
         } catch (IOException e) {
-            throw new ConversionError("IO Error during conversion", e);
-        } catch (GFF3ValidationError e) {
-            throw new ConversionError(String.format("Validation Error on line %d: %s", e.getLine(), e.getMessage()), e);
+            throw new ReadException(e);
         }
     }
 }

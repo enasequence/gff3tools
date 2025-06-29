@@ -8,13 +8,18 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter;
+package uk.ac.ebi.embl.converter.exception;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import uk.ac.ebi.embl.converter.exception.*;
+import uk.ac.ebi.embl.converter.cli.CLIExitCode;
 
-public interface Converter {
-    public void convert(BufferedReader reader, BufferedWriter writer)
-            throws ReadException, WriteException, ValidationException;
+public abstract class ExitException extends Exception {
+    public ExitException(final String message, final Exception cause) {
+        super(message, cause);
+    }
+
+    public ExitException(final String message) {
+        super(message);
+    }
+
+    public abstract CLIExitCode exitCode();
 }
