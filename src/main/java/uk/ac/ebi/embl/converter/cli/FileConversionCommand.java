@@ -59,12 +59,6 @@ public class FileConversionCommand implements Runnable {
 
     @Override
     public void run() {
-        try {
-            fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
-            toFileType = validateFileType(toFileType, outputFilePath, "-t");
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
 
         if (rules != null) {
             RuleSeverityState.INSTANCE.putAll(rules.rules());
@@ -85,6 +79,9 @@ public class FileConversionCommand implements Runnable {
                             return new BufferedWriter(new OutputStreamWriter(System.out));
                         },
                         outputFilePath)) {
+            fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
+            toFileType = validateFileType(toFileType, outputFilePath, "-t");
+
             Converter converter = getConverter(fromFileType, toFileType);
             converter.convert(inputReader, outputWriter);
         } catch (Exception e) {
