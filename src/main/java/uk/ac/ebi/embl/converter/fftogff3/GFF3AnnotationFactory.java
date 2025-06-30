@@ -329,7 +329,7 @@ public class GFF3AnnotationFactory {
         return count > 0 ? "%s_%d".formatted(baseId, count) : baseId;
     }
 
-    private String getParentFeature(String emblFeatureName, Optional geneName) {
+    public String getParentFeature(String emblFeatureName, Optional geneName) {
 
         if (!geneName.isPresent()) {
             return "";
@@ -337,7 +337,11 @@ public class GFF3AnnotationFactory {
 
         List<GFF3Feature> gffFeatures = geneMap.getOrDefault(geneName.get(), Collections.emptyList());
         Set<String> definedParents = featureRelationMap.getOrDefault(emblFeatureName, Collections.emptySet());
-        for (GFF3Feature feature : gffFeatures) {
+
+        // As the features are ordered by location, iterating the features from last to first to get the immediate
+        // parent of a child feature.
+        for (int i = gffFeatures.size() - 1; i >= 0; i--) {
+            GFF3Feature feature = gffFeatures.get(i);
             if (definedParents.contains(feature.getName())) {
                 return feature.getId().orElse("");
             }

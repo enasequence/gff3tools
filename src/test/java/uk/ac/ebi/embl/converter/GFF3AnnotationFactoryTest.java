@@ -169,58 +169,56 @@ class GFF3AnnotationFactoryTest {
         SequenceFactory sequenceFactory = new SequenceFactory();
         entry.setSequence(sequenceFactory.createSequence());
 
-        FeatureFactory featureFactory = new FeatureFactory();
-        LocationFactory locationFactory = new LocationFactory();
+        Map<String, String> qualifiers = new HashMap<>();
+        qualifiers.put("gene", "matK");
+        createAndAddFeature(entry, "source", null);
 
-        Feature sourceFeature = featureFactory.createFeature("source");
-        Join<Location> sourceLocation = new Join<>();
-        sourceLocation.addLocation(locationFactory.createLocalRange(1L, 822L));
-        sourceFeature.setLocations(sourceLocation);
-        entry.addFeature(sourceFeature);
-
-        Feature geneFeature = featureFactory.createFeature("gene");
-        geneFeature.addQualifier("gene", "matK");
-        Join<Location> geneLocation = new Join<>();
-        geneLocation.addLocation(locationFactory.createLocalRange(1L, 822L));
-        geneFeature.setLocations(geneLocation);
-        entry.addFeature(geneFeature);
-
-        Feature mRNAFeature = featureFactory.createFeature("mRNA");
-        mRNAFeature.addQualifier("gene", "matK");
-        Join<Location> mRNALocation = new Join<>();
-        mRNALocation.addLocation(locationFactory.createLocalRange(1L, 822L));
-        mRNAFeature.setLocations(mRNALocation);
-        entry.addFeature(mRNAFeature);
-
-        Feature intronFeature = featureFactory.createFeature("intron");
-        intronFeature.addQualifier("gene", "matK");
-        Join<Location> intronLocation = new Join<>();
-        intronLocation.addLocation(locationFactory.createLocalRange(100L, 150L));
-        intronFeature.setLocations(intronLocation);
-        entry.addFeature(intronFeature);
-
-        Feature repeatRegionFeature = featureFactory.createFeature("repeat_region");
-        entry.addFeature(repeatRegionFeature);
-        Join<Location> repeatLocation = new Join<>();
-        repeatLocation.addLocation(locationFactory.createLocalRange(100L, 150L));
-        repeatRegionFeature.setLocations(repeatLocation);
-        entry.addFeature(repeatRegionFeature);
+        createAndAddFeature(entry, "gene", qualifiers);
+        createAndAddFeature(entry, "mRNA", qualifiers);
+        createAndAddFeature(entry, "intron", qualifiers);
+        createAndAddFeature(entry, "repeat_region", null);
 
         gFF3AnnotationFactory.from(entry);
 
-        Method method = GFF3AnnotationFactory.class.getDeclaredMethod("getParentFeature", String.class, Optional.class);
-        method.setAccessible(true);
+        executeAndValidateGetParentFeature(gFF3AnnotationFactory, "boop", "matK", "");
+        executeAndValidateGetParentFeature(gFF3AnnotationFactory, "repeat_region", "", "");
+        executeAndValidateGetParentFeature(gFF3AnnotationFactory, "mRNA", "matK", "ncRNA_gene_matK");
+        executeAndValidateGetParentFeature(gFF3AnnotationFactory, "intron", "matK", "mRNA_matK");
 
-        Object noExistingFeature = method.invoke(gFF3AnnotationFactory, "boop", Optional.of("matK"));
-        assertEquals("", noExistingFeature);
+        // New GFF3AnnotationFactory object but adding features to entry
+        gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
+        createAndAddFeature(entry, "gene", qualifiers);
+        createAndAddFeature(entry, "mRNA", qualifiers);
+        createAndAddFeature(entry, "intron", qualifiers);
 
-        Object noGeneFeature = method.invoke(gFF3AnnotationFactory, "repeat_region", Optional.empty());
-        assertEquals("", noGeneFeature);
+        gFF3AnnotationFactory.from(entry);
 
-        Object firstDegreeParent = method.invoke(gFF3AnnotationFactory, "mRNA", Optional.of("matK"));
-        assertEquals("ncRNA_gene_matK", firstDegreeParent);
+        executeAndValidateGetParentFeature(gFF3AnnotationFactory, "mRNA", "matK", "ncRNA_gene_matK_1");
+        executeAndValidateGetParentFeature(gFF3AnnotationFactory, "intron", "matK", "mRNA_matK_1");
+    }
 
-        Object secondDegreeparent = method.invoke(gFF3AnnotationFactory, "intron", Optional.of("matK"));
-        assertEquals("mRNA_matK", secondDegreeparent);
+    private void createAndAddFeature(Entry entry, String featureName, Map<String, String> qualifiers) {
+        FeatureFactory featureFactory = new FeatureFactory();
+        Feature sourceFeature = featureFactory.createFeature(featureName);
+        if (qualifiers != null) {
+            for (String qualifier : qualifiers.keySet()) {
+                sourceFeature.addQualifier(qualifier, qualifiers.get(qualifier));
+            }
+        }
+        Join<Location> sourceLocation = new Join<>();
+        sourceLocation.addLocation(new LocationFactory().createLocalRange(1L, 822L));
+        sourceFeature.setLocations(sourceLocation);
+        entry.addFeature(sourceFeature);
+    }
+
+    private void executeAndValidateGetParentFeature(
+            GFF3AnnotationFactory gFF3AnnotationFactory, String featureName, String geneName, String expectedParentId)
+            throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        Method getParentFeature =
+                GFF3AnnotationFactory.class.getDeclaredMethod("getParentFeature", String.class, Optional.class);
+        getParentFeature.setAccessible(true);
+
+        Object noExistingFeature = getParentFeature.invoke(gFF3AnnotationFactory, featureName, Optional.of(geneName));
+        assertEquals(expectedParentId, noExistingFeature);
     }
 }
