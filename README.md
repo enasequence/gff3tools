@@ -57,15 +57,26 @@ The converter supports unix pipes, input and output using std-in and std-out.
 
 # Exit codes
 
-The CLI will exit with status code `0` on success. If an error occur the following error codes will be used:
+The CLI will exit with status code `0` on success. If an error occurs, the following error codes will be used:
 
-- `1` Is used for general unexpected errors, that were not properly handled. This will likely be a bug of the application 
-    and will be accompanied by a stacktrace
-- `2` Are errors thrown because the user is not using the command line with the correct arguments. Use `--help` to see 
-    the valid parameters for your command.
--  `10` Error reading from input.  
-      WRITE_ERROR(11),
-      // Validation errors
-      VALIDATION_ERROR(20);
+- `1` (GENERAL): General unexpected errors that were not properly handled. This likely indicates a bug in the application and will be accompanied by a stack trace.
+- `2` (USAGE): Errors due to incorrect command-line arguments. Use `--help` to see the valid parameters for your command.
+- `3` (UNSUPPORTED_FORMAT_CONVERSION): Errors when an unsupported file format conversion is attempted.
+- `10` (READ_ERROR): Error reading from an input file or stream.
+- `11` (WRITE_ERROR): Error writing to an output file or stream.
+- `12` (NON_EXISTENT_FILE): Error when an input file does not exist.
+- `20` (VALIDATION_ERROR): Errors related to data validation failures.
+- `30` (OUT_OF_MEMORY): Errors indicating that the application ran out of memory.
 
 If using bash, you can see the exit code of the last command using `echo $?`
+
+# Logging
+
+- **General Logging**: 
+    - **Errors**: The tool handles errors and logs them to `stderr`. We take care to ensure all errors are actionable by the end user. If an error is not actionable is likely a bug and should be reported. The error message in this case will include a stacktrace. 
+    - **Warnings**: The will log warnings to `stderr`. Warnings will not stop the execution of the tool, but will provide extra context on issues found in the input. Warning output implies a deviation from the validation rules specified. You can override the validation rules using the `--rules` argument.
+    - **Info**: All other information messages will be output to `stdout`.
+
+- **`conversion` command logging**: When using the `conversion` command, the logging behavior changes based on the output destination:
+    - **Output to a file**: If you specify an `output-file` (e.g., `java -jar gff3tools-1.0.jar conversion input.embl output.gff3`), logging will work as usual.
+    - **Output to `stdout` (using pipes)**: If you output the conversion results to `stdout` (e.g., `java -jar gff3tools-1.0.jar conversion input.embl -t gff3 > output.gff3`), only warning and error logs will be generated and sent to `stderr`. This is to prevent informational messages from mixing with the converted data on `stdout`.

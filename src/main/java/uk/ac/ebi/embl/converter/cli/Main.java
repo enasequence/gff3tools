@@ -46,6 +46,7 @@ public class Main {
             LOG.error(
                     "The conversion needs more memory please increase the memory using the -Xmx java argument.\neg. java -jar -Xmx2G %s %s"
                             .formatted(filename, Arrays.stream(args).collect(Collectors.joining(" "))));
+            exitCode = CLIExitCode.OUT_OF_MEMORY.asInt();
         } catch (Throwable e) {
             // Non-zero exit code (1) is returned in case of an Exception in run() method.
             LOG.error(e.getMessage(), e);

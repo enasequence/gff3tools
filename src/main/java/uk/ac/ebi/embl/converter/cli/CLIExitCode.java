@@ -20,7 +20,9 @@ public enum CLIExitCode {
     WRITE_ERROR(11),
     NON_EXISTENT_FILE(12),
     // Validation errors
-    VALIDATION_ERROR(20);
+    VALIDATION_ERROR(20),
+    // Runtime errors
+    OUT_OF_MEMORY(30);
 
     private final int exitCode;
 
