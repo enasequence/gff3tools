@@ -30,7 +30,7 @@ import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
 
 // Using pandoc CLI interface conventions
 @CommandLine.Command(name = "conversion", description = "Performs format conversions to or from gff3")
-public class CommandConversion implements Runnable {
+public class FileConversionCommand implements Runnable {
 
     @CommandLine.Option(
             names = "--rules",

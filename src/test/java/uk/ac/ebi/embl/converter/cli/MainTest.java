@@ -31,7 +31,7 @@ public class MainTest {
                 String severityName = severity.name().toLowerCase();
                 String[] args = new String[] {"--rules=" + ruleName + ":" + severityName};
 
-                CommandConversion cc = new CommandConversion();
+                FileConversionCommand cc = new FileConversionCommand();
                 CommandLine commandLine = new CommandLine(cc);
                 commandLine.parseArgs(args);
 
@@ -46,7 +46,7 @@ public class MainTest {
     @Test
     void testParseRules_InvalidRuleName() {
         String[] args = new String[] {"--rules=non_existent_rule:warn"};
-        CommandConversion cc = new CommandConversion();
+        FileConversionCommand cc = new FileConversionCommand();
         CommandLine commandLine = new CommandLine(cc);
         // Expect an exception when parsing an invalid rule name
         CommandLine.ParameterException exception = org.junit.jupiter.api.Assertions.assertThrows(
@@ -59,7 +59,7 @@ public class MainTest {
     @Test
     void testParseRules_InvalidRuleSeverity() {
         String[] args = new String[] {"--rules=flatfile_no_source:invalid_severity"};
-        CommandConversion cc = new CommandConversion();
+        FileConversionCommand cc = new FileConversionCommand();
         CommandLine commandLine = new CommandLine(cc);
         // Expect an exception when parsing an invalid severity
         CommandLine.ParameterException exception = org.junit.jupiter.api.Assertions.assertThrows(
@@ -72,7 +72,7 @@ public class MainTest {
     @Test
     void testParseRules_MultipleRules() {
         String[] args = new String[] {"--rules=flatfile_no_ontology_feature:warn,flatfile_no_source:error"};
-        CommandConversion cc = new CommandConversion();
+        FileConversionCommand cc = new FileConversionCommand();
         CommandLine commandLine = new CommandLine(cc);
         commandLine.parseArgs(args);
 
@@ -87,22 +87,9 @@ public class MainTest {
     }
 
     @Test
-    void testParseRules_MultipleRules() {
-        String[] args = new String[]{"--rules=flatfile_no_ontology_feature:warn,flatfile_no_source:error"};
-        CommandConversion cc = new CommandConversion();
-        CommandLine commandLine = new CommandLine(cc);
-        commandLine.parseArgs(args);
-
-        assertEquals(RuleSeverity.WARN, cc.rules.rules().get(ValidationRule.FLATFILE_NO_ONTOLOGY_FEATURE),
-                "Failed for rule: FLATFILE_NO_ONTOLOGY_FEATURE with severity: WARN");
-        assertEquals(RuleSeverity.ERROR, cc.rules.rules().get(ValidationRule.FLATFILE_NO_SOURCE),
-                "Failed for rule: FLATFILE_NO_SOURCE with severity: ERROR");
-    }
-
-    @Test
     public void testValidateFileType() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        CommandConversion command = new CommandConversion();
-        Method method = CommandConversion.class.getDeclaredMethod(
+        FileConversionCommand command = new FileConversionCommand();
+        Method method = FileConversionCommand.class.getDeclaredMethod(
                 "validateFileType", CommandConversionFileFormat.class, Path.class, String.class);
         method.setAccessible(true);
 

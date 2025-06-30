@@ -25,7 +25,7 @@ import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 @Command(
         name = "gff3tools",
-        subcommands = {CommandConversion.class, CommandLine.HelpCommand.class},
+        subcommands = {FileConversionCommand.class, CommandLine.HelpCommand.class},
         description = "Utility to convert and validate gff3 files")
 public class Main {
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
