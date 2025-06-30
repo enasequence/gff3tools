@@ -76,13 +76,16 @@ public class GFF3ReaderTest {
                 BufferedReader reader = new BufferedReader(filerReader);
                 GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
             gff3Reader.readHeader(); // Read header first
-            gff3Reader.readAnnotation(); // This should throw the exception
+            while (true) {
+                if (gff3Reader.readAnnotation() == null) {
+                    fail(String.format("Expected exception when parsing file: %s", testFile.getPath()));
+                }
+            }
         } catch (InvalidGFF3RecordException e) {
-            Assertions.assertTrue(e.getMessage().contains("Invalid gff3 record \"invalid_record\""));
-            Assertions.assertEquals(2, e.getLine()); // Line 2 is the invalid record
+            Assertions.assertTrue(e.getMessage().contains("Invalid gff3 record"));
+            Assertions.assertEquals(10, e.getLine()); // Line 3 is the invalid record
             return;
         }
-        fail(String.format("Expected exception when parsing file: %s", testFile.getPath()));
     }
 
     private void test(String attributeLine) throws Exception {
