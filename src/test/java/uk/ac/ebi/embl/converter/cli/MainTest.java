@@ -64,6 +64,19 @@ public class MainTest {
     }
 
     @Test
+    void testParseRules_MultipleRules() {
+        String[] args = new String[]{"--rules=flatfile_no_ontology_feature:warn,flatfile_no_source:error"};
+        CommandConversion cc = new CommandConversion();
+        CommandLine commandLine = new CommandLine(cc);
+        commandLine.parseArgs(args);
+
+        assertEquals(RuleSeverity.WARN, cc.rules.rules().get(ValidationRule.FLATFILE_NO_ONTOLOGY_FEATURE),
+                "Failed for rule: FLATFILE_NO_ONTOLOGY_FEATURE with severity: WARN");
+        assertEquals(RuleSeverity.ERROR, cc.rules.rules().get(ValidationRule.FLATFILE_NO_SOURCE),
+                "Failed for rule: FLATFILE_NO_SOURCE with severity: ERROR");
+    }
+
+    @Test
     public void testValidateFileType() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         CommandConversion command = new CommandConversion();
         Method method = CommandConversion.class.getDeclaredMethod(
