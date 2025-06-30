@@ -29,10 +29,10 @@ public class GFF3ReaderTest {
 
         for (String filePrefix : testFiles.keySet()) {
             File file = new File(testFiles.get(filePrefix).toUri());
-            FileReader filerReader = new FileReader(file);
-            BufferedReader reader = new BufferedReader(filerReader);
-            GFF3FileReader gff3Reader = new GFF3FileReader(reader);
-            try {
+
+            try (FileReader filerReader = new FileReader(file);
+                    BufferedReader reader = new BufferedReader(filerReader);
+                    GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
                 gff3Reader.readHeader();
                 while (true) {
                     if (gff3Reader.readAnnotation() == null) break;
@@ -47,10 +47,9 @@ public class GFF3ReaderTest {
     void testMissingHeader() throws Exception {
         File testFile = TestUtils.getResourceFile("validation_errors/empty_file.gff3");
 
-        FileReader filerReader = new FileReader(testFile);
-        BufferedReader reader = new BufferedReader(filerReader);
-        GFF3FileReader gff3Reader = new GFF3FileReader(reader);
-        try {
+        try (FileReader filerReader = new FileReader(testFile);
+                BufferedReader reader = new BufferedReader(filerReader);
+                GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
             gff3Reader.readHeader();
         } catch (InvalidGFF3HeaderException e) {
             Assertions.assertTrue(e.getMessage().contains("GFF3 header not found"));
@@ -70,11 +69,28 @@ public class GFF3ReaderTest {
         test("ID=ID_TEST;qualifier1=%00%09%25%3B%2C;");
     }
 
-    private void test(String attributeLine) throws Exception {
-        GFF3FileReader gff3Reader = new GFF3FileReader(new StringReader(attributeLine));
-        Map<String, Object> attrMap = gff3Reader.attributesFromString(attributeLine);
+    @Test
+    void testInvalidRecord() throws Exception {
+        File testFile = TestUtils.getResourceFile("validation_errors/invalid_record.gff3");
+        try (FileReader filerReader = new FileReader(testFile);
+                BufferedReader reader = new BufferedReader(filerReader);
+                GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
+            gff3Reader.readHeader(); // Read header first
+            gff3Reader.readAnnotation(); // This should throw the exception
+        } catch (InvalidGFF3RecordException e) {
+            Assertions.assertTrue(e.getMessage().contains("Invalid gff3 record \"invalid_record\""));
+            Assertions.assertEquals(2, e.getLine()); // Line 2 is the invalid record
+            return;
+        }
+        fail(String.format("Expected exception when parsing file: %s", testFile.getPath()));
+    }
 
-        assertEquals(attributeLine, getAttributeString(attrMap));
+    private void test(String attributeLine) throws Exception {
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(new StringReader(attributeLine))) {
+            Map<String, Object> attrMap = gff3Reader.attributesFromString(attributeLine);
+
+            assertEquals(attributeLine, getAttributeString(attrMap));
+        }
     }
 
     private String getAttributeString(Map<String, Object> attributes) throws WriteException, IOException {
