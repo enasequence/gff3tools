@@ -343,11 +343,9 @@ public class GFF3AnnotationFactory {
     private String getGFF3FeatureName(Feature ffFeature) throws ValidationException {
 
         String featureName = ffFeature.getName();
-        List<ConversionEntry> mappings = ConversionUtils.getFF2GFF3FeatureMap().get(featureName);
-        if (mappings == null) {
-            RuleSeverityState.handleValidationException(new UnmappedFFFeatureException(featureName));
-            return featureName;
-        }
+        List<ConversionEntry> mappings = Optional.ofNullable(
+                        ConversionUtils.getFF2GFF3FeatureMap().get(featureName))
+                .orElse(Collections.emptyList());
 
         // return the soTerm of the max qualifier mapping
         Optional<String> soTerm = mappings.stream()
