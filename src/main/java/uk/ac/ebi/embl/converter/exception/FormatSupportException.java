@@ -11,10 +11,10 @@
 package uk.ac.ebi.embl.converter.exception;
 
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
-import uk.ac.ebi.embl.converter.cli.CommandConversionFileFormat;
+import uk.ac.ebi.embl.converter.cli.ConversionFileFormat;
 
 public class FormatSupportException extends ExitException {
-    public FormatSupportException(final CommandConversionFileFormat fromFt, final CommandConversionFileFormat toFt) {
+    public FormatSupportException(final ConversionFileFormat fromFt, final ConversionFileFormat toFt) {
         super("Conversion from \"" + fromFt + "\" to \"" + toFt + "\" is not supported");
     }
 

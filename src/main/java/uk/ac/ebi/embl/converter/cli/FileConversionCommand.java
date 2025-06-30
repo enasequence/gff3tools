@@ -40,10 +40,10 @@ public class FileConversionCommand implements Runnable {
     public CliRulesOption rules;
 
     @CommandLine.Option(names = "-f", description = "The type of the file to be converted")
-    public CommandConversionFileFormat fromFileType;
+    public ConversionFileFormat fromFileType;
 
     @CommandLine.Option(names = "-t", description = "The type of the file to convert to")
-    public CommandConversionFileFormat toFileType;
+    public ConversionFileFormat toFileType;
 
     @CommandLine.Parameters(
             paramLabel = "[input-file]",
@@ -92,27 +92,25 @@ public class FileConversionCommand implements Runnable {
         }
     }
 
-    private Converter getConverter(
-            CommandConversionFileFormat inputFileType, CommandConversionFileFormat outputFileType)
+    private Converter getConverter(ConversionFileFormat inputFileType, ConversionFileFormat outputFileType)
             throws FormatSupportException {
-        if (inputFileType == CommandConversionFileFormat.gff3 && outputFileType == CommandConversionFileFormat.embl) {
+        if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
             return new Gff3ToFFConverter();
-        } else if (inputFileType == CommandConversionFileFormat.embl
-                && outputFileType == CommandConversionFileFormat.gff3) {
+        } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
             return new FFToGff3Converter();
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }
     }
 
-    private CommandConversionFileFormat validateFileType(
-            CommandConversionFileFormat fileFormat, Path filePath, String cliOption) throws CLIException {
+    private ConversionFileFormat validateFileType(ConversionFileFormat fileFormat, Path filePath, String cliOption)
+            throws CLIException {
         if (fileFormat == null) {
             if (!filePath.toString().isEmpty()) {
                 String fileExtension = getFileExtension(filePath);
                 if (fileExtension != null) {
                     try {
-                        fileFormat = CommandConversionFileFormat.valueOf(fileExtension);
+                        fileFormat = ConversionFileFormat.valueOf(fileExtension);
                     } catch (IllegalArgumentException e) {
                         throw new CLIException("Unrecognized file format: " + fileExtension + " use the " + cliOption
                                 + " option to specify the format manually or update the file extension");

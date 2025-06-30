@@ -90,22 +90,22 @@ public class MainTest {
     public void testValidateFileType() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         FileConversionCommand command = new FileConversionCommand();
         Method method = FileConversionCommand.class.getDeclaredMethod(
-                "validateFileType", CommandConversionFileFormat.class, Path.class, String.class);
+                "validateFileType", ConversionFileFormat.class, Path.class, String.class);
         method.setAccessible(true);
 
         Object validate = null;
 
-        validate = method.invoke(command, CommandConversionFileFormat.embl, Path.of("foo"), "-f");
-        assertEquals(CommandConversionFileFormat.embl, validate, "If format is provided returns the same format");
+        validate = method.invoke(command, ConversionFileFormat.embl, Path.of("foo"), "-f");
+        assertEquals(ConversionFileFormat.embl, validate, "If format is provided returns the same format");
 
-        validate = method.invoke(command, CommandConversionFileFormat.gff3, Path.of("foo"), "-f");
-        assertEquals(CommandConversionFileFormat.gff3, validate, "If format is provided returns the same format");
+        validate = method.invoke(command, ConversionFileFormat.gff3, Path.of("foo"), "-f");
+        assertEquals(ConversionFileFormat.gff3, validate, "If format is provided returns the same format");
 
         validate = method.invoke(command, null, Path.of("foo.embl"), "-f");
-        assertEquals(CommandConversionFileFormat.embl, validate, "If format in path extension, use it");
+        assertEquals(ConversionFileFormat.embl, validate, "If format in path extension, use it");
 
         validate = method.invoke(command, null, Path.of("foo.gff3"), "-f");
-        assertEquals(CommandConversionFileFormat.gff3, validate, "If format in path extension, use it");
+        assertEquals(ConversionFileFormat.gff3, validate, "If format in path extension, use it");
 
         try {
             validate = method.invoke(command, null, Path.of("foo.embl"), "-f");

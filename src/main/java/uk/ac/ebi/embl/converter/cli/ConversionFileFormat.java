@@ -10,7 +10,7 @@
  */
 package uk.ac.ebi.embl.converter.cli;
 
-public enum CommandConversionFileFormat {
+public enum ConversionFileFormat {
     embl,
     gff3
 }
