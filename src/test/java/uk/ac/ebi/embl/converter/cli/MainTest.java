@@ -16,8 +16,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.converter.validation.RuleSeverity;
@@ -27,20 +25,42 @@ public class MainTest {
 
     @Test
     void testParseRules() {
-        String[] args = new String[] {"--rules=flatfile_no_ontology_feature:off"};
-        Map<ValidationRule, RuleSeverity> expected = new HashMap<>() {
-            {
-                put(ValidationRule.FLATFILE_NO_ONTOLOGY_FEATURE, RuleSeverity.OFF);
-            }
-        };
+        for (ValidationRule rule : ValidationRule.values()) {
+            for (RuleSeverity severity : RuleSeverity.values()) {
+                String ruleName = rule.name().toLowerCase();
+                String severityName = severity.name().toLowerCase();
+                String[] args = new String[]{"--rules=" + ruleName + ":" + severityName};
 
+                CommandConversion cc = new CommandConversion();
+                CommandLine commandLine = new CommandLine(cc);
+                commandLine.parseArgs(args);
+
+                assertEquals(severity, cc.rules.rules().get(rule),
+                        "Failed for rule: " + rule.name() + " with severity: " + severity.name());
+            }
+        }
+    }
+
+    @Test
+    void testParseRules_InvalidRuleName() {
+        String[] args = new String[]{"--rules=non_existent_rule:warn"};
         CommandConversion cc = new CommandConversion();
         CommandLine commandLine = new CommandLine(cc);
-        commandLine.parseArgs(args);
+        // Expect an exception when parsing an invalid rule name
+        CommandLine.ParameterException exception = org.junit.jupiter.api.Assertions.assertThrows(
+                CommandLine.ParameterException.class, () -> commandLine.parseArgs(args));
+        assertTrue(exception.getMessage().contains("non_existent_rule"), "Exception message should contain the invalid rule name");
+    }
 
-        for (Map.Entry<ValidationRule, RuleSeverity> entry : expected.entrySet()) {
-            assertEquals(entry.getValue(), cc.rules.rules().get(entry.getKey()));
-        }
+    @Test
+    void testParseRules_InvalidRuleSeverity() {
+        String[] args = new String[]{"--rules=flatfile_no_source:invalid_severity"};
+        CommandConversion cc = new CommandConversion();
+        CommandLine commandLine = new CommandLine(cc);
+        // Expect an exception when parsing an invalid severity
+        CommandLine.ParameterException exception = org.junit.jupiter.api.Assertions.assertThrows(
+                CommandLine.ParameterException.class, () -> commandLine.parseArgs(args));
+        assertTrue(exception.getMessage().contains("invalid_severity"), "Exception message should contain the invalid severity name");
     }
 
     @Test
