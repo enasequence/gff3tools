@@ -43,7 +43,7 @@ public class Main {
                             .getLocation()
                             .getPath())
                     .getName();
-            System.err.println(
+            LOG.error(
                     "The conversion needs more memory please increase the memory using the -Xmx java argument.\neg. java -jar -Xmx2G %s %s"
                             .formatted(filename, Arrays.stream(args).collect(Collectors.joining(" "))));
         } catch (Throwable e) {
@@ -89,13 +89,15 @@ class RuleConverter implements ITypeConverter<CliRulesOption> {
 
 class ExecutionExceptionHandler implements IExecutionExceptionHandler {
 
+    private static final Logger LOG = LoggerFactory.getLogger(ExecutionExceptionHandler.class);
+
     // Tried to use LOG.error instead of println here but would not pipe anything to
     // stderr.
     @Override
     public int handleExecutionException(Exception e, CommandLine commandLine, ParseResult parseResult)
             throws Exception {
         if (e.getCause() instanceof ExitException) {
-            System.err.println(e.getMessage());
+            LOG.error(e.getMessage());
             return ((ExitException) e.getCause()).exitCode().asInt();
         }
         throw e;
