@@ -77,7 +77,7 @@ public class GFF3ReaderTest {
         assertEquals(attributeLine, getAttributeString(attrMap));
     }
 
-    private String getAttributeString(Map<String, Object> attributes) throws IOException {
+    private String getAttributeString(Map<String, Object> attributes) throws WriteException, IOException {
         try (StringWriter gff3Writer = new StringWriter()) {
             GFF3Annotation annotation = new GFF3Annotation();
             GFF3Feature gff3Feature = TestUtils.createGFF3Feature("ID", "Parent", attributes);

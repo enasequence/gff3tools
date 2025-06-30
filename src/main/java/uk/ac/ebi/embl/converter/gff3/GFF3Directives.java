@@ -15,13 +15,14 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
+import uk.ac.ebi.embl.converter.exception.WriteException;
 
 @Getter
 public class GFF3Directives implements IGFF3Feature {
     List<GFF3Directive> directives = new ArrayList<>();
 
     @Override
-    public void writeGFF3String(Writer writer) throws IOException {
+    public void writeGFF3String(Writer writer) throws WriteException {
         for (GFF3Directive directive : directives) {
             directive.writeGFF3String(writer);
         }
@@ -30,16 +31,24 @@ public class GFF3Directives implements IGFF3Feature {
     public record GFF3SequenceRegion(String accession, long start, long end) implements GFF3Directive {
 
         @Override
-        public void writeGFF3String(Writer writer) throws IOException {
-            writer.write("##sequence-region %s %d %d\n".formatted(accession, start, end));
+        public void writeGFF3String(Writer writer) throws WriteException {
+            try {
+                writer.write("##sequence-region %s %d %d\n".formatted(accession, start, end));
+            } catch (IOException e) {
+                throw new WriteException(e);
+            }
         }
     }
 
     public record GFF3Species(String species) implements GFF3Directive {
         @Override
-        public void writeGFF3String(Writer writer) throws IOException {
-            if (species != null) {
-                writer.write("##species %s\n".formatted(species));
+        public void writeGFF3String(Writer writer) throws WriteException {
+            try {
+                if (species != null) {
+                    writer.write("##species %s\n".formatted(species));
+                }
+            } catch (IOException e) {
+                throw new WriteException(e);
             }
         }
     }
@@ -48,5 +57,8 @@ public class GFF3Directives implements IGFF3Feature {
         directives.add(directive);
     }
 
-    public interface GFF3Directive extends IGFF3Feature {}
+    public interface GFF3Directive extends IGFF3Feature {
+        @Override
+        void writeGFF3String(Writer writer) throws WriteException;
+    }
 }
