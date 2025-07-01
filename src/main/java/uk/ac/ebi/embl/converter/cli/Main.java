@@ -44,7 +44,7 @@ public class Main {
                             .getPath())
                     .getName();
             LOG.error(
-                    "The conversion needs more memory please increase the memory using the -Xmx java argument.\neg. java -jar -Xmx2G %s %s"
+                    "The conversion needs more memory please increase the memory using the -Xmx java argument.\neg. java -Xmx2G -jar %s %s"
                             .formatted(filename, Arrays.stream(args).collect(Collectors.joining(" "))));
             exitCode = CLIExitCode.OUT_OF_MEMORY.asInt();
         } catch (Throwable e) {
