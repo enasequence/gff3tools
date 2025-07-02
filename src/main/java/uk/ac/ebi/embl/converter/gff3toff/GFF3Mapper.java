@@ -103,18 +103,15 @@ public class GFF3Mapper {
             // If the compoundlocation isComplement but the new location we are adding is not complement
             // we need to restructure the locations that it contains
             if (parentFeatureLocation.isComplement() && !location.isComplement()) {
-                parentFeatureLocation.getLocations().forEach((l) -> l.setComplement(true));
+                parentFeatureLocation.getLocations().forEach((l) -> {
+                    l.setComplement(true);
+                    setLocationPartiality(l);
+                });
                 parentFeatureLocation.setComplement(false);
             } else if (parentFeatureLocation.isComplement() && location.isComplement()) {
                 location.setComplement(false);
             } else if (!parentFeatureLocation.isComplement() && location.isComplement()) {
-                // Swap partiality in case of individual location complement. This should be done because the location
-                // writer swaps partiality in case of the complement of the inner location.
-                boolean fivePrime = location.isThreePrimePartial();
-                boolean threePrime = location.isFivePrimePartial();
-
-                location.setFivePrimePartial(fivePrime);
-                location.setThreePrimePartial(threePrime);
+                setLocationPartiality(location);
             }
             parentFeatureLocation.addLocation(location);
         } else {
@@ -145,6 +142,16 @@ public class GFF3Mapper {
                 ffFeature.addQualifier("gene", gene);
             }
         }
+    }
+
+    private void setLocationPartiality(Location location) {
+        // Swap partiality in case of individual location complement. This should be done because the location
+        // writer swaps partiality in case of the complement of the inner location.
+        boolean fivePrime = location.isThreePrimePartial();
+        boolean threePrime = location.isFivePrimePartial();
+
+        location.setFivePrimePartial(fivePrime);
+        location.setThreePrimePartial(threePrime);
     }
 
     private String getGeneForFeature(GFF3Feature gff3Feature) {

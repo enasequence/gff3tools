@@ -13,6 +13,18 @@ FT   gene            join(<1..500,600..700,800..>822)
 FT                   /gene="matK"
 FT   mRNA            100..122
 FT                   /gene="matK"
+FT   CDS             join(complement(66903..>67016),183994..184671,
+FT                   185444..>185472)
+FT                   /pseudo
+FT                   /transl_table=11
+FT                   /trans_splicing
+FT                   /gene="rps12"
+FT   CDS             join(complement(66903..67016),183994..184671,
+FT                   185444..>185472)
+FT                   /pseudo
+FT                   /transl_table=12
+FT                   /trans_splicing
+FT                   /gene="rps13"
 XX
 //
 
