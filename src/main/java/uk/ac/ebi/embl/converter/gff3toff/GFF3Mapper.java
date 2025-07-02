@@ -102,9 +102,8 @@ public class GFF3Mapper {
             CompoundLocation<Location> parentFeatureLocation = ffFeature.getLocations();
             // If the compoundlocation isComplement but the new location we are adding is not complement
             // we need to restructure the locations that it contains
-            // QUESTION: Does this ever happen? AFAIK the syntax would allow this, but it is nonsensical.
             if (parentFeatureLocation.isComplement() && !location.isComplement()) {
-                parentFeatureLocation.getLocations().forEach((l) -> location.setComplement(true));
+                parentFeatureLocation.getLocations().forEach((l) -> l.setComplement(true));
                 parentFeatureLocation.setComplement(false);
             } else if (parentFeatureLocation.isComplement() && location.isComplement()) {
                 location.setComplement(false);
