@@ -8,18 +8,22 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.gff3;
+package uk.ac.ebi.embl.converter.validation;
 
-import java.io.Writer;
-import java.util.List;
-import uk.ac.ebi.embl.converter.exception.WriteException;
+public enum ValidationRule {
+    FLATFILE_NO_SOURCE("The flatfile contains no source feature"),
+    FLATFILE_NO_ONTOLOGY_FEATURE("The flatfile feature does not exist on the ontology."),
+    GFF3_INVALID_RECORD("The record does not conform with the expected gff3 format"),
+    GFF3_INVALID_HEADER("Invalid gff3 header"),
+    ;
 
-public record GFF3File(GFF3Header header, List<GFF3Annotation> annotations) implements IGFF3Feature {
-    @Override
-    public void writeGFF3String(Writer writer) throws WriteException {
-        this.header.writeGFF3String(writer);
-        for (GFF3Annotation annotation : annotations) {
-            annotation.writeGFF3String(writer);
-        }
+    private String description;
+
+    ValidationRule(String description) {
+        this.description = description;
+    }
+
+    public String getDescription() {
+        return description;
     }
 }

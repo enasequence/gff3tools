@@ -8,18 +8,17 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.gff3;
+package uk.ac.ebi.embl.converter.exception;
 
-import java.io.Writer;
-import java.util.List;
-import uk.ac.ebi.embl.converter.exception.WriteException;
+import uk.ac.ebi.embl.converter.cli.CLIExitCode;
 
-public record GFF3File(GFF3Header header, List<GFF3Annotation> annotations) implements IGFF3Feature {
+public class CLIException extends ExitException {
     @Override
-    public void writeGFF3String(Writer writer) throws WriteException {
-        this.header.writeGFF3String(writer);
-        for (GFF3Annotation annotation : annotations) {
-            annotation.writeGFF3String(writer);
-        }
+    public CLIExitCode exitCode() {
+        return CLIExitCode.USAGE;
+    }
+
+    public CLIException(String message) {
+        super(message);
     }
 }

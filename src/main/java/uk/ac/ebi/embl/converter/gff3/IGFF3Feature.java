@@ -10,9 +10,9 @@
  */
 package uk.ac.ebi.embl.converter.gff3;
 
-import java.io.IOException;
 import java.io.Writer;
+import uk.ac.ebi.embl.converter.exception.WriteException;
 
 public interface IGFF3Feature {
-    void writeGFF3String(Writer writer) throws IOException;
+    void writeGFF3String(Writer writer) throws WriteException;
 }

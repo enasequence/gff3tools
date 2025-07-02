@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import uk.ac.ebi.embl.converter.exception.WriteException;
 
 @NoArgsConstructor
 @Getter
@@ -74,12 +75,16 @@ public class GFF3Annotation implements IGFF3Feature {
     }
 
     @Override
-    public void writeGFF3String(Writer writer) throws IOException {
-        this.directives.writeGFF3String(writer);
-        for (GFF3Feature feature : features) {
-            writeFeature(writer, feature);
+    public void writeGFF3String(Writer writer) throws WriteException {
+        try {
+            this.directives.writeGFF3String(writer);
+            for (GFF3Feature feature : features) {
+                writeFeature(writer, feature);
+            }
+            writer.write('\n');
+        } catch (IOException e) {
+            throw new WriteException(e);
         }
-        writer.write('\n');
     }
 
     public void addFeature(GFF3Feature feature) {

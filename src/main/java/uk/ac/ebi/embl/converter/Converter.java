@@ -12,7 +12,9 @@ package uk.ac.ebi.embl.converter;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import uk.ac.ebi.embl.converter.exception.*;
 
 public interface Converter {
-    public void convert(BufferedReader reader, BufferedWriter writer) throws ConversionError;
+    public void convert(BufferedReader reader, BufferedWriter writer)
+            throws ReadException, WriteException, ValidationException;
 }

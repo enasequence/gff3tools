@@ -19,10 +19,11 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
+import uk.ac.ebi.embl.converter.exception.WriteException;
 
 public class GFF3AnnotationTest {
     @Test
-    public void testWriteAttributes() throws IOException {
+    public void testWriteAttributes() throws IOException, WriteException {
 
         Map<String, Object> attributes = new HashMap<>();
         attributes.put("ID", "ID_TEST");
@@ -44,7 +45,7 @@ public class GFF3AnnotationTest {
         test(attributes, expectedAttribute);
     }
 
-    private void test(Map<String, Object> attributes, String expectedAttribute) throws IOException {
+    private void test(Map<String, Object> attributes, String expectedAttribute) throws IOException, WriteException {
         try (StringWriter gff3Writer = new StringWriter()) {
             GFF3Annotation annotation = new GFF3Annotation();
             GFF3Feature gff3Feature = TestUtils.createGFF3Feature("ID", "Parent", attributes);

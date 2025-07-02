@@ -10,27 +10,30 @@
  */
 package uk.ac.ebi.embl.converter.fftogff3;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import uk.ac.ebi.embl.converter.ConversionError;
+import uk.ac.ebi.embl.converter.exception.ReadException;
+import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
 import uk.ac.ebi.embl.converter.gff3.GFF3Header;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 public class GFF3FileFactory {
-    public GFF3File from(EmblEntryReader entryReader) throws ConversionError {
+    public GFF3File from(EmblEntryReader entryReader) throws ValidationException, ReadException {
         GFF3Header header = new GFF3Header("3.1.26");
         List<GFF3Annotation> annotations = new ArrayList<>();
+        int entryCount = 0;
         try {
-            int entryCount = 0;
             while (entryReader.read() != null && entryReader.isEntry()) {
                 annotations.add(new GFF3AnnotationFactory(entryCount > 0).from(entryReader.getEntry()));
                 entryCount++;
             }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new ReadException(e);
         }
+
         return new GFF3File(header, annotations);
     }
 }
