@@ -1,0 +1,40 @@
+ID   BN000065; SV XXX; XXX; XXX; XXX; XXX; 0 BP.
+XX
+AC   BN000065;
+XX
+DE   .
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..315242
+FT   gene            1..315242
+FT                   /gene="RHD"
+FT   mRNA            133806..191728
+FT                   /gene="RHD"
+FT   rRNA            133970..145841
+FT                   /gene="RHD"
+FT                   /number=1
+XX
+//
+ID   BN000066; SV XXX; XXX; XXX; XXX; XXX; 0 BP.
+XX
+AC   BN000066;
+XX
+DE   .
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..315242
+FT   gene            1..315242
+FT                   /gene="RHD"
+FT   mRNA            133806..191728
+FT                   /gene="RHD"
+FT   rRNA            133970..145841
+FT                   /gene="RHD"
+FT                   /number=1
+XX
+//
