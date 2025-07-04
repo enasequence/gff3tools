@@ -2,12 +2,10 @@
 - Start Date: 2025-07-04
 
 # Summary
-[summary]: #summary
 
 This RFC proposes the introduction of progress indicators to the `gff3tools` command-line interface (CLI) to enhance user experience during long-running conversion tasks.
 
 # Motivation
-[motivation]: #motivation
 
 The current `gff3tools` CLI, while functional, lacks visual feedback for users during lengthy operations.
 
@@ -22,7 +20,6 @@ The primary problem this proposal aims to solve is:
     *   **Solution:** A simple progress indicator (e.g., "Processing... [50%]") would provide visual confirmation that the tool is active, improving user confidence.
 
 # Guide-level explanation
-[guide-level-explanation]: #guide-level-explanation
 
 This proposal introduces enhancements to how users interact with `gff3tools` from the command line by providing progress indicators.
 
@@ -41,7 +38,6 @@ For conversions of large files, `gff3tools` will provide visual feedback to indi
 These changes will make the `gff3tools` CLI more user-friendly and robust. Progress indicators will improve perceived performance.
 
 # Reference-level explanation
-[reference-level-explanation]: #reference-level-explanation
 
 **1. Progress Indicators:**
 
@@ -55,13 +51,11 @@ These changes will make the `gff3tools` CLI more user-friendly and robust. Progr
     *   **Considerations:** Avoid complex UI libraries for CLI tools. Simple text-based updates are sufficient. Ensure progress reporting doesn't significantly impact performance.
 
 # Drawbacks
-[drawbacks]: #drawbacks
 
 *   **Increased Code Complexity:** Implementing this feature will add new logic, increasing the overall codebase size and potentially maintenance effort.
 *   **Development Time:** Implementing this feature will require development time and testing resources.
 
 # Rationale and alternatives
-[rationale-and-alternatives]: #rationale-and-alternatives
 
 *   **Why is this design the best in the space of possible designs?**
     *   The proposed changes leverage Picocli's capabilities for a consistent and robust CLI.
@@ -79,19 +73,16 @@ These changes will make the `gff3tools` CLI more user-friendly and robust. Progr
     *   The proposed changes will make the CLI code slightly more complex due to added features. However, by adhering to Picocli's conventions, the overall project should remain maintainable. The benefits of improved user experience and reduced support burden are expected to outweigh the marginal increase in code complexity.
 
 # Prior art
-[prior-art]: #prior-art
 
 Many well-designed command-line tools offer excellent user experiences, which have influenced these proposals:
 
 *   **`rsync` / `cp`:** These utilities often provide verbose output or progress indicators for long-running file operations, which is the inspiration for adding progress feedback.
 
 # Unresolved questions
-[unresolved-questions]: #unresolved-questions
 
 *   What is the exact level of detail for the progress indicator? (e.g., percentage, simple spinner, number of records processed).
 
 # Future possibilities
-[future-possibilities]: #future-possibilities
 
 *   **Additional File Formats:** Extend the tool to support more biological annotation formats (e.g., BED, GTF, VCF).
 *   **Specific Feature Extraction/Manipulation:** Add subcommands or options to extract specific features from GFF3 files or perform common manipulations (e.g., filter by type, merge overlapping features).

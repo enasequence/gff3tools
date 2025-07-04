@@ -1,13 +1,11 @@
-- Feature Name: cli_tool_cross_platform_distribution
+- Feature Name: cli-distribution
 - Start Date: 2025-07-04
 
-# Summary
-[summary]: #summary
+# (Summary
 
 This RFC proposes a strategy for distributing the Java CLI tool across Windows, Linux, and macOS. The core idea is to provide a user-friendly experience by abstracting away the need for users to explicitly call `java -jar` when executing the tool. This will be achieved through a combination of platform-specific wrapper scripts and native executables.
 
 # Motivation
-[motivation]: #motivation
 
 Currently, users of the Java CLI tool are required to have a Java Runtime Environment (JRE) installed and to execute the tool using the `java -jar your_tool.jar` command. This presents several challenges:
 
@@ -30,7 +28,6 @@ Specific use cases where this proposal can help a user:
 *   **Casual Users:** Users who only occasionally use the tool will appreciate the direct execution, as they won't need to remember the `java -jar` syntax.
 
 # Guide-level explanation
-[guide-level-explanation]: #guide-level-explanation
 
 Upon implementation of this RFC, users will interact with the CLI tool as follows:
 
@@ -51,7 +48,6 @@ The distribution package will be designed to be self-contained, including all ne
 This change will make the project significantly easier to use for non-developers and will reduce the barrier to entry for new users. Developers will find it simpler to integrate the tool into their existing workflows. The maintenance of the project's code itself will not be significantly impacted, as the core logic remains in Java. The primary impact will be on the build and packaging processes.
 
 # Reference-level explanation
-[reference-level-explanation]: #reference-level-explanation
 
 The proposed distribution strategy involves two main components:
 
@@ -93,7 +89,6 @@ The proposed distribution strategy involves two main components:
 *   These packages will contain the executable (wrapper script or `.exe`) and the necessary JAR files and any other dependencies.
 
 # Drawbacks
-[drawbacks]: #drawbacks
 
 *   **Increased Build Complexity:** The build process will become more complex due to the need to generate platform-specific artifacts and potentially integrate native compilation tools.
 *   **Maintenance Overhead:** Maintaining wrapper scripts and native executable configurations for multiple platforms adds to the maintenance burden.
@@ -102,7 +97,6 @@ The proposed distribution strategy involves two main components:
 *   **Debugging Challenges (for native executables):** Debugging native executables can be more challenging than debugging standard Java applications.
 
 # Rationale and alternatives
-[rationale-and-alternatives]: #rationale-and-alternatives
 
 *   **Why is this design the best in the space of possible designs?**
     This hybrid approach (wrapper scripts for Unix-like, native executable for Windows) strikes a balance between ease of use, cross-platform compatibility, and development effort. It addresses the primary pain points of explicit `java -jar` invocation while leveraging existing, mature tools for native executable generation where it provides the most benefit (Windows).
@@ -122,7 +116,6 @@ The proposed distribution strategy involves two main components:
     The core Java code will remain unaffected, so its readability and maintainability will not change. The build scripts and distribution configurations will become more complex, requiring careful documentation and maintenance. However, this complexity is confined to the build system, not the application logic.
 
 # Prior art
-[prior-art]: #prior-art
 
 *   **Other Java CLI tools:** Many popular Java CLI tools (e.g., Maven, Gradle, Apache Ant) use wrapper scripts (shell scripts for Unix-like, batch files for Windows) to simplify execution. This is a well-established and proven method for distributing Java command-line applications.
 *   **Native application packaging tools:** Tools like Launch4j, JSmooth, and Excelsior JET have long been used to create Windows executables from JARs.
@@ -130,14 +123,12 @@ The proposed distribution strategy involves two main components:
 *   **Electron (for desktop apps):** While not directly applicable to CLI, frameworks like Electron for desktop applications demonstrate the user expectation for single-click, self-contained applications that abstract away underlying runtimes (like Node.js). This proposal aims for a similar level of abstraction for CLI tools.
 
 # Unresolved questions
-[unresolved-questions]: #unresolved-questions
 
 *   Should a JRE be bundled with the wrapper scripts for Linux/macOS, or should they rely on a system-wide JRE? Bundling simplifies distribution but increases package size. Relying on system JRE reduces size but increases user setup burden. This will likely be resolved during implementation, starting with relying on system JRE and moving to bundled if user feedback indicates issues.
 *   What is the specific tool to be used for native executable generation on Windows (e.g., Launch4j vs. GraalVM Native Image)? Initial preference is Launch4j for simplicity, but a deeper dive into GraalVM's suitability will be required.
 *   How will updates and versioning be handled with this new distribution method, especially for native executables?
 
 # Future possibilities
-[future-possibilities]: #future-possibilities
 
 *   **Automated Release Pipelines:** Integrate the new build artifacts into an automated release pipeline (CI/CD) to streamline the creation and distribution of cross-platform executables.
 *   **Package Managers:** Explore distribution through platform-specific package managers (e.g., Homebrew for macOS, apt/yum for Linux, Chocolatey for Windows) to further simplify installation for users.

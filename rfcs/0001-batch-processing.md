@@ -2,12 +2,10 @@
 - Start Date: 2025-07-04
 
 # Summary
-[summary]: #summary
 
 This RFC proposes enhancements to the `gff3tools` command-line interface (CLI) specifically to introduce robust batch processing capabilities for file conversions.
 
 # Motivation
-[motivation]: #motivation
 
 This RFC addresses the current limitations of the `gff3tools` CLI regarding batch processing, aiming to improve user experience and streamline workflows.
 
@@ -22,7 +20,6 @@ The primary problem this proposal aims to solve is:
     *   **Solution:** Adding batch processing options (e.g., `java -jar gff3tools.jar conversion -f gff3 -t embl --input-dir dir1 --output-dir dir2`) would streamline this workflow directly within the tool.
 
 # Guide-level explanation
-[guide-level-explanation]: #guide-level-explanation
 
 This proposal introduces enhancements to how users interact with `gff3tools` from the command line, specifically focusing on batch processing.
 
@@ -47,7 +44,6 @@ The `conversion` command will gain new options to facilitate converting multiple
 These changes will make the `gff3tools` CLI more user-friendly and robust. Batch processing will reduce the need for external scripting.
 
 # Reference-level explanation
-[reference-level-explanation]: #reference-level-explanation
 
 **1. Batch Processing for `conversion`:**
 
@@ -87,13 +83,11 @@ These changes will make the `gff3tools` CLI more user-friendly and robust. Batch
     ```
 
 # Drawbacks
-[drawbacks]: #drawbacks
 
 *   **Increased Code Complexity:** Batch processing adds new classes, options, and logic, increasing the overall codebase size and potentially maintenance effort.
 *   **Potential for Over-featurization:** While the proposed feature is beneficial, there's a risk of adding too many options, which could make the CLI more complex for basic users.
 
 # Rationale and alternatives
-[rationale-and-alternatives]: #rationale-and-alternatives
 
 *   **Why is this design the best in the space of possible designs?**
     *   The proposed changes leverage Picocli's capabilities for a consistent and robust CLI.
@@ -122,7 +116,6 @@ These changes will make the `gff3tools` CLI more user-friendly and robust. Batch
     *   The proposed changes will make the CLI code slightly more complex due to added features. However, by adhering to Picocli's conventions, the overall project should remain maintainable. The benefits of improved user experience and reduced support burden are expected to outweigh the marginal increase in code complexity.
 
 # Prior art
-[prior-art]: #prior-art
 
 Many well-designed command-line tools offer excellent user experiences, which have influenced these proposals:
 
@@ -130,12 +123,10 @@ Many well-designed command-line tools offer excellent user experiences, which ha
 *   **Bioinformatics CLIs with Batch Processing:** Many bioinformatics tools, such as QIAGEN CLC Genomics Workbench and various tools used with "Bash for Bioinformatics", demonstrate the common need and implementation of batch processing features.
 
 # Unresolved questions
-[unresolved-questions]: #unresolved-questions
 
 *   How should file naming conflicts be handled during batch processing if `--force-overwrite` is not used (e.g., skip, prompt, rename)?
 
 # Future possibilities
-[future-possibilities]: #future-possibilities
 
 *   **Parallel/Concurrent Batch Processing:** Implement the ability to process multiple files in a batch concurrently, leveraging multi-core processors to significantly speed up large conversion tasks.
 *   **Detailed Batch Processing Reports:** Enhance the output for batch jobs to include a summary report, indicating which files were successfully processed, which failed, and detailed error messages for failures.
