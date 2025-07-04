@@ -31,7 +31,7 @@ public class GFF3FileReader implements AutoCloseable {
     static Pattern DIRECTIVE_VERSION = Pattern.compile(
             "^##gff-version (?<version>(?<major>[0-9]+)(\\.(?<minor>[0-9]+)(:?\\.(?<patch>[0-9]+))?)?)\\s*$");
     static Pattern DIRECTIVE_SEQUENCE = Pattern.compile(
-            "^##sequence-region\\s(?<accession>(?<accessionID>.+)([.](?<accessionVersion>[0-9]+)))\\s(?<start>[0-9]+)\\s(?<end>[0-9]+)");
+            "^##sequence-region\\s+(?<accession>(?<accessionId>[^.]+)(?:\\.(?<accessionVersion>\\d+))?)\\s+(?<start>[0-9]+)\\s+(?<end>[0-9]+)$");
     static Pattern DIRECTIVE_SPECIES = Pattern.compile("^##species\\s(?<species>.+)$");
     static Pattern COMMENT = Pattern.compile("^#.*$");
     static Pattern GFF3_FEATURE = Pattern.compile(
@@ -58,7 +58,10 @@ public class GFF3FileReader implements AutoCloseable {
             Matcher m = DIRECTIVE_SEQUENCE.matcher(line);
             if (m.matches()) {
                 // Create directive
-                GFF3Directives.GFF3SequenceRegion sequenceDirective = getSequenceDirective(line);
+                GFF3Directives.GFF3SequenceRegion sequenceDirective = getSequenceDirective(m);
+
+                // TODO: Validation no multiple sequence accession
+                // TODO: Validation Sequence accession is required!
 
                 GFF3Annotation previousAnnotation = gff3Annotation;
                 // New gff3 annotation for each sequence directive
@@ -85,18 +88,14 @@ public class GFF3FileReader implements AutoCloseable {
         return finalAnnotation;
     }
 
-    private GFF3Directives.GFF3SequenceRegion getSequenceDirective(String line) {
-        // Extra check for line match
-        Matcher m = DIRECTIVE_SEQUENCE.matcher(line);
-        if (!m.matches()) return null;
+    private GFF3Directives.GFF3SequenceRegion getSequenceDirective(Matcher m) {
 
-        String accession = m.group("accession");
+        String accessionId = m.group("accessionId");
+        Optional<String> accessionVersion = Optional.ofNullable(m.group("accessionVersion"));
         long start = Long.parseLong(m.group("start"));
         long end = Long.parseLong(m.group("end"));
 
-        // TODO: Validation no multiple sequence accession
-        // TODO: Validation Sequence accession is required!
-        return new GFF3Directives.GFF3SequenceRegion(accession, start, end);
+        return new GFF3Directives.GFF3SequenceRegion(accessionId, accessionVersion, start, end);
     }
 
     private void parseAndAddFeature(String line) throws ValidationException {
