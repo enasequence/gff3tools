@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.converter.cli.Main;
-import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
 
 class GFF3ToFFConverterTest {
 
@@ -30,7 +29,6 @@ class GFF3ToFFConverterTest {
         Map<String, Path> testFiles = TestUtils.getTestFiles("gff3toff_rules", ".gff3");
 
         for (String filePrefix : testFiles.keySet()) {
-            Gff3ToFFConverter converter = new Gff3ToFFConverter();
 
             String inFile = testFiles.get(filePrefix).toString();
             String outFile = filePrefix + ".embl";

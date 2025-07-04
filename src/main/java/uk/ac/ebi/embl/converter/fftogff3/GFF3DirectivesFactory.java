@@ -62,7 +62,7 @@ public class GFF3DirectivesFactory {
         long start = feature.getLocations().getMinPosition();
         long end = feature.getLocations().getMaxPosition();
 
-        return new GFF3Directives.GFF3SequenceRegion(accession, Optional.empty(), start, end);
+        return new GFF3Directives.GFF3SequenceRegion(accession, accession, Optional.empty(), start, end);
     }
 
     public GFF3Directives from(Entry entry) throws NoSourcePresentException {

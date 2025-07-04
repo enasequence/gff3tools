@@ -14,6 +14,7 @@ public enum ValidationRule {
     FLATFILE_NO_SOURCE("The flatfile contains no source feature"),
     FLATFILE_NO_ONTOLOGY_FEATURE("The flatfile feature does not exist on the ontology."),
     GFF3_INVALID_RECORD("The record does not conform with the expected gff3 format"),
+    GFF3_UNDEFINED_SEQID("The record's seqid was not defined previously on a ##sequence-region directive"),
     GFF3_INVALID_HEADER("Invalid gff3 header"),
     ;
 
