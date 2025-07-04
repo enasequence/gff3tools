@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.converter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -49,6 +50,8 @@ class FFToGFF3ConverterTest {
 
                 assertEquals(expected.trim(), gff3Writer.toString().trim(), "Error on test case: " + filePrefix);
                 gff3Writer.close();
+            } catch (Exception e) {
+                fail("Error on test case: " + filePrefix + " - " + e.getMessage());
             }
         }
     }
