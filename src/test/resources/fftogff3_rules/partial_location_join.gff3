@@ -3,4 +3,4 @@
 TEST01.1	.	ncRNA_gene	1	500	.	+	.	ID=ncRNA_gene_matK;gene=matK;partial=start;
 TEST01.1	.	ncRNA_gene	600	700	.	+	.	ID=ncRNA_gene_matK;gene=matK;
 TEST01.1	.	ncRNA_gene	800	822	.	+	.	ID=ncRNA_gene_matK;gene=matK;partial=end;
-TEST01.1	.	mRNA	100	122	.	+	.	Parent=ncRNA_gene_matK;
+TEST01.1	.	mRNA	100	122	.	+	.	ID=mRNA_matK;Parent=ncRNA_gene_matK;

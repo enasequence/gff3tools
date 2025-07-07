@@ -124,15 +124,11 @@ public class GFF3AnnotationFactory {
         String source = ".";
         String score = ".";
 
-        Optional<String> id = Optional.empty();
-        Optional<String> parentId = Optional.empty();
-
         String featureName = getGFF3FeatureName(ffFeature);
 
-        if (geneName.isPresent()) {
-            id = Optional.of(getIncrementalId(featureName, geneName.get()));
-            parentId = Optional.of(getParentFeature(featureName, geneName));
-        }
+        Optional<String> id = Optional.of(getIncrementalId(featureName, geneName));
+        Optional<String> parentId = getParentFeature(featureName, geneName);
+
 
         Map<String, Object> baseAttributes = getAttributeMap(ffFeature);
 
@@ -258,7 +254,6 @@ public class GFF3AnnotationFactory {
                     child.getAttributes().put("locus_tag", locusTag);
                 }
                 child.getAttributes().remove("gene");
-                child.getAttributes().remove("ID");
                 gffFeatures.add(child);
             }
         }
@@ -321,21 +316,23 @@ public class GFF3AnnotationFactory {
                         .orElse(false));
     }
 
-    public String getIncrementalId(String name, String geneName) {
-        String baseId = "%s_%s".formatted(name, geneName);
+    public String getIncrementalId(String featureName, Optional<String> geneName) {
+        String baseId = geneName.filter(gene -> !gene.isEmpty())
+                .map(gene -> "%s_%s".formatted(featureName, gene))
+                .orElse(featureName);
         int count = idMap.getOrDefault(baseId, 0);
         idMap.put(baseId, count + 1);
 
         return count > 0 ? "%s_%d".formatted(baseId, count) : baseId;
     }
 
-    private String getParentFeature(String emblFeatureName, Optional geneName) {
+    private Optional<String> getParentFeature(String emblFeatureName, Optional<String> geneName) {
 
         if (!geneName.isPresent()) {
-            return "";
+            return Optional.empty();
         }
 
-        List<GFF3Feature> gffFeatures = geneMap.getOrDefault(geneName.get(), Collections.emptyList());
+        List<GFF3Feature> gffFeatures = geneMap.getOrDefault(geneName.orElse(""), Collections.emptyList());
         Set<String> definedParents = featureRelationMap.getOrDefault(emblFeatureName, Collections.emptySet());
 
         // As the features are ordered by location, iterating the features from last to first to get the immediate
@@ -343,10 +340,10 @@ public class GFF3AnnotationFactory {
         for (int i = gffFeatures.size() - 1; i >= 0; i--) {
             GFF3Feature feature = gffFeatures.get(i);
             if (definedParents.contains(feature.getName())) {
-                return feature.getId().orElse("");
+                return feature.getId();
             }
         }
-        return "";
+        return Optional.empty();
     }
 
     private String getGFF3FeatureName(Feature ffFeature) {

@@ -2,4 +2,4 @@
 ##sequence-region TEST01.1 1 822
 TEST01.1	.	ncRNA_gene	1	822	.	+	.	ID=ncRNA_gene_matK;gene=matK;
 TEST01.1	.	ncRNA_gene	1	822	.	+	.	ID=ncRNA_gene_trnK;gene=trnK;
-TEST01.1	.	mRNA	1	822	.	+	.	Parent=ncRNA_gene_trnK;
+TEST01.1	.	mRNA	1	822	.	+	.	ID=mRNA_trnK;Parent=ncRNA_gene_trnK;
