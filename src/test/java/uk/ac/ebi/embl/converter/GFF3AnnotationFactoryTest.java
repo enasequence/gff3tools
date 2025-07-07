@@ -30,7 +30,6 @@ import uk.ac.ebi.embl.converter.fftogff3.GFF3AnnotationFactory;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
-import javax.swing.text.html.Option;
 
 class GFF3AnnotationFactoryTest {
     static Map<String, Set<String>> featureRelationMap;
@@ -216,7 +215,6 @@ class GFF3AnnotationFactoryTest {
     private void executeAndValidateGetParentFeature(
             GFF3AnnotationFactory gFF3AnnotationFactory, String featureName, String geneName, String expectedParentId)
             throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        System.out.println(featureName+"==="+geneName);
         Method getParentFeature =
                 GFF3AnnotationFactory.class.getDeclaredMethod("getParentFeature", String.class, Optional.class);
         getParentFeature.setAccessible(true);
