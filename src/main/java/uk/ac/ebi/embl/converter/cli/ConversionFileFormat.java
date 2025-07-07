@@ -8,18 +8,9 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.gff3.reader;
+package uk.ac.ebi.embl.converter.cli;
 
-import lombok.Getter;
-
-@Getter
-public class GFF3ValidationError extends Exception {
-    private final int line;
-    private final String message;
-
-    public GFF3ValidationError(int line, String message) {
-        super(String.format("Line: %d - %s", line, message));
-        this.line = line;
-        this.message = message;
-    }
+public enum ConversionFileFormat {
+    embl,
+    gff3
 }

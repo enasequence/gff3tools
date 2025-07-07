@@ -1,0 +1,11 @@
+##gff-version 3.1.26
+##sequence-region BN000065.1 1 315242
+BN000065.1	.	gene	1	315242	.	+	.	ID=gene_RHD;gene=RHD;
+BN000065.1	.	mRNA	133806	191728	.	+	.	Parent=gene_RHD;
+BN000065.1	.	rRNA	133970	145841	.	+	.	Parent=gene_RHD;number=1;
+
+##sequence-region BN000066.1 1 315242
+BN000066.1	.	gene	1	315242	.	+	.	ID=gene_RHD;gene=RHD;
+## Next line is broken
+BN000066.1	. 133806	191728	.	+	.	Parent=gene_RHD;
+BN000066.1	.	rRNA	133970	145841	.	+	.	Parent=gene_RHD;number=1;

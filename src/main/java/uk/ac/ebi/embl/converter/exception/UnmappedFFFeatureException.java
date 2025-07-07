@@ -8,18 +8,13 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.gff3;
+package uk.ac.ebi.embl.converter.exception;
 
-import java.io.Writer;
-import java.util.List;
-import uk.ac.ebi.embl.converter.exception.WriteException;
+import static uk.ac.ebi.embl.converter.validation.ValidationRule.FLATFILE_NO_ONTOLOGY_FEATURE;
 
-public record GFF3File(GFF3Header header, List<GFF3Annotation> annotations) implements IGFF3Feature {
-    @Override
-    public void writeGFF3String(Writer writer) throws WriteException {
-        this.header.writeGFF3String(writer);
-        for (GFF3Annotation annotation : annotations) {
-            annotation.writeGFF3String(writer);
-        }
+public class UnmappedFFFeatureException extends ValidationException {
+
+    public UnmappedFFFeatureException(String featureName) {
+        super(FLATFILE_NO_ONTOLOGY_FEATURE, featureName);
     }
 }

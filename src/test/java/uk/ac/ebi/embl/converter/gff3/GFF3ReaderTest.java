@@ -19,8 +19,8 @@ import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
+import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.converter.gff3.reader.GFF3ValidationError;
 
 public class GFF3ReaderTest {
     @Test
@@ -29,10 +29,10 @@ public class GFF3ReaderTest {
 
         for (String filePrefix : testFiles.keySet()) {
             File file = new File(testFiles.get(filePrefix).toUri());
-            FileReader filerReader = new FileReader(file);
-            BufferedReader reader = new BufferedReader(filerReader);
-            GFF3FileReader gff3Reader = new GFF3FileReader(reader);
-            try {
+
+            try (FileReader filerReader = new FileReader(file);
+                    BufferedReader reader = new BufferedReader(filerReader);
+                    GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
                 gff3Reader.readHeader();
                 while (true) {
                     if (gff3Reader.readAnnotation() == null) break;
@@ -47,17 +47,16 @@ public class GFF3ReaderTest {
     void testMissingHeader() throws Exception {
         File testFile = TestUtils.getResourceFile("validation_errors/empty_file.gff3");
 
-        FileReader filerReader = new FileReader(testFile);
-        BufferedReader reader = new BufferedReader(filerReader);
-        GFF3FileReader gff3Reader = new GFF3FileReader(reader);
-        try {
+        try (FileReader filerReader = new FileReader(testFile);
+                BufferedReader reader = new BufferedReader(filerReader);
+                GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
             gff3Reader.readHeader();
-        } catch (GFF3ValidationError e) {
+        } catch (InvalidGFF3HeaderException e) {
             Assertions.assertTrue(e.getMessage().contains("GFF3 header not found"));
             Assertions.assertEquals(1, e.getLine());
-        } catch (Exception e) {
-            fail(String.format("Error parsing file: %s", testFile.getPath()), e);
+            return;
         }
+        fail(String.format("Expected exception when parsing file: %s", testFile.getPath()));
     }
 
     @Test
@@ -70,14 +69,34 @@ public class GFF3ReaderTest {
         test("ID=ID_TEST;qualifier1=%00%09%25%3B%2C;");
     }
 
-    private void test(String attributeLine) throws Exception {
-        GFF3FileReader gff3Reader = new GFF3FileReader(new StringReader(attributeLine));
-        Map<String, Object> attrMap = gff3Reader.attributesFromString(attributeLine);
-
-        assertEquals(attributeLine, getAttributeString(attrMap));
+    @Test
+    void testInvalidRecord() throws Exception {
+        File testFile = TestUtils.getResourceFile("validation_errors/invalid_record.gff3");
+        try (FileReader filerReader = new FileReader(testFile);
+                BufferedReader reader = new BufferedReader(filerReader);
+                GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
+            gff3Reader.readHeader(); // Read header first
+            while (true) {
+                if (gff3Reader.readAnnotation() == null) {
+                    fail(String.format("Expected exception when parsing file: %s", testFile.getPath()));
+                }
+            }
+        } catch (InvalidGFF3RecordException e) {
+            Assertions.assertTrue(e.getMessage().contains("Invalid gff3 record"));
+            Assertions.assertEquals(10, e.getLine()); // Line 3 is the invalid record
+            return;
+        }
     }
 
-    private String getAttributeString(Map<String, Object> attributes) throws IOException {
+    private void test(String attributeLine) throws Exception {
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(new StringReader(attributeLine))) {
+            Map<String, Object> attrMap = gff3Reader.attributesFromString(attributeLine);
+
+            assertEquals(attributeLine, getAttributeString(attrMap));
+        }
+    }
+
+    private String getAttributeString(Map<String, Object> attributes) throws WriteException, IOException {
         try (StringWriter gff3Writer = new StringWriter()) {
             GFF3Annotation annotation = new GFF3Annotation();
             GFF3Feature gff3Feature = TestUtils.createGFF3Feature("ID", "Parent", attributes);

@@ -11,12 +11,11 @@
 package uk.ac.ebi.embl.converter.fftogff3;
 
 import io.vavr.Function0;
-import java.util.ArrayList;
 import java.util.Optional;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.OrganismQualifier;
-import uk.ac.ebi.embl.converter.ConversionError;
+import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
@@ -43,9 +42,10 @@ public class GFF3DirectivesFactory {
                 .orElseGet(getOrganism);
     }
 
-    public GFF3Directives.GFF3Species extractSpecies(Entry entry) throws ConversionError {
+    public GFF3Directives.GFF3Species extractSpecies(Entry entry) throws NoSourcePresentException {
 
-        Feature feature = Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresent::new);
+        Feature feature =
+                Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresentException::new);
 
         Optional<OrganismQualifier> qualifier =
                 feature.getQualifiers("organism").stream().findFirst().map(q -> (OrganismQualifier) q);
@@ -53,10 +53,11 @@ public class GFF3DirectivesFactory {
         return new GFF3Directives.GFF3Species(buildTaxonomyUrl(qualifier));
     }
 
-    public GFF3Directives.GFF3SequenceRegion extractSequenceRegion(Entry entry) throws ConversionError {
+    public GFF3Directives.GFF3SequenceRegion extractSequenceRegion(Entry entry) throws NoSourcePresentException {
 
         String accession = entry.getPrimaryAccession();
-        Feature feature = Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresent::new);
+        Feature feature =
+                Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresentException::new);
 
         long start = feature.getLocations().getMinPosition();
         long end = feature.getLocations().getMaxPosition();
@@ -64,9 +65,8 @@ public class GFF3DirectivesFactory {
         return new GFF3Directives.GFF3SequenceRegion(accession, start, end);
     }
 
-    public GFF3Directives from(Entry entry) throws ConversionError {
+    public GFF3Directives from(Entry entry) throws NoSourcePresentException {
 
-        ArrayList<GFF3Directives.GFF3Directive> directives = new ArrayList<>();
         GFF3Directives gff3Directives = new GFF3Directives();
         if (!this.ignoreSpecies) {
             gff3Directives.add(extractSpecies(entry));
@@ -75,11 +75,4 @@ public class GFF3DirectivesFactory {
 
         return gff3Directives;
     }
-
-    public static class NoSourcePresent extends ConversionError {
-        public NoSourcePresent() {
-            super("No source found");
-        }
-    }
-    ;
 }

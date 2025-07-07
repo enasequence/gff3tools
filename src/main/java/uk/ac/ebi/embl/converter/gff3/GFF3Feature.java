@@ -50,7 +50,8 @@ public class GFF3Feature {
 
     public String hashCodeString() {
         Map<String, Object> hashAttributes = new HashMap<>(attributes);
-        // Removing partial from the attribute as it can change for the first and last location in a compound Join
+        // Removing partial from the attribute as it can change for the first and last
+        // location in a compound Join
         hashAttributes.remove("partial");
 
         String hashCodeStr = String.join(

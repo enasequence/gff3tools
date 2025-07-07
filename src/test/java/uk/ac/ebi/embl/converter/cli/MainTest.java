@@ -17,28 +17,95 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
+import picocli.CommandLine;
+import uk.ac.ebi.embl.converter.validation.RuleSeverity;
+import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 public class MainTest {
+
+    @Test
+    void testParseRules() {
+        for (ValidationRule rule : ValidationRule.values()) {
+            for (RuleSeverity severity : RuleSeverity.values()) {
+                String ruleName = rule.name().toLowerCase();
+                String severityName = severity.name().toLowerCase();
+                String[] args = new String[] {"--rules=" + ruleName + ":" + severityName};
+
+                FileConversionCommand cc = new FileConversionCommand();
+                CommandLine commandLine = new CommandLine(cc);
+                commandLine.parseArgs(args);
+
+                assertEquals(
+                        severity,
+                        cc.rules.rules().get(rule),
+                        "Failed for rule: " + rule.name() + " with severity: " + severity.name());
+            }
+        }
+    }
+
+    @Test
+    void testParseRules_InvalidRuleName() {
+        String[] args = new String[] {"--rules=non_existent_rule:warn"};
+        FileConversionCommand cc = new FileConversionCommand();
+        CommandLine commandLine = new CommandLine(cc);
+        // Expect an exception when parsing an invalid rule name
+        CommandLine.ParameterException exception = org.junit.jupiter.api.Assertions.assertThrows(
+                CommandLine.ParameterException.class, () -> commandLine.parseArgs(args));
+        assertTrue(
+                exception.getMessage().contains("non_existent_rule"),
+                "Exception message should contain the invalid rule name");
+    }
+
+    @Test
+    void testParseRules_InvalidRuleSeverity() {
+        String[] args = new String[] {"--rules=flatfile_no_source:invalid_severity"};
+        FileConversionCommand cc = new FileConversionCommand();
+        CommandLine commandLine = new CommandLine(cc);
+        // Expect an exception when parsing an invalid severity
+        CommandLine.ParameterException exception = org.junit.jupiter.api.Assertions.assertThrows(
+                CommandLine.ParameterException.class, () -> commandLine.parseArgs(args));
+        assertTrue(
+                exception.getMessage().contains("invalid_severity"),
+                "Exception message should contain the invalid severity name");
+    }
+
+    @Test
+    void testParseRules_MultipleRules() {
+        String[] args = new String[] {"--rules=flatfile_no_ontology_feature:warn,flatfile_no_source:error"};
+        FileConversionCommand cc = new FileConversionCommand();
+        CommandLine commandLine = new CommandLine(cc);
+        commandLine.parseArgs(args);
+
+        assertEquals(
+                RuleSeverity.WARN,
+                cc.rules.rules().get(ValidationRule.FLATFILE_NO_ONTOLOGY_FEATURE),
+                "Failed for rule: FLATFILE_NO_ONTOLOGY_FEATURE with severity: WARN");
+        assertEquals(
+                RuleSeverity.ERROR,
+                cc.rules.rules().get(ValidationRule.FLATFILE_NO_SOURCE),
+                "Failed for rule: FLATFILE_NO_SOURCE with severity: ERROR");
+    }
+
     @Test
     public void testValidateFileType() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        CommandConversion command = new CommandConversion();
-        Method method = CommandConversion.class.getDeclaredMethod(
-                "validateFileType", CommandConversion.FileFormat.class, Path.class, String.class);
+        FileConversionCommand command = new FileConversionCommand();
+        Method method = FileConversionCommand.class.getDeclaredMethod(
+                "validateFileType", ConversionFileFormat.class, Path.class, String.class);
         method.setAccessible(true);
 
         Object validate = null;
 
-        validate = method.invoke(command, CommandConversion.FileFormat.embl, Path.of("foo"), "-f");
-        assertEquals(CommandConversion.FileFormat.embl, validate, "If format is provided returns the same format");
+        validate = method.invoke(command, ConversionFileFormat.embl, Path.of("foo"), "-f");
+        assertEquals(ConversionFileFormat.embl, validate, "If format is provided returns the same format");
 
-        validate = method.invoke(command, CommandConversion.FileFormat.gff3, Path.of("foo"), "-f");
-        assertEquals(CommandConversion.FileFormat.gff3, validate, "If format is provided returns the same format");
+        validate = method.invoke(command, ConversionFileFormat.gff3, Path.of("foo"), "-f");
+        assertEquals(ConversionFileFormat.gff3, validate, "If format is provided returns the same format");
 
         validate = method.invoke(command, null, Path.of("foo.embl"), "-f");
-        assertEquals(CommandConversion.FileFormat.embl, validate, "If format in path extension, use it");
+        assertEquals(ConversionFileFormat.embl, validate, "If format in path extension, use it");
 
         validate = method.invoke(command, null, Path.of("foo.gff3"), "-f");
-        assertEquals(CommandConversion.FileFormat.gff3, validate, "If format in path extension, use it");
+        assertEquals(ConversionFileFormat.gff3, validate, "If format in path extension, use it");
 
         try {
             validate = method.invoke(command, null, Path.of("foo.embl"), "-f");
