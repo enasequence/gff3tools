@@ -30,7 +30,6 @@ import uk.ac.ebi.embl.converter.fftogff3.GFF3AnnotationFactory;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
-
 class GFF3AnnotationFactoryTest {
     static Map<String, Set<String>> featureRelationMap;
 
@@ -219,7 +218,8 @@ class GFF3AnnotationFactoryTest {
                 GFF3AnnotationFactory.class.getDeclaredMethod("getParentFeature", String.class, Optional.class);
         getParentFeature.setAccessible(true);
 
-        Optional<String> result = (Optional<String>) getParentFeature.invoke(gFF3AnnotationFactory, featureName, Optional.of(geneName));
+        Optional<String> result =
+                (Optional<String>) getParentFeature.invoke(gFF3AnnotationFactory, featureName, Optional.of(geneName));
         assertEquals(expectedParentId, result.orElse(""));
     }
 }

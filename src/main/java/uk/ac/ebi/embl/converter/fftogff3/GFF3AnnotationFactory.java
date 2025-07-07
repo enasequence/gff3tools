@@ -129,7 +129,6 @@ public class GFF3AnnotationFactory {
         Optional<String> id = Optional.of(getIncrementalId(featureName, geneName));
         Optional<String> parentId = getParentFeature(featureName, geneName);
 
-
         Map<String, Object> baseAttributes = getAttributeMap(ffFeature);
 
         geneName.ifPresent(v -> baseAttributes.put("gene", v));
