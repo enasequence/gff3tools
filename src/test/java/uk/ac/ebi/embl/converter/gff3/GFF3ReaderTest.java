@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 public class GFF3ReaderTest {
     @Test
@@ -86,6 +87,23 @@ public class GFF3ReaderTest {
             Assertions.assertEquals(10, e.getLine()); // Line 3 is the invalid record
             return;
         }
+    }
+
+    @Test
+    void testUndefinedSeqIdException() throws Exception {
+        File testFile = TestUtils.getResourceFile("validation_errors/undefined_seq_id.gff3");
+
+        try (FileReader filerReader = new FileReader(testFile);
+                BufferedReader reader = new BufferedReader(filerReader);
+                GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
+            gff3Reader.readHeader();
+            gff3Reader.readAnnotation();
+        } catch (UndefinedSeqIdException e) {
+            Assertions.assertTrue(e.getMessage().contains(ValidationRule.GFF3_UNDEFINED_SEQID.getDescription()));
+            Assertions.assertEquals(2, e.getLine());
+            return;
+        }
+        fail(String.format("Expected exception when parsing file: %s", testFile.getPath()));
     }
 
     private void test(String attributeLine) throws Exception {
