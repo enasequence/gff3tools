@@ -203,16 +203,8 @@ The `Main` class integrates with `picocli` via `CommandLine.setExecutionExceptio
     *   **Implications:** This can lead to a less differentiated type system. Subclassing `ExitException` provides for more specific `catch` blocks and compile-time checks. The use of distinct type names, such as `ReadException`, can also provide more immediate information regarding the nature of the error.
 
 # Technical Debt / Future Considerations
-*   **Missing Test Coverage:** Implement comprehensive unit and integration tests for `ExitException` subclasses to verify `CLIExitCode` and constructor behavior, as well as the `Main` class's exception handling, as outlined in the Testing Strategy section.
-*   **Expansion of `CLIExitCode`:** Assess if additional standard `CLIExitCode` values are required to cover future error scenarios.
-*   **Error Reporting Framework:** Extend error handling to include more sophisticated error reporting, such as logging errors to a file, sending reports to a centralized service.
-
-# Testing Strategy
-
-The current testing strategy for this error handling system includes:
-*   **Unit Tests:** Existing unit tests primarily focus on command-line argument parsing and validation rules within `MainTest.java`. Dedicated unit tests for each `ExitException` subclass to verify the correctness of their `exitCode()` method and constructors are currently not comprehensively implemented.
-*   **Integration Tests:** Integration tests aim to verify that throwing an `ExitException` correctly results in the program exiting with the expected `CLIExitCode` when executed via the `Main` class. These tests should cover scenarios for `CLIException`, `ReadException`, `ValidationException`, `OutOfMemoryError`, and general `Throwable` catches. Comprehensive tests directly asserting `System.exit()` behavior for all `ExitException` types are not yet fully in place.
-*   **End-to-End Tests:** Command-line tool tests should validate that specific erroneous inputs or conditions lead to the expected exit code, simulating real-world usage.
+*   **Expansion of `CLIExitCode`:** The current `CLIExitCode` values are generally sufficient for existing error scenarios, and expansion is not an immediate high priority, though future assessment for truly distinct error categories is always open.
+*   **Error Reporting Framework:** Extend error handling to include more sophisticated error reporting, such as logging errors to a file, sending reports to a centralized service. The current implementation primarily uses standard SLF4J logging, and more advanced reporting mechanisms are still a future consideration.
 
 # Deployment & Operations
 
