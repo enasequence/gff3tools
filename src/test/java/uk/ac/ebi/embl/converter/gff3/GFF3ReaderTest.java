@@ -22,9 +22,7 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.converter.validation.RuleSeverity;
-import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
-import uk.ac.ebi.embl.converter.validation.ValidationRule;
+import uk.ac.ebi.embl.converter.validation.*;
 
 public class GFF3ReaderTest {
     @Test
@@ -131,6 +129,38 @@ public class GFF3ReaderTest {
         } finally {
             // Reset the rule severity to ERROR for other tests
             ruleSeverityMap.put(ValidationRule.GFF3_UNDEFINED_SEQID, RuleSeverity.ERROR);
+            RuleSeverityState.INSTANCE.putAll(ruleSeverityMap);
+        }
+    }
+
+    @Test
+    void testInvalidRecordNoExceptionWhenRuleOff() throws Exception {
+        File testFile = TestUtils.getResourceFile("validation_errors/invalid_record.gff3");
+        Map<ValidationRule, RuleSeverity> ruleSeverityMap = new HashMap<>();
+        ruleSeverityMap.put(ValidationRule.GFF3_INVALID_RECORD, RuleSeverity.OFF);
+        RuleSeverityState.INSTANCE.putAll(ruleSeverityMap);
+
+        try (FileReader filerReader = new FileReader(testFile);
+                BufferedReader reader = new BufferedReader(filerReader);
+                GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
+            gff3Reader.readHeader();
+            GFF3Annotation annotation = null;
+            while (true) {
+                GFF3Annotation currentAnnotation = gff3Reader.readAnnotation();
+                if (currentAnnotation == null) break;
+                if (annotation == null) {
+                    annotation = currentAnnotation;
+                } else {
+                    annotation.getFeatures().addAll(currentAnnotation.getFeatures());
+                }
+            }
+            Assertions.assertNotNull(annotation);
+            // The invalid record is skipped, so we expect 5 features instead of 6 if it
+            // were valid
+            Assertions.assertEquals(5, annotation.getFeatures().size());
+        } finally {
+            // Reset the rule severity to ERROR for other tests
+            ruleSeverityMap.put(ValidationRule.GFF3_INVALID_RECORD, RuleSeverity.ERROR);
             RuleSeverityState.INSTANCE.putAll(ruleSeverityMap);
         }
     }
