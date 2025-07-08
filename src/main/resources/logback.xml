@@ -1,5 +1,6 @@
 <configuration>
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- We only want on stdout INFO or less unfortunatelly ThresholdFilter doesn't work for this-->
         <encoder>
             <pattern>%d{YYYY-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
@@ -8,9 +9,15 @@
             <onMatch>DENY</onMatch>
             <onMismatch>NEUTRAL</onMismatch>
         </filter>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>DENY</onMatch>
+            <onMismatch>NEUTRAL</onMismatch>
+        </filter>
     </appender>
 
     <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- We only want on stderr WARN or greater-->
         <target>System.err</target>
         <encoder>
             <pattern>%d{YYYY-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
