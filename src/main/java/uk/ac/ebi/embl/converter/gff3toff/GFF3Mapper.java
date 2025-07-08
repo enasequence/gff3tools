@@ -11,7 +11,6 @@
 package uk.ac.ebi.embl.converter.gff3toff;
 
 import java.util.*;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -32,9 +31,6 @@ import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 public class GFF3Mapper {
 
     private static final Logger LOG = LoggerFactory.getLogger(GFF3Mapper.class);
-
-    private static final Set<String> JOIN_EXCLUDED_FEATURES =
-            Set.of("protein_bind", "repeat_region", "assembly_gap", "misc_feature");
 
     private final Map<String, String> qmap = ConversionUtils.getGFF32FFQualifierMap();
     private final EntryFactory entryFactory = new EntryFactory();
@@ -129,11 +125,7 @@ public class GFF3Mapper {
             locations.addLocation(location);
             ffFeature.setLocations(locations);
             ffFeature.addQualifiers(mapGFF3Attributes(attributes));
-            // Only adds this feature to the map if is not one of the excluded features.
-            // This is so locations won't be merged on joins for the excluded features.
-            if (!JOIN_EXCLUDED_FEATURES.contains(featureName)) {
-                joinableFeatureMap.put(featureHashId, ffFeature);
-            }
+            joinableFeatureMap.put(featureHashId, ffFeature);
             entry.addFeature(ffFeature);
         }
         if (ffFeature.getQualifiers("gene").isEmpty()) {
