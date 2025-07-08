@@ -17,13 +17,13 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.exception.*;
-import uk.ac.ebi.embl.converter.exception.CLIException;
 import uk.ac.ebi.embl.converter.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
@@ -128,12 +128,14 @@ public class FileConversionCommand implements Runnable {
         T apply(Path p, Charset c) throws IOException;
     }
 
-    private <T> T getPipe(NewPipeFunction<T> newFilePipe, Function0<T> newStdPipe, Path filePath) {
+    private <T> T getPipe(NewPipeFunction<T> newFilePipe, Function0<T> newStdPipe, Path filePath) throws ExitException {
         if (!filePath.toString().isEmpty()) {
             try {
                 return newFilePipe.apply(filePath, StandardCharsets.UTF_8);
+            } catch (NoSuchFileException e) {
+                throw new NonExistingFile("The file does not exist: " + filePath, e);
             } catch (IOException e) {
-                throw new Error("Error opening file: " + filePath, e);
+                throw new ReadException("Error opening file: " + filePath, e);
             }
         } else {
             return newStdPipe.apply();
