@@ -13,6 +13,19 @@ FT   gene            join(<1..500,600..700,800..>822)
 FT                   /gene="matK"
 FT   mRNA            100..122
 FT                   /gene="matK"
+XX
+//
+ID   OZ215952; SV XXX; XXX; XXX; XXX; XXX; 0 BP.
+XX
+AC   OZ215952;
+XX
+DE   .
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..822
 FT   CDS             join(complement(66903..>67016),183994..184671,
 FT                   185444..>185472)
 FT                   /pseudo
@@ -27,4 +40,3 @@ FT                   /trans_splicing
 FT                   /gene="rps13"
 XX
 //
-

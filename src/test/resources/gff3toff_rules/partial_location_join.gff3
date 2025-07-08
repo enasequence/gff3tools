@@ -4,6 +4,7 @@ TEST01.1	.	gene	1	500	.	+	.	ID=gene_matK;gene=matK;partial=start;
 TEST01.1	.	gene	600	700	.	+	.	ID=gene_matK;gene=matK;
 TEST01.1	.	gene	800	822	.	+	.	ID=gene_matK;gene=matK;partial=end;
 TEST01.1	.	mRNA	100	122	.	+	.	Parent=gene_matK;
+##sequence-region OZ215952.1 1 822
 OZ215952.1	.	pseudogenic_CDS	66903	67016	.	-	0	ID=pseudogenic_CDS_rps12;gene=rps12;partial=end;pseudo=true;trans_splicing=true;transl_table=11;
 OZ215952.1	.	pseudogenic_CDS	183994	184671	.	+	0	ID=pseudogenic_CDS_rps12;gene=rps12;pseudo=true;trans_splicing=true;transl_table=11;
 OZ215952.1	.	pseudogenic_CDS	185444	185472	.	+	0	ID=pseudogenic_CDS_rps12;gene=rps12;partial=end;pseudo=true;trans_splicing=true;transl_table=11;

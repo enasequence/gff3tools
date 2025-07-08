@@ -15,12 +15,16 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.*;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.converter.validation.RuleSeverity;
+import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
+import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 public class GFF3ReaderTest {
     @Test
@@ -85,6 +89,44 @@ public class GFF3ReaderTest {
             Assertions.assertTrue(e.getMessage().contains("Invalid gff3 record"));
             Assertions.assertEquals(10, e.getLine()); // Line 3 is the invalid record
             return;
+        }
+    }
+
+    @Test
+    void testUndefinedSeqIdException() throws Exception {
+        File testFile = TestUtils.getResourceFile("validation_errors/undefined_seq_id.gff3");
+
+        try (FileReader filerReader = new FileReader(testFile);
+                BufferedReader reader = new BufferedReader(filerReader);
+                GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
+            gff3Reader.readHeader();
+            gff3Reader.readAnnotation();
+        } catch (UndefinedSeqIdException e) {
+            Assertions.assertTrue(e.getMessage().contains(ValidationRule.GFF3_UNDEFINED_SEQID.getDescription()));
+            Assertions.assertEquals(2, e.getLine());
+            return;
+        }
+        fail(String.format("Expected exception when parsing file: %s", testFile.getPath()));
+    }
+
+    @Test
+    void testUndefinedSeqIdNoExceptionWhenRuleOff() throws Exception {
+        File testFile = TestUtils.getResourceFile("validation_errors/undefined_seq_id.gff3");
+        Map<ValidationRule, RuleSeverity> ruleSeverityMap = new HashMap<>();
+        ruleSeverityMap.put(ValidationRule.GFF3_UNDEFINED_SEQID, RuleSeverity.OFF);
+        RuleSeverityState.INSTANCE.putAll(ruleSeverityMap);
+
+        try (FileReader filerReader = new FileReader(testFile);
+                BufferedReader reader = new BufferedReader(filerReader);
+                GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
+            gff3Reader.readHeader();
+            GFF3Annotation annotation = gff3Reader.readAnnotation();
+            Assertions.assertNotNull(annotation);
+            Assertions.assertEquals(1, annotation.getFeatures().size());
+        } finally {
+            // Reset the rule severity to ERROR for other tests
+            ruleSeverityMap.put(ValidationRule.GFF3_UNDEFINED_SEQID, RuleSeverity.ERROR);
+            RuleSeverityState.INSTANCE.putAll(ruleSeverityMap);
         }
     }
 
