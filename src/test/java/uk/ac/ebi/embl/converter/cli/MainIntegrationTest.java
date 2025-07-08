@@ -54,9 +54,18 @@ public class MainIntegrationTest {
     @Test
     void testReadExceptionExitCode() {
         String[] args = new String[] {"conversion", "-f", "embl", "-t", "gff3", "non_existent_input.embl"}; //
-        // mainMockedStatic.verify(() -> Main.exit(CLIExitCode.USAGE.asInt()));
-        // Main.main(args);
-        // mainMockedStatic.verify(() -> Main.exit(CLIExitCode.READ_ERROR.asInt()));
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(errContent));
+
+        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
+            mock.when(() -> Main.main(any())).thenCallRealMethod();
+            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
+            Main.main(args);
+            mock.verify(() -> Main.exit(CLIExitCode.NON_EXISTENT_FILE.asInt()));
+        } finally {
+            System.setErr(originalErr);
+        }
     }
 
     @Test
