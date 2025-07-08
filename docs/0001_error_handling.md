@@ -107,6 +107,46 @@ The error handling strategy centers around the `ExitException` abstract class, w
     }
     ```
 
+**Flow diagram**
+```mermaid
+
+graph TD
+
+    subgraph Error Flow
+        E[Error Occurs] --> F{Throw ExitException Subclass}
+        F --> G[Main Class]
+    end
+
+    subgraph Centralized Handling
+        G --> I[ExecutionExceptionHandler]
+        I --> J{Is cause ExitException?}
+        J -- Yes --> K[Get CLIExitCode from ExitException]
+        J -- No --> O
+        G --> M{Catch OutOfMemoryError?}
+        M -- Yes --> N[Set exitCode = CLIExitCode.OUT_OF_MEMORY]
+        M -- No --> O{Catch General Throwable?}
+        O -- Yes --> P[Log error, default exit code]
+    end
+
+    K --> Q[System.exit]
+    N --> Q
+    P --> Q
+```
+
+### ExitException Hierarchy and New Entity Addition
+
+```mermaid
+ graph TD
+
+    subgraph Adding New Entities
+        H[New CLIExitCode Value]
+        I[New Top-Level ExitException]
+
+        H -- implemented by --> I
+        I -- extends --> K[Detailed Exception]
+    end
+```
+
 This system ensures a clear separation of error types, immediate insight into program exit behavior via exception types, and centralized control over `System.exit()` calls.
 
 # Detailed Design & Implementation
