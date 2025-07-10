@@ -89,7 +89,7 @@ public class GFF3FileReader implements AutoCloseable {
         long start = Long.parseLong(m.group("start"));
         long end = Long.parseLong(m.group("end"));
 
-        return new GFF3Directives.GFF3SequenceRegion(accession, accessionId, accessionVersion, start, end);
+        return new GFF3Directives.GFF3SequenceRegion(accessionId, accessionVersion, start, end);
     }
 
     private GFF3Annotation parseAndAddFeature(String line) throws ValidationException {

@@ -30,7 +30,7 @@ public class GFF3Directives implements IGFF3Feature {
     }
 
     public record GFF3SequenceRegion(
-            String accession, String accessionId, Optional<String> accessionVersion, long start, long end)
+            String accessionId, Optional<String> accessionVersion, long start, long end)
             implements GFF3Directive {
 
         @Override
