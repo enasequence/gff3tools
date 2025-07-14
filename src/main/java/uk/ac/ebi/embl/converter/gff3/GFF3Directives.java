@@ -29,19 +29,19 @@ public class GFF3Directives implements IGFF3Feature {
         }
     }
 
-    public record GFF3SequenceRegion(
-            String accessionId, Optional<String> accessionVersion, long start, long end)
+    public record GFF3SequenceRegion(String accessionId, Optional<String> accessionVersion, long start, long end)
             implements GFF3Directive {
+
+        public String accession() {
+            return "%s%s"
+                    .formatted(
+                            accessionId, accessionVersion().map((s) -> '.' + s).orElse(""));
+        }
 
         @Override
         public void writeGFF3String(Writer writer) throws WriteException {
             try {
-                writer.write("##sequence-region %s%s %d %d\n"
-                        .formatted(
-                                accessionId,
-                                accessionVersion.map((s) -> "." + s).orElse(""),
-                                start,
-                                end));
+                writer.write("##sequence-region %s %d %d\n".formatted(accession(), start, end));
             } catch (IOException e) {
                 throw new WriteException(e);
             }
