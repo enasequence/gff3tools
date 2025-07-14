@@ -135,6 +135,34 @@ public class GFF3ReaderTest {
         }
     }
 
+    @Test
+    void testDirectiveResolution() throws Exception {
+        String gff3Content = "##gff-version 3.2.1\n"
+                + "##sequence-region seq1 1 200\n"
+                + "seq1\tsource\tfeature1\t1\t100\t.\t+\t.\tID=feat1\n"
+                + "###\n"
+                + "seq1\tsource\tfeature2\t100\t200\t.\t+\t.\tID=feat2\n";
+
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(new StringReader(gff3Content))) {
+            gff3Reader.readHeader();
+
+            GFF3Annotation annotation1 = gff3Reader.readAnnotation();
+            Assertions.assertNotNull(annotation1);
+            Assertions.assertEquals(1, annotation1.getFeatures().size());
+            Assertions.assertEquals(
+                    "feat1", annotation1.getFeatures().get(0).getId().get());
+
+            GFF3Annotation annotation2 = gff3Reader.readAnnotation();
+            Assertions.assertNotNull(annotation2);
+            Assertions.assertEquals(1, annotation2.getFeatures().size());
+            Assertions.assertEquals(
+                    "feat2", annotation2.getFeatures().get(0).getId().get());
+
+            GFF3Annotation annotation3 = gff3Reader.readAnnotation();
+            Assertions.assertNull(annotation3);
+        }
+    }
+
     private void test(String attributeLine) throws Exception {
         try (GFF3FileReader gff3Reader = new GFF3FileReader(new StringReader(attributeLine))) {
             Map<String, Object> attrMap = gff3Reader.attributesFromString(attributeLine);
