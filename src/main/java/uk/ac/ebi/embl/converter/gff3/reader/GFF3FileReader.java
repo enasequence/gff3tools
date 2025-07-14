@@ -39,14 +39,14 @@ public class GFF3FileReader implements AutoCloseable {
 
     BufferedReader bufferedReader;
     int lineCount;
-    GFF3Annotation gff3Annotation;
+    GFF3Annotation currentAnnotation;
     String currentAccession;
-    Map<String, GFF3Directives.GFF3SequenceRegion> sequenceRegions = new HashMap<>();
+    Map<String, GFF3Directives.GFF3SequenceRegion> accessionSequenceRegionMap = new HashMap<>();
 
     public GFF3FileReader(Reader reader) {
         this.bufferedReader = new BufferedReader(reader);
         lineCount = 0;
-        gff3Annotation = null;
+        currentAnnotation = new GFF3Annotation();
     }
 
     public GFF3Annotation readAnnotation() throws IOException, ValidationException {
@@ -61,7 +61,7 @@ public class GFF3FileReader implements AutoCloseable {
             if (m.matches()) {
                 // Create directive
                 GFF3Directives.GFF3SequenceRegion sequenceDirective = getSequenceDirective(m);
-                sequenceRegions.put(sequenceDirective.accession(), sequenceDirective);
+                accessionSequenceRegionMap.put(sequenceDirective.accession(), sequenceDirective);
             } else if (COMMENT.matcher(line).matches()) {
                 // Skip comment
                 continue;
@@ -76,14 +76,17 @@ public class GFF3FileReader implements AutoCloseable {
             }
         }
 
-        GFF3Annotation finalAnnotation = gff3Annotation;
-        gff3Annotation = null;
-        return finalAnnotation;
+        GFF3Annotation finalAnnotation = currentAnnotation;
+        currentAnnotation = new GFF3Annotation();
+        if (!finalAnnotation.getFeatures().isEmpty()) {
+            return finalAnnotation;
+        } else {
+            return null;
+        }
     }
 
     private GFF3Directives.GFF3SequenceRegion getSequenceDirective(Matcher m) {
 
-        String accession = m.group("accession");
         String accessionId = m.group("accessionId");
         Optional<String> accessionVersion = Optional.ofNullable(m.group("accessionVersion"));
         long start = Long.parseLong(m.group("start"));
@@ -124,25 +127,27 @@ public class GFF3FileReader implements AutoCloseable {
         // TODO: Validate that the new annotation was not used before the current
         // annotation. Meaning that features are out of order
         if (!accession.equals(currentAccession)) {
+            // In case of different accession create a new GFF3Annotation and return the
+            // previous one.
             currentAccession = accession;
-            GFF3Annotation previousAnnotation = gff3Annotation;
-            // New gff3 annotation for each sequence directive
-            gff3Annotation = new GFF3Annotation();
-            if (sequenceRegions.containsKey(accession)) {
-                GFF3Directives.GFF3SequenceRegion sequenceRegion = sequenceRegions.get(accession);
-                gff3Annotation.getDirectives().add(sequenceRegion);
+            GFF3Annotation previousAnnotation = currentAnnotation;
+            currentAnnotation = new GFF3Annotation();
+            currentAnnotation.addFeature(feature);
 
-                // return previous annotation
-                if (previousAnnotation != null) {
-                    gff3Annotation.addFeature(feature);
-                    return previousAnnotation;
-                }
+            // Add the corresponding sequence region to the current annotation
+            if (accessionSequenceRegionMap.containsKey(accession)) {
+                GFF3Directives.GFF3SequenceRegion sequenceRegion = accessionSequenceRegionMap.get(accession);
+                currentAnnotation.getDirectives().add(sequenceRegion);
             } else {
                 RuleSeverityState.handleValidationException(new UndefinedSeqIdException(lineCount, line));
             }
-        }
 
-        gff3Annotation.addFeature(feature);
+            if (!previousAnnotation.getFeatures().isEmpty()) {
+                return previousAnnotation;
+            }
+        } else {
+            currentAnnotation.addFeature(feature);
+        }
 
         return null;
     }

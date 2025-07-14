@@ -122,7 +122,12 @@ public class GFF3ReaderTest {
             gff3Reader.readHeader();
             GFF3Annotation annotation = gff3Reader.readAnnotation();
             Assertions.assertNotNull(annotation);
-            Assertions.assertEquals(1, annotation.getFeatures().size());
+            Assertions.assertEquals(2, annotation.getFeatures().size());
+            annotation = gff3Reader.readAnnotation();
+            Assertions.assertNotNull(annotation);
+            Assertions.assertEquals(3, annotation.getFeatures().size());
+            annotation = gff3Reader.readAnnotation();
+            Assertions.assertNull(annotation);
         } finally {
             // Reset the rule severity to ERROR for other tests
             ruleSeverityMap.put(ValidationRule.GFF3_UNDEFINED_SEQID, RuleSeverity.ERROR);
