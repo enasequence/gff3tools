@@ -33,6 +33,7 @@ public class GFF3FileReader implements AutoCloseable {
     static Pattern DIRECTIVE_SEQUENCE = Pattern.compile(
             "^##sequence-region\\s+(?<accession>(?<accessionId>[^.]+)(?:\\.(?<accessionVersion>\\d+))?)\\s+(?<start>[0-9]+)\\s+(?<end>[0-9]+)$");
     static Pattern DIRECTIVE_SPECIES = Pattern.compile("^##species\\s(?<species>.+)$");
+    static Pattern DIRECTIVE_RESOLUTION = Pattern.compile("^###$");
     static Pattern COMMENT = Pattern.compile("^#.*$");
     static Pattern GFF3_FEATURE = Pattern.compile(
             "^(?<accession>.+)\\t(?<source>.+)\\t(?<name>.+)\\t(?<start>[0-9]+)\\t(?<end>[0-9]+)\\t(?<score>.+)\\t(?<strand>\\+|\\-|\\.|\\?)\\t(?<phase>.+)\\t(?<attributes>.+)?$");
@@ -62,6 +63,13 @@ public class GFF3FileReader implements AutoCloseable {
                 // Create directive
                 GFF3Directives.GFF3SequenceRegion sequenceDirective = getSequenceDirective(m);
                 accessionSequenceRegionMap.put(sequenceDirective.accession(), sequenceDirective);
+            } else if (DIRECTIVE_RESOLUTION.matcher(line).matches()) {
+                if (!currentAnnotation.getFeatures().isEmpty()) {
+                    GFF3Annotation previousAnnotation = currentAnnotation;
+                    currentAnnotation = new GFF3Annotation();
+                    return previousAnnotation;
+                }
+                continue;
             } else if (COMMENT.matcher(line).matches()) {
                 // Skip comment
                 continue;
