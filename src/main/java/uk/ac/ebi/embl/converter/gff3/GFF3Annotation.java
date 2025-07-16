@@ -15,6 +15,7 @@ import java.io.Writer;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -45,10 +46,20 @@ public class GFF3Annotation implements IGFF3Feature {
 
     private void writeAttributes(Writer writer, GFF3Feature feature) throws IOException {
         writer.write('\t');
-        writer.write(feature.getAttributes().entrySet().stream()
-                .sorted(Map.Entry.comparingByKey()) // Sort by key
-                .map(GFF3Annotation::encodeAttribute)
-                .collect(Collectors.joining(";", "", ";")));
+        writer.write(
+                feature.getAttributes().entrySet().stream()
+                        .sorted(Comparator
+                                .comparingInt((Map.Entry<String, Object> e) -> {
+                                    String key = e.getKey();
+                                    if (key.equals("ID")) return -2;     // Highest priority
+                                    if (key.equals("Parent")) return -1; // Next
+                                    return 0;                             // Others
+                                })
+                                .thenComparing(Map.Entry.comparingByKey()) // Sort others by key
+                        )
+                        .map(GFF3Annotation::encodeAttribute)
+                        .collect(Collectors.joining(";", "", ";"))
+        );
     }
 
     private static String encodeAttribute(Map.Entry<String, Object> entry) {

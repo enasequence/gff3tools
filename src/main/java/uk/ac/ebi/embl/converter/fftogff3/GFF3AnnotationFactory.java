@@ -10,10 +10,9 @@
  */
 package uk.ac.ebi.embl.converter.fftogff3;
 
-import static uk.ac.ebi.embl.converter.validation.ValidationRule.*;
-
 import java.util.*;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +36,8 @@ public class GFF3AnnotationFactory {
 
     // Map of features with parent-child relation
     static final Map<String, Set<String>> featureRelationMap = ConversionUtils.getFeatureRelationMap();
+    // Base Id ends with _ and digit (e.g. ppk_2)
+    static final Pattern incrementIdpattern = Pattern.compile(".*_\\d+$");
 
     /// Keeps track of all the features belonging to a gene.
     Map<String, List<GFF3Feature>> geneMap;
@@ -313,9 +314,15 @@ public class GFF3AnnotationFactory {
     }
 
     public String getIncrementalId(String featureName, Optional<String> geneName) {
+
         String baseId = geneName.filter(gene -> !gene.isEmpty())
                 .map(gene -> "%s_%s".formatted(featureName, gene))
                 .orElse(featureName);
+
+        // Add ".S" to baseId when the id ends with _ and a digit (e.g ppk_2 -> ppk_2.S)
+        if (incrementIdpattern.matcher(baseId).matches()) {
+            baseId = baseId + ".S";
+        }
         int count = idMap.getOrDefault(baseId, 0);
         idMap.put(baseId, count + 1);
 
