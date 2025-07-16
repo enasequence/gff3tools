@@ -46,20 +46,18 @@ public class GFF3Annotation implements IGFF3Feature {
 
     private void writeAttributes(Writer writer, GFF3Feature feature) throws IOException {
         writer.write('\t');
-        writer.write(
-                feature.getAttributes().entrySet().stream()
-                        .sorted(Comparator
-                                .comparingInt((Map.Entry<String, Object> e) -> {
+        writer.write(feature.getAttributes().entrySet().stream()
+                .sorted(
+                        Comparator.comparingInt((Map.Entry<String, Object> e) -> {
                                     String key = e.getKey();
-                                    if (key.equals("ID")) return -2;     // Highest priority
+                                    if (key.equals("ID")) return -2; // Highest priority
                                     if (key.equals("Parent")) return -1; // Next
-                                    return 0;                             // Others
+                                    return 0; // Others
                                 })
                                 .thenComparing(Map.Entry.comparingByKey()) // Sort others by key
                         )
-                        .map(GFF3Annotation::encodeAttribute)
-                        .collect(Collectors.joining(";", "", ";"))
-        );
+                .map(GFF3Annotation::encodeAttribute)
+                .collect(Collectors.joining(";", "", ";")));
     }
 
     private static String encodeAttribute(Map.Entry<String, Object> entry) {
