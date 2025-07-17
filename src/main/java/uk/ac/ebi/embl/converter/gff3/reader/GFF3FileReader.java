@@ -28,12 +28,11 @@ import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
 public class GFF3FileReader implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(GFF3FileReader.class);
 
-    static Pattern DIRECTIVE_VERSION = Pattern.compile(
+    static Pattern VERSION_DIRECTIVE = Pattern.compile(
             "^##gff-version (?<version>(?<major>[0-9]+)(\\.(?<minor>[0-9]+)(:?\\.(?<patch>[0-9]+))?)?)\\s*$");
-    static Pattern DIRECTIVE_SEQUENCE = Pattern.compile(
+    static Pattern SEQUENCE_REGION_DIRECTIVE = Pattern.compile(
             "^##sequence-region\\s+(?<accession>(?<accessionId>[^.]+)(?:\\.(?<accessionVersion>\\d+))?)\\s+(?<start>[0-9]+)\\s+(?<end>[0-9]+)$");
-    static Pattern DIRECTIVE_SPECIES = Pattern.compile("^##species\\s(?<species>.+)$");
-    static Pattern DIRECTIVE_RESOLUTION = Pattern.compile("^###$");
+    static Pattern RESOLUTION_DIRECTIVE = Pattern.compile("^###$");
     static Pattern COMMENT = Pattern.compile("^#.*$");
     static Pattern GFF3_FEATURE = Pattern.compile(
             "^(?<accession>.+)\\t(?<source>.+)\\t(?<name>.+)\\t(?<start>[0-9]+)\\t(?<end>[0-9]+)\\t(?<score>.+)\\t(?<strand>\\+|\\-|\\.|\\?)\\t(?<phase>.+)\\t(?<attributes>.+)?$");
@@ -58,12 +57,12 @@ public class GFF3FileReader implements AutoCloseable {
                 // Ignore blank lines
                 continue;
             }
-            Matcher m = DIRECTIVE_SEQUENCE.matcher(line);
+            Matcher m = SEQUENCE_REGION_DIRECTIVE.matcher(line);
             if (m.matches()) {
                 // Create directive
                 GFF3Directives.GFF3SequenceRegion sequenceDirective = getSequenceDirective(m);
                 accessionSequenceRegionMap.put(sequenceDirective.accession(), sequenceDirective);
-            } else if (DIRECTIVE_RESOLUTION.matcher(line).matches()) {
+            } else if (RESOLUTION_DIRECTIVE.matcher(line).matches()) {
                 if (!currentAnnotation.getFeatures().isEmpty()) {
                     GFF3Annotation previousAnnotation = currentAnnotation;
                     currentAnnotation = new GFF3Annotation();
@@ -185,7 +184,7 @@ public class GFF3FileReader implements AutoCloseable {
                 continue;
             }
 
-            Matcher m = DIRECTIVE_VERSION.matcher(line);
+            Matcher m = VERSION_DIRECTIVE.matcher(line);
             if (m.matches()) {
                 String version = m.group("version");
                 return new GFF3Header(version);
