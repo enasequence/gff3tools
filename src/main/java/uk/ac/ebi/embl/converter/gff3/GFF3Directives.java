@@ -29,7 +29,7 @@ public class GFF3Directives implements IGFF3Feature {
         }
     }
 
-    public record GFF3SequenceRegion(String accessionId, Optional<String> accessionVersion, long start, long end)
+    public record GFF3SequenceRegion(String accessionId, Optional<Integer> accessionVersion, long start, long end)
             implements GFF3Directive {
 
         public String accession() {
