@@ -127,9 +127,6 @@ public class GFF3FileReader implements AutoCloseable {
         GFF3Feature feature =
                 new GFF3Feature(id, parentId, accession, source, name, start, end, score, strand, phase, attributesMap);
 
-        // This feature belongs to a new annotation. We need to add add this feature to
-        // the new annotation and bubble up the previous annotation so it can be closed
-        //
         // TODO: Validate that the new annotation was not used before the current
         // annotation. Meaning that features are out of order
         if (!accession.equals(currentAccession)) {
