@@ -83,13 +83,12 @@ public class GFF3FileReader implements AutoCloseable {
             }
         }
 
-        GFF3Annotation finalAnnotation = currentAnnotation;
-        currentAnnotation = new GFF3Annotation();
-        if (!finalAnnotation.getFeatures().isEmpty()) {
+        if (!currentAnnotation.getFeatures().isEmpty()) {
+            GFF3Annotation finalAnnotation = currentAnnotation;
+            currentAnnotation = new GFF3Annotation();
             return finalAnnotation;
-        } else {
-            return null;
         }
+        return null;
     }
 
     private GFF3Directives.GFF3SequenceRegion getSequenceDirective(Matcher m) {
