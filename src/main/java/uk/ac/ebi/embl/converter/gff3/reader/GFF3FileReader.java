@@ -141,8 +141,8 @@ public class GFF3FileReader implements AutoCloseable {
             currentAnnotation.addFeature(feature);
 
             // Add the corresponding sequence region to the current annotation
-            if (accessionSequenceRegionMap.containsKey(accession)) {
-                GFF3Directives.GFF3SequenceRegion sequenceRegion = accessionSequenceRegionMap.get(accession);
+            if (accessionSequenceRegionMap.containsKey(currentAccession)) {
+                GFF3Directives.GFF3SequenceRegion sequenceRegion = accessionSequenceRegionMap.get(currentAccession);
                 currentAnnotation.getDirectives().add(sequenceRegion);
             } else {
                 RuleSeverityState.handleValidationException(new UndefinedSeqIdException(lineCount, line));
