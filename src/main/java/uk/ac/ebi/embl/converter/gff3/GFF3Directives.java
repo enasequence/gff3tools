@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import lombok.Getter;
 import uk.ac.ebi.embl.converter.exception.WriteException;
 
@@ -28,12 +29,18 @@ public class GFF3Directives implements IGFF3Feature {
         }
     }
 
-    public record GFF3SequenceRegion(String accession, long start, long end) implements GFF3Directive {
+    public record GFF3SequenceRegion(String accessionId, Optional<String> accessionVersion, long start, long end)
+            implements GFF3Directive {
+
+        public String accession() {
+            String versionSuffix = accessionVersion().map(v -> "." + v).orElse("");
+            return accessionId + versionSuffix;
+        }
 
         @Override
         public void writeGFF3String(Writer writer) throws WriteException {
             try {
-                writer.write("##sequence-region %s %d %d\n".formatted(accession, start, end));
+                writer.write("##sequence-region %s %d %d\n".formatted(accession(), start, end));
             } catch (IOException e) {
                 throw new WriteException(e);
             }

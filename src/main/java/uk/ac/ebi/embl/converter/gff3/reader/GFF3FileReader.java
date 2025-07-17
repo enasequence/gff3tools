@@ -28,23 +28,25 @@ import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
 public class GFF3FileReader implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(GFF3FileReader.class);
 
-    static Pattern DIRECTIVE_VERSION = Pattern.compile(
+    static Pattern VERSION_DIRECTIVE = Pattern.compile(
             "^##gff-version (?<version>(?<major>[0-9]+)(\\.(?<minor>[0-9]+)(:?\\.(?<patch>[0-9]+))?)?)\\s*$");
-    static Pattern DIRECTIVE_SEQUENCE = Pattern.compile(
-            "^##sequence-region\\s(?<accession>(?<accessionID>.+)([.](?<accessionVersion>[0-9]+)))\\s(?<start>[0-9]+)\\s(?<end>[0-9]+)");
-    static Pattern DIRECTIVE_SPECIES = Pattern.compile("^##species\\s(?<species>.+)$");
+    static Pattern SEQUENCE_REGION_DIRECTIVE = Pattern.compile(
+            "^##sequence-region\\s+(?<accession>(?<accessionId>[^.]+)(?:\\.(?<accessionVersion>\\d+))?)\\s+(?<start>[0-9]+)\\s+(?<end>[0-9]+)$");
+    static Pattern RESOLUTION_DIRECTIVE = Pattern.compile("^###$");
     static Pattern COMMENT = Pattern.compile("^#.*$");
     static Pattern GFF3_FEATURE = Pattern.compile(
             "^(?<accession>.+)\\t(?<source>.+)\\t(?<name>.+)\\t(?<start>[0-9]+)\\t(?<end>[0-9]+)\\t(?<score>.+)\\t(?<strand>\\+|\\-|\\.|\\?)\\t(?<phase>.+)\\t(?<attributes>.+)?$");
 
     BufferedReader bufferedReader;
     int lineCount;
-    GFF3Annotation gff3Annotation;
+    GFF3Annotation currentAnnotation;
+    String currentAccession;
+    Map<String, GFF3Directives.GFF3SequenceRegion> accessionSequenceRegionMap = new HashMap<>();
 
     public GFF3FileReader(Reader reader) {
         this.bufferedReader = new BufferedReader(reader);
         lineCount = 0;
-        gff3Annotation = null;
+        currentAnnotation = new GFF3Annotation();
     }
 
     public GFF3Annotation readAnnotation() throws IOException, ValidationException {
@@ -55,56 +57,56 @@ public class GFF3FileReader implements AutoCloseable {
                 // Ignore blank lines
                 continue;
             }
-            Matcher m = DIRECTIVE_SEQUENCE.matcher(line);
+            Matcher m = SEQUENCE_REGION_DIRECTIVE.matcher(line);
             if (m.matches()) {
                 // Create directive
-                GFF3Directives.GFF3SequenceRegion sequenceDirective = getSequenceDirective(line);
-
-                GFF3Annotation previousAnnotation = gff3Annotation;
-                // New gff3 annotation for each sequence directive
-                gff3Annotation = new GFF3Annotation();
-                gff3Annotation.getDirectives().add(sequenceDirective);
-
-                // return previous annotation
-                if (previousAnnotation != null) {
+                GFF3Directives.GFF3SequenceRegion sequenceDirective = getSequenceDirective(m);
+                accessionSequenceRegionMap.put(sequenceDirective.accession(), sequenceDirective);
+            } else if (RESOLUTION_DIRECTIVE.matcher(line).matches()) {
+                if (!currentAnnotation.getFeatures().isEmpty()) {
+                    GFF3Annotation previousAnnotation = currentAnnotation;
+                    currentAnnotation = new GFF3Annotation();
                     return previousAnnotation;
                 }
+                continue;
             } else if (COMMENT.matcher(line).matches()) {
                 // Skip comment
                 continue;
             } else if (GFF3_FEATURE.matcher(line).matches()) {
-                parseAndAddFeature(line);
+                GFF3Annotation annotation = parseAndAddFeature(line);
+                if (annotation != null) {
+                    return annotation;
+                }
             } else {
                 RuleSeverityState.handleValidationException(
                         new InvalidGFF3RecordException(lineCount, "Invalid gff3 record \"" + line + "\""));
             }
         }
 
-        GFF3Annotation finalAnnotation = gff3Annotation;
-        gff3Annotation = null;
-        return finalAnnotation;
+        if (!currentAnnotation.getFeatures().isEmpty()) {
+            GFF3Annotation finalAnnotation = currentAnnotation;
+            currentAnnotation = new GFF3Annotation();
+            return finalAnnotation;
+        }
+        return null;
     }
 
-    private GFF3Directives.GFF3SequenceRegion getSequenceDirective(String line) {
-        // Extra check for line match
-        Matcher m = DIRECTIVE_SEQUENCE.matcher(line);
-        if (!m.matches()) return null;
+    private GFF3Directives.GFF3SequenceRegion getSequenceDirective(Matcher m) {
 
-        String accession = m.group("accession");
+        String accessionId = m.group("accessionId");
+        Optional<String> accessionVersion = Optional.ofNullable(m.group("accessionVersion"));
         long start = Long.parseLong(m.group("start"));
         long end = Long.parseLong(m.group("end"));
 
-        // TODO: Validation no multiple sequence accession
-        // TODO: Validation Sequence accession is required!
-        return new GFF3Directives.GFF3SequenceRegion(accession, start, end);
+        return new GFF3Directives.GFF3SequenceRegion(accessionId, accessionVersion, start, end);
     }
 
-    private void parseAndAddFeature(String line) throws ValidationException {
+    private GFF3Annotation parseAndAddFeature(String line) throws ValidationException {
         // Extra check for line match
         Matcher m = GFF3_FEATURE.matcher(line);
         if (!m.matches()) {
             RuleSeverityState.handleValidationException(new InvalidGFF3RecordException(lineCount, line));
-            return;
+            return null;
         }
 
         String accession = m.group("accession");
@@ -125,7 +127,32 @@ public class GFF3FileReader implements AutoCloseable {
         GFF3Feature feature =
                 new GFF3Feature(id, parentId, accession, source, name, start, end, score, strand, phase, attributesMap);
 
-        gff3Annotation.addFeature(feature);
+        // TODO: Validate that the new annotation was not used before the current
+        // annotation. Meaning that features are out of order
+        if (!accession.equals(currentAccession)) {
+            // In case of different accession create a new GFF3Annotation and return the
+            // previous one.
+            currentAccession = accession;
+            GFF3Annotation previousAnnotation = currentAnnotation;
+            currentAnnotation = new GFF3Annotation();
+            currentAnnotation.addFeature(feature);
+
+            // Add the corresponding sequence region to the current annotation
+            if (accessionSequenceRegionMap.containsKey(currentAccession)) {
+                GFF3Directives.GFF3SequenceRegion sequenceRegion = accessionSequenceRegionMap.get(currentAccession);
+                currentAnnotation.getDirectives().add(sequenceRegion);
+            } else {
+                RuleSeverityState.handleValidationException(new UndefinedSeqIdException(lineCount, line));
+            }
+
+            if (!previousAnnotation.getFeatures().isEmpty()) {
+                return previousAnnotation;
+            }
+        } else {
+            currentAnnotation.addFeature(feature);
+        }
+
+        return null;
     }
 
     public Map<String, Object> attributesFromString(String line) {
@@ -153,7 +180,7 @@ public class GFF3FileReader implements AutoCloseable {
                 continue;
             }
 
-            Matcher m = DIRECTIVE_VERSION.matcher(line);
+            Matcher m = VERSION_DIRECTIVE.matcher(line);
             if (m.matches()) {
                 String version = m.group("version");
                 return new GFF3Header(version);

@@ -63,9 +63,8 @@ public class GFF3Mapper {
                     gff3Annotation.getDirectives().getDirectives()) {
                 if (directive.getClass() == GFF3Directives.GFF3SequenceRegion.class) {
                     GFF3Directives.GFF3SequenceRegion reg = (GFF3Directives.GFF3SequenceRegion) directive;
-                    String accession = reg.accession();
-                    LOG.info("Converting Gff3 entry: {}", accession);
-                    String accessionId = accession.substring(0, accession.lastIndexOf('.'));
+                    String accessionId = reg.accessionId();
+                    LOG.info("Converting Gff3 entry: {}", accessionId);
                     entry.setPrimaryAccession(accessionId);
                     Location location = this.locationFactory.createLocalRange(reg.start(), reg.end());
                     Join<Location> compoundJoin = new Join<>();
@@ -96,7 +95,8 @@ public class GFF3Mapper {
         Feature ffFeature = joinableFeatureMap.get(featureHashId);
         if (ffFeature != null) {
             CompoundLocation<Location> parentFeatureLocation = ffFeature.getLocations();
-            // If the compoundlocation isComplement but the new location we are adding is not complement
+            // If the compoundlocation isComplement but the new location we are adding is
+            // not complement
             // we need to restructure the locations that it contains
             if (parentFeatureLocation.isComplement() && !location.isComplement()) {
                 parentFeatureLocation.getLocations().forEach((l) -> {
@@ -137,7 +137,8 @@ public class GFF3Mapper {
     }
 
     private void setLocationPartiality(Location location) {
-        // Swap partiality in case of individual location complement. This should be done because the location
+        // Swap partiality in case of individual location complement. This should be
+        // done because the location
         // writer swaps partiality in case of the complement of the inner location.
         boolean fivePrime = location.isThreePrimePartial();
         boolean threePrime = location.isFivePrimePartial();
