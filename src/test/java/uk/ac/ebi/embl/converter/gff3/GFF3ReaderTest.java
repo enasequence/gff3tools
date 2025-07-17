@@ -149,12 +149,14 @@ public class GFF3ReaderTest {
             GFF3Annotation annotation1 = gff3Reader.readAnnotation();
             Assertions.assertNotNull(annotation1);
             Assertions.assertEquals(1, annotation1.getFeatures().size());
+            Assertions.assertEquals("seq1", annotation1.getFeatures().get(0).getAccession());
             Assertions.assertEquals(
                     "feat1", annotation1.getFeatures().get(0).getId().get());
 
             GFF3Annotation annotation2 = gff3Reader.readAnnotation();
             Assertions.assertNotNull(annotation2);
             Assertions.assertEquals(1, annotation2.getFeatures().size());
+            Assertions.assertEquals("seq2", annotation1.getFeatures().get(0).getAccession());
             Assertions.assertEquals(
                     "feat2", annotation2.getFeatures().get(0).getId().get());
 
