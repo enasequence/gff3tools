@@ -25,7 +25,7 @@ import uk.ac.ebi.embl.converter.cli.Main;
 class GFF3ToFFConverterTest {
 
     @Test
-    void testWriteGFF3() throws Exception {
+    void testWriteEMBL() throws Exception {
         Map<String, Path> testFiles = TestUtils.getTestFiles("gff3toff_rules", ".gff3");
 
         for (String filePrefix : testFiles.keySet()) {
