@@ -1,4 +1,4 @@
-ID   BN000065; SV XXX; XXX; XXX; XXX; XXX; 0 BP.
+ID   BN000065; SV 1; XXX; XXX; XXX; XXX; 0 BP.
 XX
 AC   BN000065;
 XX
@@ -18,7 +18,7 @@ FT                   /gene="RHD"
 FT                   /number=1
 XX
 //
-ID   BN000066; SV XXX; XXX; XXX; XXX; XXX; 0 BP.
+ID   BN000066; SV 2; XXX; XXX; XXX; XXX; 0 BP.
 XX
 AC   BN000066;
 XX
