@@ -33,9 +33,8 @@ public class GFF3Directives implements IGFF3Feature {
             implements GFF3Directive {
 
         public String accession() {
-            return "%s%s"
-                    .formatted(
-                            accessionId, accessionVersion().map((s) -> '.' + s).orElse(""));
+            String versionSuffix = accessionVersion().map(v -> "." + v).orElse("");
+            return accessionId + versionSuffix;
         }
 
         @Override
