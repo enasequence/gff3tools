@@ -4,7 +4,7 @@ plugins {
     id 'maven-publish'
     id "org.hidetake.ssh" version "2.2.0"
     id "com.diffplug.spotless" version "6.11.0"
-    id 'com.github.johnrengelman.shadow' version '5.2.0'
+    id "com.gradleup.shadow" version "8.3.0"
 }
 
 archivesBaseName = 'gff3tools'
@@ -79,6 +79,11 @@ shadowJar {
 application {
     mainClassName = 'uk.ac.ebi.embl.converter.cli.Main'
 }
+
+tasks.distTar.dependsOn shadowJar
+tasks.distZip.dependsOn shadowJar
+tasks.startScripts.dependsOn shadowJar
+tasks.startShadowScripts.dependsOn jar
 
 publishing {
     publications {
