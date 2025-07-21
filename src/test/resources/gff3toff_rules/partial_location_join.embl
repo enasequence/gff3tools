@@ -1,4 +1,4 @@
-ID   TEST01; SV XXX; XXX; XXX; XXX; XXX; 0 BP.
+ID   TEST01; SV 1; XXX; XXX; XXX; XXX; 0 BP.
 XX
 AC   TEST01;
 XX
@@ -15,7 +15,7 @@ FT   mRNA            100..122
 FT                   /gene="matK"
 XX
 //
-ID   OZ215952; SV XXX; XXX; XXX; XXX; XXX; 0 BP.
+ID   OZ215952; SV 1; XXX; XXX; XXX; XXX; 0 BP.
 XX
 AC   OZ215952;
 XX

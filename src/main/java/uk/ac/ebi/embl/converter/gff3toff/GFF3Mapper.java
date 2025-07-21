@@ -21,6 +21,7 @@ import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
 import uk.ac.ebi.embl.api.entry.location.*;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.qualifier.QualifierFactory;
+import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
@@ -55,7 +56,7 @@ public class GFF3Mapper {
         parentFeatures.clear();
         joinableFeatureMap.clear();
         entry = entryFactory.createEntry();
-        entry.setSequence(sequenceFactory.createSequence());
+        Sequence sequence = sequenceFactory.createSequence();
 
         if (!gff3Annotation.getDirectives().getDirectives().isEmpty()) {
             SourceFeature sourceFeature = this.featureFactory.createSourceFeature();
@@ -63,9 +64,10 @@ public class GFF3Mapper {
                     gff3Annotation.getDirectives().getDirectives()) {
                 if (directive.getClass() == GFF3Directives.GFF3SequenceRegion.class) {
                     GFF3Directives.GFF3SequenceRegion reg = (GFF3Directives.GFF3SequenceRegion) directive;
-                    String accessionId = reg.accessionId();
-                    LOG.info("Converting Gff3 entry: {}", accessionId);
-                    entry.setPrimaryAccession(accessionId);
+                    entry.setPrimaryAccession(reg.accessionId());
+
+                    sequence.setVersion(reg.accessionVersion().orElse(1));
+
                     Location location = this.locationFactory.createLocalRange(reg.start(), reg.end());
                     Join<Location> compoundJoin = new Join<>();
                     compoundJoin.addLocation(location);
@@ -74,6 +76,8 @@ public class GFF3Mapper {
             }
             entry.addFeature(sourceFeature);
         }
+
+        entry.setSequence(sequence);
 
         for (GFF3Feature gff3Feature : gff3Annotation.getFeatures()) {
             if (gff3Feature.getId().isPresent()) {

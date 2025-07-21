@@ -94,7 +94,8 @@ public class GFF3FileReader implements AutoCloseable {
     private GFF3Directives.GFF3SequenceRegion getSequenceDirective(Matcher m) {
 
         String accessionId = m.group("accessionId");
-        Optional<String> accessionVersion = Optional.ofNullable(m.group("accessionVersion"));
+        Optional<Integer> accessionVersion =
+                Optional.ofNullable(m.group("accessionVersion")).map(Integer::parseInt);
         long start = Long.parseLong(m.group("start"));
         long end = Long.parseLong(m.group("end"));
 
