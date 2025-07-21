@@ -66,10 +66,7 @@ public class GFF3Mapper {
                     GFF3Directives.GFF3SequenceRegion reg = (GFF3Directives.GFF3SequenceRegion) directive;
                     entry.setPrimaryAccession(reg.accessionId());
 
-                    Optional<Integer> version = reg.accessionVersion();
-                    version.ifPresent(v -> {
-                        sequence.setVersion(v);
-                    });
+                    sequence.setVersion(reg.accessionVersion().orElse(1));
 
                     Location location = this.locationFactory.createLocalRange(reg.start(), reg.end());
                     Join<Location> compoundJoin = new Join<>();
