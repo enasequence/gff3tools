@@ -41,14 +41,6 @@ repositories {
     mavenCentral()
     maven {
         url "https://gitlab.ebi.ac.uk/api/v4/groups/enasequence/-/packages/maven"
-
-        credentials(HttpHeaderCredentials) {
-            name = "Private-Token"
-            value = gitlab_private_token
-        }
-        authentication {
-            header( HttpHeaderAuthentication )
-        }
     }
     maven { url 'https://jitpack.io' }
 }
@@ -97,13 +89,6 @@ publishing {
     repositories {
         maven {
             url "https://gitlab.ebi.ac.uk/api/v4/projects/5502/packages/maven"
-            credentials(HttpHeaderCredentials) {
-                name = "Private-Token"
-                value = gitlab_private_token
-            }
-            authentication {
-                header(HttpHeaderAuthentication)
-            }
         }
     }
 }
