@@ -3,8 +3,8 @@ plugins {
     id 'application'
     id 'maven-publish'
     id "org.hidetake.ssh" version "2.2.0"
-    id "com.diffplug.spotless" version "6.11.0"
-    id 'com.github.johnrengelman.shadow' version '5.2.0'
+    id "com.diffplug.spotless" version "7.2.1"
+    id "com.gradleup.shadow" version "8.3.0"
 }
 
 archivesBaseName = 'gff3tools'
@@ -41,14 +41,6 @@ repositories {
     mavenCentral()
     maven {
         url "https://gitlab.ebi.ac.uk/api/v4/groups/enasequence/-/packages/maven"
-
-        credentials(HttpHeaderCredentials) {
-            name = "Private-Token"
-            value = gitlab_private_token
-        }
-        authentication {
-            header( HttpHeaderAuthentication )
-        }
     }
     maven { url 'https://jitpack.io' }
 }
@@ -88,6 +80,11 @@ application {
     mainClassName = 'uk.ac.ebi.embl.converter.cli.Main'
 }
 
+tasks.distTar.dependsOn shadowJar
+tasks.distZip.dependsOn shadowJar
+tasks.startScripts.dependsOn shadowJar
+tasks.startShadowScripts.dependsOn jar
+
 publishing {
     publications {
         mavenJava(MavenPublication) {
@@ -97,13 +94,6 @@ publishing {
     repositories {
         maven {
             url "https://gitlab.ebi.ac.uk/api/v4/projects/5502/packages/maven"
-            credentials(HttpHeaderCredentials) {
-                name = "Private-Token"
-                value = gitlab_private_token
-            }
-            authentication {
-                header(HttpHeaderAuthentication)
-            }
         }
     }
 }
