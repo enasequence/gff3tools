@@ -11,6 +11,9 @@ archivesBaseName = 'gff3tools'
 group = 'uk.ac.ebi.ena'
 version = '1.0'
 
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
+
 ext.codonDeployBaseDir = "/hps/software/users/tburdett/ena/jar/$archivesBaseName"
 ext.codonDeployArtifactDir = codonDeployBaseDir
 
@@ -35,6 +38,14 @@ spotless {
     }
 }
 
+application {
+    mainClass.set("uk.ac.ebi.embl.converter.cli.Main")
+}
+
+shadowJar {
+    archiveClassifier.set('')
+    dependsOn(distTar, distZip)
+}
 
 repositories {
     mavenLocal()
@@ -42,7 +53,6 @@ repositories {
     maven {
         url "https://gitlab.ebi.ac.uk/api/v4/groups/enasequence/-/packages/maven"
     }
-    maven { url 'https://jitpack.io' }
 }
 
 dependencies {
@@ -72,19 +82,6 @@ test {
 }
 
 
-shadowJar {
-    archiveClassifier.set('')
-}
-
-application {
-    mainClassName = 'uk.ac.ebi.embl.converter.cli.Main'
-}
-
-tasks.distTar.dependsOn shadowJar
-tasks.distZip.dependsOn shadowJar
-tasks.startScripts.dependsOn shadowJar
-tasks.startShadowScripts.dependsOn jar
-
 publishing {
     publications {
         mavenJava(MavenPublication) {
@@ -94,6 +91,13 @@ publishing {
     repositories {
         maven {
             url "https://gitlab.ebi.ac.uk/api/v4/projects/5502/packages/maven"
+            credentials(HttpHeaderCredentials) {
+                name = "Private-Token"
+                value = gitlab_private_token
+            }
+            authentication {
+                header(HttpHeaderAuthentication)
+            }
         }
     }
 }

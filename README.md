@@ -107,3 +107,8 @@ To set `FLATFILE_NO_SOURCE` to `ERROR` and `FLATFILE_NO_ONTOLOGY_FEATURE` to `WA
 ```bash
 java -jar gff3tools-1.0.jar conversion -f embl -t gff3 --rules FLATFILE_NO_SOURCE:ERROR,FLATFILE_NO_ONTOLOGY_FEATURE:WARN input.embl output.gff3
 ```
+
+# publishing
+To publish, create the `gradle.properties` file and add your private EBI gitlab token in the following format.
+
+```gitlab_private_token=<token>```
