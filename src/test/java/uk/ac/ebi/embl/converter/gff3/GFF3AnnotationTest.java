@@ -17,6 +17,7 @@ import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
 import uk.ac.ebi.embl.converter.exception.WriteException;
@@ -85,5 +86,34 @@ public class GFF3AnnotationTest {
             assertTrue(mergedContent.contains("feature1"));
             assertTrue(mergedContent.contains("feature2"));
         }
+    }
+
+    @Test
+    public void testGetAccession() throws IOException, WriteException {
+        // Test case 1: Accession from GFF3SequenceRegion directive
+        GFF3Annotation annotation1 = new GFF3Annotation();
+        annotation1.getDirectives().add(new GFF3Directives.GFF3SequenceRegion("ACC00001", Optional.empty(), 1, 100));
+        assertEquals("ACC00001", annotation1.getAccession());
+
+        // Test case 2: Accession from the first feature when no GFF3SequenceRegion directive
+        GFF3Annotation annotation2 = new GFF3Annotation();
+        GFF3Feature feature2 = new GFF3Feature(
+                Optional.of("feature_id_2"),
+                Optional.empty(),
+                "ACC00002", // Accession
+                "source",
+                "type",
+                1,
+                100,
+                ".",
+                "+",
+                ".",
+                new HashMap<>());
+        annotation2.addFeature(feature2);
+        assertEquals("ACC00002", annotation2.getAccession());
+
+        // Test case 3: No accession (empty annotation)
+        GFF3Annotation annotation3 = new GFF3Annotation();
+        assertNull(annotation3.getAccession());
     }
 }
