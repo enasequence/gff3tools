@@ -112,3 +112,4 @@ java -jar gff3tools-1.0.jar conversion -f embl -t gff3 --rules FLATFILE_NO_SOURC
 To publish, create the `gradle.properties` file and add your private EBI gitlab token in the following format.
 
 ```gitlab_private_token=<token>```
+
