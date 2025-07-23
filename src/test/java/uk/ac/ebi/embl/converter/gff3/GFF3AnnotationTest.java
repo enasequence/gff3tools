@@ -55,4 +55,35 @@ public class GFF3AnnotationTest {
             assertTrue(attr.endsWith(expectedAttribute));
         }
     }
+
+    @Test
+    public void testMergeAnnotations() throws IOException, WriteException {
+        // Create first annotation
+        GFF3Annotation annotation1 = new GFF3Annotation();
+        Map<String, Object> attributes1 = new HashMap<>();
+        attributes1.put("ID", "feature1");
+        GFF3Feature feature1 = TestUtils.createGFF3Feature("ID1", "Parent1", attributes1);
+        annotation1.addFeature(feature1);
+
+        // Create second annotation
+        GFF3Annotation annotation2 = new GFF3Annotation();
+        Map<String, Object> attributes2 = new HashMap<>();
+        attributes2.put("ID", "feature2");
+        GFF3Feature feature2 = TestUtils.createGFF3Feature("ID2", "Parent2", attributes2);
+        annotation2.addFeature(feature2);
+
+        // Merge annotations
+        annotation1.merge(annotation2);
+
+        // Assert merged content
+        try (StringWriter gff3Writer = new StringWriter()) {
+            annotation1.writeGFF3String(gff3Writer);
+            String mergedContent = gff3Writer.toString();
+
+            assertTrue(mergedContent.contains("ID1"));
+            assertTrue(mergedContent.contains("ID2"));
+            assertTrue(mergedContent.contains("feature1"));
+            assertTrue(mergedContent.contains("feature2"));
+        }
+    }
 }
