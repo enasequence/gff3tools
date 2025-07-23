@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -98,5 +99,28 @@ public class GFF3Annotation implements IGFF3Feature {
 
     public void addFeature(GFF3Feature feature) {
         features.add(feature);
+    }
+
+    public void merge(GFF3Annotation other) {
+        this.directives.getDirectives().addAll(other.directives.getDirectives());
+        this.features.addAll(other.features);
+    }
+
+    public String getAccession() {
+        Optional<GFF3Directives.GFF3SequenceRegion> directive = this.directives.getDirectives().stream()
+                .filter((d) -> {
+                    if (d instanceof GFF3Directives.GFF3SequenceRegion) {
+                        return true;
+                    }
+                    return false;
+                })
+                .map((d) -> (GFF3Directives.GFF3SequenceRegion) d)
+                .findFirst();
+        return directive
+                .map((d) -> d.accession())
+                .orElse(this.features.stream()
+                        .findFirst()
+                        .map(GFF3Feature::getAccession)
+                        .orElse(null));
     }
 }
