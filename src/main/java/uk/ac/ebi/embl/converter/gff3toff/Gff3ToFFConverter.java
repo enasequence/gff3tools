@@ -33,8 +33,7 @@ public class Gff3ToFFConverter implements Converter {
             // must be merged into a single EmblEntry before being written to the output.
             while ((currentAnnotation = gff3Reader.readAnnotation()) != null) {
                 // Merge the annotations if the accession is the same
-                if (previousAnnotation != null
-                        && currentAnnotation.getAccession().equals(previousAnnotation.getAccession())) {
+                if (isSameAnnotation(previousAnnotation, currentAnnotation)) {
                     previousAnnotation.merge(currentAnnotation);
                 } else {
                     // The accession is different, so write the previous annotation to EMBL
@@ -43,10 +42,14 @@ public class Gff3ToFFConverter implements Converter {
                 }
             }
             // After the loop, write the last accumulated annotation.
-            if (previousAnnotation != null) writeEntry(mapper, previousAnnotation, writer);
+            writeEntry(mapper, previousAnnotation, writer);
         } catch (IOException e) {
             throw new ReadException(e);
         }
+    }
+
+    private boolean isSameAnnotation(GFF3Annotation previousAnnotation, GFF3Annotation currentAnnotation) {
+        return previousAnnotation != null && currentAnnotation.getAccession().equals(previousAnnotation.getAccession());
     }
 
     /**
@@ -58,12 +61,14 @@ public class Gff3ToFFConverter implements Converter {
      * @throws WriteException if an error occurs during writing.
      */
     private void writeEntry(GFF3Mapper mapper, GFF3Annotation annotation, BufferedWriter writer) throws WriteException {
-        EmblEntryWriter entryWriter = new EmblEntryWriter(mapper.mapGFF3ToEntry(annotation));
-        entryWriter.setShowAcStartLine(false);
-        try {
-            entryWriter.write(writer);
-        } catch (IOException e) {
-            throw new WriteException(e);
+        if (annotation != null) {
+            EmblEntryWriter entryWriter = new EmblEntryWriter(mapper.mapGFF3ToEntry(annotation));
+            entryWriter.setShowAcStartLine(false);
+            try {
+                entryWriter.write(writer);
+            } catch (IOException e) {
+                throw new WriteException(e);
+            }
         }
     }
 }
