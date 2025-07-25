@@ -29,7 +29,7 @@ import uk.ac.ebi.embl.converter.exception.WriteException;
 @Getter
 @Setter
 public class GFF3Annotation implements IGFF3Feature {
-    GFF3Directives.GFF3SequenceRegion sequenceRegion = null;
+    GFF3SequenceRegion sequenceRegion = null;
     List<GFF3Feature> features = new ArrayList<>();
 
     private void writeFeature(Writer writer, GFF3Feature feature) throws IOException {
@@ -108,7 +108,7 @@ public class GFF3Annotation implements IGFF3Feature {
     }
 
     public String getAccession() {
-        Optional<GFF3Directives.GFF3SequenceRegion> directive = Optional.ofNullable(this.sequenceRegion);
+        Optional<GFF3SequenceRegion> directive = Optional.ofNullable(this.sequenceRegion);
         return directive
                 .map((d) -> d.accession())
                 .orElse(this.features.stream()

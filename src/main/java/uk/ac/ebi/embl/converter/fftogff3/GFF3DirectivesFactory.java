@@ -16,7 +16,7 @@ import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.OrganismQualifier;
 import uk.ac.ebi.embl.converter.exception.*;
-import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
+import uk.ac.ebi.embl.converter.gff3.GFF3SequenceRegion;
 import uk.ac.ebi.embl.converter.gff3.GFF3Species;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
@@ -54,7 +54,7 @@ public class GFF3DirectivesFactory {
         return new GFF3Species(buildTaxonomyUrl(qualifier));
     }
 
-    public GFF3Directives.GFF3SequenceRegion extractSequenceRegion(Entry entry) throws NoSourcePresentException {
+    public GFF3SequenceRegion extractSequenceRegion(Entry entry) throws NoSourcePresentException {
 
         String accession = entry.getPrimaryAccession();
         if (accession != null && !accession.isEmpty()) {
@@ -72,7 +72,7 @@ public class GFF3DirectivesFactory {
             long start = feature.getLocations().getMinPosition();
             long end = feature.getLocations().getMaxPosition();
 
-            return new GFF3Directives.GFF3SequenceRegion(sequenceId, sequenceVersion, start, end);
+            return new GFF3SequenceRegion(sequenceId, sequenceVersion, start, end);
         }
         return null;
     }

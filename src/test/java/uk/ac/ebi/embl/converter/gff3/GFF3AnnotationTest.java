@@ -92,7 +92,7 @@ public class GFF3AnnotationTest {
     public void testGetAccession() throws IOException, WriteException {
         // Test case 1: Accession from GFF3SequenceRegion directive
         GFF3Annotation annotation1 = new GFF3Annotation();
-        annotation1.setSequenceRegion(new GFF3Directives.GFF3SequenceRegion("ACC00001", Optional.empty(), 1, 100));
+        annotation1.setSequenceRegion(new GFF3SequenceRegion("ACC00001", Optional.empty(), 1, 100));
         assertEquals("ACC00001", annotation1.getAccession());
 
         // Test case 2: Accession from the first feature when no GFF3SequenceRegion directive

@@ -24,8 +24,8 @@ import uk.ac.ebi.embl.api.entry.qualifier.QualifierFactory;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
-import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
+import uk.ac.ebi.embl.converter.gff3.GFF3SequenceRegion;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
@@ -60,7 +60,7 @@ public class GFF3Mapper {
 
         SourceFeature sourceFeature = this.featureFactory.createSourceFeature();
 
-        GFF3Directives.GFF3SequenceRegion reg = gff3Annotation.getSequenceRegion();
+        GFF3SequenceRegion reg = gff3Annotation.getSequenceRegion();
         if (reg != null) {
             entry.setPrimaryAccession(reg.accessionId());
             sequence.setVersion(reg.accessionVersion().orElse(1));

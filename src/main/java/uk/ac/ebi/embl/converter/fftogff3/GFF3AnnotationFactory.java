@@ -25,7 +25,7 @@ import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.converter.exception.UnmappedFFFeatureException;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.gff3.*;
-import uk.ac.ebi.embl.converter.gff3.GFF3Directives.GFF3SequenceRegion;
+import uk.ac.ebi.embl.converter.gff3.GFF3SequenceRegion;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 import uk.ac.ebi.embl.converter.utils.Gff3Utils;
@@ -63,7 +63,7 @@ public class GFF3AnnotationFactory {
         LOG.info("Converting FF entry: {}", accession);
 
         GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory(ignoreSpecies);
-        GFF3Directives.GFF3SequenceRegion sequenceRegion = directivesFactory.extractSequenceRegion(entry);
+        GFF3SequenceRegion sequenceRegion = directivesFactory.extractSequenceRegion(entry);
 
         for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
 

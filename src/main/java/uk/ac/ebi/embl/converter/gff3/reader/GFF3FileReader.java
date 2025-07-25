@@ -41,7 +41,7 @@ public class GFF3FileReader implements AutoCloseable {
     int lineCount;
     GFF3Annotation currentAnnotation;
     String currentAccession;
-    Map<String, GFF3Directives.GFF3SequenceRegion> accessionSequenceRegionMap = new HashMap<>();
+    Map<String, GFF3SequenceRegion> accessionSequenceRegionMap = new HashMap<>();
 
     public GFF3FileReader(Reader reader) {
         this.bufferedReader = new BufferedReader(reader);
@@ -60,7 +60,7 @@ public class GFF3FileReader implements AutoCloseable {
             Matcher m = SEQUENCE_REGION_DIRECTIVE.matcher(line);
             if (m.matches()) {
                 // Create directive
-                GFF3Directives.GFF3SequenceRegion sequenceDirective = getSequenceDirective(m);
+                GFF3SequenceRegion sequenceDirective = getSequenceDirective(m);
                 accessionSequenceRegionMap.put(sequenceDirective.accession(), sequenceDirective);
             } else if (RESOLUTION_DIRECTIVE.matcher(line).matches()) {
                 if (!currentAnnotation.getFeatures().isEmpty()) {
@@ -91,7 +91,7 @@ public class GFF3FileReader implements AutoCloseable {
         return null;
     }
 
-    private GFF3Directives.GFF3SequenceRegion getSequenceDirective(Matcher m) {
+    private GFF3SequenceRegion getSequenceDirective(Matcher m) {
 
         String accessionId = m.group("accessionId");
         Optional<Integer> accessionVersion =
@@ -99,7 +99,7 @@ public class GFF3FileReader implements AutoCloseable {
         long start = Long.parseLong(m.group("start"));
         long end = Long.parseLong(m.group("end"));
 
-        return new GFF3Directives.GFF3SequenceRegion(accessionId, accessionVersion, start, end);
+        return new GFF3SequenceRegion(accessionId, accessionVersion, start, end);
     }
 
     private GFF3Annotation parseAndAddFeature(String line) throws ValidationException {
@@ -154,7 +154,7 @@ public class GFF3FileReader implements AutoCloseable {
 
             // Add the corresponding sequence region to the current annotation
             if (accessionSequenceRegionMap.containsKey(currentAccession)) {
-                GFF3Directives.GFF3SequenceRegion sequenceRegion = accessionSequenceRegionMap.get(currentAccession);
+                GFF3SequenceRegion sequenceRegion = accessionSequenceRegionMap.get(currentAccession);
                 currentAnnotation.setSequenceRegion(sequenceRegion);
             } else {
                 RuleSeverityState.handleValidationException(new UndefinedSeqIdException(lineCount, line));

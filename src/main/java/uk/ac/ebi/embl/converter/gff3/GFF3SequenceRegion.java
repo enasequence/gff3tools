@@ -10,29 +10,25 @@
  */
 package uk.ac.ebi.embl.converter.gff3;
 
+import java.io.IOException;
 import java.io.Writer;
-import java.util.ArrayList;
-import java.util.List;
-import lombok.Getter;
+import java.util.Optional;
 import uk.ac.ebi.embl.converter.exception.WriteException;
 
-@Getter
-public class GFF3Directives implements IGFF3Feature {
-    List<GFF3Directive> directives = new ArrayList<>();
+public record GFF3SequenceRegion(String accessionId, Optional<Integer> accessionVersion, long start, long end)
+        implements IGFF3Feature {
+
+    public String accession() {
+        String versionSuffix = accessionVersion().map(v -> "." + v).orElse("");
+        return accessionId + versionSuffix;
+    }
 
     @Override
     public void writeGFF3String(Writer writer) throws WriteException {
-        for (GFF3Directive directive : directives) {
-            directive.writeGFF3String(writer);
+        try {
+            writer.write("##sequence-region %s %d %d\n".formatted(accession(), start, end));
+        } catch (IOException e) {
+            throw new WriteException(e);
         }
-    }
-
-    public void add(GFF3Directive directive) {
-        directives.add(directive);
-    }
-
-    public interface GFF3Directive extends IGFF3Feature {
-        @Override
-        void writeGFF3String(Writer writer) throws WriteException;
     }
 }
