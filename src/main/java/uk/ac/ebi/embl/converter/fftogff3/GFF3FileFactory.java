@@ -13,14 +13,13 @@ package uk.ac.ebi.embl.converter.fftogff3;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.converter.exception.ReadException;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
 import uk.ac.ebi.embl.converter.gff3.GFF3Header;
-import uk.ac.ebi.embl.converter.gff3.GFF3Directives.GFF3Species;
+import uk.ac.ebi.embl.converter.gff3.GFF3Species;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 public class GFF3FileFactory {
@@ -33,8 +32,8 @@ public class GFF3FileFactory {
             while (entryReader.read() != null && entryReader.isEntry()) {
                 Entry entry = entryReader.getEntry();
                 if (species == null) {
-                  GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory(false);
-                  species = directivesFactory.extractSpecies(entry);
+                    GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory(false);
+                    species = directivesFactory.extractSpecies(entry);
                 }
                 annotations.add(new GFF3AnnotationFactory(entryCount > 0).from(entry));
                 entryCount++;

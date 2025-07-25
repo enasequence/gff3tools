@@ -17,6 +17,7 @@ import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.OrganismQualifier;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
+import uk.ac.ebi.embl.converter.gff3.GFF3Species;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 public class GFF3DirectivesFactory {
@@ -42,7 +43,7 @@ public class GFF3DirectivesFactory {
                 .orElseGet(getOrganism);
     }
 
-    public GFF3Directives.GFF3Species extractSpecies(Entry entry) throws NoSourcePresentException {
+    public GFF3Species extractSpecies(Entry entry) throws NoSourcePresentException {
 
         Feature feature =
                 Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresentException::new);
@@ -50,7 +51,7 @@ public class GFF3DirectivesFactory {
         Optional<OrganismQualifier> qualifier =
                 feature.getQualifiers("organism").stream().findFirst().map(q -> (OrganismQualifier) q);
 
-        return new GFF3Directives.GFF3Species(buildTaxonomyUrl(qualifier));
+        return new GFF3Species(buildTaxonomyUrl(qualifier));
     }
 
     public GFF3Directives.GFF3SequenceRegion extractSequenceRegion(Entry entry) throws NoSourcePresentException {
@@ -58,20 +59,20 @@ public class GFF3DirectivesFactory {
         String accession = entry.getPrimaryAccession();
         if (accession != null && !accession.isEmpty()) {
             String[] parts = accession.split("[.]");
-                String sequenceId = parts[0];
-                Optional<Integer> sequenceVersion;
-                if (parts.length == 2) {
-                    sequenceVersion = Optional.of(Integer.parseInt(parts[1]));
-                } else {
-                    sequenceVersion = Optional.of(1);
-                }
-                Feature feature =
-                        Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresentException::new);
+            String sequenceId = parts[0];
+            Optional<Integer> sequenceVersion;
+            if (parts.length == 2) {
+                sequenceVersion = Optional.of(Integer.parseInt(parts[1]));
+            } else {
+                sequenceVersion = Optional.of(1);
+            }
+            Feature feature =
+                    Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresentException::new);
 
-                long start = feature.getLocations().getMinPosition();
-                long end = feature.getLocations().getMaxPosition();
+            long start = feature.getLocations().getMinPosition();
+            long end = feature.getLocations().getMaxPosition();
 
-                return new GFF3Directives.GFF3SequenceRegion(sequenceId, sequenceVersion, start, end);
+            return new GFF3Directives.GFF3SequenceRegion(sequenceId, sequenceVersion, start, end);
         }
         return null;
     }

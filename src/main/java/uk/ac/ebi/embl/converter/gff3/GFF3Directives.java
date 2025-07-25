@@ -47,19 +47,6 @@ public class GFF3Directives implements IGFF3Feature {
         }
     }
 
-    public record GFF3Species(String species) implements GFF3Directive {
-        @Override
-        public void writeGFF3String(Writer writer) throws WriteException {
-            try {
-                if (species != null) {
-                    writer.write("##species %s\n".formatted(species));
-                }
-            } catch (IOException e) {
-                throw new WriteException(e);
-            }
-        }
-    }
-
     public void add(GFF3Directive directive) {
         directives.add(directive);
     }
