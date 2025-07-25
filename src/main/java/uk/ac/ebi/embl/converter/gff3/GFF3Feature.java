@@ -25,7 +25,8 @@ public class GFF3Feature {
     // Non-Mutable members used in constructor
     final Optional<String> id;
     final Optional<String> parentId;
-    final String accession;
+    final String seqId;
+    final Optional<Integer> seqIdVersion;
     final String source;
     final String name;
     final long start;
@@ -44,6 +45,11 @@ public class GFF3Feature {
         children.add(child);
     }
 
+    public String accession() {
+        String versionSuffix = seqIdVersion.map(v -> "." + v).orElse("");
+        return seqId + versionSuffix;
+    }
+
     public boolean hasChildren() {
         return !children.isEmpty();
     }
@@ -58,7 +64,7 @@ public class GFF3Feature {
                 "|",
                 id.orElse(""),
                 parentId.orElse(""),
-                accession,
+                seqId,
                 source,
                 name,
                 score,

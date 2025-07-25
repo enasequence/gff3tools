@@ -56,23 +56,23 @@ public class GFF3DirectivesFactory {
     public GFF3Directives.GFF3SequenceRegion extractSequenceRegion(Entry entry) throws NoSourcePresentException {
 
         String accession = entry.getPrimaryAccession();
-        Feature feature =
-                Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresentException::new);
+        if (accession != null && !accession.isEmpty()) {
+            String[] parts = accession.split("[.]");
+                String sequenceId = parts[0];
+                Optional<Integer> sequenceVersion;
+                if (parts.length == 2) {
+                    sequenceVersion = Optional.of(Integer.parseInt(parts[1]));
+                } else {
+                    sequenceVersion = Optional.of(1);
+                }
+                Feature feature =
+                        Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresentException::new);
 
-        long start = feature.getLocations().getMinPosition();
-        long end = feature.getLocations().getMaxPosition();
+                long start = feature.getLocations().getMinPosition();
+                long end = feature.getLocations().getMaxPosition();
 
-        return new GFF3Directives.GFF3SequenceRegion(accession, Optional.empty(), start, end);
-    }
-
-    public GFF3Directives from(Entry entry) throws NoSourcePresentException {
-
-        GFF3Directives gff3Directives = new GFF3Directives();
-        if (!this.ignoreSpecies) {
-            gff3Directives.add(extractSpecies(entry));
+                return new GFF3Directives.GFF3SequenceRegion(sequenceId, sequenceVersion, start, end);
         }
-        gff3Directives.add(extractSequenceRegion(entry));
-
-        return gff3Directives;
+        return null;
     }
 }

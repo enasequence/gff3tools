@@ -14,10 +14,13 @@ import java.io.Writer;
 import java.util.List;
 import uk.ac.ebi.embl.converter.exception.WriteException;
 
-public record GFF3File(GFF3Header header, List<GFF3Annotation> annotations) implements IGFF3Feature {
+public record GFF3File(GFF3Header header, GFF3Directives.GFF3Species species, List<GFF3Annotation> annotations) implements IGFF3Feature {
     @Override
     public void writeGFF3String(Writer writer) throws WriteException {
         this.header.writeGFF3String(writer);
+        if (this.species != null) {
+          this.species.writeGFF3String(writer);
+        }
         for (GFF3Annotation annotation : annotations) {
             annotation.writeGFF3String(writer);
         }

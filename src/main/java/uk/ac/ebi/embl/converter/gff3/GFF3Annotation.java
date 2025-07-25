@@ -29,11 +29,11 @@ import uk.ac.ebi.embl.converter.exception.WriteException;
 @Getter
 @Setter
 public class GFF3Annotation implements IGFF3Feature {
-    GFF3Directives directives = new GFF3Directives();
+    GFF3Directives.GFF3SequenceRegion sequenceRegion = null;
     List<GFF3Feature> features = new ArrayList<>();
 
     private void writeFeature(Writer writer, GFF3Feature feature) throws IOException {
-        writer.write(feature.getAccession());
+        writer.write(feature.accession());
         writer.write('\t' + feature.getSource());
         writer.write('\t' + feature.getName());
         writer.write("\t%d".formatted(feature.getStart()));
@@ -87,7 +87,9 @@ public class GFF3Annotation implements IGFF3Feature {
     @Override
     public void writeGFF3String(Writer writer) throws WriteException {
         try {
-            this.directives.writeGFF3String(writer);
+            if (this.sequenceRegion != null) {
+                this.sequenceRegion.writeGFF3String(writer);
+            }
             for (GFF3Feature feature : features) {
                 writeFeature(writer, feature);
             }
@@ -102,25 +104,16 @@ public class GFF3Annotation implements IGFF3Feature {
     }
 
     public void merge(GFF3Annotation other) {
-        this.directives.getDirectives().addAll(other.directives.getDirectives());
         this.features.addAll(other.features);
     }
 
     public String getAccession() {
-        Optional<GFF3Directives.GFF3SequenceRegion> directive = this.directives.getDirectives().stream()
-                .filter((d) -> {
-                    if (d instanceof GFF3Directives.GFF3SequenceRegion) {
-                        return true;
-                    }
-                    return false;
-                })
-                .map((d) -> (GFF3Directives.GFF3SequenceRegion) d)
-                .findFirst();
+        Optional<GFF3Directives.GFF3SequenceRegion> directive = Optional.ofNullable(this.sequenceRegion);
         return directive
                 .map((d) -> d.accession())
                 .orElse(this.features.stream()
                         .findFirst()
-                        .map(GFF3Feature::getAccession)
+                        .map(GFF3Feature::accession)
                         .orElse(null));
     }
 }

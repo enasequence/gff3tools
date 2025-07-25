@@ -58,25 +58,19 @@ public class GFF3Mapper {
         entry = entryFactory.createEntry();
         Sequence sequence = sequenceFactory.createSequence();
 
-        if (!gff3Annotation.getDirectives().getDirectives().isEmpty()) {
-            SourceFeature sourceFeature = this.featureFactory.createSourceFeature();
-            for (GFF3Directives.GFF3Directive directive :
-                    gff3Annotation.getDirectives().getDirectives()) {
-                if (directive.getClass() == GFF3Directives.GFF3SequenceRegion.class) {
-                    GFF3Directives.GFF3SequenceRegion reg = (GFF3Directives.GFF3SequenceRegion) directive;
-                    entry.setPrimaryAccession(reg.accessionId());
+        SourceFeature sourceFeature = this.featureFactory.createSourceFeature();
 
-                    sequence.setVersion(reg.accessionVersion().orElse(1));
-
-                    Location location = this.locationFactory.createLocalRange(reg.start(), reg.end());
-                    Join<Location> compoundJoin = new Join<>();
-                    compoundJoin.addLocation(location);
-                    sourceFeature.setLocations(compoundJoin);
-                }
-            }
-            entry.addFeature(sourceFeature);
+        GFF3Directives.GFF3SequenceRegion reg = gff3Annotation.getSequenceRegion();
+        if (reg != null) {
+            entry.setPrimaryAccession(reg.accessionId());
+            sequence.setVersion(reg.accessionVersion().orElse(1));
+            Location location = this.locationFactory.createLocalRange(reg.start(), reg.end());
+            Join<Location> compoundJoin = new Join<>();
+            compoundJoin.addLocation(location);
+            sourceFeature.setLocations(compoundJoin);
         }
 
+        entry.addFeature(sourceFeature);
         entry.setSequence(sequence);
 
         for (GFF3Feature gff3Feature : gff3Annotation.getFeatures()) {

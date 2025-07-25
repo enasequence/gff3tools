@@ -25,6 +25,7 @@ import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.converter.exception.UnmappedFFFeatureException;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.gff3.*;
+import uk.ac.ebi.embl.converter.gff3.GFF3Directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 import uk.ac.ebi.embl.converter.utils.Gff3Utils;
@@ -60,11 +61,9 @@ public class GFF3AnnotationFactory {
 
         String accession = entry.getSequence().getAccession();
         LOG.info("Converting FF entry: {}", accession);
-        // TODO: We need to handle accession versions
-        entry.setPrimaryAccession(accession + ".1");
-        entry.getSequence().setAccession(accession + ".1");
 
-        GFF3Directives directives = new GFF3DirectivesFactory(this.ignoreSpecies).from(entry);
+        GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory(ignoreSpecies);
+        GFF3Directives.GFF3SequenceRegion sequenceRegion = directivesFactory.extractSequenceRegion(entry);
 
         for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
 
@@ -72,14 +71,14 @@ public class GFF3AnnotationFactory {
                 continue; // early exit
             }
 
-            buildGeneFeatureMap(entry.getPrimaryAccession(), feature);
+            buildGeneFeatureMap(sequenceRegion, feature);
         }
 
         // For circular topologies; We have not found a circular feature so we must
         // include a region
         // encompasing all source.
         if (isCircularTopology(entry) && lacksCircularAttribute()) {
-            nonGeneFeatures.add(createLandmarkFeature(accession, entry));
+            nonGeneFeatures.add(createLandmarkFeature(sequenceRegion, entry));
         }
         sortFeaturesAndAssignId();
 
@@ -89,8 +88,8 @@ public class GFF3AnnotationFactory {
 
         // Create annotation and set values
         GFF3Annotation annotation = new GFF3Annotation();
+        annotation.setSequenceRegion(sequenceRegion);
         annotation.setFeatures(features);
-        annotation.setDirectives(directives);
 
         return annotation;
     }
@@ -104,12 +103,13 @@ public class GFF3AnnotationFactory {
         return entry.getSequence().getTopology() == Sequence.Topology.CIRCULAR;
     }
 
-    private GFF3Feature createLandmarkFeature(String accession, Entry entry) {
+    private GFF3Feature createLandmarkFeature(GFF3SequenceRegion sequenceRegion, Entry entry) {
         CompoundLocation<Location> locations = entry.getPrimarySourceFeature().getLocations();
         return new GFF3Feature(
-                Optional.of(accession),
+                Optional.of(sequenceRegion.accession()),
                 Optional.empty(),
-                entry.getPrimaryAccession(),
+                sequenceRegion.accessionId(),
+                sequenceRegion.accessionVersion(),
                 ".",
                 "region",
                 locations.getMinPosition(),
@@ -117,10 +117,11 @@ public class GFF3AnnotationFactory {
                 ".",
                 "+",
                 ".",
-                Map.of("ID", accession, "Is_circular", "true"));
+                Map.of("ID", sequenceRegion.accession(), "Is_circular", "true"));
     }
 
-    private List<GFF3Feature> transformFeature(String accession, Feature ffFeature, Optional<String> geneName)
+    private List<GFF3Feature> transformFeature(
+            GFF3SequenceRegion sequenceRegion, Feature ffFeature, Optional<String> geneName)
             throws ValidationException {
         List<GFF3Feature> gff3Features = new ArrayList<>();
 
@@ -150,7 +151,8 @@ public class GFF3AnnotationFactory {
             gff3Features.add(new GFF3Feature(
                     id,
                     parentId,
-                    accession,
+                    sequenceRegion.accessionId(),
+                    sequenceRegion.accessionVersion(),
                     source,
                     featureName,
                     location.getBeginPosition(),
@@ -179,12 +181,12 @@ public class GFF3AnnotationFactory {
         return attributes;
     }
 
-    private void buildGeneFeatureMap(String accession, Feature ffFeature) throws ValidationException {
+    private void buildGeneFeatureMap(GFF3SequenceRegion sequenceRegion, Feature ffFeature) throws ValidationException {
 
         List<Qualifier> genes = ffFeature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
 
         if (genes.isEmpty()) {
-            nonGeneFeatures.addAll(transformFeature(accession, ffFeature, Optional.empty()));
+            nonGeneFeatures.addAll(transformFeature(sequenceRegion, ffFeature, Optional.empty()));
         } else {
 
             for (Qualifier gene : genes) {
@@ -192,7 +194,7 @@ public class GFF3AnnotationFactory {
 
                 List<GFF3Feature> gfFeatures = geneMap.getOrDefault(geneName, new ArrayList<>());
 
-                gfFeatures.addAll(transformFeature(accession, ffFeature, Optional.of(geneName)));
+                gfFeatures.addAll(transformFeature(sequenceRegion, ffFeature, Optional.of(geneName)));
                 geneMap.put(geneName, gfFeatures);
             }
         }

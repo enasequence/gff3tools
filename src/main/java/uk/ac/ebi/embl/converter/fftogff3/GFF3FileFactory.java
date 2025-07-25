@@ -13,27 +13,36 @@ package uk.ac.ebi.embl.converter.fftogff3;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.converter.exception.ReadException;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
 import uk.ac.ebi.embl.converter.gff3.GFF3Header;
+import uk.ac.ebi.embl.converter.gff3.GFF3Directives.GFF3Species;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 public class GFF3FileFactory {
     public GFF3File from(EmblEntryReader entryReader) throws ValidationException, ReadException {
         GFF3Header header = new GFF3Header("3.1.26");
+        GFF3Species species = null;
         List<GFF3Annotation> annotations = new ArrayList<>();
         int entryCount = 0;
         try {
             while (entryReader.read() != null && entryReader.isEntry()) {
-                annotations.add(new GFF3AnnotationFactory(entryCount > 0).from(entryReader.getEntry()));
+                Entry entry = entryReader.getEntry();
+                if (species == null) {
+                  GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory(false);
+                  species = directivesFactory.extractSpecies(entry);
+                }
+                annotations.add(new GFF3AnnotationFactory(entryCount > 0).from(entry));
                 entryCount++;
             }
         } catch (IOException e) {
             throw new ReadException(e);
         }
 
-        return new GFF3File(header, annotations);
+        return new GFF3File(header, species, annotations);
     }
 }

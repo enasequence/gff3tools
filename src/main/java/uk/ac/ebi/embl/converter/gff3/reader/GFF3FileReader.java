@@ -35,7 +35,7 @@ public class GFF3FileReader implements AutoCloseable {
     static Pattern RESOLUTION_DIRECTIVE = Pattern.compile("^###$");
     static Pattern COMMENT = Pattern.compile("^#.*$");
     static Pattern GFF3_FEATURE = Pattern.compile(
-            "^(?<accession>.+)\\t(?<source>.+)\\t(?<name>.+)\\t(?<start>[0-9]+)\\t(?<end>[0-9]+)\\t(?<score>.+)\\t(?<strand>\\+|\\-|\\.|\\?)\\t(?<phase>.+)\\t(?<attributes>.+)?$");
+            "^(?<accession>(?<accessionId>[^.]+)(?:\\.(?<accessionVersion>\\d+))?)\\t(?<source>.+)\\t(?<name>.+)\\t(?<start>[0-9]+)\\t(?<end>[0-9]+)\\t(?<score>.+)\\t(?<strand>\\+|\\-|\\.|\\?)\\t(?<phase>.+)\\t(?<attributes>.+)?$");
 
     BufferedReader bufferedReader;
     int lineCount;
@@ -111,6 +111,9 @@ public class GFF3FileReader implements AutoCloseable {
         }
 
         String accession = m.group("accession");
+        String accessionId = m.group("accessionId");
+        Optional<Integer> accessionVersion =
+                Optional.ofNullable(m.group("accessionVersion")).map(Integer::parseInt);
         String source = m.group("source");
         String name = m.group("name");
         long start = Long.parseLong(m.group("start"));
@@ -125,8 +128,19 @@ public class GFF3FileReader implements AutoCloseable {
         Optional<String> id = Optional.ofNullable((String) attributesMap.get("ID"));
         Optional<String> parentId = Optional.ofNullable((String) attributesMap.get("Parent"));
 
-        GFF3Feature feature =
-                new GFF3Feature(id, parentId, accession, source, name, start, end, score, strand, phase, attributesMap);
+        GFF3Feature feature = new GFF3Feature(
+                id,
+                parentId,
+                accessionId,
+                accessionVersion,
+                source,
+                name,
+                start,
+                end,
+                score,
+                strand,
+                phase,
+                attributesMap);
 
         // TODO: Validate that the new annotation was not used before the current
         // annotation. Meaning that features are out of order
@@ -141,7 +155,7 @@ public class GFF3FileReader implements AutoCloseable {
             // Add the corresponding sequence region to the current annotation
             if (accessionSequenceRegionMap.containsKey(currentAccession)) {
                 GFF3Directives.GFF3SequenceRegion sequenceRegion = accessionSequenceRegionMap.get(currentAccession);
-                currentAnnotation.getDirectives().add(sequenceRegion);
+                currentAnnotation.setSequenceRegion(sequenceRegion);
             } else {
                 RuleSeverityState.handleValidationException(new UndefinedSeqIdException(lineCount, line));
             }
