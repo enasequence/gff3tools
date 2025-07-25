@@ -175,6 +175,7 @@ class GFF3AnnotationFactoryTest {
 
         EntryFactory entryFactory = new EntryFactory();
         Entry entry = entryFactory.createEntry();
+        entry.setPrimaryAccession("abc");
 
         SequenceFactory sequenceFactory = new SequenceFactory();
         entry.setSequence(sequenceFactory.createSequence());
