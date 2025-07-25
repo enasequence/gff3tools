@@ -24,6 +24,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import uk.ac.ebi.embl.converter.exception.WriteException;
+import uk.ac.ebi.embl.converter.gff3.directives.GFF3SequenceRegion;
 
 @NoArgsConstructor
 @Getter

@@ -8,11 +8,12 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.gff3;
+package uk.ac.ebi.embl.converter.gff3.directives;
 
 import java.io.IOException;
 import java.io.Writer;
 import uk.ac.ebi.embl.converter.exception.WriteException;
+import uk.ac.ebi.embl.converter.gff3.IGFF3Feature;
 
 public record GFF3Header(String version) implements IGFF3Feature {
 

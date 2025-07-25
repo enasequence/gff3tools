@@ -18,8 +18,8 @@ import uk.ac.ebi.embl.converter.exception.ReadException;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
-import uk.ac.ebi.embl.converter.gff3.GFF3Header;
-import uk.ac.ebi.embl.converter.gff3.GFF3Species;
+import uk.ac.ebi.embl.converter.gff3.directives.GFF3Header;
+import uk.ac.ebi.embl.converter.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 public class GFF3FileFactory {

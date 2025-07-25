@@ -22,6 +22,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.*;
+import uk.ac.ebi.embl.converter.gff3.directives.GFF3Header;
+import uk.ac.ebi.embl.converter.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.converter.utils.Gff3Utils;
 import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
 

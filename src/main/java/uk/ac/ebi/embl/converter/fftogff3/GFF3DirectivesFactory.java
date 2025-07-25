@@ -16,8 +16,8 @@ import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.OrganismQualifier;
 import uk.ac.ebi.embl.converter.exception.*;
-import uk.ac.ebi.embl.converter.gff3.GFF3SequenceRegion;
-import uk.ac.ebi.embl.converter.gff3.GFF3Species;
+import uk.ac.ebi.embl.converter.gff3.directives.GFF3SequenceRegion;
+import uk.ac.ebi.embl.converter.gff3.directives.GFF3Species;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 public class GFF3DirectivesFactory {

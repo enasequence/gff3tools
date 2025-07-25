@@ -25,7 +25,7 @@ import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.converter.exception.UnmappedFFFeatureException;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.gff3.*;
-import uk.ac.ebi.embl.converter.gff3.GFF3SequenceRegion;
+import uk.ac.ebi.embl.converter.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 import uk.ac.ebi.embl.converter.utils.Gff3Utils;
