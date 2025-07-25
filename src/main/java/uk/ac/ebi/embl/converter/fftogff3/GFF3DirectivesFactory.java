@@ -22,12 +22,6 @@ import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 public class GFF3DirectivesFactory {
 
-    boolean ignoreSpecies;
-
-    public GFF3DirectivesFactory(boolean ignoreSpecies) {
-        this.ignoreSpecies = ignoreSpecies;
-    }
-
     static final String BASE_TAXON_URL = "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi";
 
     private String buildTaxonomyUrl(Optional<OrganismQualifier> qualifier) {

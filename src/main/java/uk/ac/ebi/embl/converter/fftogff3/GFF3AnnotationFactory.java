@@ -62,7 +62,7 @@ public class GFF3AnnotationFactory {
         String accession = entry.getSequence().getAccession();
         LOG.info("Converting FF entry: {}", accession);
 
-        GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory(ignoreSpecies);
+        GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
         GFF3SequenceRegion sequenceRegion = directivesFactory.extractSequenceRegion(entry);
 
         for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
