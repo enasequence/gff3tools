@@ -17,6 +17,7 @@ import picocli.CommandLine.IExecutionExceptionHandler;
 import picocli.CommandLine.ParseResult;
 import uk.ac.ebi.embl.converter.exception.ExitException;
 
+// All the exceptions for this tool are handled here. An appropriate exit code is returned in case of handled errors.
 public class ExecutionExceptionHandler implements IExecutionExceptionHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(ExecutionExceptionHandler.class);
