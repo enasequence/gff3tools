@@ -57,6 +57,9 @@ public class GFF3DirectivesFactory {
             Optional<Integer> sequenceVersion;
             if (parts.length == 2) {
                 sequenceVersion = Optional.of(Integer.parseInt(parts[1]));
+            } else if(entry.getSequence()!=null && entry.getSequence().getVersion()!=null){
+                // version from ID line.
+                sequenceVersion = Optional.of(entry.getSequence().getVersion());
             } else {
                 sequenceVersion = Optional.of(1);
             }
