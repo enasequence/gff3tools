@@ -48,10 +48,10 @@ public class GFF3AnnotationFactory {
     // Map of Id with count, used for incrementing when same id is found.
     Map<String, Integer> idMap = new HashMap<>();
 
-    boolean ignoreSpecies;
+    GFF3DirectivesFactory directivesFactory;
 
-    public GFF3AnnotationFactory(boolean ignoreSpecies) {
-        this.ignoreSpecies = ignoreSpecies;
+    public GFF3AnnotationFactory(GFF3DirectivesFactory directivesFactory) {
+        this.directivesFactory = directivesFactory;
     }
 
     public GFF3Annotation from(Entry entry) throws ValidationException {
@@ -62,7 +62,6 @@ public class GFF3AnnotationFactory {
         String accession = entry.getSequence().getAccession();
         LOG.info("Converting FF entry: {}", accession);
 
-        GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
         GFF3SequenceRegion sequenceRegion = directivesFactory.createSequenceRegion(entry);
 
         for (Feature feature : entry.getFeatures().stream().sorted().toList()) {

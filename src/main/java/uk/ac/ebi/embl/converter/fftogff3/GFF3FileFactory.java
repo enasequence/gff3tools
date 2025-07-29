@@ -27,16 +27,14 @@ public class GFF3FileFactory {
         GFF3Header header = new GFF3Header("3.1.26");
         GFF3Species species = null;
         List<GFF3Annotation> annotations = new ArrayList<>();
-        int entryCount = 0;
+        GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
         try {
             while (entryReader.read() != null && entryReader.isEntry()) {
                 Entry entry = entryReader.getEntry();
                 if (species == null) {
-                    GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
                     species = directivesFactory.createSpecies(entry);
                 }
-                annotations.add(new GFF3AnnotationFactory(entryCount > 0).from(entry));
-                entryCount++;
+                annotations.add(new GFF3AnnotationFactory(directivesFactory).from(entry));
             }
         } catch (IOException e) {
             throw new ReadException(e);
