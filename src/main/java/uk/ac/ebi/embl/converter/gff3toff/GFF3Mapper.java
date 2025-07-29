@@ -63,6 +63,7 @@ public class GFF3Mapper {
         GFF3SequenceRegion reg = gff3Annotation.getSequenceRegion();
         if (reg != null) {
             entry.setPrimaryAccession(reg.accessionId());
+            sequence.setAccession(reg.accessionId());
             sequence.setVersion(reg.accessionVersion().orElse(1));
             Location location = this.locationFactory.createLocalRange(reg.start(), reg.end());
             Join<Location> compoundJoin = new Join<>();
