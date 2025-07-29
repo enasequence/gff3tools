@@ -52,7 +52,8 @@ public class Gff3ToFFConverter implements Converter {
         }
     }
 
-    private boolean isSameAnnotation(GFF3Annotation previousAnnotation, GFF3Annotation currentAnnotation) throws NoGFF3AccessionException {
+    private boolean isSameAnnotation(GFF3Annotation previousAnnotation, GFF3Annotation currentAnnotation)
+            throws NoGFF3AccessionException {
         return previousAnnotation != null && currentAnnotation.getAccession().equals(previousAnnotation.getAccession());
     }
 

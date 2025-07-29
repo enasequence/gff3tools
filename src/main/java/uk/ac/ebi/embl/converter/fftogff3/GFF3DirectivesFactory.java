@@ -48,16 +48,18 @@ public class GFF3DirectivesFactory {
         return new GFF3Species(buildTaxonomyUrl(qualifier));
     }
 
-    public GFF3SequenceRegion createSequenceRegion(Entry entry) throws NoSourcePresentException, NoAccessionPresentException {
+    public GFF3SequenceRegion createSequenceRegion(Entry entry)
+            throws NoSourcePresentException, NoAccessionPresentException {
 
-        String accession = Optional.ofNullable(entry.getSequence().getAccession()).orElseThrow(NoAccessionPresentException::new);
+        String accession =
+                Optional.ofNullable(entry.getSequence().getAccession()).orElseThrow(NoAccessionPresentException::new);
         if (accession != null && !accession.isEmpty()) {
             String[] parts = accession.split("[.]");
             String sequenceId = parts[0];
             Optional<Integer> sequenceVersion;
             if (parts.length == 2) {
                 sequenceVersion = Optional.of(Integer.parseInt(parts[1]));
-            } else if(entry.getSequence()!=null && entry.getSequence().getVersion()!=null){
+            } else if (entry.getSequence() != null && entry.getSequence().getVersion() != null) {
                 // version from ID line.
                 sequenceVersion = Optional.of(entry.getSequence().getVersion());
             } else {

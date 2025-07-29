@@ -12,6 +12,6 @@ package uk.ac.ebi.embl.converter.exception;
 
 public class NoGFF3AccessionException extends Exception {
     public NoGFF3AccessionException() {
-      super("The annotation has no sequence-region and no features. So no accession is available for it");
+        super("The annotation has no sequence-region and no features. So no accession is available for it");
     }
 }

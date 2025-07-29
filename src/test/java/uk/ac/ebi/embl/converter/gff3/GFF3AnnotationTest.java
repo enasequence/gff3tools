@@ -20,8 +20,8 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
-import uk.ac.ebi.embl.converter.exception.WriteException;
 import uk.ac.ebi.embl.converter.exception.NoGFF3AccessionException;
+import uk.ac.ebi.embl.converter.exception.WriteException;
 import uk.ac.ebi.embl.converter.gff3.directives.GFF3SequenceRegion;
 
 public class GFF3AnnotationTest {
@@ -48,7 +48,8 @@ public class GFF3AnnotationTest {
         test(attributes, expectedAttribute);
     }
 
-    private void test(Map<String, Object> attributes, String expectedAttribute) throws IOException, WriteException, NoGFF3AccessionException {
+    private void test(Map<String, Object> attributes, String expectedAttribute)
+            throws IOException, WriteException, NoGFF3AccessionException {
         try (StringWriter gff3Writer = new StringWriter()) {
             GFF3Annotation annotation = new GFF3Annotation();
             GFF3Feature gff3Feature = TestUtils.createGFF3Feature("ID", "Parent", attributes);
@@ -63,11 +64,19 @@ public class GFF3AnnotationTest {
     public void testMergeAnnotations() throws IOException, WriteException, NoGFF3AccessionException {
         // Test case 1: Merge annotations where the first annotation has no sequence region
         GFF3Annotation annotation1 = new GFF3Annotation();
-        annotation1.addFeature(TestUtils.createGFF3Feature("ID1", "Parent1", new HashMap<>() {{ put("ID", "feature1"); }}));
+        annotation1.addFeature(TestUtils.createGFF3Feature("ID1", "Parent1", new HashMap<>() {
+            {
+                put("ID", "feature1");
+            }
+        }));
 
         GFF3Annotation annotation2 = new GFF3Annotation();
         annotation2.setSequenceRegion(new GFF3SequenceRegion("ACC00002", Optional.empty(), 1, 200));
-        annotation2.addFeature(TestUtils.createGFF3Feature("ID2", "Parent2", new HashMap<>() {{ put("ID", "feature2"); }}));
+        annotation2.addFeature(TestUtils.createGFF3Feature("ID2", "Parent2", new HashMap<>() {
+            {
+                put("ID", "feature2");
+            }
+        }));
 
         annotation1.merge(annotation2);
 
@@ -80,11 +89,19 @@ public class GFF3AnnotationTest {
         // Test case 2: Merge annotations where both have sequence regions
         GFF3Annotation annotation3 = new GFF3Annotation();
         annotation3.setSequenceRegion(new GFF3SequenceRegion("ACC00003", Optional.empty(), 1, 300));
-        annotation3.addFeature(TestUtils.createGFF3Feature("ID3", "Parent3", new HashMap<>() {{ put("ID", "feature3"); }}));
+        annotation3.addFeature(TestUtils.createGFF3Feature("ID3", "Parent3", new HashMap<>() {
+            {
+                put("ID", "feature3");
+            }
+        }));
 
         GFF3Annotation annotation4 = new GFF3Annotation();
         annotation4.setSequenceRegion(new GFF3SequenceRegion("ACC00004", Optional.empty(), 1, 400));
-        annotation4.addFeature(TestUtils.createGFF3Feature("ID4", "Parent4", new HashMap<>() {{ put("ID", "feature4"); }}));
+        annotation4.addFeature(TestUtils.createGFF3Feature("ID4", "Parent4", new HashMap<>() {
+            {
+                put("ID", "feature4");
+            }
+        }));
 
         annotation3.merge(annotation4);
 
@@ -97,7 +114,11 @@ public class GFF3AnnotationTest {
         // Test case 3: Merge with empty second annotation
         GFF3Annotation annotation5 = new GFF3Annotation();
         annotation5.setSequenceRegion(new GFF3SequenceRegion("ACC00005", Optional.empty(), 1, 500));
-        annotation5.addFeature(TestUtils.createGFF3Feature("ID5", "Parent5", new HashMap<>() {{ put("ID", "feature5"); }}));
+        annotation5.addFeature(TestUtils.createGFF3Feature("ID5", "Parent5", new HashMap<>() {
+            {
+                put("ID", "feature5");
+            }
+        }));
 
         GFF3Annotation annotation6 = new GFF3Annotation(); // Empty
 
@@ -113,7 +134,11 @@ public class GFF3AnnotationTest {
 
         GFF3Annotation annotation8 = new GFF3Annotation();
         annotation8.setSequenceRegion(new GFF3SequenceRegion("ACC00008", Optional.empty(), 1, 800));
-        annotation8.addFeature(TestUtils.createGFF3Feature("ID8", "Parent8", new HashMap<>() {{ put("ID", "feature8"); }}));
+        annotation8.addFeature(TestUtils.createGFF3Feature("ID8", "Parent8", new HashMap<>() {
+            {
+                put("ID", "feature8");
+            }
+        }));
 
         annotation7.merge(annotation8);
 
