@@ -37,7 +37,7 @@ public class GFF3DirectivesFactory {
                 .orElseGet(getOrganism);
     }
 
-    public GFF3Species extractSpecies(Entry entry) throws NoSourcePresentException {
+    public GFF3Species createSpecies(Entry entry) throws NoSourcePresentException {
 
         Feature feature =
                 Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresentException::new);
@@ -48,9 +48,9 @@ public class GFF3DirectivesFactory {
         return new GFF3Species(buildTaxonomyUrl(qualifier));
     }
 
-    public GFF3SequenceRegion extractSequenceRegion(Entry entry) throws NoSourcePresentException {
+    public GFF3SequenceRegion createSequenceRegion(Entry entry) throws NoSourcePresentException, NoAccessionPresentException {
 
-        String accession = entry.getPrimaryAccession();
+        String accession = Optional.ofNullable(entry.getSequence().getAccession()).orElseThrow(NoAccessionPresentException::new);
         if (accession != null && !accession.isEmpty()) {
             String[] parts = accession.split("[.]");
             String sequenceId = parts[0];

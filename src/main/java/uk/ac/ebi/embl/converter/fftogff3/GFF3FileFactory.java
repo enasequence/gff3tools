@@ -33,7 +33,7 @@ public class GFF3FileFactory {
                 Entry entry = entryReader.getEntry();
                 if (species == null) {
                     GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
-                    species = directivesFactory.extractSpecies(entry);
+                    species = directivesFactory.createSpecies(entry);
                 }
                 annotations.add(new GFF3AnnotationFactory(entryCount > 0).from(entry));
                 entryCount++;

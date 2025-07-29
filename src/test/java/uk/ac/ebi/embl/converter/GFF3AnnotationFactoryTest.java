@@ -25,6 +25,7 @@ import uk.ac.ebi.embl.api.entry.feature.FeatureFactory;
 import uk.ac.ebi.embl.api.entry.location.Join;
 import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.api.entry.location.LocationFactory;
+import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.fftogff3.GFF3AnnotationFactory;
@@ -178,7 +179,9 @@ class GFF3AnnotationFactoryTest {
         entry.setPrimaryAccession("abc");
 
         SequenceFactory sequenceFactory = new SequenceFactory();
-        entry.setSequence(sequenceFactory.createSequence());
+        Sequence sequence = sequenceFactory.createSequence();
+        sequence.setAccession("abc");
+        entry.setSequence(sequence);
 
         Map<String, String> qualifiers = new HashMap<>();
         qualifiers.put("gene", "matK");
