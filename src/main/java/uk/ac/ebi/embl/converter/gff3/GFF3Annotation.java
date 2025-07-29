@@ -113,12 +113,14 @@ public class GFF3Annotation implements IGFF3Feature {
     }
 
     public String getAccession() throws NoGFF3AccessionException {
-        Optional<GFF3SequenceRegion> sequenceRegion = Optional.ofNullable(this.sequenceRegion);
-        return sequenceRegion
-                .map((d) -> d.accession())
-                .orElse(this.features.stream()
-                        .findFirst()
-                        .map(GFF3Feature::accession)
-                        .orElseThrow(NoGFF3AccessionException::new));
+      if (this.sequenceRegion != null) {
+        return this.sequenceRegion.accession();
+      } else {
+        return this.features.stream()
+          .findFirst()
+          .map(GFF3Feature::accession)
+          .orElseThrow(NoGFF3AccessionException::new);
+      }
+        
     }
 }

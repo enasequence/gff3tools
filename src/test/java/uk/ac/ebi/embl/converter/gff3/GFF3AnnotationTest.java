@@ -21,11 +21,12 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
 import uk.ac.ebi.embl.converter.exception.WriteException;
+import uk.ac.ebi.embl.converter.exception.NoGFF3AccessionException;
 import uk.ac.ebi.embl.converter.gff3.directives.GFF3SequenceRegion;
 
 public class GFF3AnnotationTest {
     @Test
-    public void testWriteAttributes() throws IOException, WriteException {
+    public void testWriteAttributes() throws IOException, WriteException, NoGFF3AccessionException {
 
         Map<String, Object> attributes = new HashMap<>();
         attributes.put("ID", "ID_TEST");
@@ -47,7 +48,7 @@ public class GFF3AnnotationTest {
         test(attributes, expectedAttribute);
     }
 
-    private void test(Map<String, Object> attributes, String expectedAttribute) throws IOException, WriteException {
+    private void test(Map<String, Object> attributes, String expectedAttribute) throws IOException, WriteException, NoGFF3AccessionException {
         try (StringWriter gff3Writer = new StringWriter()) {
             GFF3Annotation annotation = new GFF3Annotation();
             GFF3Feature gff3Feature = TestUtils.createGFF3Feature("ID", "Parent", attributes);
@@ -59,38 +60,71 @@ public class GFF3AnnotationTest {
     }
 
     @Test
-    public void testMergeAnnotations() throws IOException, WriteException {
-        // Create first annotation
+    public void testMergeAnnotations() throws IOException, WriteException, NoGFF3AccessionException {
+        // Test case 1: Merge annotations where the first annotation has no sequence region
         GFF3Annotation annotation1 = new GFF3Annotation();
-        Map<String, Object> attributes1 = new HashMap<>();
-        attributes1.put("ID", "feature1");
-        GFF3Feature feature1 = TestUtils.createGFF3Feature("ID1", "Parent1", attributes1);
-        annotation1.addFeature(feature1);
+        annotation1.addFeature(TestUtils.createGFF3Feature("ID1", "Parent1", new HashMap<>() {{ put("ID", "feature1"); }}));
 
-        // Create second annotation
         GFF3Annotation annotation2 = new GFF3Annotation();
-        Map<String, Object> attributes2 = new HashMap<>();
-        attributes2.put("ID", "feature2");
-        GFF3Feature feature2 = TestUtils.createGFF3Feature("ID2", "Parent2", attributes2);
-        annotation2.addFeature(feature2);
+        annotation2.setSequenceRegion(new GFF3SequenceRegion("ACC00002", Optional.empty(), 1, 200));
+        annotation2.addFeature(TestUtils.createGFF3Feature("ID2", "Parent2", new HashMap<>() {{ put("ID", "feature2"); }}));
 
-        // Merge annotations
         annotation1.merge(annotation2);
 
-        // Assert merged content
-        try (StringWriter gff3Writer = new StringWriter()) {
-            annotation1.writeGFF3String(gff3Writer);
-            String mergedContent = gff3Writer.toString();
+        assertNotNull(annotation1.getSequenceRegion());
+        assertEquals("ACC00002", annotation1.getSequenceRegion().accession());
+        assertEquals(2, annotation1.getFeatures().size());
+        assertEquals("ID1", annotation1.getFeatures().get(0).id.get());
+        assertEquals("ID2", annotation1.getFeatures().get(1).id.get());
 
-            assertTrue(mergedContent.contains("ID1"));
-            assertTrue(mergedContent.contains("ID2"));
-            assertTrue(mergedContent.contains("feature1"));
-            assertTrue(mergedContent.contains("feature2"));
-        }
+        // Test case 2: Merge annotations where both have sequence regions
+        GFF3Annotation annotation3 = new GFF3Annotation();
+        annotation3.setSequenceRegion(new GFF3SequenceRegion("ACC00003", Optional.empty(), 1, 300));
+        annotation3.addFeature(TestUtils.createGFF3Feature("ID3", "Parent3", new HashMap<>() {{ put("ID", "feature3"); }}));
+
+        GFF3Annotation annotation4 = new GFF3Annotation();
+        annotation4.setSequenceRegion(new GFF3SequenceRegion("ACC00004", Optional.empty(), 1, 400));
+        annotation4.addFeature(TestUtils.createGFF3Feature("ID4", "Parent4", new HashMap<>() {{ put("ID", "feature4"); }}));
+
+        annotation3.merge(annotation4);
+
+        assertNotNull(annotation3.getSequenceRegion());
+        assertEquals("ACC00003", annotation3.getSequenceRegion().accession()); // Should retain original
+        assertEquals(2, annotation3.getFeatures().size());
+        assertEquals("ID3", annotation3.getFeatures().get(0).id.get());
+        assertEquals("ID4", annotation3.getFeatures().get(1).id.get());
+
+        // Test case 3: Merge with empty second annotation
+        GFF3Annotation annotation5 = new GFF3Annotation();
+        annotation5.setSequenceRegion(new GFF3SequenceRegion("ACC00005", Optional.empty(), 1, 500));
+        annotation5.addFeature(TestUtils.createGFF3Feature("ID5", "Parent5", new HashMap<>() {{ put("ID", "feature5"); }}));
+
+        GFF3Annotation annotation6 = new GFF3Annotation(); // Empty
+
+        annotation5.merge(annotation6);
+
+        assertNotNull(annotation5.getSequenceRegion());
+        assertEquals("ACC00005", annotation5.getSequenceRegion().accession());
+        assertEquals(1, annotation5.getFeatures().size());
+        assertEquals("ID5", annotation5.getFeatures().get(0).id.get());
+
+        // Test case 4: Merge into empty first annotation
+        GFF3Annotation annotation7 = new GFF3Annotation(); // Empty
+
+        GFF3Annotation annotation8 = new GFF3Annotation();
+        annotation8.setSequenceRegion(new GFF3SequenceRegion("ACC00008", Optional.empty(), 1, 800));
+        annotation8.addFeature(TestUtils.createGFF3Feature("ID8", "Parent8", new HashMap<>() {{ put("ID", "feature8"); }}));
+
+        annotation7.merge(annotation8);
+
+        assertNotNull(annotation7.getSequenceRegion());
+        assertEquals("ACC00008", annotation7.getSequenceRegion().accession());
+        assertEquals(1, annotation7.getFeatures().size());
+        assertEquals("ID8", annotation7.getFeatures().get(0).id.get());
     }
 
     @Test
-    public void testGetAccession() throws IOException, WriteException {
+    public void testGetAccession() throws IOException, WriteException, NoGFF3AccessionException {
         // Test case 1: Accession from GFF3SequenceRegion directive
         GFF3Annotation annotation1 = new GFF3Annotation();
         annotation1.setSequenceRegion(new GFF3SequenceRegion("ACC00001", Optional.empty(), 1, 100));
@@ -116,6 +150,6 @@ public class GFF3AnnotationTest {
 
         // Test case 3: No accession (empty annotation)
         GFF3Annotation annotation3 = new GFF3Annotation();
-        assertNull(annotation3.getAccession());
+        assertThrows(NoGFF3AccessionException.class, annotation3::getAccession);
     }
 }
