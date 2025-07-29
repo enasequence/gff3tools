@@ -109,8 +109,8 @@ public class GFF3Annotation implements IGFF3Feature {
     }
 
     public String getAccession() {
-        Optional<GFF3SequenceRegion> directive = Optional.ofNullable(this.sequenceRegion);
-        return directive
+        Optional<GFF3SequenceRegion> sequenceRegion = Optional.ofNullable(this.sequenceRegion);
+        return sequenceRegion
                 .map((d) -> d.accession())
                 .orElse(this.features.stream()
                         .findFirst()
