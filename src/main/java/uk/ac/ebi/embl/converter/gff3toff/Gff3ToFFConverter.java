@@ -33,12 +33,16 @@ public class Gff3ToFFConverter implements Converter {
             // must be merged into a single EmblEntry before being written to the output.
             while ((currentAnnotation = gff3Reader.readAnnotation()) != null) {
                 // Merge the annotations if the accession is the same
-                if (isSameAnnotation(previousAnnotation, currentAnnotation)) {
+                try {
+                    if (isSameAnnotation(previousAnnotation, currentAnnotation)) {
+                        previousAnnotation.merge(currentAnnotation);
+                    } else {
+                        // The accession is different, so write the previous annotation to EMBL
+                        if (previousAnnotation != null) writeEntry(mapper, previousAnnotation, writer);
+                        previousAnnotation = currentAnnotation;
+                    }
+                } catch (NoGFF3AccessionException e) {
                     previousAnnotation.merge(currentAnnotation);
-                } else {
-                    // The accession is different, so write the previous annotation to EMBL
-                    if (previousAnnotation != null) writeEntry(mapper, previousAnnotation, writer);
-                    previousAnnotation = currentAnnotation;
                 }
             }
             // After the loop, write the last accumulated annotation.
@@ -48,7 +52,7 @@ public class Gff3ToFFConverter implements Converter {
         }
     }
 
-    private boolean isSameAnnotation(GFF3Annotation previousAnnotation, GFF3Annotation currentAnnotation) {
+    private boolean isSameAnnotation(GFF3Annotation previousAnnotation, GFF3Annotation currentAnnotation) throws NoGFF3AccessionException {
         return previousAnnotation != null && currentAnnotation.getAccession().equals(previousAnnotation.getAccession());
     }
 
