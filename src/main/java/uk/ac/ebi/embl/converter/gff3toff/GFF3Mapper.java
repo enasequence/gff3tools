@@ -60,12 +60,12 @@ public class GFF3Mapper {
 
         SourceFeature sourceFeature = this.featureFactory.createSourceFeature();
 
-        GFF3SequenceRegion reg = gff3Annotation.getSequenceRegion();
-        if (reg != null) {
-            entry.setPrimaryAccession(reg.accessionId());
-            sequence.setAccession(reg.accessionId());
-            sequence.setVersion(reg.accessionVersion().orElse(1));
-            Location location = this.locationFactory.createLocalRange(reg.start(), reg.end());
+        GFF3SequenceRegion sequenceRegion = gff3Annotation.getSequenceRegion();
+        if (sequenceRegion != null) {
+            entry.setPrimaryAccession(sequenceRegion.accessionId());
+            sequence.setAccession(sequenceRegion.accessionId());
+            sequence.setVersion(sequenceRegion.accessionVersion().orElse(1));
+            Location location = this.locationFactory.createLocalRange(sequenceRegion.start(), sequenceRegion.end());
             Join<Location> compoundJoin = new Join<>();
             compoundJoin.addLocation(location);
             sourceFeature.setLocations(compoundJoin);
