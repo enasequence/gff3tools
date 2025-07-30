@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +36,7 @@ public enum RuleSeverityState {
     }
 
     public RuleSeverity getSeverity(ValidationRule rule) {
-        return severityMap.get(rule);
+        return Optional.ofNullable(severityMap.get(rule)).orElse(RuleSeverity.ERROR);
     }
 
     public static void handleValidationException(ValidationException exception) throws ValidationException {
