@@ -24,8 +24,8 @@ import uk.ac.ebi.embl.api.entry.qualifier.QualifierFactory;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
-import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
+import uk.ac.ebi.embl.converter.gff3.directives.*;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
@@ -58,25 +58,20 @@ public class GFF3Mapper {
         entry = entryFactory.createEntry();
         Sequence sequence = sequenceFactory.createSequence();
 
-        if (!gff3Annotation.getDirectives().getDirectives().isEmpty()) {
-            SourceFeature sourceFeature = this.featureFactory.createSourceFeature();
-            for (GFF3Directives.GFF3Directive directive :
-                    gff3Annotation.getDirectives().getDirectives()) {
-                if (directive.getClass() == GFF3Directives.GFF3SequenceRegion.class) {
-                    GFF3Directives.GFF3SequenceRegion reg = (GFF3Directives.GFF3SequenceRegion) directive;
-                    entry.setPrimaryAccession(reg.accessionId());
+        SourceFeature sourceFeature = this.featureFactory.createSourceFeature();
 
-                    sequence.setVersion(reg.accessionVersion().orElse(1));
-
-                    Location location = this.locationFactory.createLocalRange(reg.start(), reg.end());
-                    Join<Location> compoundJoin = new Join<>();
-                    compoundJoin.addLocation(location);
-                    sourceFeature.setLocations(compoundJoin);
-                }
-            }
-            entry.addFeature(sourceFeature);
+        GFF3SequenceRegion sequenceRegion = gff3Annotation.getSequenceRegion();
+        if (sequenceRegion != null) {
+            entry.setPrimaryAccession(sequenceRegion.accessionId());
+            sequence.setAccession(sequenceRegion.accessionId());
+            sequence.setVersion(sequenceRegion.accessionVersion().orElse(1));
+            Location location = this.locationFactory.createLocalRange(sequenceRegion.start(), sequenceRegion.end());
+            Join<Location> compoundJoin = new Join<>();
+            compoundJoin.addLocation(location);
+            sourceFeature.setLocations(compoundJoin);
         }
 
+        entry.addFeature(sourceFeature);
         entry.setSequence(sequence);
 
         for (GFF3Feature gff3Feature : gff3Annotation.getFeatures()) {

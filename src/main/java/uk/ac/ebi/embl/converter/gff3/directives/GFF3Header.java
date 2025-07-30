@@ -8,23 +8,21 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.gff3;
+package uk.ac.ebi.embl.converter.gff3.directives;
 
+import java.io.IOException;
 import java.io.Writer;
-import java.util.List;
 import uk.ac.ebi.embl.converter.exception.WriteException;
-import uk.ac.ebi.embl.converter.gff3.directives.*;
+import uk.ac.ebi.embl.converter.gff3.IGFF3Feature;
 
-public record GFF3File(GFF3Header header, GFF3Species species, List<GFF3Annotation> annotations)
-        implements IGFF3Feature {
+public record GFF3Header(String version) implements IGFF3Feature {
+
     @Override
     public void writeGFF3String(Writer writer) throws WriteException {
-        this.header.writeGFF3String(writer);
-        if (this.species != null) {
-            this.species.writeGFF3String(writer);
-        }
-        for (GFF3Annotation annotation : annotations) {
-            annotation.writeGFF3String(writer);
+        try {
+            writer.write("##gff-version %s\n".formatted(version));
+        } catch (IOException exception) {
+            throw new WriteException(exception);
         }
     }
 }

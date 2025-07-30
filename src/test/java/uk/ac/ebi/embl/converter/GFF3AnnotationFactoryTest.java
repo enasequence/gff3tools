@@ -25,9 +25,11 @@ import uk.ac.ebi.embl.api.entry.feature.FeatureFactory;
 import uk.ac.ebi.embl.api.entry.location.Join;
 import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.api.entry.location.LocationFactory;
+import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.fftogff3.GFF3AnnotationFactory;
+import uk.ac.ebi.embl.converter.fftogff3.GFF3DirectivesFactory;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
@@ -42,7 +44,8 @@ class GFF3AnnotationFactoryTest {
     @Test
     public void buildFeatureTreeFullMapTest() {
         // TODO: need to fix test
-        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
+        GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
+        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(directivesFactory);
         featureRelationMap.forEach((childName, parentSet) -> {
             List<GFF3Feature> featureList = new ArrayList<>();
             parentSet.forEach(parentName -> {
@@ -73,7 +76,7 @@ class GFF3AnnotationFactoryTest {
     @Test
     public void orderRootAndChildrenTest() {
         // TODO: need to fix test
-        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
+        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(new GFF3DirectivesFactory());
         List<GFF3Feature> featureList = new ArrayList<>();
         List<GFF3Feature> parentList = new ArrayList<>();
         List<GFF3Feature> childList = new ArrayList<>();
@@ -118,7 +121,7 @@ class GFF3AnnotationFactoryTest {
 
     @Test
     public void testGetIncrementalId() {
-        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
+        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(new GFF3DirectivesFactory());
         List<String> genes = Arrays.asList("tnpA", "tnpB", "tnpA", "tnpA", "tnpC", "tnpB", "ppk_2", "ppk_2", "ppk_2");
         List<String> ids = Arrays.asList(
                 "CDS_tnpA",
@@ -142,7 +145,7 @@ class GFF3AnnotationFactoryTest {
     @Test
     public void testGetGFF3FeatureName()
             throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
+        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(new GFF3DirectivesFactory());
         Method method = GFF3AnnotationFactory.class.getDeclaredMethod("getGFF3FeatureName", Feature.class);
         method.setAccessible(true);
 
@@ -171,13 +174,17 @@ class GFF3AnnotationFactoryTest {
     @Test
     public void testGetParentFeature()
             throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, ValidationException {
-        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
+        GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
+        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(directivesFactory);
 
         EntryFactory entryFactory = new EntryFactory();
         Entry entry = entryFactory.createEntry();
+        entry.setPrimaryAccession("abc");
 
         SequenceFactory sequenceFactory = new SequenceFactory();
-        entry.setSequence(sequenceFactory.createSequence());
+        Sequence sequence = sequenceFactory.createSequence();
+        sequence.setAccession("abc");
+        entry.setSequence(sequence);
 
         Map<String, String> qualifiers = new HashMap<>();
         qualifiers.put("gene", "matK");
@@ -196,7 +203,7 @@ class GFF3AnnotationFactoryTest {
         executeAndValidateGetParentFeature(gFF3AnnotationFactory, "intron", "matK", "mRNA_matK");
 
         // New GFF3AnnotationFactory object but adding features to entry
-        gFF3AnnotationFactory = new GFF3AnnotationFactory(true);
+        gFF3AnnotationFactory = new GFF3AnnotationFactory(directivesFactory);
         createAndAddFeature(entry, "gene", qualifiers);
         createAndAddFeature(entry, "mRNA", qualifiers);
         createAndAddFeature(entry, "intron", qualifiers);

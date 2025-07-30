@@ -23,16 +23,17 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import uk.ac.ebi.embl.converter.exception.WriteException;
+import uk.ac.ebi.embl.converter.gff3.directives.GFF3SequenceRegion;
 
 @NoArgsConstructor
 @Getter
 @Setter
 public class GFF3Annotation implements IGFF3Feature {
-    GFF3Directives directives = new GFF3Directives();
+    GFF3SequenceRegion sequenceRegion = null;
     List<GFF3Feature> features = new ArrayList<>();
 
     private void writeFeature(Writer writer, GFF3Feature feature) throws IOException {
-        writer.write(feature.getAccession());
+        writer.write(feature.accession());
         writer.write('\t' + feature.getSource());
         writer.write('\t' + feature.getName());
         writer.write("\t%d".formatted(feature.getStart()));
@@ -86,7 +87,9 @@ public class GFF3Annotation implements IGFF3Feature {
     @Override
     public void writeGFF3String(Writer writer) throws WriteException {
         try {
-            this.directives.writeGFF3String(writer);
+            if (this.sequenceRegion != null) {
+                this.sequenceRegion.writeGFF3String(writer);
+            }
             for (GFF3Feature feature : features) {
                 writeFeature(writer, feature);
             }
@@ -98,5 +101,26 @@ public class GFF3Annotation implements IGFF3Feature {
 
     public void addFeature(GFF3Feature feature) {
         features.add(feature);
+    }
+
+    public void merge(GFF3Annotation other) {
+        if (this.sequenceRegion == null) {
+            this.sequenceRegion = other.sequenceRegion;
+        }
+        this.features.addAll(other.features);
+    }
+
+    public String getAccession() {
+        if (this.sequenceRegion != null) {
+            return this.sequenceRegion.accession();
+        } else {
+            // If there is no features and no sequence region on the annotation we consider it a bug of our
+            // library.
+            // All annotations must have either a sequence region or features.
+            return this.features.stream()
+                    .findFirst()
+                    .map(GFF3Feature::accession)
+                    .orElseThrow(RuntimeException::new);
+        }
     }
 }

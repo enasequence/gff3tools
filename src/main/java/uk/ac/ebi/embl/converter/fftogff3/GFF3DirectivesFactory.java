@@ -16,16 +16,11 @@ import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.OrganismQualifier;
 import uk.ac.ebi.embl.converter.exception.*;
-import uk.ac.ebi.embl.converter.gff3.GFF3Directives;
+import uk.ac.ebi.embl.converter.gff3.directives.GFF3SequenceRegion;
+import uk.ac.ebi.embl.converter.gff3.directives.GFF3Species;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 public class GFF3DirectivesFactory {
-
-    boolean ignoreSpecies;
-
-    public GFF3DirectivesFactory(boolean ignoreSpecies) {
-        this.ignoreSpecies = ignoreSpecies;
-    }
 
     static final String BASE_TAXON_URL = "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi";
 
@@ -42,7 +37,7 @@ public class GFF3DirectivesFactory {
                 .orElseGet(getOrganism);
     }
 
-    public GFF3Directives.GFF3Species extractSpecies(Entry entry) throws NoSourcePresentException {
+    public GFF3Species createSpecies(Entry entry) throws NoSourcePresentException {
 
         Feature feature =
                 Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresentException::new);
@@ -50,29 +45,34 @@ public class GFF3DirectivesFactory {
         Optional<OrganismQualifier> qualifier =
                 feature.getQualifiers("organism").stream().findFirst().map(q -> (OrganismQualifier) q);
 
-        return new GFF3Directives.GFF3Species(buildTaxonomyUrl(qualifier));
+        return new GFF3Species(buildTaxonomyUrl(qualifier));
     }
 
-    public GFF3Directives.GFF3SequenceRegion extractSequenceRegion(Entry entry) throws NoSourcePresentException {
+    public GFF3SequenceRegion createSequenceRegion(Entry entry)
+            throws NoSourcePresentException, NoAccessionPresentException {
 
-        String accession = entry.getPrimaryAccession();
-        Feature feature =
-                Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresentException::new);
+        String accession =
+                Optional.ofNullable(entry.getSequence().getAccession()).orElseThrow(NoAccessionPresentException::new);
+        if (accession != null && !accession.isEmpty()) {
+            String[] parts = accession.split("[.]");
+            String sequenceId = parts[0];
+            Optional<Integer> sequenceVersion;
+            if (parts.length == 2) {
+                sequenceVersion = Optional.of(Integer.parseInt(parts[1]));
+            } else if (entry.getSequence() != null && entry.getSequence().getVersion() != null) {
+                // version from ID line.
+                sequenceVersion = Optional.of(entry.getSequence().getVersion());
+            } else {
+                sequenceVersion = Optional.of(1);
+            }
+            Feature feature =
+                    Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresentException::new);
 
-        long start = feature.getLocations().getMinPosition();
-        long end = feature.getLocations().getMaxPosition();
+            long start = feature.getLocations().getMinPosition();
+            long end = feature.getLocations().getMaxPosition();
 
-        return new GFF3Directives.GFF3SequenceRegion(accession, Optional.empty(), start, end);
-    }
-
-    public GFF3Directives from(Entry entry) throws NoSourcePresentException {
-
-        GFF3Directives gff3Directives = new GFF3Directives();
-        if (!this.ignoreSpecies) {
-            gff3Directives.add(extractSpecies(entry));
+            return new GFF3SequenceRegion(sequenceId, sequenceVersion, start, end);
         }
-        gff3Directives.add(extractSequenceRegion(entry));
-
-        return gff3Directives;
+        return null;
     }
 }
