@@ -20,13 +20,12 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
-import uk.ac.ebi.embl.converter.exception.NoGFF3AccessionException;
 import uk.ac.ebi.embl.converter.exception.WriteException;
 import uk.ac.ebi.embl.converter.gff3.directives.GFF3SequenceRegion;
 
 public class GFF3AnnotationTest {
     @Test
-    public void testWriteAttributes() throws IOException, WriteException, NoGFF3AccessionException {
+    public void testWriteAttributes() throws IOException, WriteException {
 
         Map<String, Object> attributes = new HashMap<>();
         attributes.put("ID", "ID_TEST");
@@ -48,8 +47,7 @@ public class GFF3AnnotationTest {
         test(attributes, expectedAttribute);
     }
 
-    private void test(Map<String, Object> attributes, String expectedAttribute)
-            throws IOException, WriteException, NoGFF3AccessionException {
+    private void test(Map<String, Object> attributes, String expectedAttribute) throws IOException, WriteException {
         try (StringWriter gff3Writer = new StringWriter()) {
             GFF3Annotation annotation = new GFF3Annotation();
             GFF3Feature gff3Feature = TestUtils.createGFF3Feature("ID", "Parent", attributes);
@@ -61,7 +59,7 @@ public class GFF3AnnotationTest {
     }
 
     @Test
-    public void testMergeAnnotations() throws IOException, WriteException, NoGFF3AccessionException {
+    public void testMergeAnnotations() throws IOException, WriteException {
         // Test case 1: Merge annotations where the first annotation has no sequence region
         GFF3Annotation annotation1 = new GFF3Annotation();
         annotation1.addFeature(TestUtils.createGFF3Feature("ID1", "Parent1", new HashMap<>() {
@@ -149,7 +147,7 @@ public class GFF3AnnotationTest {
     }
 
     @Test
-    public void testGetAccession() throws IOException, WriteException, NoGFF3AccessionException {
+    public void testGetAccession() throws IOException, WriteException {
         // Test case 1: Accession from GFF3SequenceRegion directive
         GFF3Annotation annotation1 = new GFF3Annotation();
         annotation1.setSequenceRegion(new GFF3SequenceRegion("ACC00001", Optional.empty(), 1, 100));
@@ -175,6 +173,6 @@ public class GFF3AnnotationTest {
 
         // Test case 3: No accession (empty annotation)
         GFF3Annotation annotation3 = new GFF3Annotation();
-        assertThrows(NoGFF3AccessionException.class, annotation3::getAccession);
+        assertThrows(RuntimeException.class, annotation3::getAccession);
     }
 }

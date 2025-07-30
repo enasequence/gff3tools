@@ -65,7 +65,7 @@ public class GFF3FileReader implements AutoCloseable {
                 GFF3SequenceRegion sequenceDirective = getSequenceDirective(m);
                 accessionSequenceRegionMap.put(sequenceDirective.accession(), sequenceDirective);
             } else if (RESOLUTION_DIRECTIVE.matcher(line).matches()) {
-                if (!currentAnnotation.getFeatures().isEmpty()) {
+                if (!currentAnnotation.getFeatures().isEmpty() || currentAnnotation.getSequenceRegion() != null) {
                     GFF3Annotation previousAnnotation = currentAnnotation;
                     currentAnnotation = new GFF3Annotation();
                     return previousAnnotation;

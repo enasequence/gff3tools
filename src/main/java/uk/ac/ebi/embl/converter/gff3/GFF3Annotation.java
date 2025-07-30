@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import uk.ac.ebi.embl.converter.exception.NoGFF3AccessionException;
 import uk.ac.ebi.embl.converter.exception.WriteException;
 import uk.ac.ebi.embl.converter.gff3.directives.GFF3SequenceRegion;
 
@@ -111,14 +110,14 @@ public class GFF3Annotation implements IGFF3Feature {
         this.features.addAll(other.features);
     }
 
-    public String getAccession() throws NoGFF3AccessionException {
+    public String getAccession() {
         if (this.sequenceRegion != null) {
             return this.sequenceRegion.accession();
         } else {
             return this.features.stream()
                     .findFirst()
                     .map(GFF3Feature::accession)
-                    .orElseThrow(NoGFF3AccessionException::new);
+                    .orElseThrow(RuntimeException::new);
         }
     }
 }
