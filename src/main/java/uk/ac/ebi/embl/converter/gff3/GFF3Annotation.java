@@ -114,6 +114,9 @@ public class GFF3Annotation implements IGFF3Feature {
         if (this.sequenceRegion != null) {
             return this.sequenceRegion.accession();
         } else {
+            // If there is no features and no sequence region on the annotation we consider it a bug of our
+            // library.
+            // All annotations must have either a sequence region or features.
             return this.features.stream()
                     .findFirst()
                     .map(GFF3Feature::accession)
