@@ -17,6 +17,7 @@ public enum ValidationRule {
     GFF3_INVALID_RECORD("The record does not conform with the expected gff3 format"),
     GFF3_UNDEFINED_SEQID("The record's seqid was not defined previously on a ##sequence-region directive"),
     GFF3_INVALID_HEADER("Invalid gff3 header"),
+    GFF3_UNGROUPED_FEATURES("The features on the GFF3 file are not grouped by Sequence ID"),
     ;
 
     private String description;
