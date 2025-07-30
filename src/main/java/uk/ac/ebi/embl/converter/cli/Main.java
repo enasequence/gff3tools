@@ -17,9 +17,8 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
-import picocli.CommandLine.*;
+import picocli.CommandLine.Command;
 import uk.ac.ebi.embl.converter.exception.CLIException;
-import uk.ac.ebi.embl.converter.exception.ExitException;
 import uk.ac.ebi.embl.converter.validation.RuleSeverity;
 import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
@@ -31,7 +30,7 @@ public class Main {
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 
     public static void main(String[] args) {
-        int exitCode = 1;
+        int exitCode = CLIExitCode.GENERAL.asInt();
         try {
             exitCode = new CommandLine(new Main())
                     .setExecutionExceptionHandler(new ExecutionExceptionHandler())
@@ -52,13 +51,17 @@ public class Main {
             LOG.error(e.getMessage(), e);
         }
 
-        System.exit(exitCode);
+        exit(exitCode);
+    }
+
+    public static void exit(int status) {
+        System.exit(status);
     }
 }
 
 record CliRulesOption(Map<ValidationRule, RuleSeverity> rules) {}
 
-class RuleConverter implements ITypeConverter<CliRulesOption> {
+class RuleConverter implements CommandLine.ITypeConverter<CliRulesOption> {
     CliRulesOption map = new CliRulesOption(new HashMap<>());
 
     @Override
@@ -85,22 +88,5 @@ class RuleConverter implements ITypeConverter<CliRulesOption> {
             this.map.rules().put(key, value);
         }
         return this.map;
-    }
-}
-
-class ExecutionExceptionHandler implements IExecutionExceptionHandler {
-
-    private static final Logger LOG = LoggerFactory.getLogger(ExecutionExceptionHandler.class);
-
-    // Tried to use LOG.error instead of println here but would not pipe anything to
-    // stderr.
-    @Override
-    public int handleExecutionException(Exception e, CommandLine commandLine, ParseResult parseResult)
-            throws Exception {
-        if (e.getCause() instanceof ExitException) {
-            LOG.error(e.getMessage());
-            return ((ExitException) e.getCause()).exitCode().asInt();
-        }
-        throw e;
     }
 }
