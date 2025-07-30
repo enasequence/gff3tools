@@ -208,7 +208,7 @@ public class GFF3ReaderTest {
         try (GFF3FileReader gff3Reader = new GFF3FileReader(new StringReader(gff3Content))) {
             gff3Reader.readHeader();
             gff3Reader.readAnnotation(); // Read first annotation
-            gff3Reader.readAnnotation(); // Read second annotation 
+            gff3Reader.readAnnotation(); // Read second annotation
             gff3Reader.readAnnotation(); // This should trigger the exception
             fail("Expected UngroupedFeaturesException to be thrown.");
         } catch (UngroupedFeaturesException e) {

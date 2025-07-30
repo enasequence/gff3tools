@@ -16,6 +16,9 @@ import uk.ac.ebi.embl.converter.validation.ValidationRule;
 @Getter
 public class UngroupedFeaturesException extends ValidationException {
     public UngroupedFeaturesException(int line, String offendingSeqId) {
-        super(ValidationRule.GFF3_UNGROUPED_FEATURES, line, "The seq id \"%s\" was used previously".formatted(offendingSeqId));
+        super(
+                ValidationRule.GFF3_UNGROUPED_FEATURES,
+                line,
+                "The seq id \"%s\" was used previously".formatted(offendingSeqId));
     }
 }

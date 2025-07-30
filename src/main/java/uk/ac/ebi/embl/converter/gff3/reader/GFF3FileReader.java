@@ -148,11 +148,9 @@ public class GFF3FileReader implements AutoCloseable {
                 phase,
                 attributesMap);
 
-        // TODO: Validate that the new annotation was not used before the current
-        // annotation. Meaning that features are out of order
         if (!accession.equals(currentAccession)) {
             if (finishedAccessions.contains(accession)) {
-                throw new UngroupedFeaturesException(lineCount, accession);
+                RuleSeverityState.handleValidationException(new UngroupedFeaturesException(lineCount, accession));
             }
             // In case of different accession create a new GFF3Annotation and return the
             // previous one.
