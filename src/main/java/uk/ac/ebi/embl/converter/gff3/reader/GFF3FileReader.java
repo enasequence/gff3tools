@@ -44,7 +44,7 @@ public class GFF3FileReader implements AutoCloseable {
     GFF3Annotation currentAnnotation;
     String currentAccession;
     Map<String, GFF3SequenceRegion> accessionSequenceRegionMap = new HashMap<>();
-    HashSet<String> finishedAccessions = new HashSet<>();
+    HashSet<String> processedAnnotations = new HashSet<>();
 
     public GFF3FileReader(Reader reader) {
         this.bufferedReader = new BufferedReader(reader);
@@ -146,7 +146,7 @@ public class GFF3FileReader implements AutoCloseable {
                 attributesMap);
 
         if (!accession.equals(currentAccession)) {
-            if (finishedAccessions.contains(accession)) {
+            if (processedAnnotations.contains(accession)) {
                 RuleSeverityState.handleValidationException(new DuplicateSeqIdException(lineCount, accession));
             }
             // In case of different accession create a new GFF3Annotation and return the
@@ -165,7 +165,7 @@ public class GFF3FileReader implements AutoCloseable {
             }
 
             if (!previousAnnotation.getFeatures().isEmpty()) {
-                finishedAccessions.add(previousAnnotation.getAccession());
+                processedAnnotations.add(previousAnnotation.getAccession());
                 return previousAnnotation;
             }
         } else {
