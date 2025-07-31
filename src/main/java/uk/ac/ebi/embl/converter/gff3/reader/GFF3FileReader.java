@@ -150,7 +150,7 @@ public class GFF3FileReader implements AutoCloseable {
 
         if (!accession.equals(currentAccession)) {
             if (finishedAccessions.contains(accession)) {
-                RuleSeverityState.handleValidationException(new UngroupedFeaturesException(lineCount, accession));
+                RuleSeverityState.handleValidationException(new DuplicateSeqIdException(lineCount, accession));
             }
             // In case of different accession create a new GFF3Annotation and return the
             // previous one.

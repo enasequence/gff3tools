@@ -210,8 +210,8 @@ public class GFF3ReaderTest {
             gff3Reader.readAnnotation(); // Read first annotation
             gff3Reader.readAnnotation(); // Read second annotation
             gff3Reader.readAnnotation(); // This should trigger the exception
-            fail("Expected UngroupedFeaturesException to be thrown.");
-        } catch (UngroupedFeaturesException e) {
+            fail("Expected DuplicateSeqIdException to be thrown.");
+        } catch (DuplicateSeqIdException e) {
             Assertions.assertTrue(e.getMessage().contains("The seq id \"seq1\" was used previously"));
             Assertions.assertEquals(6, e.getLine()); // Line 5 is where the duplicate sequence-region is
         }

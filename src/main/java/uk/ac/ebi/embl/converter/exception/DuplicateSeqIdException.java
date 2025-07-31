@@ -10,12 +10,10 @@
  */
 package uk.ac.ebi.embl.converter.exception;
 
-import lombok.Getter;
 import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
-@Getter
-public class UngroupedFeaturesException extends ValidationException {
-    public UngroupedFeaturesException(int line, String offendingSeqId) {
+public class DuplicateSeqIdException extends ValidationException {
+    public DuplicateSeqIdException(int line, String offendingSeqId) {
         super(
                 ValidationRule.GFF3_UNGROUPED_FEATURES,
                 line,
