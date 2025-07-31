@@ -195,6 +195,28 @@ public class GFF3ReaderTest {
         }
     }
 
+    @Test
+    void testSequenceRegionAfterFeatures() throws Exception {
+        String gff3Content = "##gff-version 3.2.1\n"
+                + "##sequence-region seq1 1 200\n"
+                + "seq1\tsource\tfeature1\t1\t100\t.\t+\t.\tID=feata1\n"
+                + "##sequence-region seq2 1 200\n"
+                + "seq2\tsource\tfeature1\t1\t100\t.\t+\t.\tID=featb1\n"
+                + "seq1\tsource\tfeature2\t100\t200\t.\t+\t.\tID=feata2\n"
+                + "seq2\tsource\tfeature2\t1\t100\t.\t+\t.\tID=featb2\n";
+
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(new StringReader(gff3Content))) {
+            gff3Reader.readHeader();
+            gff3Reader.readAnnotation(); // Read first annotation
+            gff3Reader.readAnnotation(); // Read second annotation
+            gff3Reader.readAnnotation(); // This should trigger the exception
+            fail("Expected DuplicateSeqIdException to be thrown.");
+        } catch (DuplicateSeqIdException e) {
+            Assertions.assertTrue(e.getMessage().contains("The seq id \"seq1\" was used previously"));
+            Assertions.assertEquals(6, e.getLine()); // Line 5 is where the duplicate sequence-region is
+        }
+    }
+
     private void test(String attributeLine) throws Exception {
         try (GFF3FileReader gff3Reader = new GFF3FileReader(new StringReader(attributeLine))) {
             Map<String, Object> attrMap = gff3Reader.attributesFromString(attributeLine);
