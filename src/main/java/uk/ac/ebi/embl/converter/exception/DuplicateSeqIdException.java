@@ -15,7 +15,7 @@ import uk.ac.ebi.embl.converter.validation.ValidationRule;
 public class DuplicateSeqIdException extends ValidationException {
     public DuplicateSeqIdException(int line, String offendingSeqId) {
         super(
-                ValidationRule.GFF3_UNGROUPED_FEATURES,
+                ValidationRule.GFF3_DUPLICATE_SEQID,
                 line,
                 "The seq id \"%s\" was used previously".formatted(offendingSeqId));
     }
