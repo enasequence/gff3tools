@@ -89,9 +89,6 @@ public class GFF3FileReader implements AutoCloseable {
         if (!currentAnnotation.getFeatures().isEmpty()) {
             GFF3Annotation finalAnnotation = currentAnnotation;
             currentAnnotation = new GFF3Annotation();
-            if (!finalAnnotation.getFeatures().isEmpty()) {
-                finishedAccessions.add(finalAnnotation.getAccession());
-            }
             return finalAnnotation;
         }
         return null;
