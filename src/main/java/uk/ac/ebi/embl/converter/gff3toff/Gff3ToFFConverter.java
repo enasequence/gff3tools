@@ -31,7 +31,7 @@ public class Gff3ToFFConverter implements Converter {
         // TODO: Add validators!
     }
 
-    public void overrideSeverities(Map<String, RuleSeverity> overrideSeverities) {
+    public void overrideSeverities(Map<String, RuleSeverity> overrideSeverities) throws CLIException {
         builder.overrideRuleSeverities(overrideSeverities);
     }
 
