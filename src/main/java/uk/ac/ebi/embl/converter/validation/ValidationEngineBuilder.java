@@ -15,6 +15,8 @@ import java.io.InputStream;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import uk.ac.ebi.embl.converter.exception.CLIException;
 import uk.ac.ebi.embl.converter.exception.DuplicateValidationRuleException;
 
 public class ValidationEngineBuilder<F, A> {
@@ -70,11 +72,10 @@ public class ValidationEngineBuilder<F, A> {
         return new ValidationEngine<>(activeFeatureValidations, activeAnnotationValidations, severityMap);
     }
 
-    public void overrideRuleSeverities(Map<String, RuleSeverity> map) {
+    public void overrideRuleSeverities(Map<String, RuleSeverity> map) throws CLIException {
         for (String rule : map.keySet()) {
             if (!this.registeredValidationRules.contains(rule)) {
-                // TODO This must be an ExitException
-                throw new RuntimeException("The rule %s has no validator assigned".formatted(rule));
+                throw new CLIException("The rule %s has no validator assigned".formatted(rule));
             }
         }
         this.severityMap.putAll(map);
