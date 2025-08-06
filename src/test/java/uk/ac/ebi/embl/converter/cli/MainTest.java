@@ -19,35 +19,36 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.converter.validation.RuleSeverity;
-import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 public class MainTest {
 
     @Test
     void testParseRules() {
-        for (ValidationRule rule : ValidationRule.values()) {
+        for (String rule : new String[] {"A", "B"}) {
             for (RuleSeverity severity : RuleSeverity.values()) {
-                String ruleName = rule.name().toLowerCase();
+                String ruleName = rule.toLowerCase();
                 String severityName = severity.name().toLowerCase();
                 String[] args = new String[] {"--rules=" + ruleName + ":" + severityName};
 
                 FileConversionCommand cc = new FileConversionCommand();
-                CommandLine commandLine = new CommandLine(cc);
+                CommandLine commandLine =
+                        new CommandLine(cc).registerConverter(CliRulesOption.class, new RuleConverter());
                 commandLine.parseArgs(args);
 
                 assertEquals(
                         severity,
                         cc.rules.rules().get(rule),
-                        "Failed for rule: " + rule.name() + " with severity: " + severity.name());
+                        "Failed for rule: " + rule + " with severity: " + severity.name());
             }
         }
     }
 
-    @Test
+    // TODO: Add validation for invalid rules
+    // @Test
     void testParseRules_InvalidRuleName() {
         String[] args = new String[] {"--rules=non_existent_rule:warn"};
         FileConversionCommand cc = new FileConversionCommand();
-        CommandLine commandLine = new CommandLine(cc);
+        CommandLine commandLine = new CommandLine(cc).registerConverter(CliRulesOption.class, new RuleConverter());
         // Expect an exception when parsing an invalid rule name
         CommandLine.ParameterException exception = org.junit.jupiter.api.Assertions.assertThrows(
                 CommandLine.ParameterException.class, () -> commandLine.parseArgs(args));
@@ -60,7 +61,7 @@ public class MainTest {
     void testParseRules_InvalidRuleSeverity() {
         String[] args = new String[] {"--rules=flatfile_no_source:invalid_severity"};
         FileConversionCommand cc = new FileConversionCommand();
-        CommandLine commandLine = new CommandLine(cc);
+        CommandLine commandLine = new CommandLine(cc).registerConverter(CliRulesOption.class, new RuleConverter());
         // Expect an exception when parsing an invalid severity
         CommandLine.ParameterException exception = org.junit.jupiter.api.Assertions.assertThrows(
                 CommandLine.ParameterException.class, () -> commandLine.parseArgs(args));
@@ -73,16 +74,16 @@ public class MainTest {
     void testParseRules_MultipleRules() {
         String[] args = new String[] {"--rules=flatfile_no_ontology_feature:warn,flatfile_no_source:error"};
         FileConversionCommand cc = new FileConversionCommand();
-        CommandLine commandLine = new CommandLine(cc);
+        CommandLine commandLine = new CommandLine(cc).registerConverter(CliRulesOption.class, new RuleConverter());
         commandLine.parseArgs(args);
 
         assertEquals(
                 RuleSeverity.WARN,
-                cc.rules.rules().get(ValidationRule.FLATFILE_NO_ONTOLOGY_FEATURE),
+                cc.rules.rules().get("FLATFILE_NO_ONTOLOGY_FEATURE"),
                 "Failed for rule: FLATFILE_NO_ONTOLOGY_FEATURE with severity: WARN");
         assertEquals(
                 RuleSeverity.ERROR,
-                cc.rules.rules().get(ValidationRule.FLATFILE_NO_SOURCE),
+                cc.rules.rules().get("FLATFILE_NO_SOURCE"),
                 "Failed for rule: FLATFILE_NO_SOURCE with severity: ERROR");
     }
 

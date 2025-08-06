@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
-import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 public class NoSourcePresentExceptionTest {
 
@@ -23,10 +22,8 @@ public class NoSourcePresentExceptionTest {
     void testConstructor() {
         NoSourcePresentException exception = new NoSourcePresentException();
 
-        assertEquals(
-                "Violation of rule FLATFILE_NO_SOURCE: The flatfile contains no source feature (No source present)",
-                exception.getMessage());
-        assertEquals(ValidationRule.FLATFILE_NO_SOURCE, exception.getValidationRule());
+        assertEquals("Violation of rule FLATFILE_NO_SOURCE: No source present", exception.getMessage());
+        assertEquals("FLATFILE_NO_SOURCE", exception.getValidationRule());
         assertEquals(0, exception.getLine());
         assertEquals(CLIExitCode.VALIDATION_ERROR, exception.exitCode());
         assertNull(exception.getCause());

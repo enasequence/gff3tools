@@ -10,10 +10,8 @@
  */
 package uk.ac.ebi.embl.converter.exception;
 
-import uk.ac.ebi.embl.converter.validation.ValidationRule;
-
 public class NoAccessionPresentException extends ValidationException {
     public NoAccessionPresentException() {
-        super(ValidationRule.FLATFILE_NO_ACCESSION, "No accession present");
+        super("FLATFILE_NO_ACCESSION", "No accession present");
     }
 }

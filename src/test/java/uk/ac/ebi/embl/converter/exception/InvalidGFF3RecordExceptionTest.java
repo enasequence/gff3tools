@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
-import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 public class InvalidGFF3RecordExceptionTest {
 
@@ -25,12 +24,9 @@ public class InvalidGFF3RecordExceptionTest {
         String message = "Invalid number of columns.";
         InvalidGFF3RecordException exception = new InvalidGFF3RecordException(line, message);
 
-        assertEquals(
-                "Violation of rule GFF3_INVALID_RECORD on line 15: The record does not conform with the expected gff3 format (%s)"
-                        .formatted(message),
-                exception.getMessage());
+        assertEquals("Violation of rule GFF3_INVALID_RECORD on line 15: %s".formatted(message), exception.getMessage());
         assertEquals(line, exception.getLine());
-        assertEquals(ValidationRule.GFF3_INVALID_RECORD, exception.getValidationRule());
+        assertEquals("GFF3_INVALID_RECORD", exception.getValidationRule());
         assertEquals(CLIExitCode.VALIDATION_ERROR, exception.exitCode());
         assertNull(exception.getCause());
     }

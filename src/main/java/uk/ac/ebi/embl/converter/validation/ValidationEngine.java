@@ -11,48 +11,83 @@
 package uk.ac.ebi.embl.converter.validation;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import uk.ac.ebi.embl.converter.exception.DuplicateValidationRuleException;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 
-public class ValidationEngine<T, A> {
-    private final List<Validation> validations;
+public class ValidationEngine<F, A> {
+    private final List<Validation> allValidations;
+    private final List<FeatureValidation<F>> activeFeatureValidations;
+    private final List<AnnotationValidation<A>> activeAnnotationValidations;
+    private final HashSet<String> registeredValidationRules;
 
     public ValidationEngine() {
-        this.validations = new ArrayList<>();
+        this.allValidations = new ArrayList<>();
+        this.activeFeatureValidations = new ArrayList<>();
+        this.activeAnnotationValidations = new ArrayList<>();
+        this.registeredValidationRules = new HashSet<>();
     }
 
-    public void registerValidation(Validation validation) {
-        validations.add(validation);
+    // Due to Java's type erasure, we cannot directly check for FeatureValidation<A> and AnnotationValidation<A>
+    // at runtime for a specific type A.
+    // The 'instanceof' checks only verifies the raw type 'FeatureValidation' and `AnnotationValidation`.
+    // This means the casts is unchecked and relies on convention
+    // to prevent ClassCastException if an incompatible validation is registered.
+    public void registerValidation(Validation validation) throws ClassCastException, DuplicateValidationRuleException {
+        String validationRule = validation.getValidationRule();
+        if (registeredValidationRules.contains(validationRule)) {
+            throw new DuplicateValidationRuleException(
+                    "Validation rule with name '" + validationRule + "' is already registered.");
+        }
+
+        if (validation instanceof FeatureValidation) {
+            activeFeatureValidations.add((FeatureValidation<F>) validation);
+        }
+        if (validation instanceof AnnotationValidation) {
+            activeAnnotationValidations.add((AnnotationValidation<A>) validation);
+        }
+
+        allValidations.add(validation);
+
+        registeredValidationRules.add(validationRule);
     }
 
-    // Getter for testing purposes
-    public List<Validation> getValidations() {
-        return validations;
-    }
+    public void setActiveValidations(Set<String> activeValidationsRules) {
+        this.activeFeatureValidations.clear();
+        this.activeAnnotationValidations.clear();
 
-    public void validateFeature(T feature) throws ValidationException, ClassCastException {
-        // Due to Java's type erasure, we cannot directly check for FeatureValidation<T> at runtime for a specific type
-        // T.
-        // The 'instanceof' check only verifies the raw type 'FeatureValidation'.
-        // This means the cast '((FeatureValidation<T>) validation)' is unchecked and relies on convention
-        // to prevent ClassCastException if an incompatible validation is registered.
-        for (Validation validation : validations) {
-            if (validation instanceof FeatureValidation) {
-                ((FeatureValidation<T>) validation).validateFeature(feature);
+        for (Validation validation : allValidations) {
+            if (activeValidationsRules.contains(validation.getValidationRule())) {
+                if (validation instanceof FeatureValidation) {
+                    activeFeatureValidations.add((FeatureValidation<F>) validation);
+                }
+                if (validation instanceof AnnotationValidation) {
+                    activeAnnotationValidations.add((AnnotationValidation<A>) validation);
+                }
             }
         }
     }
 
+    // Getter for testing purposes
+    public List<FeatureValidation<F>> getFeatureValidations() {
+        return activeFeatureValidations;
+    }
+
+    public List<AnnotationValidation<A>> getAnnotationValidations() {
+        return activeAnnotationValidations;
+    }
+
+    public void validateFeature(F feature) throws ValidationException {
+        for (FeatureValidation<F> validation : activeFeatureValidations) {
+            validation.validateFeature(feature);
+        }
+    }
+
     public void validateAnnotation(A annotation) throws ValidationException, ClassCastException {
-        // Due to Java's type erasure, we cannot directly check for AnnotationValidation<A> at runtime for a specific
-        // type A.
-        // The 'instanceof' check only verifies the raw type 'AnnotationValidation'.
-        // This means the cast '((AnnotationValidation<A>) validation)' is unchecked and relies on convention
-        // to prevent ClassCastException if an incompatible validation is registered.
-        for (Validation validation : validations) {
-            if (validation instanceof AnnotationValidation) {
-                ((AnnotationValidation<A>) validation).validateAnnotation(annotation);
-            }
+        for (AnnotationValidation<A> validation : activeAnnotationValidations) {
+            validation.validateAnnotation(annotation);
         }
     }
 }

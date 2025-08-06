@@ -11,11 +11,10 @@
 package uk.ac.ebi.embl.converter.exception;
 
 import lombok.Getter;
-import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 @Getter
 public class UndefinedSeqIdException extends ValidationException {
     public UndefinedSeqIdException(int line, String message) {
-        super(ValidationRule.GFF3_UNDEFINED_SEQID, line, message);
+        super("GFF3_UNDEFINED_SEQID", line, message);
     }
 }

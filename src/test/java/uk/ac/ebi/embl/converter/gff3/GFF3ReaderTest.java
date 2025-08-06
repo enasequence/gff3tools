@@ -100,7 +100,7 @@ public class GFF3ReaderTest {
             gff3Reader.readHeader();
             gff3Reader.readAnnotation();
         } catch (UndefinedSeqIdException e) {
-            Assertions.assertTrue(e.getMessage().contains(ValidationRule.GFF3_UNDEFINED_SEQID.getDescription()));
+            Assertions.assertTrue(e.getMessage().contains("GFF3_UNDEFINED_SEQID"));
             Assertions.assertEquals(2, e.getLine());
             return;
         }
@@ -110,8 +110,8 @@ public class GFF3ReaderTest {
     @Test
     void testUndefinedSeqIdNoExceptionWhenRuleOff() throws Exception {
         File testFile = TestUtils.getResourceFile("validation_errors/undefined_seq_id.gff3");
-        Map<ValidationRule, RuleSeverity> ruleSeverityMap = new HashMap<>();
-        ruleSeverityMap.put(ValidationRule.GFF3_UNDEFINED_SEQID, RuleSeverity.OFF);
+        Map<String, RuleSeverity> ruleSeverityMap = new HashMap<>();
+        ruleSeverityMap.put("GFF3_UNDEFINED_SEQID", RuleSeverity.OFF);
         RuleSeverityState.INSTANCE.putAll(ruleSeverityMap);
 
         try (FileReader filerReader = new FileReader(testFile);
@@ -128,7 +128,7 @@ public class GFF3ReaderTest {
             Assertions.assertNull(annotation);
         } finally {
             // Reset the rule severity to ERROR for other tests
-            ruleSeverityMap.put(ValidationRule.GFF3_UNDEFINED_SEQID, RuleSeverity.ERROR);
+            ruleSeverityMap.put("GFF3_UNDEFINED_SEQID", RuleSeverity.ERROR);
             RuleSeverityState.INSTANCE.putAll(ruleSeverityMap);
         }
     }
@@ -136,8 +136,8 @@ public class GFF3ReaderTest {
     @Test
     void testInvalidRecordNoExceptionWhenRuleOff() throws Exception {
         File testFile = TestUtils.getResourceFile("validation_errors/invalid_record.gff3");
-        Map<ValidationRule, RuleSeverity> ruleSeverityMap = new HashMap<>();
-        ruleSeverityMap.put(ValidationRule.GFF3_INVALID_RECORD, RuleSeverity.OFF);
+        Map<String, RuleSeverity> ruleSeverityMap = new HashMap<>();
+        ruleSeverityMap.put("GFF3_INVALID_RECORD", RuleSeverity.OFF);
         RuleSeverityState.INSTANCE.putAll(ruleSeverityMap);
 
         try (FileReader filerReader = new FileReader(testFile);
@@ -160,7 +160,7 @@ public class GFF3ReaderTest {
             Assertions.assertEquals(5, annotation.getFeatures().size());
         } finally {
             // Reset the rule severity to ERROR for other tests
-            ruleSeverityMap.put(ValidationRule.GFF3_INVALID_RECORD, RuleSeverity.ERROR);
+            ruleSeverityMap.put("GFF3_INVALID_RECORD", RuleSeverity.ERROR);
             RuleSeverityState.INSTANCE.putAll(ruleSeverityMap);
         }
     }

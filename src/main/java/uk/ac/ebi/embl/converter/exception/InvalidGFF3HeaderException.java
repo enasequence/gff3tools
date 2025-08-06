@@ -11,11 +11,10 @@
 package uk.ac.ebi.embl.converter.exception;
 
 import lombok.Getter;
-import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 @Getter
 public class InvalidGFF3HeaderException extends ValidationException {
     public InvalidGFF3HeaderException(int line, String message) {
-        super(ValidationRule.GFF3_INVALID_HEADER, line, message);
+        super("GFF3_INVALID_HEADER", line, message);
     }
 }

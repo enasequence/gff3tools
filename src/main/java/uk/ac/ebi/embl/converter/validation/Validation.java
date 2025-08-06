@@ -10,4 +10,6 @@
  */
 package uk.ac.ebi.embl.converter.validation;
 
-public interface Validation {}
+public interface Validation {
+    String getValidationRule();
+}
