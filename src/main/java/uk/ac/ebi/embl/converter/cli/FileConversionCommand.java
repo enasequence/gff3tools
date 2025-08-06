@@ -19,6 +19,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -26,7 +29,7 @@ import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
-import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
+import uk.ac.ebi.embl.converter.validation.RuleSeverity;
 
 // Using pandoc CLI interface conventions
 @CommandLine.Command(name = "conversion", description = "Performs format conversions to or from gff3")
@@ -61,10 +64,8 @@ public class FileConversionCommand implements Runnable {
 
     @Override
     public void run() {
-
-        if (rules != null) {
-            RuleSeverityState.INSTANCE.putAll(rules.rules());
-        }
+        Map<String, RuleSeverity> ruleSeverities =
+                Optional.ofNullable(rules).map((r) -> r.rules()).orElse(new HashMap<>());
 
         try (BufferedReader inputReader = getPipe(
                         Files::newBufferedReader,

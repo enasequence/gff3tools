@@ -10,64 +10,27 @@
  */
 package uk.ac.ebi.embl.converter.validation;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import uk.ac.ebi.embl.converter.exception.DuplicateValidationRuleException;
+import java.util.Map;
+import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 
 public class ValidationEngine<F, A> {
-    private final List<Validation> allValidations;
+    private static Logger LOG = LoggerFactory.getLogger(ValidationEngine.class);
+
     private final List<FeatureValidation<F>> activeFeatureValidations;
     private final List<AnnotationValidation<A>> activeAnnotationValidations;
-    private final HashSet<String> registeredValidationRules;
+    private final Map<String, RuleSeverity> severityMap;
 
-    public ValidationEngine() {
-        this.allValidations = new ArrayList<>();
-        this.activeFeatureValidations = new ArrayList<>();
-        this.activeAnnotationValidations = new ArrayList<>();
-        this.registeredValidationRules = new HashSet<>();
-    }
-
-    // Due to Java's type erasure, we cannot directly check for FeatureValidation<A> and AnnotationValidation<A>
-    // at runtime for a specific type A.
-    // The 'instanceof' checks only verifies the raw type 'FeatureValidation' and `AnnotationValidation`.
-    // This means the casts is unchecked and relies on convention
-    // to prevent ClassCastException if an incompatible validation is registered.
-    public void registerValidation(Validation validation) throws ClassCastException, DuplicateValidationRuleException {
-        String validationRule = validation.getValidationRule();
-        if (registeredValidationRules.contains(validationRule)) {
-            throw new DuplicateValidationRuleException(
-                    "Validation rule with name '" + validationRule + "' is already registered.");
-        }
-
-        if (validation instanceof FeatureValidation) {
-            activeFeatureValidations.add((FeatureValidation<F>) validation);
-        }
-        if (validation instanceof AnnotationValidation) {
-            activeAnnotationValidations.add((AnnotationValidation<A>) validation);
-        }
-
-        allValidations.add(validation);
-
-        registeredValidationRules.add(validationRule);
-    }
-
-    public void setActiveValidations(Set<String> activeValidationsRules) {
-        this.activeFeatureValidations.clear();
-        this.activeAnnotationValidations.clear();
-
-        for (Validation validation : allValidations) {
-            if (activeValidationsRules.contains(validation.getValidationRule())) {
-                if (validation instanceof FeatureValidation) {
-                    activeFeatureValidations.add((FeatureValidation<F>) validation);
-                }
-                if (validation instanceof AnnotationValidation) {
-                    activeAnnotationValidations.add((AnnotationValidation<A>) validation);
-                }
-            }
-        }
+    ValidationEngine(
+            List<FeatureValidation<F>> activeFeatureValidations,
+            List<AnnotationValidation<A>> activeAnnotationValidations,
+            Map<String, RuleSeverity> severityMap) {
+        this.activeFeatureValidations = activeFeatureValidations;
+        this.activeAnnotationValidations = activeAnnotationValidations;
+        this.severityMap = severityMap;
     }
 
     // Getter for testing purposes
@@ -81,13 +44,35 @@ public class ValidationEngine<F, A> {
 
     public void validateFeature(F feature) throws ValidationException {
         for (FeatureValidation<F> validation : activeFeatureValidations) {
-            validation.validateFeature(feature);
+            try {
+                validation.validateFeature(feature);
+            } catch (ValidationException exception) {
+                handleValidationException(exception);
+            }
         }
     }
 
     public void validateAnnotation(A annotation) throws ValidationException, ClassCastException {
         for (AnnotationValidation<A> validation : activeAnnotationValidations) {
-            validation.validateAnnotation(annotation);
+            try {
+                validation.validateAnnotation(annotation);
+            } catch (ValidationException exception) {
+                handleValidationException(exception);
+            }
+        }
+    }
+
+    private void handleValidationException(ValidationException exception) throws ValidationException {
+        String rule = exception.getValidationRule().toString();
+        RuleSeverity severity = Optional.ofNullable(severityMap.get(rule)).orElse(RuleSeverity.ERROR);
+        switch (severity) {
+            case OFF -> {}
+            case WARN -> {
+                LOG.warn(exception.getMessage());
+            }
+            case ERROR -> {
+                throw exception;
+            }
         }
     }
 }

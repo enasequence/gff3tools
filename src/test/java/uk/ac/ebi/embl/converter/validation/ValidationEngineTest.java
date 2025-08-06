@@ -12,8 +12,7 @@ package uk.ac.ebi.embl.converter.validation;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Map;
 import org.junit.jupiter.api.*;
 import uk.ac.ebi.embl.converter.exception.DuplicateValidationRuleException;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
@@ -21,22 +20,24 @@ import uk.ac.ebi.embl.converter.exception.ValidationException;
 public class ValidationEngineTest {
 
     @Test
-    public void testRegisterValidation() {
-        ValidationEngine<String, String> validationEngine = new ValidationEngine<>();
+    public void testRegisterValidation() throws DuplicateValidationRuleException {
+        ValidationEngineBuilder<String, String> validationEngineBuilder = new ValidationEngineBuilder<>();
         Validation mockValidation = new Validation() {
             @Override
             public String getValidationRule() {
                 return "MockValidationRule";
             }
         };
-        validationEngine.registerValidation(mockValidation);
+        validationEngineBuilder.registerValidation(mockValidation);
+        ValidationEngine<String, String> validationEngine = validationEngineBuilder.build();
         assertEquals(0, validationEngine.getFeatureValidations().size());
         assertEquals(0, validationEngine.getAnnotationValidations().size());
     }
 
     @Test
-    public void testValidateFeature_successfulValidation() throws ValidationException {
-        ValidationEngine<String, String> validationEngine = new ValidationEngine<>();
+    public void testValidateFeature_successfulValidation()
+            throws ValidationException, DuplicateValidationRuleException {
+        ValidationEngineBuilder<String, String> validationEngineBuilder = new ValidationEngineBuilder<>();
         final boolean[] validated = {false};
         FeatureValidation<String> mockFeatureValidation = new FeatureValidation<String>() {
             @Override
@@ -49,14 +50,16 @@ public class ValidationEngineTest {
                 return "MockFeatureValidationRule";
             }
         };
-        validationEngine.registerValidation(mockFeatureValidation);
+        validationEngineBuilder.registerValidation(mockFeatureValidation);
+        ValidationEngine<String, String> validationEngine = validationEngineBuilder.build();
         validationEngine.validateFeature("testFeature");
         assertTrue(validated[0]);
     }
 
     @Test
-    public void testValidateFeature_noClassCastExceptionWithIncompatibleValidation() throws ValidationException {
-        ValidationEngine<String, String> validationEngine = new ValidationEngine<>();
+    public void testValidateFeature_noClassCastExceptionWithIncompatibleValidation()
+            throws ValidationException, DuplicateValidationRuleException {
+        ValidationEngineBuilder<String, String> validationEngineBuilder = new ValidationEngineBuilder<>();
 
         AnnotationValidation<String> mockAnnotationValidation = new AnnotationValidation<String>() {
             @Override
@@ -69,14 +72,16 @@ public class ValidationEngineTest {
                 return "MockAnnotationValidationRule";
             }
         };
-        validationEngine.registerValidation(mockAnnotationValidation);
+        validationEngineBuilder.registerValidation(mockAnnotationValidation);
+        ValidationEngine<String, String> validationEngine = validationEngineBuilder.build();
         // This should not throw ClassCastException as validateFeature only iterates over FeatureValidations
         validationEngine.validateFeature("testFeature");
     }
 
     @Test
-    public void testValidateAnnotation_successfulValidation() throws ValidationException {
-        ValidationEngine<String, String> validationEngine = new ValidationEngine<>();
+    public void testValidateAnnotation_successfulValidation()
+            throws ValidationException, DuplicateValidationRuleException {
+        ValidationEngineBuilder<String, String> validationEngineBuilder = new ValidationEngineBuilder<>();
 
         final boolean[] validated = {false};
         AnnotationValidation<String> mockAnnotationValidation = new AnnotationValidation<String>() {
@@ -90,14 +95,16 @@ public class ValidationEngineTest {
                 return "MockAnnotationValidationRule";
             }
         };
-        validationEngine.registerValidation(mockAnnotationValidation);
+        validationEngineBuilder.registerValidation(mockAnnotationValidation);
+        ValidationEngine<String, String> validationEngine = validationEngineBuilder.build();
         validationEngine.validateAnnotation("testAnnotation");
         assertTrue(validated[0]);
     }
 
     @Test
-    public void testValidateAnnotation_noClassCastExceptionWithIncompatibleValidation() throws ValidationException {
-        ValidationEngine<String, String> validationEngine = new ValidationEngine<>();
+    public void testValidateAnnotation_noClassCastExceptionWithIncompatibleValidation()
+            throws ValidationException, DuplicateValidationRuleException {
+        ValidationEngineBuilder<String, String> validationEngineBuilder = new ValidationEngineBuilder<>();
 
         FeatureValidation<String> mockFeatureValidation = new FeatureValidation<String>() {
             @Override
@@ -110,14 +117,15 @@ public class ValidationEngineTest {
                 return "MockFeatureValidationRule";
             }
         };
-        validationEngine.registerValidation(mockFeatureValidation);
+        validationEngineBuilder.registerValidation(mockFeatureValidation);
+        ValidationEngine<String, String> validationEngine = validationEngineBuilder.build();
         // This should not throw ClassCastException as validateAnnotation only iterates over AnnotationValidations
         validationEngine.validateAnnotation("testAnnotation");
     }
 
     @Test
     public void testRegisterValidation_throwsDuplicateValidationRuleException() {
-        ValidationEngine<String, String> validationEngine = new ValidationEngine<>();
+        ValidationEngineBuilder<String, String> validationEngineBuilder = new ValidationEngineBuilder<>();
         Validation mockValidation1 = new Validation() {
             @Override
             public String getValidationRule() {
@@ -132,9 +140,10 @@ public class ValidationEngineTest {
         };
 
         try {
-            validationEngine.registerValidation(mockValidation1);
+            validationEngineBuilder.registerValidation(mockValidation1);
             assertThrows(
-                    DuplicateValidationRuleException.class, () -> validationEngine.registerValidation(mockValidation2));
+                    DuplicateValidationRuleException.class,
+                    () -> validationEngineBuilder.registerValidation(mockValidation2));
         } catch (DuplicateValidationRuleException e) {
             fail("Should not throw DuplicateValidationRuleException on first registration");
         }
@@ -142,7 +151,7 @@ public class ValidationEngineTest {
 
     @Test
     public void testSetActiveValidations() throws ValidationException, DuplicateValidationRuleException {
-        ValidationEngine<String, String> validationEngine = new ValidationEngine<>();
+        ValidationEngineBuilder<String, String> validationEngineBuilder = new ValidationEngineBuilder<>();
 
         FeatureValidation<String> featureValidation1 = new FeatureValidation<String>() {
             @Override
@@ -172,19 +181,19 @@ public class ValidationEngineTest {
             }
         };
 
-        validationEngine.registerValidation(featureValidation1);
-        validationEngine.registerValidation(featureValidation2);
-        validationEngine.registerValidation(annotationValidation1);
+        validationEngineBuilder.registerValidation(featureValidation1);
+        validationEngineBuilder.registerValidation(featureValidation2);
+        validationEngineBuilder.registerValidation(annotationValidation1);
 
         // Initially all registered validations should be active
+        ValidationEngine<String, String> validationEngine = validationEngineBuilder.build();
         assertEquals(2, validationEngine.getFeatureValidations().size());
         assertEquals(1, validationEngine.getAnnotationValidations().size());
 
         // Set active validations to include only FeatureRule1 and AnnotationRule1
-        Set<String> activeRules = new HashSet<>();
-        activeRules.add("FeatureRule1");
-        activeRules.add("AnnotationRule1");
-        validationEngine.setActiveValidations(activeRules);
+        validationEngineBuilder.overrideRuleSeverities(
+                Map.of("FeatureRule2", RuleSeverity.OFF, "AnnotationRule1", RuleSeverity.WARN));
+        validationEngine = validationEngineBuilder.build();
 
         assertEquals(1, validationEngine.getFeatureValidations().size());
         assertTrue(validationEngine.getFeatureValidations().contains(featureValidation1));
@@ -192,7 +201,9 @@ public class ValidationEngineTest {
         assertTrue(validationEngine.getAnnotationValidations().contains(annotationValidation1));
 
         // Test with empty set
-        validationEngine.setActiveValidations(new HashSet<>());
+        validationEngineBuilder.overrideRuleSeverities(
+                Map.of("FeatureRule1", RuleSeverity.OFF, "AnnotationRule1", RuleSeverity.OFF));
+        validationEngine = validationEngineBuilder.build();
         assertEquals(0, validationEngine.getFeatureValidations().size());
         assertEquals(0, validationEngine.getAnnotationValidations().size());
     }

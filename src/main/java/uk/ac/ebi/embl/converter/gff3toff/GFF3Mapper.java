@@ -28,6 +28,7 @@ import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 import uk.ac.ebi.embl.converter.gff3.directives.*;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
+import uk.ac.ebi.embl.converter.validation.ValidationEngine;
 
 public class GFF3Mapper {
 
@@ -44,10 +45,12 @@ public class GFF3Mapper {
     // Used to keep track of features that will be merged using a location join
     Map<String, Feature> joinableFeatureMap;
     Entry entry;
+    ValidationEngine<GFF3Feature, GFF3Annotation> validationEngine;
 
-    public GFF3Mapper() {
+    public GFF3Mapper(ValidationEngine<GFF3Feature, GFF3Annotation> vEngine) {
         parentFeatures = new HashMap<>();
         joinableFeatureMap = new HashMap<>();
+        validationEngine = vEngine;
         entry = null;
     }
 
