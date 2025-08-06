@@ -12,28 +12,41 @@ package uk.ac.ebi.embl.converter.validation;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.HashSet;
+import java.util.Set;
 import org.junit.jupiter.api.*;
+import uk.ac.ebi.embl.converter.exception.DuplicateValidationRuleException;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 
 public class ValidationEngineTest {
 
     @Test
     public void testRegisterValidation() {
-        ValidationEngine<String, String> validationEngine = new ValidationEngine();
-        Validation mockValidation = new Validation() {};
+        ValidationEngine<String, String> validationEngine = new ValidationEngine<>();
+        Validation mockValidation = new Validation() {
+            @Override
+            public String getValidationRule() {
+                return "MockValidationRule";
+            }
+        };
         validationEngine.registerValidation(mockValidation);
-        assertEquals(1, validationEngine.getValidations().size());
-        assertTrue(validationEngine.getValidations().contains(mockValidation));
+        assertEquals(0, validationEngine.getFeatureValidations().size());
+        assertEquals(0, validationEngine.getAnnotationValidations().size());
     }
 
     @Test
     public void testValidateFeature_successfulValidation() throws ValidationException {
-        ValidationEngine<String, String> validationEngine = new ValidationEngine();
+        ValidationEngine<String, String> validationEngine = new ValidationEngine<>();
         final boolean[] validated = {false};
         FeatureValidation<String> mockFeatureValidation = new FeatureValidation<String>() {
             @Override
             public void validateFeature(String feature) throws ValidationException {
                 validated[0] = true;
+            }
+
+            @Override
+            public String getValidationRule() {
+                return "MockFeatureValidationRule";
             }
         };
         validationEngine.registerValidation(mockFeatureValidation);
@@ -42,34 +55,39 @@ public class ValidationEngineTest {
     }
 
     @Test
-    public void testValidateFeature_noClassCastExceptionWithIncompatibleValidation() {
-        ValidationEngine<String, String> validationEngine = new ValidationEngine();
+    public void testValidateFeature_noClassCastExceptionWithIncompatibleValidation() throws ValidationException {
+        ValidationEngine<String, String> validationEngine = new ValidationEngine<>();
 
         AnnotationValidation<String> mockAnnotationValidation = new AnnotationValidation<String>() {
             @Override
             public void validateAnnotation(String annotation) throws ValidationException {
                 // This method won't be called by validateFeature
             }
+
+            @Override
+            public String getValidationRule() {
+                return "MockAnnotationValidationRule";
+            }
         };
         validationEngine.registerValidation(mockAnnotationValidation);
-        try {
-            validationEngine.validateFeature("testFeature");
-        } catch (ClassCastException e) {
-            fail("ClassCastException should not be thrown for incompatible validation.");
-        } catch (ValidationException e) {
-            // Expected if a validation rule throws it, but not for ClassCastException test
-        }
+        // This should not throw ClassCastException as validateFeature only iterates over FeatureValidations
+        validationEngine.validateFeature("testFeature");
     }
 
     @Test
     public void testValidateAnnotation_successfulValidation() throws ValidationException {
-        ValidationEngine<String, String> validationEngine = new ValidationEngine();
+        ValidationEngine<String, String> validationEngine = new ValidationEngine<>();
 
         final boolean[] validated = {false};
         AnnotationValidation<String> mockAnnotationValidation = new AnnotationValidation<String>() {
             @Override
             public void validateAnnotation(String annotation) throws ValidationException {
                 validated[0] = true;
+            }
+
+            @Override
+            public String getValidationRule() {
+                return "MockAnnotationValidationRule";
             }
         };
         validationEngine.registerValidation(mockAnnotationValidation);
@@ -78,43 +96,104 @@ public class ValidationEngineTest {
     }
 
     @Test
-    public void testValidateAnnotation_noClassCastExceptionWithIncompatibleValidation() {
-        ValidationEngine<String, String> validationEngine = new ValidationEngine();
+    public void testValidateAnnotation_noClassCastExceptionWithIncompatibleValidation() throws ValidationException {
+        ValidationEngine<String, String> validationEngine = new ValidationEngine<>();
 
         FeatureValidation<String> mockFeatureValidation = new FeatureValidation<String>() {
             @Override
             public void validateFeature(String feature) throws ValidationException {
                 // This method won't be called by validateAnnotation
             }
+
+            @Override
+            public String getValidationRule() {
+                return "MockFeatureValidationRule";
+            }
         };
         validationEngine.registerValidation(mockFeatureValidation);
+        // This should not throw ClassCastException as validateAnnotation only iterates over AnnotationValidations
+        validationEngine.validateAnnotation("testAnnotation");
+    }
+
+    @Test
+    public void testRegisterValidation_throwsDuplicateValidationRuleException() {
+        ValidationEngine<String, String> validationEngine = new ValidationEngine<>();
+        Validation mockValidation1 = new Validation() {
+            @Override
+            public String getValidationRule() {
+                return "DuplicateRule";
+            }
+        };
+        Validation mockValidation2 = new Validation() {
+            @Override
+            public String getValidationRule() {
+                return "DuplicateRule";
+            }
+        };
+
         try {
-            validationEngine.validateAnnotation("testAnnotation");
-        } catch (ClassCastException e) {
-            fail("ClassCastException should not be thrown for incompatible validation.");
-        } catch (ValidationException e) {
-            // Expected if a validation rule throws it, but not for ClassCastException test
+            validationEngine.registerValidation(mockValidation1);
+            assertThrows(
+                    DuplicateValidationRuleException.class, () -> validationEngine.registerValidation(mockValidation2));
+        } catch (DuplicateValidationRuleException e) {
+            fail("Should not throw DuplicateValidationRuleException on first registration");
         }
     }
 
     @Test
-    public void testValidateFeature_throwsClassCastExceptionWithIncompatibleType() {
-        ValidationEngine<String, String> validationEngine = new ValidationEngine();
+    public void testSetActiveValidations() throws ValidationException, DuplicateValidationRuleException {
+        ValidationEngine<String, String> validationEngine = new ValidationEngine<>();
 
-        // Register a FeatureValidation that is incompatible with the ValidationEngine's type T (String)
-        // For example, FeatureValidation<Integer> instead of FeatureValidation<String>
-        // Due to type erasure, this will compile but should throw ClassCastException at runtime
-        // when validateFeature is called and attempts an unchecked cast.
-        Validation incompatibleValidation = new FeatureValidation<Integer>() {
+        FeatureValidation<String> featureValidation1 = new FeatureValidation<String>() {
             @Override
-            public void validateFeature(Integer feature) throws ValidationException {
-                // This method will not be reached as ClassCastException is expected earlier
+            public void validateFeature(String feature) throws ValidationException {}
+
+            @Override
+            public String getValidationRule() {
+                return "FeatureRule1";
             }
         };
-        validationEngine.registerValidation(incompatibleValidation);
+        FeatureValidation<String> featureValidation2 = new FeatureValidation<String>() {
+            @Override
+            public void validateFeature(String feature) throws ValidationException {}
 
-        assertThrows(ClassCastException.class, () -> {
-            validationEngine.validateFeature("testFeature");
-        });
+            @Override
+            public String getValidationRule() {
+                return "FeatureRule2";
+            }
+        };
+        AnnotationValidation<String> annotationValidation1 = new AnnotationValidation<String>() {
+            @Override
+            public void validateAnnotation(String annotation) throws ValidationException {}
+
+            @Override
+            public String getValidationRule() {
+                return "AnnotationRule1";
+            }
+        };
+
+        validationEngine.registerValidation(featureValidation1);
+        validationEngine.registerValidation(featureValidation2);
+        validationEngine.registerValidation(annotationValidation1);
+
+        // Initially all registered validations should be active
+        assertEquals(2, validationEngine.getFeatureValidations().size());
+        assertEquals(1, validationEngine.getAnnotationValidations().size());
+
+        // Set active validations to include only FeatureRule1 and AnnotationRule1
+        Set<String> activeRules = new HashSet<>();
+        activeRules.add("FeatureRule1");
+        activeRules.add("AnnotationRule1");
+        validationEngine.setActiveValidations(activeRules);
+
+        assertEquals(1, validationEngine.getFeatureValidations().size());
+        assertTrue(validationEngine.getFeatureValidations().contains(featureValidation1));
+        assertEquals(1, validationEngine.getAnnotationValidations().size());
+        assertTrue(validationEngine.getAnnotationValidations().contains(annotationValidation1));
+
+        // Test with empty set
+        validationEngine.setActiveValidations(new HashSet<>());
+        assertEquals(0, validationEngine.getFeatureValidations().size());
+        assertEquals(0, validationEngine.getAnnotationValidations().size());
     }
 }

@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
-import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 public class UnmappedFFFeatureExceptionTest {
 
@@ -25,10 +24,8 @@ public class UnmappedFFFeatureExceptionTest {
         UnmappedFFFeatureException exception = new UnmappedFFFeatureException(featureName);
 
         assertEquals(
-                "Violation of rule FLATFILE_NO_ONTOLOGY_FEATURE: The flatfile feature does not exist on the ontology. (%s)"
-                        .formatted(featureName),
-                exception.getMessage());
-        assertEquals(ValidationRule.FLATFILE_NO_ONTOLOGY_FEATURE, exception.getValidationRule());
+                "Violation of rule FLATFILE_NO_ONTOLOGY_FEATURE: %s".formatted(featureName), exception.getMessage());
+        assertEquals("FLATFILE_NO_ONTOLOGY_FEATURE", exception.getValidationRule());
         assertEquals(0, exception.getLine());
         assertEquals(CLIExitCode.VALIDATION_ERROR, exception.exitCode());
         assertNull(exception.getCause());

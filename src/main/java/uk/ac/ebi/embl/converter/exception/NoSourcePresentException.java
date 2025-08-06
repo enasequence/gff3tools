@@ -10,10 +10,8 @@
  */
 package uk.ac.ebi.embl.converter.exception;
 
-import uk.ac.ebi.embl.converter.validation.ValidationRule;
-
 public class NoSourcePresentException extends ValidationException {
     public NoSourcePresentException() {
-        super(ValidationRule.FLATFILE_NO_SOURCE, "No source present");
+        super("FLATFILE_NO_SOURCE", "No source present");
     }
 }

@@ -72,7 +72,7 @@ public class SomeDataReader implements AutoCloseable {
             // ...
         }
         // Handle final annotation at end of file
-        if (!currentAnnotation.getFeatures().isEmpty()) {
+        if (currentAnnotation != null) {
             validationEngine.validateAnnotation(currentAnnotation);
             return currentAnnotation;
         }
@@ -97,12 +97,14 @@ public class FeatureIdValidation implements FeatureValidation<GFF3Feature>, Anno
     private Set<String> featureIdsInCurrentAnnotation = new HashSet<>();
 
     @Override
+    public ValidationRule getAssociatedRule() {
+        return ValidationRule.GFF3_DUPLICATE_FEATURE_ID
+    }
+
+    @Override
     public void validateFeature(GFF3Feature feature) throws ValidationException {
-        if (!feature.getId().isPresent()) {
-            RuleSeverityState.handleValidationException(new ValidationException(ValidationRule.GFF3_MISSING_ID));
-        }
         if (feature.getId().isPresent() && featureIdsInCurrentAnnotation.contains(feature.getId().get())) {
-            RuleSeverityState.handleValidationException(new ValidationException(ValidationRule.GFF3_DUPLICATE_FEATURE_ID));
+            throw new ValidationException(ValidationRule.GFF3_DUPLICATE_FEATURE_ID);
         }
         feature.getId().ifPresent(featureIdsInCurrentAnnotation::add);
     }

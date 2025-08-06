@@ -35,8 +35,7 @@ public class FileConversionCommand implements Runnable {
     @CommandLine.Option(
             names = "--rules",
             paramLabel = "<key:value,key:value>",
-            description = "Specify rules in the format key:value",
-            converter = RuleConverter.class)
+            description = "Specify rules in the format key:value")
     public CliRulesOption rules;
 
     @CommandLine.Option(names = "-f", description = "The type of the file to be converted")

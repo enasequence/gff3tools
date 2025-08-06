@@ -25,22 +25,22 @@ public enum RuleSeverityState {
 
     private static Logger LOG = LoggerFactory.getLogger(RuleSeverityState.class);
 
-    private Map<ValidationRule, RuleSeverity> severityMap = new HashMap<>();
+    private Map<String, RuleSeverity> severityMap = new HashMap<>();
 
     private RuleSeverityState() {
         this.loadProps();
     }
 
-    public void putAll(Map<ValidationRule, RuleSeverity> map) {
+    public void putAll(Map<String, RuleSeverity> map) {
         this.severityMap.putAll(map);
     }
 
-    public RuleSeverity getSeverity(ValidationRule rule) {
+    public RuleSeverity getSeverity(String rule) {
         return Optional.ofNullable(severityMap.get(rule)).orElse(RuleSeverity.ERROR);
     }
 
     public static void handleValidationException(ValidationException exception) throws ValidationException {
-        switch (INSTANCE.getSeverity(exception.getValidationRule())) {
+        switch (INSTANCE.getSeverity(exception.getValidationRule().toString())) {
             case OFF -> {}
             case WARN -> {
                 LOG.warn(exception.getMessage());
@@ -62,7 +62,7 @@ public enum RuleSeverityState {
             prop.load(input);
 
             prop.forEach((k, v) -> {
-                ValidationRule rule = ValidationRule.valueOf((String) k);
+                String rule = (String) k;
                 RuleSeverity severity = RuleSeverity.valueOf((String) v);
                 this.severityMap.put(rule, severity);
             });

@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
-import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 public class InvalidGFF3HeaderExceptionTest {
 
@@ -25,11 +24,9 @@ public class InvalidGFF3HeaderExceptionTest {
         String message = "Missing GFF3 version directive.";
         InvalidGFF3HeaderException exception = new InvalidGFF3HeaderException(line, message);
 
-        assertEquals(
-                "Violation of rule GFF3_INVALID_HEADER on line 5: Invalid gff3 header (%s)".formatted(message),
-                exception.getMessage());
+        assertEquals("Violation of rule GFF3_INVALID_HEADER on line 5: %s".formatted(message), exception.getMessage());
         assertEquals(line, exception.getLine());
-        assertEquals(ValidationRule.GFF3_INVALID_HEADER, exception.getValidationRule());
+        assertEquals("GFF3_INVALID_HEADER", exception.getValidationRule());
         assertEquals(CLIExitCode.VALIDATION_ERROR, exception.exitCode());
         assertNull(exception.getCause());
     }

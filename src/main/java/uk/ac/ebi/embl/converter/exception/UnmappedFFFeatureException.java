@@ -10,11 +10,9 @@
  */
 package uk.ac.ebi.embl.converter.exception;
 
-import static uk.ac.ebi.embl.converter.validation.ValidationRule.FLATFILE_NO_ONTOLOGY_FEATURE;
-
 public class UnmappedFFFeatureException extends ValidationException {
 
     public UnmappedFFFeatureException(String featureName) {
-        super(FLATFILE_NO_ONTOLOGY_FEATURE, featureName);
+        super("FLATFILE_NO_ONTOLOGY_FEATURE", featureName);
     }
 }

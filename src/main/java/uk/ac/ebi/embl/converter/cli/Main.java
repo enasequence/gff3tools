@@ -20,7 +20,6 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import uk.ac.ebi.embl.converter.exception.CLIException;
 import uk.ac.ebi.embl.converter.validation.RuleSeverity;
-import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 @Command(
         name = "gff3tools",
@@ -33,6 +32,7 @@ public class Main {
         int exitCode = CLIExitCode.GENERAL.asInt();
         try {
             exitCode = new CommandLine(new Main())
+                    .registerConverter(CliRulesOption.class, new RuleConverter())
                     .setExecutionExceptionHandler(new ExecutionExceptionHandler())
                     .execute(args);
         } catch (OutOfMemoryError e) {
@@ -59,7 +59,7 @@ public class Main {
     }
 }
 
-record CliRulesOption(Map<ValidationRule, RuleSeverity> rules) {}
+record CliRulesOption(Map<String, RuleSeverity> rules) {}
 
 class RuleConverter implements CommandLine.ITypeConverter<CliRulesOption> {
     CliRulesOption map = new CliRulesOption(new HashMap<>());
@@ -73,12 +73,7 @@ class RuleConverter implements CommandLine.ITypeConverter<CliRulesOption> {
             if (pairs.length != 2) {
                 throw new CLIException("Invalid rule: '" + entry + "' There must be 2 values separated by ':' ");
             }
-            ValidationRule key;
-            try {
-                key = ValidationRule.valueOf(pairs[0].toUpperCase());
-            } catch (IllegalArgumentException e) {
-                throw new CLIException("The rule: \"" + pairs[0] + "\" is invalid");
-            }
+            String key = pairs[0].toUpperCase();
             RuleSeverity value;
             try {
                 value = RuleSeverity.valueOf(pairs[1].toUpperCase());
