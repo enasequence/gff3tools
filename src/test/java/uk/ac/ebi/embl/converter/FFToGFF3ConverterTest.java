@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
+import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.fftogff3.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
 import uk.ac.ebi.embl.converter.validation.*;
@@ -95,6 +96,28 @@ class FFToGFF3ConverterTest {
 
         } catch (Exception e) {
             fail("Error on test case: " + inputFile + " - " + e.getMessage());
+        }
+    }
+
+    @Test
+    void testUnmappedFFFeatureValidation() throws Exception {
+      try {
+            ValidationEngineBuilder<Feature, Entry> builder = new ValidationEngineBuilder<>();
+            builder.registerValidation(new UnmappedFFFeatureValidation());
+            builder.overrideRuleSeverities(Map.of("FLATFILE_NO_ONTOLOGY_FEATURE", RuleSeverity.ERROR));
+            GFF3FileFactory rule = new GFF3FileFactory(builder.build());
+            try (BufferedReader testFileReader =
+                    TestUtils.getResourceReader("validation_errors/unmapped_feature.embl")) {
+                ReaderOptions readerOptions = new ReaderOptions();
+                readerOptions.setIgnoreSequence(true);
+                EmblEntryReader entryReader =
+                        new EmblEntryReader(testFileReader, EmblEntryReader.Format.EMBL_FORMAT, "", readerOptions);
+                rule.from(entryReader);
+            }
+            fail("Expected ValidationException for unmapped feature.");
+        } catch (ValidationException e) {
+            assertEquals("FLATFILE_NO_ONTOLOGY_FEATURE", e.getValidationRule());
+            assert(e.getMessage().contains("unmapped_feature"));
         }
     }
 }
