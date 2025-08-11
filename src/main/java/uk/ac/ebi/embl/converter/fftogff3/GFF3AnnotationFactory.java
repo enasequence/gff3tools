@@ -25,7 +25,6 @@ import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.gff3.directives.GFF3SequenceRegion;
-import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 import uk.ac.ebi.embl.converter.utils.Gff3Utils;
 import uk.ac.ebi.embl.converter.validation.ValidationEngine;
@@ -355,46 +354,12 @@ public class GFF3AnnotationFactory {
 
     private String getGFF3FeatureName(Feature ffFeature) throws ValidationException {
 
-        String featureName = ffFeature.getName();
-        List<ConversionEntry> mappings = Optional.ofNullable(
-                        ConversionUtils.getFF2GFF3FeatureMap().get(featureName))
-                .orElse(Collections.emptyList());
-
-        // return the soTerm of the max qualifier mapping
-        Optional<String> soTerm = mappings.stream()
-                .filter(entry -> entry.getFeature().equalsIgnoreCase(ffFeature.getName()))
-                .filter(entry -> hasAllQualifiers(ffFeature, entry))
-                .max(Comparator.comparingInt(entry -> entry.getQualifiers().size()))
-                .map(ConversionEntry::getSOTerm);
+        Optional<String> soTerm = FeatureMapping.getGFF3FeatureName(ffFeature);
 
         if (soTerm.isEmpty()) {
-            // TODO: RuleSeverityState.handleValidationException(new UnmappedFFFeatureException(featureName));
-            return featureName;
+            return ffFeature.getName();
         } else {
             return soTerm.get();
         }
-    }
-
-    private boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {
-        Map<String, String> requiredQualifiers = conversionEntry.getQualifiers();
-
-        boolean matchesAllQualifiers = true;
-        for (String expectedQualifierName : requiredQualifiers.keySet()) {
-            boolean qualifierMatches = false;
-            for (Qualifier featureQualifier : feature.getQualifiers(expectedQualifierName)) {
-                // When qualifier value is not found the value is considered "true"
-                String qualifierValue = featureQualifier.getValue() == null ? "true" : featureQualifier.getValue();
-                qualifierMatches = qualifierValue.equalsIgnoreCase(requiredQualifiers.get(expectedQualifierName));
-                if (qualifierMatches) {
-                    break;
-                }
-            }
-            matchesAllQualifiers = qualifierMatches;
-            if (!matchesAllQualifiers) {
-                break;
-            }
-        }
-
-        return matchesAllQualifiers;
     }
 }
