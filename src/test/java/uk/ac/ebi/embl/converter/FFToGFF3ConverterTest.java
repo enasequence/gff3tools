@@ -18,8 +18,11 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.api.entry.Entry;
+import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.converter.fftogff3.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
+import uk.ac.ebi.embl.converter.validation.*;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
@@ -31,7 +34,8 @@ class FFToGFF3ConverterTest {
         Map<String, Path> testFiles = TestUtils.getTestFiles("fftogff3_rules", ".embl");
 
         for (String filePrefix : testFiles.keySet()) {
-            GFF3FileFactory rule = new GFF3FileFactory();
+            ValidationEngineBuilder<Feature, Entry> builder = new ValidationEngineBuilder<>();
+            GFF3FileFactory rule = new GFF3FileFactory(builder.build());
             try (BufferedReader testFileReader =
                     TestUtils.getResourceReader(testFiles.get(filePrefix).toString())) {
                 ReaderOptions readerOptions = new ReaderOptions();

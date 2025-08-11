@@ -22,14 +22,13 @@ import uk.ac.ebi.embl.api.entry.location.CompoundLocation;
 import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
-import uk.ac.ebi.embl.converter.exception.UnmappedFFFeatureException;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 import uk.ac.ebi.embl.converter.utils.Gff3Utils;
-import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
+import uk.ac.ebi.embl.converter.validation.ValidationEngine;
 
 public class GFF3AnnotationFactory {
 
@@ -49,8 +48,11 @@ public class GFF3AnnotationFactory {
     Map<String, Integer> idMap = new HashMap<>();
 
     GFF3DirectivesFactory directivesFactory;
+    ValidationEngine<Feature, Entry> validationEngine;
 
-    public GFF3AnnotationFactory(GFF3DirectivesFactory directivesFactory) {
+    public GFF3AnnotationFactory(
+            ValidationEngine<Feature, Entry> validationEngine, GFF3DirectivesFactory directivesFactory) {
+        this.validationEngine = validationEngine;
         this.directivesFactory = directivesFactory;
     }
 
@@ -69,9 +71,10 @@ public class GFF3AnnotationFactory {
             if (feature.getName().equalsIgnoreCase("source")) {
                 continue; // early exit
             }
-
+            validationEngine.validateFeature(feature);
             buildGeneFeatureMap(sequenceRegion, feature);
         }
+        validationEngine.validateAnnotation(entry);
 
         // For circular topologies; We have not found a circular feature so we must
         // include a region
@@ -365,7 +368,7 @@ public class GFF3AnnotationFactory {
                 .map(ConversionEntry::getSOTerm);
 
         if (soTerm.isEmpty()) {
-            RuleSeverityState.handleValidationException(new UnmappedFFFeatureException(featureName));
+            // TODO: RuleSeverityState.handleValidationException(new UnmappedFFFeatureException(featureName));
             return featureName;
         } else {
             return soTerm.get();

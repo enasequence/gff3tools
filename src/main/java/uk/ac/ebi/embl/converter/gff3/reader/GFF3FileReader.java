@@ -25,7 +25,6 @@ import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.converter.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.converter.utils.Gff3Utils;
-import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
 
 public class GFF3FileReader implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(GFF3FileReader.class);
@@ -81,8 +80,8 @@ public class GFF3FileReader implements AutoCloseable {
                     return annotation;
                 }
             } else {
-                RuleSeverityState.handleValidationException(
-                        new InvalidGFF3RecordException(lineCount, "Invalid gff3 record \"" + line + "\""));
+                // TODO:  RuleSeverityState.handleValidationException(
+                //         new InvalidGFF3RecordException(lineCount, "Invalid gff3 record \"" + line + "\""));
             }
         }
 
@@ -109,7 +108,7 @@ public class GFF3FileReader implements AutoCloseable {
         // Extra check for line match
         Matcher m = GFF3_FEATURE.matcher(line);
         if (!m.matches()) {
-            RuleSeverityState.handleValidationException(new InvalidGFF3RecordException(lineCount, line));
+            // TODO: RuleSeverityState.handleValidationException(new InvalidGFF3RecordException(lineCount, line));
             return null;
         }
 
@@ -147,7 +146,7 @@ public class GFF3FileReader implements AutoCloseable {
 
         if (!accession.equals(currentAccession)) {
             if (processedAnnotations.contains(accession)) {
-                RuleSeverityState.handleValidationException(new DuplicateSeqIdException(lineCount, accession));
+                // TODO: RuleSeverityState.handleValidationException(new DuplicateSeqIdException(lineCount, accession));
             }
             // In case of different accession create a new GFF3Annotation and return the
             // previous one.
@@ -161,7 +160,7 @@ public class GFF3FileReader implements AutoCloseable {
                 GFF3SequenceRegion sequenceRegion = accessionSequenceRegionMap.get(currentAccession);
                 currentAnnotation.setSequenceRegion(sequenceRegion);
             } else {
-                RuleSeverityState.handleValidationException(new UndefinedSeqIdException(lineCount, line));
+                // TODO: RuleSeverityState.handleValidationException(new UndefinedSeqIdException(lineCount, line));
             }
 
             if (!previousAnnotation.getFeatures().isEmpty()) {
@@ -205,10 +204,11 @@ public class GFF3FileReader implements AutoCloseable {
                 String version = m.group("version");
                 return new GFF3Header(version);
             } else if (!COMMENT.matcher(line).matches()) {
-                RuleSeverityState.handleValidationException(new InvalidGFF3HeaderException(lineCount, line));
+                // TODO:  RuleSeverityState.handleValidationException(new InvalidGFF3HeaderException(lineCount, line));
             }
         }
-        RuleSeverityState.handleValidationException(new InvalidGFF3HeaderException(lineCount, "GFF3 header not found"));
+        // TODO:  RuleSeverityState.handleValidationException(new InvalidGFF3HeaderException(lineCount, "GFF3 header not
+        // found"));
         return null;
     }
 
