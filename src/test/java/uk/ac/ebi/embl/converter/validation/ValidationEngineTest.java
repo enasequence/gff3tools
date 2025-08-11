@@ -14,9 +14,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Map;
 import org.junit.jupiter.api.*;
-
-import uk.ac.ebi.embl.converter.exception.CLIException;
 import uk.ac.ebi.embl.converter.exception.DuplicateValidationRuleException;
+import uk.ac.ebi.embl.converter.exception.UnregisteredValidationRuleException;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 
 public class ValidationEngineTest {
@@ -152,7 +151,8 @@ public class ValidationEngineTest {
     }
 
     @Test
-    public void testSetActiveValidations() throws ValidationException, DuplicateValidationRuleException, CLIException {
+    public void testSetActiveValidations()
+            throws ValidationException, DuplicateValidationRuleException, UnregisteredValidationRuleException {
         ValidationEngineBuilder<String, String> validationEngineBuilder = new ValidationEngineBuilder<>();
 
         FeatureValidation<String> featureValidation1 = new FeatureValidation<String>() {

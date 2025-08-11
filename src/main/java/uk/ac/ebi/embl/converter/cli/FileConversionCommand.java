@@ -86,8 +86,7 @@ public class FileConversionCommand implements Runnable {
             toFileType = validateFileType(toFileType, outputFilePath, "-t");
 
             Converter converter = getConverter(fromFileType, toFileType, masterFilePath);
-            converter.convert(inputReader, outputWriter);
-
+            converter.convert(ruleSeverities, inputReader, outputWriter);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }

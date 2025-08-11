@@ -19,8 +19,11 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.api.entry.Entry;
+import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.converter.fftogff3.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
+import uk.ac.ebi.embl.converter.validation.*;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
@@ -32,7 +35,8 @@ class FFToGFF3ConverterTest {
         Map<String, Path> testFiles = TestUtils.getTestFiles("fftogff3_rules", ".embl");
 
         for (String filePrefix : testFiles.keySet()) {
-            GFF3FileFactory rule = new GFF3FileFactory();
+            ValidationEngineBuilder<Feature, Entry> builder = new ValidationEngineBuilder<>();
+            GFF3FileFactory rule = new GFF3FileFactory(builder.build());
             try (BufferedReader testFileReader =
                     TestUtils.getResourceReader(testFiles.get(filePrefix).toString())) {
                 ReaderOptions readerOptions = new ReaderOptions();
@@ -58,7 +62,7 @@ class FFToGFF3ConverterTest {
     }
 
     @Test
-    void testWriteGFF3UsingReducedFlatfile(){
+    void testWriteGFF3UsingReducedFlatfile() {
 
         Path scaffoldPath = TestUtils.getResourceFile("./fftogff3_rules/reduced/scaffold-reduced.embl")
                 .toPath();
@@ -72,16 +76,16 @@ class FFToGFF3ConverterTest {
         Path masterPath = TestUtils.getResourceFile("./fftogff3_rules/reduced/master.embl")
                 .toPath();
 
-        testConvert(scaffoldPath,expectedScaffoldPath,masterPath);
-        testConvert(contigPath,expectedContigPath,masterPath);
+        testConvert(scaffoldPath, expectedScaffoldPath, masterPath);
+        testConvert(contigPath, expectedContigPath, masterPath);
     }
 
-    private void testConvert(Path inputFile, Path expectedFile, Path masterFile){
+    private void testConvert(Path inputFile, Path expectedFile, Path masterFile) {
         FFToGff3Converter converter = new FFToGff3Converter(masterFile);
         try (BufferedReader testFileReader = Files.newBufferedReader(inputFile);
-             BufferedReader expectedFileReader = Files.newBufferedReader(expectedFile);
-             StringWriter stringWriter = new StringWriter();
-             BufferedWriter bufferedWriter = new BufferedWriter(stringWriter); ) {
+                BufferedReader expectedFileReader = Files.newBufferedReader(expectedFile);
+                StringWriter stringWriter = new StringWriter();
+                BufferedWriter bufferedWriter = new BufferedWriter(stringWriter); ) {
 
             converter.convert(testFileReader, bufferedWriter);
             bufferedWriter.flush();

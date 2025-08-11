@@ -14,15 +14,23 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import uk.ac.ebi.embl.api.entry.Entry;
+import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.converter.exception.ReadException;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
 import uk.ac.ebi.embl.converter.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.converter.gff3.directives.GFF3Species;
+import uk.ac.ebi.embl.converter.validation.ValidationEngine;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 public class GFF3FileFactory {
+    ValidationEngine<Feature, Entry> engine;
+
+    public GFF3FileFactory(ValidationEngine<Feature, Entry> engine) {
+        this.engine = engine;
+    }
+
     public GFF3File from(EmblEntryReader entryReader, Entry masterEntry) throws ValidationException, ReadException {
         GFF3Header header = new GFF3Header("3.1.26");
         GFF3Species species = null;
@@ -34,7 +42,7 @@ public class GFF3FileFactory {
                 if (species == null) {
                     species = directivesFactory.createSpecies(entry, masterEntry);
                 }
-                annotations.add(new GFF3AnnotationFactory(directivesFactory).from(entry));
+                annotations.add(new GFF3AnnotationFactory(engine, directivesFactory).from(entry));
             }
         } catch (IOException e) {
             throw new ReadException(e);
