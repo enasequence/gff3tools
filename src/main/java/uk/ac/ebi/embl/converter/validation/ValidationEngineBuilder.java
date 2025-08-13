@@ -72,11 +72,6 @@ public class ValidationEngineBuilder<F, A> {
     }
 
     public void overrideRuleSeverities(Map<String, RuleSeverity> map) throws UnregisteredValidationRuleException {
-        for (String rule : map.keySet()) {
-            if (!this.registeredValidationRules.contains(rule)) {
-                throw new UnregisteredValidationRuleException("The rule %s has no validator assigned".formatted(rule));
-            }
-        }
         this.severityMap.putAll(map);
     }
 

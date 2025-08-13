@@ -8,16 +8,10 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.gff3.validation;
+package uk.ac.ebi.embl.converter.validation;
 
-import uk.ac.ebi.embl.converter.validation.Validation;
+import uk.ac.ebi.embl.converter.exception.ValidationException;
 
-public class UndefinedSeqIdValidation implements Validation {
-
-    public static final String VALIDATION_RULE = "GFF3_UNDEFINED_SEQID";
-
-    @Override
-    public String getValidationRule() {
-        return VALIDATION_RULE;
-    }
+public interface SemanticValidation<T> extends Validation {
+    void validateSemantic(T parsedObject) throws ValidationException;
 }

@@ -12,10 +12,15 @@ package uk.ac.ebi.embl.converter.gff3;
 
 import java.io.Writer;
 import java.util.List;
+import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.exception.WriteException;
 import uk.ac.ebi.embl.converter.gff3.directives.*;
 
-public record GFF3File(GFF3Header header, GFF3Species species, List<GFF3Annotation> annotations)
+public record GFF3File(
+        GFF3Header header,
+        GFF3Species species,
+        List<GFF3Annotation> annotations,
+        List<ValidationException> parsingErrors)
         implements IGFF3Feature {
     @Override
     public void writeGFF3String(Writer writer) throws WriteException {

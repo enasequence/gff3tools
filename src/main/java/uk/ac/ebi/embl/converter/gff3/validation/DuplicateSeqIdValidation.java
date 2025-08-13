@@ -23,6 +23,7 @@ public class DuplicateSeqIdValidation implements FeatureValidation<GFF3Feature>,
 
     private HashSet<String> processedAnnotations = new HashSet<>();
     private String currentAccession = null;
+    private int currentAccessionFeatureCount = 0;
 
     @Override
     public String getValidationRule() {
@@ -37,8 +38,12 @@ public class DuplicateSeqIdValidation implements FeatureValidation<GFF3Feature>,
             if (processedAnnotations.contains(accession)) {
                 throw new ValidationException(getValidationRule(), feature.getName());
             }
+            if (currentAccessionFeatureCount > 0) {
+                processedAnnotations.add(currentAccession);
+            }
             currentAccession = accession;
         }
+        currentAccessionFeatureCount++;
     }
 
     @Override
