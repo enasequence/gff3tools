@@ -42,7 +42,7 @@ class GFF3ToFFConverterTest {
 
             String expected;
             String expectedFilePath = inFile.replace(".gff3", ".embl");
-            try (BufferedReader emblTestFileReader = TestUtils.getResourceReader(expectedFilePath)) {
+            try (BufferedReader emblTestFileReader = TestUtils.getResourceReaderWithPath(expectedFilePath)) {
                 expected = new BufferedReader(emblTestFileReader).lines().collect(Collectors.joining("\n"));
             }
 
