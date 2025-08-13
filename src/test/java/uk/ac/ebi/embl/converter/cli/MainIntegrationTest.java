@@ -85,9 +85,7 @@ public class MainIntegrationTest {
             mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
             Main.main(args);
             mock.verify(() -> Main.exit(CLIExitCode.VALIDATION_ERROR.asInt()));
-            assertTrue(errContent
-                    .toString()
-                    .contains("GFF3_INVALID_HEADER"));
+            assertTrue(errContent.toString().contains("GFF3_INVALID_HEADER"));
         } finally {
             Files.deleteIfExists(tempFile);
             System.setErr(originalErr);
