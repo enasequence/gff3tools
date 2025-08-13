@@ -25,6 +25,7 @@ import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.converter.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.converter.utils.Gff3Utils;
+import uk.ac.ebi.embl.converter.validation.ValidationEngine;
 
 public class GFF3FileReader implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(GFF3FileReader.class);
@@ -44,8 +45,10 @@ public class GFF3FileReader implements AutoCloseable {
     String currentAccession;
     Map<String, GFF3SequenceRegion> accessionSequenceRegionMap = new HashMap<>();
     HashSet<String> processedAnnotations = new HashSet<>();
+    ValidationEngine<GFF3Feature, GFF3Annotation> validationEngine;
 
-    public GFF3FileReader(Reader reader) {
+    public GFF3FileReader(ValidationEngine<GFF3Feature, GFF3Annotation> validationEngine, Reader reader) {
+        this.validationEngine = validationEngine;
         this.bufferedReader = new BufferedReader(reader);
         lineCount = 0;
         currentAnnotation = new GFF3Annotation();
@@ -144,10 +147,10 @@ public class GFF3FileReader implements AutoCloseable {
                 phase,
                 attributesMap);
 
+        validationEngine.validateFeature(feature);
+
         if (!accession.equals(currentAccession)) {
-            if (processedAnnotations.contains(accession)) {
-                // TODO: RuleSeverityState.handleValidationException(new DuplicateSeqIdException(lineCount, accession));
-            }
+
             // In case of different accession create a new GFF3Annotation and return the
             // previous one.
             currentAccession = accession;

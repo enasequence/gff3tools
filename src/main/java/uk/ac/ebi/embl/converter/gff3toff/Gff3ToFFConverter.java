@@ -17,6 +17,7 @@ import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.converter.gff3.validation.*;
 import uk.ac.ebi.embl.converter.validation.*;
 import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 
@@ -26,13 +27,19 @@ public class Gff3ToFFConverter implements Converter {
 
     public void convert(Map<String, RuleSeverity> overrideSeverities, BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException, UnregisteredValidationRuleException {
-        try (GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
-            ValidationEngineBuilder<GFF3Feature, GFF3Annotation> builder = new ValidationEngineBuilder<>();
-            builder.registerValidations(new Validation[] {});
-            builder.overrideRuleSeverities(overrideSeverities);
-            ValidationEngine<GFF3Feature, GFF3Annotation> validationEngine = builder.build();
+        ValidationEngineBuilder<GFF3Feature, GFF3Annotation> builder = new ValidationEngineBuilder<>();
+        builder.registerValidations(new Validation[] {
+            new InvalidGFF3HeaderValidation(),
+            new UndefinedSeqIdValidation(),
+            new DuplicateSeqIdValidation(),
+            new InvalidGFF3RecordValidation()
+        });
+        builder.overrideRuleSeverities(overrideSeverities);
+        ValidationEngine<GFF3Feature, GFF3Annotation> validationEngine = builder.build();
 
-            GFF3Mapper mapper = new GFF3Mapper(validationEngine);
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
+
+            GFF3Mapper mapper = new GFF3Mapper();
             gff3Reader.readHeader();
             GFF3Annotation previousAnnotation = null;
             GFF3Annotation currentAnnotation;

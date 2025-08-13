@@ -37,9 +37,11 @@ class FFToGFF3ConverterTest {
 
         for (String filePrefix : testFiles.keySet()) {
             ValidationEngineBuilder<Feature, Entry> builder = new ValidationEngineBuilder<>();
+            builder.registerValidation(new UnmappedFFFeatureValidation());
+
             GFF3FileFactory rule = new GFF3FileFactory(builder.build());
-            try (BufferedReader testFileReader =
-                    TestUtils.getResourceReader(testFiles.get(filePrefix).toString())) {
+            try (BufferedReader testFileReader = TestUtils.getResourceReaderWithPath(
+                    testFiles.get(filePrefix).toString())) {
                 ReaderOptions readerOptions = new ReaderOptions();
                 readerOptions.setIgnoreSequence(true);
                 EmblEntryReader entryReader =
@@ -50,7 +52,7 @@ class FFToGFF3ConverterTest {
 
                 String expected;
                 String expectedFilePath = testFiles.get(filePrefix).toString().replace(".embl", ".gff3");
-                try (BufferedReader gff3TestFileReader = TestUtils.getResourceReader(expectedFilePath)) {
+                try (BufferedReader gff3TestFileReader = TestUtils.getResourceReaderWithPath(expectedFilePath)) {
                     expected = new BufferedReader(gff3TestFileReader).lines().collect(Collectors.joining("\n"));
                 }
 
@@ -101,13 +103,15 @@ class FFToGFF3ConverterTest {
 
     @Test
     void testUnmappedFFFeatureValidation() throws Exception {
-      try {
+        try {
             ValidationEngineBuilder<Feature, Entry> builder = new ValidationEngineBuilder<>();
             builder.registerValidation(new UnmappedFFFeatureValidation());
             builder.overrideRuleSeverities(Map.of("FLATFILE_NO_ONTOLOGY_FEATURE", RuleSeverity.ERROR));
             GFF3FileFactory rule = new GFF3FileFactory(builder.build());
             try (BufferedReader testFileReader =
                     TestUtils.getResourceReader("validation_errors/unmapped_feature.embl")) {
+
+                assert testFileReader != null;
                 ReaderOptions readerOptions = new ReaderOptions();
                 readerOptions.setIgnoreSequence(true);
                 EmblEntryReader entryReader =
@@ -117,7 +121,7 @@ class FFToGFF3ConverterTest {
             fail("Expected ValidationException for unmapped feature.");
         } catch (ValidationException e) {
             assertEquals("FLATFILE_NO_ONTOLOGY_FEATURE", e.getValidationRule());
-            assert(e.getMessage().contains("unmapped_feature"));
+            assert (e.getMessage().contains("unmapped_feature"));
         }
     }
 }
