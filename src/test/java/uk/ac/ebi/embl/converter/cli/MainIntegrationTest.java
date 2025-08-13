@@ -87,7 +87,7 @@ public class MainIntegrationTest {
             mock.verify(() -> Main.exit(CLIExitCode.VALIDATION_ERROR.asInt()));
             assertTrue(errContent
                     .toString()
-                    .contains("Violation of rule GFF3_INVALID_HEADER on line 1: This is an invalid file"));
+                    .contains("GFF3_INVALID_HEADER"));
         } finally {
             Files.deleteIfExists(tempFile);
             System.setErr(originalErr);

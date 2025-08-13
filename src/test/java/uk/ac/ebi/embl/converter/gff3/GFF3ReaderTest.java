@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.converter.gff3.validation.*;
 import uk.ac.ebi.embl.converter.validation.*;
 
 public class GFF3ReaderTest {
@@ -34,12 +33,7 @@ public class GFF3ReaderTest {
 
     ValidationEngineBuilder<GFF3Feature, GFF3Annotation> getValidationEngineBuilder() {
         ValidationEngineBuilder<GFF3Feature, GFF3Annotation> builder = new ValidationEngineBuilder<>();
-        builder.registerValidations(new Validation[] {
-            new InvalidGFF3HeaderValidation(),
-            new UndefinedSeqIdValidation(),
-            new DuplicateSeqIdValidation(),
-            new InvalidGFF3RecordValidation()
-        });
+        builder.registerValidations(new Validation[] {});
 
         return builder;
     }

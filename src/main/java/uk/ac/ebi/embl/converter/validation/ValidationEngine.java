@@ -23,6 +23,7 @@ public class ValidationEngine<F, A> {
     private final List<FeatureValidation<F>> activeFeatureValidations;
     private final List<AnnotationValidation<A>> activeAnnotationValidations;
     private final Map<String, RuleSeverity> severityMap;
+    private final List<ValidationException> parsingErrors;
 
     ValidationEngine(
             List<FeatureValidation<F>> activeFeatureValidations,
@@ -31,6 +32,7 @@ public class ValidationEngine<F, A> {
         this.activeFeatureValidations = activeFeatureValidations;
         this.activeAnnotationValidations = activeAnnotationValidations;
         this.severityMap = severityMap;
+        this.parsingErrors = new java.util.ArrayList<>();
     }
 
     // Getter for testing purposes
@@ -62,12 +64,21 @@ public class ValidationEngine<F, A> {
         }
     }
 
+    public void handleSyntacticError(ValidationException exception) throws ValidationException {
+        handleValidationException(exception);
+    }
+
+    public List<ValidationException> getParsingErrors() {
+        return parsingErrors;
+    }
+
     private void handleValidationException(ValidationException exception) throws ValidationException {
         String rule = exception.getValidationRule().toString();
         RuleSeverity severity = Optional.ofNullable(severityMap.get(rule)).orElse(RuleSeverity.ERROR);
         switch (severity) {
             case OFF -> {}
             case WARN -> {
+                this.parsingErrors.add(exception);
                 LOG.warn(exception.getMessage());
             }
             case ERROR -> {

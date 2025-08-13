@@ -77,14 +77,17 @@ public class GFF3FileReader implements AutoCloseable {
             } else if (COMMENT.matcher(line).matches()) {
                 // Skip comment
                 continue;
-            } else if (GFF3_FEATURE.matcher(line).matches()) {
-                GFF3Annotation annotation = parseAndAddFeature(line);
-                if (annotation != null) {
-                    return annotation;
-                }
             } else {
-                // TODO:  RuleSeverityState.handleValidationException(
-                //         new InvalidGFF3RecordException(lineCount, "Invalid gff3 record \"" + line + "\""));
+                Matcher feature_matcher = GFF3_FEATURE.matcher(line);
+                if (feature_matcher.matches()) {
+                    GFF3Annotation a = parseAndAddFeature(feature_matcher);
+                    if (a != null) {
+                        return a;
+                    }
+                } else {
+                    validationEngine.handleSyntacticError(
+                            new InvalidGFF3RecordException(lineCount, "Invalid gff3 record \"" + line + "\""));
+                }
             }
         }
 
@@ -107,13 +110,7 @@ public class GFF3FileReader implements AutoCloseable {
         return new GFF3SequenceRegion(accessionId, accessionVersion, start, end);
     }
 
-    private GFF3Annotation parseAndAddFeature(String line) throws ValidationException {
-        // Extra check for line match
-        Matcher m = GFF3_FEATURE.matcher(line);
-        if (!m.matches()) {
-            // TODO: RuleSeverityState.handleValidationException(new InvalidGFF3RecordException(lineCount, line));
-            return null;
-        }
+    private GFF3Annotation parseAndAddFeature(Matcher m) throws ValidationException {
 
         String accession = m.group("accession");
         String accessionId = m.group("accessionId");
@@ -150,6 +147,9 @@ public class GFF3FileReader implements AutoCloseable {
         validationEngine.validateFeature(feature);
 
         if (!accession.equals(currentAccession)) {
+            if (processedAnnotations.contains(accession)) {
+                validationEngine.handleSyntacticError(new DuplicateSeqIdException(lineCount, accession));
+            }
 
             // In case of different accession create a new GFF3Annotation and return the
             // previous one.
@@ -163,7 +163,8 @@ public class GFF3FileReader implements AutoCloseable {
                 GFF3SequenceRegion sequenceRegion = accessionSequenceRegionMap.get(currentAccession);
                 currentAnnotation.setSequenceRegion(sequenceRegion);
             } else {
-                // TODO: RuleSeverityState.handleValidationException(new UndefinedSeqIdException(lineCount, line));
+                validationEngine.handleSyntacticError(new UndefinedSeqIdException(
+                        lineCount, "Undefined sequence region for accession \"" + currentAccession + "\""));
             }
 
             if (!previousAnnotation.getFeatures().isEmpty()) {
@@ -207,11 +208,11 @@ public class GFF3FileReader implements AutoCloseable {
                 String version = m.group("version");
                 return new GFF3Header(version);
             } else if (!COMMENT.matcher(line).matches()) {
-                // TODO:  RuleSeverityState.handleValidationException(new InvalidGFF3HeaderException(lineCount, line));
+                validationEngine.handleSyntacticError(
+                        new InvalidGFF3HeaderException(lineCount, "Invalid gff3 header \"" + line + "\""));
             }
         }
-        // TODO:  RuleSeverityState.handleValidationException(new InvalidGFF3HeaderException(lineCount, "GFF3 header not
-        // found"));
+        validationEngine.handleSyntacticError(new InvalidGFF3HeaderException(lineCount, "GFF3 header not found"));
         return null;
     }
 
