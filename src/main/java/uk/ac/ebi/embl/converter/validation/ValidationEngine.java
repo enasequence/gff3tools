@@ -44,20 +44,20 @@ public class ValidationEngine<F, A> {
         return activeAnnotationValidations;
     }
 
-    public void validateFeature(F feature) throws ValidationException {
+    public void validateFeature(F feature, int line) throws ValidationException {
         for (FeatureValidation<F> validation : activeFeatureValidations) {
             try {
-                validation.validateFeature(feature);
+                validation.validateFeature(feature, line);
             } catch (ValidationException exception) {
                 handleValidationException(exception);
             }
         }
     }
 
-    public void validateAnnotation(A annotation) throws ValidationException, ClassCastException {
+    public void validateAnnotation(A annotation, int line) throws ValidationException, ClassCastException {
         for (AnnotationValidation<A> validation : activeAnnotationValidations) {
             try {
-                validation.validateAnnotation(annotation);
+                validation.validateAnnotation(annotation, line);
             } catch (ValidationException exception) {
                 handleValidationException(exception);
             }

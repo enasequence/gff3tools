@@ -44,7 +44,6 @@ public class GFF3FileReader implements AutoCloseable {
     GFF3Annotation currentAnnotation;
     String currentAccession;
     Map<String, GFF3SequenceRegion> accessionSequenceRegionMap = new HashMap<>();
-    HashSet<String> processedAnnotations = new HashSet<>();
     ValidationEngine<GFF3Feature, GFF3Annotation> validationEngine;
 
     public GFF3FileReader(ValidationEngine<GFF3Feature, GFF3Annotation> validationEngine, Reader reader) {
@@ -71,7 +70,7 @@ public class GFF3FileReader implements AutoCloseable {
                 if (!currentAnnotation.getFeatures().isEmpty() || currentAnnotation.getSequenceRegion() != null) {
                     GFF3Annotation previousAnnotation = currentAnnotation;
                     currentAnnotation = new GFF3Annotation();
-                    validationEngine.validateAnnotation(previousAnnotation);
+                    validationEngine.validateAnnotation(previousAnnotation, lineCount);
                     return previousAnnotation;
                 }
                 continue;
@@ -95,7 +94,7 @@ public class GFF3FileReader implements AutoCloseable {
         if (!currentAnnotation.getFeatures().isEmpty()) {
             GFF3Annotation finalAnnotation = currentAnnotation;
             currentAnnotation = new GFF3Annotation();
-            validationEngine.validateAnnotation(finalAnnotation);
+            validationEngine.validateAnnotation(finalAnnotation, lineCount);
             return finalAnnotation;
         }
         return null;
@@ -146,13 +145,9 @@ public class GFF3FileReader implements AutoCloseable {
                 phase,
                 attributesMap);
 
-        validationEngine.validateFeature(feature);
+        validationEngine.validateFeature(feature, lineCount);
 
         if (!accession.equals(currentAccession)) {
-            if (processedAnnotations.contains(accession)) {
-                validationEngine.handleSyntacticError(new DuplicateSeqIdException(lineCount, accession));
-            }
-
             // In case of different accession create a new GFF3Annotation and return the
             // previous one.
             currentAccession = accession;
@@ -170,7 +165,6 @@ public class GFF3FileReader implements AutoCloseable {
             }
 
             if (!previousAnnotation.getFeatures().isEmpty()) {
-                processedAnnotations.add(previousAnnotation.getAccession());
                 return previousAnnotation;
             }
         } else {

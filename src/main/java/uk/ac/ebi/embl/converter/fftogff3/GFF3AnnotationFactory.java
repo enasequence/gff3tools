@@ -70,10 +70,10 @@ public class GFF3AnnotationFactory {
             if (feature.getName().equalsIgnoreCase("source")) {
                 continue; // early exit
             }
-            validationEngine.validateFeature(feature);
+            validationEngine.validateFeature(feature, -1);
             buildGeneFeatureMap(sequenceRegion, feature);
         }
-        validationEngine.validateAnnotation(entry);
+        validationEngine.validateAnnotation(entry, -1);
 
         // For circular topologies; We have not found a circular feature so we must
         // include a region

@@ -22,12 +22,14 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.converter.gff3toff.validation.DuplicateSeqIdValidation;
 import uk.ac.ebi.embl.converter.validation.*;
 
 public class GFF3ReaderTest {
 
     ValidationEngine<GFF3Feature, GFF3Annotation> getValidationEngine() {
         ValidationEngineBuilder<GFF3Feature, GFF3Annotation> builder = getValidationEngineBuilder();
+        builder.registerValidation(new DuplicateSeqIdValidation());
         return builder.build();
     }
 

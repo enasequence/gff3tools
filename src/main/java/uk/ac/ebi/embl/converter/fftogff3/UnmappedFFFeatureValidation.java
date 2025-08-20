@@ -22,7 +22,7 @@ public class UnmappedFFFeatureValidation implements FeatureValidation<Feature> {
     }
 
     @Override
-    public void validateFeature(Feature feature) throws ValidationException {
+    public void validateFeature(Feature feature, int line) throws ValidationException {
 
         if (FeatureMapping.getGFF3FeatureName(feature).isEmpty()) {
             throw new ValidationException(getValidationRule(), feature.getName());

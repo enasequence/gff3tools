@@ -42,7 +42,7 @@ public class ValidationEngineTest {
         final boolean[] validated = {false};
         FeatureValidation<String> mockFeatureValidation = new FeatureValidation<String>() {
             @Override
-            public void validateFeature(String feature) throws ValidationException {
+            public void validateFeature(String feature, int line) throws ValidationException {
                 validated[0] = true;
             }
 
@@ -53,7 +53,7 @@ public class ValidationEngineTest {
         };
         validationEngineBuilder.registerValidation(mockFeatureValidation);
         ValidationEngine<String, String> validationEngine = validationEngineBuilder.build();
-        validationEngine.validateFeature("testFeature");
+        validationEngine.validateFeature("testFeature", -1);
         assertTrue(validated[0]);
     }
 
@@ -64,7 +64,7 @@ public class ValidationEngineTest {
 
         AnnotationValidation<String> mockAnnotationValidation = new AnnotationValidation<String>() {
             @Override
-            public void validateAnnotation(String annotation) throws ValidationException {
+            public void validateAnnotation(String annotation, int line) throws ValidationException {
                 // This method won't be called by validateFeature
             }
 
@@ -76,7 +76,7 @@ public class ValidationEngineTest {
         validationEngineBuilder.registerValidation(mockAnnotationValidation);
         ValidationEngine<String, String> validationEngine = validationEngineBuilder.build();
         // This should not throw ClassCastException as validateFeature only iterates over FeatureValidations
-        validationEngine.validateFeature("testFeature");
+        validationEngine.validateFeature("testFeature", -1);
     }
 
     @Test
@@ -87,7 +87,7 @@ public class ValidationEngineTest {
         final boolean[] validated = {false};
         AnnotationValidation<String> mockAnnotationValidation = new AnnotationValidation<String>() {
             @Override
-            public void validateAnnotation(String annotation) throws ValidationException {
+            public void validateAnnotation(String annotation, int line) throws ValidationException {
                 validated[0] = true;
             }
 
@@ -98,7 +98,7 @@ public class ValidationEngineTest {
         };
         validationEngineBuilder.registerValidation(mockAnnotationValidation);
         ValidationEngine<String, String> validationEngine = validationEngineBuilder.build();
-        validationEngine.validateAnnotation("testAnnotation");
+        validationEngine.validateAnnotation("testAnnotation", -1);
         assertTrue(validated[0]);
     }
 
@@ -109,7 +109,7 @@ public class ValidationEngineTest {
 
         FeatureValidation<String> mockFeatureValidation = new FeatureValidation<String>() {
             @Override
-            public void validateFeature(String feature) throws ValidationException {
+            public void validateFeature(String feature, int line) throws ValidationException {
                 // This method won't be called by validateAnnotation
             }
 
@@ -121,7 +121,7 @@ public class ValidationEngineTest {
         validationEngineBuilder.registerValidation(mockFeatureValidation);
         ValidationEngine<String, String> validationEngine = validationEngineBuilder.build();
         // This should not throw ClassCastException as validateAnnotation only iterates over AnnotationValidations
-        validationEngine.validateAnnotation("testAnnotation");
+        validationEngine.validateAnnotation("testAnnotation", -1);
     }
 
     @Test
@@ -157,7 +157,7 @@ public class ValidationEngineTest {
 
         FeatureValidation<String> featureValidation1 = new FeatureValidation<String>() {
             @Override
-            public void validateFeature(String feature) throws ValidationException {}
+            public void validateFeature(String feature, int line) throws ValidationException {}
 
             @Override
             public String getValidationRule() {
@@ -166,7 +166,7 @@ public class ValidationEngineTest {
         };
         FeatureValidation<String> featureValidation2 = new FeatureValidation<String>() {
             @Override
-            public void validateFeature(String feature) throws ValidationException {}
+            public void validateFeature(String feature, int line) throws ValidationException {}
 
             @Override
             public String getValidationRule() {
@@ -175,7 +175,7 @@ public class ValidationEngineTest {
         };
         AnnotationValidation<String> annotationValidation1 = new AnnotationValidation<String>() {
             @Override
-            public void validateAnnotation(String annotation) throws ValidationException {}
+            public void validateAnnotation(String annotation, int line) throws ValidationException {}
 
             @Override
             public String getValidationRule() {
