@@ -8,9 +8,10 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.gff3.validation;
+package uk.ac.ebi.embl.converter.gff3toff.validation;
 
 import java.util.HashSet;
+import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
@@ -23,7 +24,6 @@ public class DuplicateSeqIdValidation implements FeatureValidation<GFF3Feature>,
 
     private HashSet<String> processedAnnotations = new HashSet<>();
     private String currentAccession = null;
-    private int currentAccessionFeatureCount = 0;
 
     @Override
     public String getValidationRule() {
@@ -31,24 +31,20 @@ public class DuplicateSeqIdValidation implements FeatureValidation<GFF3Feature>,
     }
 
     @Override
-    public void validateFeature(GFF3Feature feature) throws ValidationException {
+    public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
         String accession = feature.accession();
 
         if (!accession.equals(currentAccession)) {
             if (processedAnnotations.contains(accession)) {
-                throw new ValidationException(getValidationRule(), feature.getName());
+                throw new DuplicateSeqIdException(line, feature.accession());
             }
-            if (currentAccessionFeatureCount > 0) {
-                processedAnnotations.add(currentAccession);
-            }
+            processedAnnotations.add(currentAccession);
             currentAccession = accession;
         }
-        currentAccessionFeatureCount++;
     }
 
     @Override
-    public void validateAnnotation(GFF3Annotation feature) throws ValidationException {
+    public void validateAnnotation(GFF3Annotation feature, int line) throws ValidationException {
         currentAccession = null;
-        processedAnnotations = new HashSet<>();
     }
 }

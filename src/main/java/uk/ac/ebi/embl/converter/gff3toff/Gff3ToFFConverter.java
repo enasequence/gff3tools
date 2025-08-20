@@ -18,6 +18,7 @@ import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.converter.gff3toff.validation.*;
 import uk.ac.ebi.embl.converter.validation.*;
 import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 
@@ -28,7 +29,7 @@ public class Gff3ToFFConverter implements Converter {
     public void convert(Map<String, RuleSeverity> overrideSeverities, BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException, UnregisteredValidationRuleException {
         ValidationEngineBuilder<GFF3Feature, GFF3Annotation> builder = new ValidationEngineBuilder<>();
-        builder.registerValidations(new Validation[] {});
+        builder.registerValidations(new Validation[] {new DuplicateSeqIdValidation()});
         builder.overrideRuleSeverities(overrideSeverities);
         ValidationEngine<GFF3Feature, GFF3Annotation> validationEngine = builder.build();
 

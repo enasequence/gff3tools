@@ -13,5 +13,5 @@ package uk.ac.ebi.embl.converter.validation;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 
 public interface AnnotationValidation<T> extends Validation {
-    void validateAnnotation(T feature) throws ValidationException;
+    void validateAnnotation(T feature, int line) throws ValidationException;
 }
