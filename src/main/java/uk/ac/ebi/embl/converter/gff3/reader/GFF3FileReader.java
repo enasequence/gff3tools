@@ -71,6 +71,7 @@ public class GFF3FileReader implements AutoCloseable {
                 if (!currentAnnotation.getFeatures().isEmpty() || currentAnnotation.getSequenceRegion() != null) {
                     GFF3Annotation previousAnnotation = currentAnnotation;
                     currentAnnotation = new GFF3Annotation();
+                    validationEngine.validateAnnotation(previousAnnotation);
                     return previousAnnotation;
                 }
                 continue;
@@ -94,6 +95,7 @@ public class GFF3FileReader implements AutoCloseable {
         if (!currentAnnotation.getFeatures().isEmpty()) {
             GFF3Annotation finalAnnotation = currentAnnotation;
             currentAnnotation = new GFF3Annotation();
+            validationEngine.validateAnnotation(finalAnnotation);
             return finalAnnotation;
         }
         return null;
