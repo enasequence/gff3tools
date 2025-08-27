@@ -2,20 +2,24 @@ plugins {
     id 'java'
     id 'application'
     id 'maven-publish'
-    id "org.hidetake.ssh" version "2.2.0"
+    id "org.hidetake.ssh" version "2.12.0"
     id "com.diffplug.spotless" version "7.2.1"
     id "com.gradleup.shadow" version "8.3.0"
 }
 
-archivesBaseName = 'gff3tools'
-group = 'uk.ac.ebi.ena'
-version = '1.0'
+base {
+    archivesName = 'gff3tools'
+    group = 'uk.ac.ebi.ena'
+    version = '1.0'
+}
 
-sourceCompatibility = JavaVersion.VERSION_17
-targetCompatibility = JavaVersion.VERSION_17
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
 
-ext.codonDeployBaseDir = "/hps/software/users/tburdett/ena/jar/$archivesBaseName"
-ext.codonDeployArtifactDir = codonDeployBaseDir
+ext.codonDeployBaseDir = "/hps/software/users/tburdett/ena/jar/gff3tools/";
+
 
 spotless {
     encoding 'UTF-8'
@@ -42,8 +46,12 @@ application {
     mainClass.set("uk.ac.ebi.embl.converter.cli.Main")
 }
 
-shadowJar {
+jar {
     archiveClassifier.set('')
+}
+
+shadowJar {
+    archiveClassifier.set('all')
     dependsOn(distTar, distZip)
 }
 
@@ -110,31 +118,31 @@ task deploy() {
     dependsOn shadowJar
 
     doLast {
-        deployToRemote(remotes.codon, codonDeployBaseDir, codonDeployArtifactDir)
+        deployToRemote(remotes.codon, codonDeployBaseDir)
     }
 }
 
-def deployToRemote(remote, deployBaseDir, deployArtifactDir) {
-    def assemble = jar
+def deployToRemote(remote, deployBaseDir) {
+    def assemble = tasks.named("shadowJar").get()
 
-    uploadAssembleAndCreateSymlink(assemble, deployBaseDir , deployArtifactDir,remote)
+    uploadAssembleAndCreateSymlink(assemble, deployBaseDir,remote)
 
     displaySymlink(getSymlinkFullName(deployBaseDir , assemble ), remote)
 }
 
-def uploadAssembleAndCreateSymlink(assemble, symlinkDir, codonDeployArtifactDir, remote) {
+def uploadAssembleAndCreateSymlink(assemble, deployBaseDir, remote) {
 
-    def symlinkFullName = getSymlinkFullName(symlinkDir , assemble)
-    def symlinkTarget = getSymlinkTarget(codonDeployArtifactDir,  assemble)
+    def symlinkFullName = getSymlinkFullName(deployBaseDir , assemble)
+    def symlinkTarget = getSymlinkTarget(deployBaseDir,  assemble)
 
 
     printSeparationLine()
-    println("\tsymlinkDir:'$symlinkDir'\tuploadAssembleDir:'$codonDeployArtifactDir'")
+    println("\tsymlinkDir:'$deployBaseDir'\tuploadAssembleDir:'$deployBaseDir'")
     println("\tsymlinkName:'$symlinkFullName'\tsymlinkTargetName:'$symlinkTarget'")
-    printSeparationLine()
 
-    uploadAssemble(assemble , codonDeployArtifactDir , remote)
+    uploadAssemble(assemble , deployBaseDir , remote)
     createSymlink(symlinkFullName , symlinkTarget , remote)
+    printSeparationLine()
 }
 
 def displaySymlink(symlink , remote){
@@ -146,11 +154,12 @@ def displaySymlink(symlink , remote){
     }
 }
 
-def uploadAssemble(assemble , uploadDir , remote){
+def uploadAssemble(assemble , deployBaseDir , remote){
+    def jarFile = assemble.archiveFile.get().asFile
     ssh.run {
         session(remote) {
-            println "Uploading assembly:'$assemble.archiveName' to $remote.host:$uploadDir"
-            put(assemble.archivePath.absolutePath, uploadDir)
+            println "\tUpload: "+jarFile.absolutePath + " to "+deployBaseDir
+            put from: jarFile.absolutePath, into: deployBaseDir
         }
     }
 }
@@ -158,22 +167,22 @@ def uploadAssemble(assemble , uploadDir , remote){
 def createSymlink(symlink , symlinkTarget , remote){
     ssh.run {
         session(remote) {
-            println ("Creating symbolic link:'$symlink', target:'$symlinkTarget', remote:'$remote.host'")
+            println ("\tCreating symbolic link:'$symlink', target:'$symlinkTarget', remote:'$remote.host'")
             execute "ln -s -f $symlinkTarget $symlink"
         }
     }
 }
 
 static String getAssembleBaseName(assemble){
-    return assemble.getBaseName() + "." + assemble.getExtension()
+    return assemble.archiveFileName.get();
 }
 
-static String getSymlinkFullName(symlinkDir, assemble){
-    return "$symlinkDir/" + getAssembleBaseName(assemble)
+static String getSymlinkFullName(deployBaseDir, assemble){
+    return "$deployBaseDir" + assemble.archiveBaseName.get() + "." + assemble.archiveExtension.get()
 }
 
-static String getSymlinkTarget(uploadAssembleDir, assemble){
-    return "$uploadAssembleDir/$assemble.archiveName"
+static String getSymlinkTarget(deployBaseDir, assemble){
+    return "$deployBaseDir" + getAssembleBaseName(assemble)
 }
 
 def printSeparationLine(){
