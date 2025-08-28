@@ -18,7 +18,7 @@ import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 import uk.ac.ebi.embl.converter.validation.AnnotationValidation;
 import uk.ac.ebi.embl.converter.validation.FeatureValidation;
 
-public class DuplicateSeqIdValidation implements FeatureValidation<GFF3Feature>, AnnotationValidation<GFF3Annotation> {
+public class DuplicateSeqIdValidation implements FeatureValidation, AnnotationValidation {
 
     public static final String VALIDATION_RULE = "GFF3_DUPLICATE_SEQID";
 

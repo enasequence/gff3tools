@@ -13,18 +13,14 @@ package uk.ac.ebi.embl.converter.validation;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.converter.exception.DuplicateValidationRuleException;
 import uk.ac.ebi.embl.converter.exception.UnregisteredValidationRuleException;
 
-public class ValidationEngineBuilder<F, A> {
-
-    private static Logger LOG = LoggerFactory.getLogger(ValidationEngineBuilder.class);
+public class ValidationEngineBuilder {
 
     private final List<Validation> allValidations;
-    private final List<FeatureValidation<F>> activeFeatureValidations;
-    private final List<AnnotationValidation<A>> activeAnnotationValidations;
+    private final List<FeatureValidation> activeFeatureValidations;
+    private final List<AnnotationValidation> activeAnnotationValidations;
     private final HashSet<String> registeredValidationRules;
     private Map<String, RuleSeverity> severityMap;
 
@@ -36,12 +32,7 @@ public class ValidationEngineBuilder<F, A> {
         this.severityMap = loadDefaultSeverities();
     }
 
-    // Due to Java's type erasure, we cannot directly check for FeatureValidation<A> and AnnotationValidation<A>
-    // at runtime for a specific type A.
-    // The 'instanceof' checks only verifies the raw type 'FeatureValidation' and `AnnotationValidation`.
-    // This means the casts is unchecked and relies on convention
-    // to prevent ClassCastException if an incompatible validation is registered.
-    public void registerValidation(Validation validation) throws ClassCastException, DuplicateValidationRuleException {
+    public void registerValidation(Validation validation) throws DuplicateValidationRuleException {
         String validationRule = validation.getValidationRule();
         if (registeredValidationRules.contains(validationRule)) {
             throw new DuplicateValidationRuleException(
@@ -49,10 +40,10 @@ public class ValidationEngineBuilder<F, A> {
         }
 
         if (validation instanceof FeatureValidation) {
-            activeFeatureValidations.add((FeatureValidation<F>) validation);
+            activeFeatureValidations.add((FeatureValidation) validation);
         }
         if (validation instanceof AnnotationValidation) {
-            activeAnnotationValidations.add((AnnotationValidation<A>) validation);
+            activeAnnotationValidations.add((AnnotationValidation) validation);
         }
 
         allValidations.add(validation);
@@ -66,9 +57,9 @@ public class ValidationEngineBuilder<F, A> {
         }
     }
 
-    public ValidationEngine<F, A> build() {
+    public ValidationEngine build() {
         reevaluateActiveValidations();
-        return new ValidationEngine<>(activeFeatureValidations, activeAnnotationValidations, severityMap);
+        return new ValidationEngine(activeFeatureValidations, activeAnnotationValidations, severityMap);
     }
 
     public void overrideRuleSeverities(Map<String, RuleSeverity> map) throws UnregisteredValidationRuleException {
@@ -107,10 +98,10 @@ public class ValidationEngineBuilder<F, A> {
             String validationRule = validation.getValidationRule();
             if (severityMap.getOrDefault(validationRule, RuleSeverity.ERROR) != RuleSeverity.OFF) {
                 if (validation instanceof FeatureValidation) {
-                    activeFeatureValidations.add((FeatureValidation<F>) validation);
+                    activeFeatureValidations.add((FeatureValidation) validation);
                 }
                 if (validation instanceof AnnotationValidation) {
-                    activeAnnotationValidations.add((AnnotationValidation<A>) validation);
+                    activeAnnotationValidations.add((AnnotationValidation) validation);
                 }
             }
         }
