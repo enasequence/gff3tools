@@ -11,7 +11,8 @@
 package uk.ac.ebi.embl.converter.validation;
 
 import uk.ac.ebi.embl.converter.exception.ValidationException;
+import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 
-public interface FeatureValidation<T> extends Validation {
-    void validateFeature(T feature, int line) throws ValidationException;
+public interface FeatureValidation extends Validation {
+    void validateFeature(GFF3Feature feature, int line) throws ValidationException;
 }

@@ -12,17 +12,21 @@ package uk.ac.ebi.embl.converter.validation;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.*;
 import uk.ac.ebi.embl.converter.exception.DuplicateValidationRuleException;
 import uk.ac.ebi.embl.converter.exception.UnregisteredValidationRuleException;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
+import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
+import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 
 public class ValidationEngineTest {
 
     @Test
     public void testRegisterValidation() throws DuplicateValidationRuleException {
-        ValidationEngineBuilder<String, String> validationEngineBuilder = new ValidationEngineBuilder<>();
+        ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
         Validation mockValidation = new Validation() {
             @Override
             public String getValidationRule() {
@@ -30,7 +34,7 @@ public class ValidationEngineTest {
             }
         };
         validationEngineBuilder.registerValidation(mockValidation);
-        ValidationEngine<String, String> validationEngine = validationEngineBuilder.build();
+        ValidationEngine validationEngine = validationEngineBuilder.build();
         assertEquals(0, validationEngine.getFeatureValidations().size());
         assertEquals(0, validationEngine.getAnnotationValidations().size());
     }
@@ -38,11 +42,11 @@ public class ValidationEngineTest {
     @Test
     public void testValidateFeature_successfulValidation()
             throws ValidationException, DuplicateValidationRuleException {
-        ValidationEngineBuilder<String, String> validationEngineBuilder = new ValidationEngineBuilder<>();
+        ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
         final boolean[] validated = {false};
-        FeatureValidation<String> mockFeatureValidation = new FeatureValidation<String>() {
+        FeatureValidation mockFeatureValidation = new FeatureValidation() {
             @Override
-            public void validateFeature(String feature, int line) throws ValidationException {
+            public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
                 validated[0] = true;
             }
 
@@ -52,19 +56,33 @@ public class ValidationEngineTest {
             }
         };
         validationEngineBuilder.registerValidation(mockFeatureValidation);
-        ValidationEngine<String, String> validationEngine = validationEngineBuilder.build();
-        validationEngine.validateFeature("testFeature", -1);
+        ValidationEngine validationEngine = validationEngineBuilder.build();
+        validationEngine.validateFeature(
+                new GFF3Feature(
+                        Optional.empty(),
+                        Optional.empty(),
+                        "",
+                        Optional.empty(),
+                        "",
+                        "",
+                        0L,
+                        1L,
+                        "",
+                        "",
+                        "",
+                        new HashMap<>()),
+                1);
         assertTrue(validated[0]);
     }
 
     @Test
     public void testValidateFeature_noClassCastExceptionWithIncompatibleValidation()
             throws ValidationException, DuplicateValidationRuleException {
-        ValidationEngineBuilder<String, String> validationEngineBuilder = new ValidationEngineBuilder<>();
+        ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
 
-        AnnotationValidation<String> mockAnnotationValidation = new AnnotationValidation<String>() {
+        AnnotationValidation mockAnnotationValidation = new AnnotationValidation() {
             @Override
-            public void validateAnnotation(String annotation, int line) throws ValidationException {
+            public void validateAnnotation(GFF3Annotation annotation, int line) throws ValidationException {
                 // This method won't be called by validateFeature
             }
 
@@ -74,20 +92,34 @@ public class ValidationEngineTest {
             }
         };
         validationEngineBuilder.registerValidation(mockAnnotationValidation);
-        ValidationEngine<String, String> validationEngine = validationEngineBuilder.build();
+        ValidationEngine validationEngine = validationEngineBuilder.build();
         // This should not throw ClassCastException as validateFeature only iterates over FeatureValidations
-        validationEngine.validateFeature("testFeature", -1);
+        validationEngine.validateFeature(
+                new GFF3Feature(
+                        Optional.empty(),
+                        Optional.empty(),
+                        "",
+                        Optional.empty(),
+                        "",
+                        "",
+                        0L,
+                        1L,
+                        "",
+                        "",
+                        "",
+                        new HashMap<>()),
+                1);
     }
 
     @Test
     public void testValidateAnnotation_successfulValidation()
             throws ValidationException, DuplicateValidationRuleException {
-        ValidationEngineBuilder<String, String> validationEngineBuilder = new ValidationEngineBuilder<>();
+        ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
 
         final boolean[] validated = {false};
-        AnnotationValidation<String> mockAnnotationValidation = new AnnotationValidation<String>() {
+        AnnotationValidation mockAnnotationValidation = new AnnotationValidation() {
             @Override
-            public void validateAnnotation(String annotation, int line) throws ValidationException {
+            public void validateAnnotation(GFF3Annotation annotation, int line) throws ValidationException {
                 validated[0] = true;
             }
 
@@ -97,19 +129,19 @@ public class ValidationEngineTest {
             }
         };
         validationEngineBuilder.registerValidation(mockAnnotationValidation);
-        ValidationEngine<String, String> validationEngine = validationEngineBuilder.build();
-        validationEngine.validateAnnotation("testAnnotation", -1);
+        ValidationEngine validationEngine = validationEngineBuilder.build();
+        validationEngine.validateAnnotation(new GFF3Annotation(), -1);
         assertTrue(validated[0]);
     }
 
     @Test
     public void testValidateAnnotation_noClassCastExceptionWithIncompatibleValidation()
             throws ValidationException, DuplicateValidationRuleException {
-        ValidationEngineBuilder<String, String> validationEngineBuilder = new ValidationEngineBuilder<>();
+        ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
 
-        FeatureValidation<String> mockFeatureValidation = new FeatureValidation<String>() {
+        FeatureValidation mockFeatureValidation = new FeatureValidation() {
             @Override
-            public void validateFeature(String feature, int line) throws ValidationException {
+            public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
                 // This method won't be called by validateAnnotation
             }
 
@@ -119,14 +151,14 @@ public class ValidationEngineTest {
             }
         };
         validationEngineBuilder.registerValidation(mockFeatureValidation);
-        ValidationEngine<String, String> validationEngine = validationEngineBuilder.build();
+        ValidationEngine validationEngine = validationEngineBuilder.build();
         // This should not throw ClassCastException as validateAnnotation only iterates over AnnotationValidations
-        validationEngine.validateAnnotation("testAnnotation", -1);
+        validationEngine.validateAnnotation(new GFF3Annotation(), -1);
     }
 
     @Test
     public void testRegisterValidation_throwsDuplicateValidationRuleException() {
-        ValidationEngineBuilder<String, String> validationEngineBuilder = new ValidationEngineBuilder<>();
+        ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
         Validation mockValidation1 = new Validation() {
             @Override
             public String getValidationRule() {
@@ -153,29 +185,29 @@ public class ValidationEngineTest {
     @Test
     public void testSetActiveValidations()
             throws ValidationException, DuplicateValidationRuleException, UnregisteredValidationRuleException {
-        ValidationEngineBuilder<String, String> validationEngineBuilder = new ValidationEngineBuilder<>();
+        ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
 
-        FeatureValidation<String> featureValidation1 = new FeatureValidation<String>() {
+        FeatureValidation featureValidation1 = new FeatureValidation() {
             @Override
-            public void validateFeature(String feature, int line) throws ValidationException {}
+            public void validateFeature(GFF3Feature feature, int line) throws ValidationException {}
 
             @Override
             public String getValidationRule() {
                 return "FeatureRule1";
             }
         };
-        FeatureValidation<String> featureValidation2 = new FeatureValidation<String>() {
+        FeatureValidation featureValidation2 = new FeatureValidation() {
             @Override
-            public void validateFeature(String feature, int line) throws ValidationException {}
+            public void validateFeature(GFF3Feature feature, int line) throws ValidationException {}
 
             @Override
             public String getValidationRule() {
                 return "FeatureRule2";
             }
         };
-        AnnotationValidation<String> annotationValidation1 = new AnnotationValidation<String>() {
+        AnnotationValidation annotationValidation1 = new AnnotationValidation() {
             @Override
-            public void validateAnnotation(String annotation, int line) throws ValidationException {}
+            public void validateAnnotation(GFF3Annotation annotation, int line) throws ValidationException {}
 
             @Override
             public String getValidationRule() {
@@ -188,7 +220,7 @@ public class ValidationEngineTest {
         validationEngineBuilder.registerValidation(annotationValidation1);
 
         // Initially all registered validations should be active
-        ValidationEngine<String, String> validationEngine = validationEngineBuilder.build();
+        ValidationEngine validationEngine = validationEngineBuilder.build();
         assertEquals(2, validationEngine.getFeatureValidations().size());
         assertEquals(1, validationEngine.getAnnotationValidations().size());
 

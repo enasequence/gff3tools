@@ -11,7 +11,8 @@
 package uk.ac.ebi.embl.converter.validation;
 
 import uk.ac.ebi.embl.converter.exception.ValidationException;
+import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 
-public interface AnnotationValidation<T> extends Validation {
-    void validateAnnotation(T feature, int line) throws ValidationException;
+public interface AnnotationValidation extends Validation {
+    void validateAnnotation(GFF3Annotation feature, int line) throws ValidationException;
 }

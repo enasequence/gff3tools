@@ -16,18 +16,20 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
+import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
+import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 
-public class ValidationEngine<F, A> {
+public class ValidationEngine {
     private static Logger LOG = LoggerFactory.getLogger(ValidationEngine.class);
 
-    private final List<FeatureValidation<F>> activeFeatureValidations;
-    private final List<AnnotationValidation<A>> activeAnnotationValidations;
+    private final List<FeatureValidation> activeFeatureValidations;
+    private final List<AnnotationValidation> activeAnnotationValidations;
     private final Map<String, RuleSeverity> severityMap;
     private final List<ValidationException> parsingErrors;
 
     ValidationEngine(
-            List<FeatureValidation<F>> activeFeatureValidations,
-            List<AnnotationValidation<A>> activeAnnotationValidations,
+            List<FeatureValidation> activeFeatureValidations,
+            List<AnnotationValidation> activeAnnotationValidations,
             Map<String, RuleSeverity> severityMap) {
         this.activeFeatureValidations = activeFeatureValidations;
         this.activeAnnotationValidations = activeAnnotationValidations;
@@ -36,16 +38,16 @@ public class ValidationEngine<F, A> {
     }
 
     // Getter for testing purposes
-    public List<FeatureValidation<F>> getFeatureValidations() {
+    public List<FeatureValidation> getFeatureValidations() {
         return activeFeatureValidations;
     }
 
-    public List<AnnotationValidation<A>> getAnnotationValidations() {
+    public List<AnnotationValidation> getAnnotationValidations() {
         return activeAnnotationValidations;
     }
 
-    public void validateFeature(F feature, int line) throws ValidationException {
-        for (FeatureValidation<F> validation : activeFeatureValidations) {
+    public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
+        for (FeatureValidation validation : activeFeatureValidations) {
             try {
                 validation.validateFeature(feature, line);
             } catch (ValidationException exception) {
@@ -54,8 +56,8 @@ public class ValidationEngine<F, A> {
         }
     }
 
-    public void validateAnnotation(A annotation, int line) throws ValidationException, ClassCastException {
-        for (AnnotationValidation<A> validation : activeAnnotationValidations) {
+    public void validateAnnotation(GFF3Annotation annotation, int line) throws ValidationException, ClassCastException {
+        for (AnnotationValidation validation : activeAnnotationValidations) {
             try {
                 validation.validateAnnotation(annotation, line);
             } catch (ValidationException exception) {

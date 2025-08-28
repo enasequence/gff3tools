@@ -11,8 +11,6 @@
 package uk.ac.ebi.embl.converter.gff3toff;
 
 import java.util.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.EntryFactory;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
@@ -30,8 +28,6 @@ import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 
 public class GFF3Mapper {
-
-    private static final Logger LOG = LoggerFactory.getLogger(GFF3Mapper.class);
 
     private final Map<String, String> qmap = ConversionUtils.getGFF32FFQualifierMap();
     private final EntryFactory entryFactory = new EntryFactory();

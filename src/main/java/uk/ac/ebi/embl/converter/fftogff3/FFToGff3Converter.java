@@ -13,8 +13,6 @@ package uk.ac.ebi.embl.converter.fftogff3;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.util.Map;
-import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.*;
@@ -26,10 +24,10 @@ public class FFToGff3Converter implements Converter {
 
     public void convert(Map<String, RuleSeverity> ruleOverrides, BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException, UnregisteredValidationRuleException {
-        ValidationEngineBuilder<Feature, Entry> engineBuilder = new ValidationEngineBuilder<>();
+        ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
         engineBuilder.registerValidations(new Validation[] {});
         engineBuilder.overrideRuleSeverities(ruleOverrides);
-        ValidationEngine<Feature, Entry> engine = engineBuilder.build();
+        ValidationEngine engine = engineBuilder.build();
         EmblEntryReader entryReader =
                 new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 

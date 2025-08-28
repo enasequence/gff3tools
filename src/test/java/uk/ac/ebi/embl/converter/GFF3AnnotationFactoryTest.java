@@ -44,7 +44,7 @@ class GFF3AnnotationFactoryTest {
 
     @Test
     public void buildFeatureTreeFullMapTest() {
-        ValidationEngineBuilder<Feature, Entry> builder = new ValidationEngineBuilder<>();
+        ValidationEngineBuilder builder = new ValidationEngineBuilder();
         GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
         GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(builder.build(), directivesFactory);
         featureRelationMap.forEach((childName, parentSet) -> {
@@ -76,14 +76,12 @@ class GFF3AnnotationFactoryTest {
 
     @Test
     public void orderRootAndChildrenTest() {
-        ValidationEngineBuilder<Feature, Entry> builder = new ValidationEngineBuilder<>();
+        ValidationEngineBuilder builder = new ValidationEngineBuilder();
         GFF3AnnotationFactory gFF3AnnotationFactory =
                 new GFF3AnnotationFactory(builder.build(), new GFF3DirectivesFactory());
         List<GFF3Feature> featureList = new ArrayList<>();
         List<GFF3Feature> parentList = new ArrayList<>();
         List<GFF3Feature> childList = new ArrayList<>();
-        int numberOfParents = 0;
-        int numberOfChild = 0;
         for (Map.Entry<String, Set<String>> entry : featureRelationMap.entrySet()) {
             String childName = entry.getKey();
             Set<String> parentSet = entry.getValue();
@@ -123,7 +121,7 @@ class GFF3AnnotationFactoryTest {
 
     @Test
     public void testGetIncrementalId() {
-        ValidationEngineBuilder<Feature, Entry> builder = new ValidationEngineBuilder<>();
+        ValidationEngineBuilder builder = new ValidationEngineBuilder();
         GFF3AnnotationFactory gFF3AnnotationFactory =
                 new GFF3AnnotationFactory(builder.build(), new GFF3DirectivesFactory());
         List<String> genes = Arrays.asList("tnpA", "tnpB", "tnpA", "tnpA", "tnpC", "tnpB", "ppk_2", "ppk_2", "ppk_2");
@@ -149,7 +147,7 @@ class GFF3AnnotationFactoryTest {
     @Test
     public void testGetGFF3FeatureName()
             throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        ValidationEngineBuilder<Feature, Entry> builder = new ValidationEngineBuilder<>();
+        ValidationEngineBuilder builder = new ValidationEngineBuilder();
         GFF3AnnotationFactory gFF3AnnotationFactory =
                 new GFF3AnnotationFactory(builder.build(), new GFF3DirectivesFactory());
 
@@ -182,7 +180,7 @@ class GFF3AnnotationFactoryTest {
     public void testGetParentFeature()
             throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, ValidationException {
         GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
-        ValidationEngineBuilder<Feature, Entry> builder = new ValidationEngineBuilder<>();
+        ValidationEngineBuilder builder = new ValidationEngineBuilder();
         GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(builder.build(), directivesFactory);
 
         EntryFactory entryFactory = new EntryFactory();

@@ -47,10 +47,9 @@ public class GFF3AnnotationFactory {
     Map<String, Integer> idMap = new HashMap<>();
 
     GFF3DirectivesFactory directivesFactory;
-    ValidationEngine<Feature, Entry> validationEngine;
+    ValidationEngine validationEngine;
 
-    public GFF3AnnotationFactory(
-            ValidationEngine<Feature, Entry> validationEngine, GFF3DirectivesFactory directivesFactory) {
+    public GFF3AnnotationFactory(ValidationEngine validationEngine, GFF3DirectivesFactory directivesFactory) {
         this.validationEngine = validationEngine;
         this.directivesFactory = directivesFactory;
     }
@@ -70,10 +69,8 @@ public class GFF3AnnotationFactory {
             if (feature.getName().equalsIgnoreCase("source")) {
                 continue; // early exit
             }
-            validationEngine.validateFeature(feature, -1);
             buildGeneFeatureMap(sequenceRegion, feature);
         }
-        validationEngine.validateAnnotation(entry, -1);
 
         // For circular topologies; We have not found a circular feature so we must
         // include a region
@@ -91,6 +88,8 @@ public class GFF3AnnotationFactory {
         GFF3Annotation annotation = new GFF3Annotation();
         annotation.setSequenceRegion(sequenceRegion);
         annotation.setFeatures(features);
+
+        validationEngine.validateAnnotation(annotation, -1);
 
         return annotation;
     }
@@ -149,7 +148,7 @@ public class GFF3AnnotationFactory {
                 attributes.put("partial", partiality);
             }
 
-            gff3Features.add(new GFF3Feature(
+            GFF3Feature gff3Feature = new GFF3Feature(
                     id,
                     parentId,
                     sequenceRegion.accessionId(),
@@ -161,7 +160,9 @@ public class GFF3AnnotationFactory {
                     score,
                     getStrand(location, compoundLocation),
                     getPhase(ffFeature),
-                    attributes));
+                    attributes);
+            validationEngine.validateFeature(gff3Feature, -1);
+            gff3Features.add(gff3Feature);
         }
 
         return gff3Features;

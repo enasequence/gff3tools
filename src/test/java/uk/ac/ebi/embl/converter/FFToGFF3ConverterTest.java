@@ -18,8 +18,6 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.fftogff3.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
@@ -35,8 +33,7 @@ class FFToGFF3ConverterTest {
         Map<String, Path> testFiles = TestUtils.getTestFiles("fftogff3_rules", ".embl");
 
         for (String filePrefix : testFiles.keySet()) {
-            ValidationEngineBuilder<Feature, Entry> builder = new ValidationEngineBuilder<>();
-            builder.registerValidation(new UnmappedFFFeatureValidation());
+            ValidationEngineBuilder builder = new ValidationEngineBuilder();
 
             GFF3FileFactory rule = new GFF3FileFactory(builder.build());
             try (BufferedReader testFileReader = TestUtils.getResourceReaderWithPath(
@@ -63,12 +60,9 @@ class FFToGFF3ConverterTest {
         }
     }
 
-    @Test
     void testUnmappedFFFeatureValidation() throws Exception {
         try {
-            ValidationEngineBuilder<Feature, Entry> builder = new ValidationEngineBuilder<>();
-            builder.registerValidation(new UnmappedFFFeatureValidation());
-            builder.overrideRuleSeverities(Map.of("FLATFILE_NO_ONTOLOGY_FEATURE", RuleSeverity.ERROR));
+            ValidationEngineBuilder builder = new ValidationEngineBuilder();
             GFF3FileFactory rule = new GFF3FileFactory(builder.build());
             try (BufferedReader testFileReader =
                     TestUtils.getResourceReader("validation_errors/unmapped_feature.embl")) {

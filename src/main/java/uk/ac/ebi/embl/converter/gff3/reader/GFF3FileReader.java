@@ -18,8 +18,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.gff3.directives.GFF3Header;
@@ -28,7 +26,6 @@ import uk.ac.ebi.embl.converter.utils.Gff3Utils;
 import uk.ac.ebi.embl.converter.validation.ValidationEngine;
 
 public class GFF3FileReader implements AutoCloseable {
-    private static final Logger LOG = LoggerFactory.getLogger(GFF3FileReader.class);
 
     static Pattern VERSION_DIRECTIVE = Pattern.compile(
             "^##gff-version (?<version>(?<major>[0-9]+)(\\.(?<minor>[0-9]+)(:?\\.(?<patch>[0-9]+))?)?)\\s*$");
@@ -44,9 +41,9 @@ public class GFF3FileReader implements AutoCloseable {
     GFF3Annotation currentAnnotation;
     String currentAccession;
     Map<String, GFF3SequenceRegion> accessionSequenceRegionMap = new HashMap<>();
-    ValidationEngine<GFF3Feature, GFF3Annotation> validationEngine;
+    ValidationEngine validationEngine;
 
-    public GFF3FileReader(ValidationEngine<GFF3Feature, GFF3Annotation> validationEngine, Reader reader) {
+    public GFF3FileReader(ValidationEngine validationEngine, Reader reader) {
         this.validationEngine = validationEngine;
         this.bufferedReader = new BufferedReader(reader);
         lineCount = 0;

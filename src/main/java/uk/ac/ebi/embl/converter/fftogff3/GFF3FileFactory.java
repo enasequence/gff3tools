@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.converter.exception.ReadException;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
@@ -25,9 +24,9 @@ import uk.ac.ebi.embl.converter.validation.ValidationEngine;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 public class GFF3FileFactory {
-    ValidationEngine<Feature, Entry> engine;
+    ValidationEngine engine;
 
-    public GFF3FileFactory(ValidationEngine<Feature, Entry> engine) {
+    public GFF3FileFactory(ValidationEngine engine) {
         this.engine = engine;
     }
 
