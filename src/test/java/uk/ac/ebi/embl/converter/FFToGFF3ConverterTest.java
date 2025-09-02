@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -39,7 +40,7 @@ class FFToGFF3ConverterTest {
                 EmblEntryReader entryReader =
                         new EmblEntryReader(testFileReader, EmblEntryReader.Format.EMBL_FORMAT, "", readerOptions);
                 Writer gff3Writer = new StringWriter();
-                GFF3File gff3 = rule.from(entryReader);
+                GFF3File gff3 = rule.from(entryReader, null);
                 gff3.writeGFF3String(gff3Writer);
 
                 String expected;
@@ -53,6 +54,43 @@ class FFToGFF3ConverterTest {
             } catch (Exception e) {
                 fail("Error on test case: " + filePrefix + " - " + e.getMessage());
             }
+        }
+    }
+
+    @Test
+    void testWriteGFF3UsingReducedFlatfile(){
+
+        Path scaffoldPath = TestUtils.getResourceFile("./fftogff3_rules/reduced/scaffold-reduced.embl")
+                .toPath();
+        // Test contig file is synthetic taken from CAXMMS010000001 and CAVNYM020000001
+        Path contigPath = TestUtils.getResourceFile("./fftogff3_rules/reduced/contig-reduced.embl")
+                .toPath();
+        Path expectedScaffoldPath = TestUtils.getResourceFile("./fftogff3_rules/reduced/scaffold-reduced-expected.gff3")
+                .toPath();
+        Path expectedContigPath = TestUtils.getResourceFile("./fftogff3_rules/reduced/contig-reduced-expected.gff3")
+                .toPath();
+        Path masterPath = TestUtils.getResourceFile("./fftogff3_rules/reduced/master.embl")
+                .toPath();
+
+        testConvert(scaffoldPath,expectedScaffoldPath,masterPath);
+        testConvert(contigPath,expectedContigPath,masterPath);
+    }
+
+    private void testConvert(Path inputFile, Path expectedFile, Path masterFile){
+        FFToGff3Converter converter = new FFToGff3Converter(masterFile);
+        try (BufferedReader testFileReader = Files.newBufferedReader(inputFile);
+             BufferedReader expectedFileReader = Files.newBufferedReader(expectedFile);
+             StringWriter stringWriter = new StringWriter();
+             BufferedWriter bufferedWriter = new BufferedWriter(stringWriter); ) {
+
+            converter.convert(testFileReader, bufferedWriter);
+            bufferedWriter.flush();
+
+            String expected = expectedFileReader.lines().collect(Collectors.joining("\n"));
+            assertEquals(expected.trim(), stringWriter.toString().trim(), "Error on test case: ");
+
+        } catch (Exception e) {
+            fail("Error on test case: " + inputFile + " - " + e.getMessage());
         }
     }
 }

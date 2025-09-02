@@ -1,0 +1,38 @@
+ID   CAXMMS010000000; SV 01; linear; genomic DNA; SET; INV; 63 SQ.
+XX
+AC   CAXMMS010000000;
+XX
+PR   Project:PRJEB77003;
+XX
+DT   29-JUN-2024 (Rel. 144, Created)
+DT   30-JUN-2024 (Rel. 144, Last updated, Version 1)
+XX
+DE   Pristionchus pacificus genome assembly
+XX
+KW   .
+XX
+OS   Pristionchus pacificus
+OC   Eukaryota; Metazoa; Ecdysozoa; Nematoda; Chromadorea; Rhabditida;
+OC   Rhabditina; Diplogasteromorpha; Diplogasteroidea; Neodiplogasteridae;
+OC   Pristionchus.
+XX
+RN   [1]
+RA   Roedelsperger C.;
+RT   ;
+RL   Submitted (27-JUN-2024) to the INSDC.
+RL   MAX PLANCK INSTITUTE FOR DEVELOPMENTAL BIOLOGY, Department for Evolutionary
+RL   Biology, Max-Planck-Ring 9, 72076, Germany
+XX
+DR   BioSample; SAMEA4599121.
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1
+FT                   /organism="Pristionchus pacificus"
+FT                   /mol_type="genomic DNA"
+FT                   /db_xref="taxon:54126"
+XX
+WGS  CAXMMS010000001-CAXMMS010000063
+XX
+CON  OZ077731-OZ077731
+//

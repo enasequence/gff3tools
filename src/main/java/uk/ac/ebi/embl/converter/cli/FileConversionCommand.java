@@ -45,6 +45,9 @@ public class FileConversionCommand implements Runnable {
     @CommandLine.Option(names = "-t", description = "The type of the file to convert to")
     public ConversionFileFormat toFileType;
 
+    @CommandLine.Option(names = "-m", description = "Optional master file")
+    public Path masterFilePath;
+
     @CommandLine.Parameters(
             paramLabel = "[input-file]",
             defaultValue = "",
@@ -82,19 +85,21 @@ public class FileConversionCommand implements Runnable {
             fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
             toFileType = validateFileType(toFileType, outputFilePath, "-t");
 
-            Converter converter = getConverter(fromFileType, toFileType);
+            Converter converter = getConverter(fromFileType, toFileType, masterFilePath);
             converter.convert(inputReader, outputWriter);
+
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
     }
 
-    private Converter getConverter(ConversionFileFormat inputFileType, ConversionFileFormat outputFileType)
+    private Converter getConverter(
+            ConversionFileFormat inputFileType, ConversionFileFormat outputFileType, Path masterFilePath)
             throws FormatSupportException {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
             return new Gff3ToFFConverter();
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
-            return new FFToGff3Converter();
+            return new FFToGff3Converter(masterFilePath);
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }

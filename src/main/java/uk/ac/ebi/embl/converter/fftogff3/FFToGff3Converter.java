@@ -12,6 +12,10 @@ package uk.ac.ebi.embl.converter.fftogff3;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
@@ -20,13 +24,20 @@ import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 public class FFToGff3Converter implements Converter {
 
+    // MasterFile will be used when converting reduced flatfile tto GFF3
+    Path masterFilePath = null;
+
+    public FFToGff3Converter(Path masterFilePath) {
+        this.masterFilePath = masterFilePath;
+    }
+
     public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException {
         EmblEntryReader entryReader =
                 new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
         GFF3FileFactory fftogff3 = new GFF3FileFactory();
-        GFF3File file = fftogff3.from(entryReader);
+        GFF3File file = fftogff3.from(entryReader, getMasterEntry(masterFilePath));
         file.writeGFF3String(writer);
     }
 
@@ -34,5 +45,19 @@ public class FFToGff3Converter implements Converter {
         ReaderOptions readerOptions = new ReaderOptions();
         readerOptions.setIgnoreSequence(true);
         return readerOptions;
+    }
+
+    private Entry getMasterEntry(Path masterFilePath) throws ReadException {
+        try (BufferedReader inputReader = Files.newBufferedReader(masterFilePath)) {
+            Entry masterEntry = null;
+            EmblEntryReader entryReader = new EmblEntryReader(
+                    inputReader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
+            while (entryReader.read() != null && entryReader.isEntry()) {
+                masterEntry = entryReader.getEntry();
+            }
+            return masterEntry;
+        } catch (IOException e) {
+            throw new ReadException("Error opening master file: " + masterFilePath, e);
+        }
     }
 }
