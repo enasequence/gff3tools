@@ -48,6 +48,9 @@ public class FFToGff3Converter implements Converter {
     }
 
     private Entry getMasterEntry(Path masterFilePath) throws ReadException {
+        if(masterFilePath==null) {
+            return null;
+        }
         try (BufferedReader inputReader = Files.newBufferedReader(masterFilePath)) {
             Entry masterEntry = null;
             EmblEntryReader entryReader = new EmblEntryReader(
