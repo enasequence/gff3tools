@@ -1,0 +1,50 @@
+ID   CAXMMS010000001; SV 1; linear; genomic DNA; WGS; INV; 60 BP.
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..60
+FT                   /submitter_seqid="contig1"
+FT   CDS             complement(join(18760..18866,18935..19228,19307..19517,
+FT                   20592..20785,22582..22639))
+FT                   /codon_start=1
+FT                   /transl_table=1
+FT                   /locus_tag="STYATE_LOCUS1"
+FT                   /product="hypothetical protein"
+FT                   /note="ID:STYATC00000000001"
+FT                   /note="source:GeneMark.hmm3"
+FT                   /protein_id="CAK7552472.1"
+FT                   /translation="MVIILVHLTTTTASSENDTGYVIIYDRNKRHYDANKRGKSRQHFD
+FT                   NLINSDSDIFETVNCTIITAQIAGTASLPCAIKKFTTGVVSWIRRKDFHLLTVGLATYS
+FT                   SDNRFSVEHIRHLHNWSLQIRNVQNDDCGFYECQISSHPPTSIFVQLKVIEATAEILGV
+FT                   PDVYVNNGSMLKLECVLRHSTEMPVYVFWYHEDRMINYDGHRDLIVQTQKMFSTLIINA
+FT                   AQISDNGNYTCLPSNTRPASINVHVLNTTAGDQPAAMQHANTNRASNVYKLYYVIFIMF
+FT                   VILSKR"
+FT   intron          complement(18867..18934)
+FT                   /locus_tag="STYATE_LOCUS1"
+FT                   /note="ID:STYATI00000000001"
+FT                   /note="source:GeneMark.hmm3"
+FT   intron          complement(19229..19306)
+FT                   /locus_tag="STYATE_LOCUS1"
+FT                   /note="ID:STYATI00000000002"
+FT                   /note="source:GeneMark.hmm3"
+FT   intron          complement(19518..20591)
+FT                   /locus_tag="STYATE_LOCUS1"
+FT                   /note="ID:STYATI00000000003"
+FT                   /note="source:GeneMark.hmm3"
+FT   intron          complement(20786..22581)
+FT                   /locus_tag="STYATE_LOCUS1"
+FT                   /note="ID:STYATI00000000004"
+FT                   /note="source:GeneMark.hmm3"
+FT   gene            complement(22770..24247)
+FT                   /locus_tag="STYATE_LOCUS2"
+FT                   /note="ID:STYATG00000000002"
+FT                   /note="source:GeneMark.hmm3"
+FT   mRNA            complement(join(22770..22798,24193..24247))
+FT                   /locus_tag="STYATE_LOCUS2"
+FT                   /product="hypothetical protein"
+FT                   /note="ID:STYATM00000000003"
+FT                   /note="source:GeneMark.hmm3"
+XX
+SQ   Sequence 4885411 BP; 1386961 A; 1065087 C; 1061033 G; 1372330 T; 0 other;
+     tgcctaagcc taagcctaag cctaagccta agcctaagcc taagcctaag cctaagccta        60
+//

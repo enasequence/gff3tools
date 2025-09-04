@@ -1,0 +1,44 @@
+ID   OZ077731; SV 1; linear; genomic DNA; CON; INV; 60 BP.
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..60
+FT                   /submitter_seqid="ChrI_RagTag"
+FT   assembly_gap    4885412..4885511
+FT                   /estimated_length=100
+FT                   /gap_type="within scaffold"
+FT                   /linkage_evidence="unspecified"
+FT   assembly_gap    13975760..13975859
+FT                   /estimated_length=100
+FT                   /gap_type="within scaffold"
+FT                   /linkage_evidence="unspecified"
+FT   assembly_gap    17142005..17142104
+FT                   /estimated_length=100
+FT                   /gap_type="within scaffold"
+FT                   /linkage_evidence="unspecified"
+FT   assembly_gap    30688363..30688462
+FT                   /estimated_length=100
+FT                   /gap_type="within scaffold"
+FT                   /linkage_evidence="unspecified"
+FT   assembly_gap    34912230..34912329
+FT                   /estimated_length=100
+FT                   /gap_type="within scaffold"
+FT                   /linkage_evidence="unspecified"
+FT   assembly_gap    37059966..37060065
+FT                   /estimated_length=100
+FT                   /gap_type="within scaffold"
+FT                   /linkage_evidence="unspecified"
+FT   assembly_gap    37147416..37147515
+FT                   /estimated_length=100
+FT                   /gap_type="within scaffold"
+FT                   /linkage_evidence="unspecified"
+XX
+CO   join(CAXMMS010000001.1:1..4885411,gap(100),CAXMMS010000002.1:1..9090248,
+CO   gap(100),CAXMMS010000003.1:1..3166145,gap(100),
+CO   CAXMMS010000004.1:1..13546258,gap(100),CAXMMS010000005.1:1..4223767,
+CO   gap(100),CAXMMS010000006.1:1..2147636,gap(100),CAXMMS010000007.1:1..87350,
+CO   gap(100),CAXMMS010000008.1:1..3008152)
+XX
+SQ   Sequence 40155667 BP; 11448717 A; 8641223 C; 8640023 G; 11425004 T; 700 other;
+     tgcctaagcc taagcctaag cctaagccta agcctaagcc taagcctaag cctaagccta        60
+//

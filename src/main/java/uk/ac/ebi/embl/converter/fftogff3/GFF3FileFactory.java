@@ -23,7 +23,7 @@ import uk.ac.ebi.embl.converter.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 public class GFF3FileFactory {
-    public GFF3File from(EmblEntryReader entryReader) throws ValidationException, ReadException {
+    public GFF3File from(EmblEntryReader entryReader, Entry masterEntry) throws ValidationException, ReadException {
         GFF3Header header = new GFF3Header("3.1.26");
         GFF3Species species = null;
         List<GFF3Annotation> annotations = new ArrayList<>();
@@ -32,7 +32,7 @@ public class GFF3FileFactory {
             while (entryReader.read() != null && entryReader.isEntry()) {
                 Entry entry = entryReader.getEntry();
                 if (species == null) {
-                    species = directivesFactory.createSpecies(entry);
+                    species = directivesFactory.createSpecies(entry, masterEntry);
                 }
                 annotations.add(new GFF3AnnotationFactory(directivesFactory).from(entry));
             }

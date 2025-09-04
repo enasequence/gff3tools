@@ -37,10 +37,11 @@ public class GFF3DirectivesFactory {
                 .orElseGet(getOrganism);
     }
 
-    public GFF3Species createSpecies(Entry entry) throws NoSourcePresentException {
+    public GFF3Species createSpecies(Entry entry, Entry masterEntry) throws NoSourcePresentException {
+        Entry sourceEntry = masterEntry == null ? entry : masterEntry;
 
         Feature feature =
-                Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresentException::new);
+                Optional.ofNullable(sourceEntry.getPrimarySourceFeature()).orElseThrow(NoSourcePresentException::new);
 
         Optional<OrganismQualifier> qualifier =
                 feature.getQualifiers("organism").stream().findFirst().map(q -> (OrganismQualifier) q);
