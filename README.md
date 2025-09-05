@@ -1,58 +1,66 @@
 # gff3tools
 
-gff3tools is a Java library for converting EMBL flat files to GFF3 format. 
+gff3tools is a Java based library and command line utility for converting EMBL flat files to GFF3 format, and vice versa.
 It uses [sequencetools](https://github.com/enasequence/sequencetools) to read the flat file.
 
 # Conversion Rules and Assumptions
 
-Conversion rules and Assumptions are added to the code under `// Rule: ` and `// Assumption:` comments for now. 
+Conversion rules and Assumptions are added to the code under `// Rule: ` and `// Assumption:` comments for now.
 
 # Building the project
 Checkout the project
 * Clone the project
 
-```git clone https://github.com/EBIBioStudies/gff3tools.git```
+```git clone https://github.com/enasequence/gff3tools.git```
 * Change dir
 
 ```cd gff3tools```
 
-* Build the project 
+* Build the project
 
-```./gradlew clean build``` 
+```./gradlew clean build```
 
-The jar file will be found in /build/lib/gff3tools*.jar. You can use this jar to run the converter.
+After build, you will find two JARs in build/libs:
+- gff3tools-1.0.jar → plain JAR (library, not runnable directly)
+- gff3tools-1.0-all.jar → shadow JAR (includes all dependencies, runnable)
+- Use the shadow JAR for runnable
 
-# Usage 
+# Command Line Tool Usage
 
-```java -jar gff3tools-1.0.jar help```
+```java -jar gff3tools-1.0-all.jar help```
 
+### Flat file (.embl) to GFF3 (.gff3) Conversion
 
-### Defaults and conventions
+```java -jar gff3tools-1.0-all.jar conversion OZ026791.embl OZ026791.gff3```
 
-- The conversion tool will identify file formats using the file extension. Only `gff3` and `ff` are recognised file extensions
-- The parameters `-f` (from) and `-t` (to)  can be used to specify the file format if the extension is not recognised or if using std-in/std-out
-- If not provided the parameter `-t` (to) will default to `gff3`
+### GFF3 (.gff3) to Flat file (.embl) Conversion
 
-## Converter
-
-**FF to GFF3**
-```java -jar gff3tools-1.0.jar conversion OZ026791.embl OZ026791.gff3```
-
-**GFF3 to FF**
-```java -jar gff3tools-1.0.jar conversion OZ026791.gff3 OZ026791.embl```
+```java -jar gff3tools-1.0-all.jar conversion OZ026791.gff3 OZ026791.embl```
 
 ### Using unix pipes
 
-The converter supports unix pipes, input and output using std-in and std-out.
+The tool supports unix pipes, input and output using std-in and std-out.
 
 **From gff3 stdin to ff stdout**
 
-```cat OZ026791.gff3 | java -jar gff3tools-1.0.jar conversion -f gff3 -t embl > OZ026791.embl```
+```cat OZ026791.gff3 | java -jar gff3tools-1.0-all.jar conversion -f gff3 -t embl > OZ026791.embl```
+
+### Defaults & Conventions
+
+- The tool currently supports `.embl` and `.gff3` as valid input and output formats. These formats are automatically recognised if the file extension is correct.
+- If your input file has a different extension, like `.ff` or `.txt`, the tool cannot detect the format automatically.
+- In such cases, you must explicitly tell the tool what format the input file is using `-f` option to specify input and `-t` option to specify output.
+- **Examples**
+    - Converting a flat file (.txt) to GFF3
+        - ```java -jar gff3tools-1.0-all.jar conversion -f embl OZ026791.txt OZ026791.gff3```
+    - Converting from GFF3 to a flat file (.txt):
+        - ```java -jar gff3tools-1.0-all.jar conversion -t embl OZ026791.gff3 OZ026791.txt```
 
 # Exit codes
 
-The CLI will exit with status code `0` on success. If an error occurs, the following error codes will be used:
+The CLI will exit with the following codes:
 
+- `0` (SUCCESS)
 - `1` (GENERAL): General unexpected errors that were not properly handled. This likely indicates a bug in the application and will be accompanied by a stack trace.
 - `2` (USAGE): Errors due to incorrect command-line arguments. Use `--help` to see the valid parameters for your command.
 - `3` (UNSUPPORTED_FORMAT_CONVERSION): Errors when an unsupported file format conversion is attempted.
@@ -66,8 +74,8 @@ If using bash, you can see the exit code of the last command using `echo $?`
 
 # Logging
 
-- **General Logging**: 
-    - **Errors**: The tool handles errors and logs them to `stderr`. We take care to ensure all errors are actionable by the end user. If an error is not actionable is likely a bug and should be reported. The error message in this case will include a stacktrace. 
+- **General Logging**:
+    - **Errors**: The tool handles errors and logs them to `stderr`. We take care to ensure all errors are actionable by the end user. If an error is not actionable is likely a bug and should be reported. The error message in this case will include a stacktrace.
     - **Warnings**: The will log warnings to `stderr`. Warnings will not stop the execution of the tool, but will provide extra context on issues found in the input. Warning output implies a deviation from the validation rules specified. You can override the validation rules using the `--rules` argument.
     - **Info**: All other information messages will be output to `stdout`.
 
