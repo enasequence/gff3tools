@@ -16,6 +16,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+
+import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.*;

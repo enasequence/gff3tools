@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
@@ -86,7 +87,7 @@ class FFToGFF3ConverterTest {
                 StringWriter stringWriter = new StringWriter();
                 BufferedWriter bufferedWriter = new BufferedWriter(stringWriter); ) {
 
-            converter.convert(testFileReader, bufferedWriter);
+            converter.convert(new HashMap<>(), testFileReader, bufferedWriter);
             bufferedWriter.flush();
 
             String expected = expectedFileReader.lines().collect(Collectors.joining("\n"));
