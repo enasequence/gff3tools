@@ -19,7 +19,6 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.fftogff3.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
 import uk.ac.ebi.embl.converter.validation.*;
@@ -61,7 +60,6 @@ class FFToGFF3ConverterTest {
         }
     }
 
-<<<<<<< HEAD
     @Test
     void testWriteGFF3UsingReducedFlatfile() {
 
