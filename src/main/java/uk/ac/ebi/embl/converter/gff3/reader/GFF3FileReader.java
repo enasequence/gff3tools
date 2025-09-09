@@ -79,6 +79,7 @@ public class GFF3FileReader implements AutoCloseable {
                 if (feature_matcher.matches()) {
                     GFF3Annotation a = parseAndAddFeature(feature_matcher);
                     if (a != null) {
+                        validationEngine.validateAnnotation(a, lineCount);
                         return a;
                     }
                 } else {
