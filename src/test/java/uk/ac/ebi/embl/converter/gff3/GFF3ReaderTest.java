@@ -22,8 +22,8 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.converter.gff3toff.validation.DuplicateSeqIdValidation;
 import uk.ac.ebi.embl.converter.validation.*;
+import uk.ac.ebi.embl.converter.validation.builtin.*;
 
 public class GFF3ReaderTest {
 

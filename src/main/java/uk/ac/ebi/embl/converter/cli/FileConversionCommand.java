@@ -29,7 +29,8 @@ import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.converter.gff3toff.Gff3ToFFConverter;
-import uk.ac.ebi.embl.converter.validation.RuleSeverity;
+import uk.ac.ebi.embl.converter.validation.*;
+import uk.ac.ebi.embl.converter.validation.builtin.*;
 
 // Using pandoc CLI interface conventions
 @CommandLine.Command(name = "conversion", description = "Performs format conversions to or from gff3")
@@ -64,7 +65,7 @@ public class FileConversionCommand implements Runnable {
 
     @Override
     public void run() {
-        Map<String, RuleSeverity> ruleSeverities =
+        Map<String, RuleSeverity> ruleOverrides =
                 Optional.ofNullable(rules).map((r) -> r.rules()).orElse(new HashMap<>());
 
         try (BufferedReader inputReader = getPipe(
@@ -86,10 +87,19 @@ public class FileConversionCommand implements Runnable {
             toFileType = validateFileType(toFileType, outputFilePath, "-t");
 
             Converter converter = getConverter(fromFileType, toFileType, masterFilePath);
-            converter.convert(ruleSeverities, inputReader, outputWriter);
+            ValidationEngine engine = initValidationEngine(ruleOverrides);
+            converter.convert(engine, inputReader, outputWriter);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
+    }
+
+    private ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides)
+            throws UnregisteredValidationRuleException {
+        ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
+        engineBuilder.registerValidations(new Validation[] {new DuplicateSeqIdValidation()});
+        engineBuilder.overrideRuleSeverities(ruleOverrides);
+        return engineBuilder.build();
     }
 
     private Converter getConverter(

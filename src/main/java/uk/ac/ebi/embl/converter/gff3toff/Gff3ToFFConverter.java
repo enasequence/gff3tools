@@ -12,25 +12,17 @@ package uk.ac.ebi.embl.converter.gff3toff;
 
 import java.io.*;
 import java.util.List;
-import java.util.Map;
 import uk.ac.ebi.embl.converter.*;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.converter.gff3toff.validation.*;
 import uk.ac.ebi.embl.converter.validation.*;
 import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 
 public class Gff3ToFFConverter implements Converter {
 
-    ValidationEngineBuilder builder;
-
-    public void convert(Map<String, RuleSeverity> overrideSeverities, BufferedReader reader, BufferedWriter writer)
-            throws ReadException, WriteException, ValidationException, UnregisteredValidationRuleException {
-        ValidationEngineBuilder builder = new ValidationEngineBuilder();
-        builder.registerValidations(new Validation[] {new DuplicateSeqIdValidation()});
-        builder.overrideRuleSeverities(overrideSeverities);
-        ValidationEngine validationEngine = builder.build();
+    public void convert(ValidationEngine validationEngine, BufferedReader reader, BufferedWriter writer)
+            throws ReadException, WriteException, ValidationException {
 
         try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
 

@@ -12,11 +12,10 @@ package uk.ac.ebi.embl.converter;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.util.Map;
 import uk.ac.ebi.embl.converter.exception.*;
-import uk.ac.ebi.embl.converter.validation.RuleSeverity;
+import uk.ac.ebi.embl.converter.validation.*;
 
 public interface Converter {
-    public void convert(Map<String, RuleSeverity> ruleSeverities, BufferedReader reader, BufferedWriter writer)
-            throws ReadException, WriteException, ValidationException, UnregisteredValidationRuleException;
+    public void convert(ValidationEngine validationEngine, BufferedReader reader, BufferedWriter writer)
+            throws ReadException, WriteException, ValidationException;
 }

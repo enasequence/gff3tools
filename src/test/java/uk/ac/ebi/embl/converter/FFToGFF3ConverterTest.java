@@ -16,13 +16,13 @@ import static org.junit.jupiter.api.Assertions.fail;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.fftogff3.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
 import uk.ac.ebi.embl.converter.validation.*;
+import uk.ac.ebi.embl.converter.validation.builtin.*;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
@@ -86,8 +86,10 @@ class FFToGFF3ConverterTest {
                 BufferedReader expectedFileReader = Files.newBufferedReader(expectedFile);
                 StringWriter stringWriter = new StringWriter();
                 BufferedWriter bufferedWriter = new BufferedWriter(stringWriter); ) {
-
-            converter.convert(new HashMap<>(), testFileReader, bufferedWriter);
+            ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
+            engineBuilder.registerValidations(new Validation[] {new DuplicateSeqIdValidation()});
+            ValidationEngine engine = engineBuilder.build();
+            converter.convert(engine, testFileReader, bufferedWriter);
             bufferedWriter.flush();
 
             String expected = expectedFileReader.lines().collect(Collectors.joining("\n"));

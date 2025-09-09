@@ -15,8 +15,6 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
-
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.exception.*;
@@ -33,12 +31,9 @@ public class FFToGff3Converter implements Converter {
         this.masterFilePath = masterFilePath;
     }
 
-    public void convert(Map<String, RuleSeverity> ruleOverrides, BufferedReader reader, BufferedWriter writer)
-            throws ReadException, WriteException, ValidationException, UnregisteredValidationRuleException {
-        ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
-        engineBuilder.registerValidations(new Validation[] {});
-        engineBuilder.overrideRuleSeverities(ruleOverrides);
-        ValidationEngine engine = engineBuilder.build();
+    public void convert(ValidationEngine engine, BufferedReader reader, BufferedWriter writer)
+            throws ReadException, WriteException, ValidationException {
+
         EmblEntryReader entryReader =
                 new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
