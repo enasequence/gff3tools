@@ -1,10 +1,10 @@
 - Feature Name: Validation Engine
 - Document Date: 2025-08-01
-- Last Updated: 2025-08-18
+- Last Updated: 2025-09-10
 
 # Summary
 
-The document describes the Validation Engine for the GFF3Tools project. This engine centraises and manages the execution of various validation rules, ensuring data integrity and consistency throughout the parsing and conversion process. It is designed to be integrated with various readers and converters, allowing for both real-time syntax-level validation and aggregated semantic validation.
+The document describes the Validation Engine for the GFF3Tools project. This engine centralises and manages the execution of various validation rules and allows for both real-time syntax-level validation and aggregated semantic validation.
 
 # Motivation & Rationale
 
@@ -18,11 +18,9 @@ This Validation Engine aims to address these issues by:
 - **Enabling Comprehensive Validation:** Supporting both syntax and semantic validations that may require accumulated state.
 - **Improving Extensibility and Maintainability:** Making it easier to add new semantic validation rules and manage existing ones without modifying core reader or converter logic.
 
-The rationale behind the chosen design emphasizes a clear separation of concerns, flexibility, and performance. By introducing a dedicated engine, we can decouple semantic validation logic from data reading, making the system more modular and testable. The design allows for both immediate syntactic and deferred semantic validation, accommodating various validation requirements efficiently.
+The rationale behind the chosen design emphasizes a clear separation of concerns, flexibility, and performance. By introducing a dedicated engine, we can decouple semantic validation logic from data reading, making the system more modular and testable. The design allows for both immediate syntactic and deferred semantic validation.
 
 # Usage Guidelines
-
-The Validation Engine will be used internally by various readers/converters to ensure data quality.
 
 **Integration with Readers/Converters:**
 - Readers/converters will be modified to instantiate and use the `ValidationEngine`.
@@ -44,13 +42,13 @@ The Validation Engine will be used internally by various readers/converters to e
 
 public class SomeDataReader implements AutoCloseable {
     // ... existing fields ...
-    private ValidationEngine<SomeFeature, SomeAnnotation> validationEngine;
+    private ValidationEngine validationEngine;
 
     public SomeDataReader(Reader reader) {
         // ... existing initialization ...
-        this.validationEngine = new ValidationEngine<>(); // Initialize the engine with appropriate generics
+        this.validationEngine = new ValidationEngine(); // Initialize the engine
         // Register specific Validation implementations with the engine
-        validationEngine.registerValidation(new FeatureIdValidation()); // Assuming FeatureIdValidation is generic now
+        validationEngine.registerValidation(new FeatureIdValidation()); 
         // ...
     }
 
@@ -62,7 +60,7 @@ public class SomeDataReader implements AutoCloseable {
                 validationEngine.handleSyntacticError(new MessedUpLineException());
                 continue;
             } else if (lineRepresentsAFeature) {
-                SomeFeature feature = parseFeature(line); // Assuming this now returns a generic Feature
+                GFF3Feature feature = parseFeature(line); // Assuming this now returns a GFF3Feature
                 validationEngine.validateFeature(feature); // Validate feature immediately
 
                 // ... add feature to currentAnnotation ...
@@ -86,17 +84,17 @@ public class SomeDataReader implements AutoCloseable {
 }
 
 // Conceptual FeatureValidation Interface
-public interface FeatureValidation<T> {
-    void validateFeature(T feature) throws ValidationException;
+public interface FeatureValidation {
+    void validateFeature(GFF3Feature feature) throws ValidationException;
 }
 
 // Conceptual AnnotationValidation Interface
-public interface AnnotationValidation<T> {
-    void validateAnnotation(T annotation) throws ValidationException;
+public interface AnnotationValidation {
+    void validateAnnotation(GFF3Annotation annotation) throws ValidationException;
 }
 
 // Conceptual Example of a specific FeatureValidation and AnnotationValidation implementation
-public class FeatureIdValidation implements FeatureValidation<GFF3Feature>, AnnotationValidation<GFF3Annotation> {
+public class FeatureIdValidation implements FeatureValidation, AnnotationValidation {
     private Set<String> featureIdsInCurrentAnnotation = new HashSet<>();
 
     @Override
@@ -127,10 +125,9 @@ The Validation Engine is designed to act as an intermediary between data readers
 **Main Components:**
 - **`ValidationEngine`:** The central orchestrator. It holds a collection of `Validation` instances and is responsible for iterating through them to apply validations at appropriate stages.
 - **`Validation`:** A marker interface for all validation types.
-- **`FeatureValidation<T>`:** Defines the contract for semantic validation logic applied to individual features of type `T`.
-- **`AnnotationValidation<A>`:** Defines the contract for semantic validation logic applied to entire annotations of type `A`.
-- **Concrete `Validation` Implementations:** These will be individual classes (e.g., `FeatureIdValidation`, `ParentChildValidation`) that implement `FeatureValidation<T>` or `AnnotationValidation<A>`. Each will contain the specific logic for its validation rule(s).
-- **Generic Feature and Annotation Objects (`T` and `A`):** The data structures that will be passed to the validation engine and individual `Validation` implementations. (eg., `GFF3Feature` or `GFF3Annotation`)
+- **`FeatureValidation`:** Defines the contract for semantic validation logic applied to individual features.
+- **`AnnotationValidation`:** Defines the contract for semantic validation logic applied to entire annotations.
+- **Concrete `Validation` Implementations:** These will be individual classes (e.g., `FeatureIdValidation`, `ParentChildValidation`) that implement `FeatureValidation` or `AnnotationValidation`. Each will contain the specific logic for its validation rule(s).
 
 **Diagram: Validation Engine Flow**
 
@@ -159,7 +156,7 @@ graph TD
 **High-Level Interaction:**
 1.  **Initialization:** A reader/converter instantiates `ValidationEngine` with appropriate generics and registers all desired `Validation` implementations.
 3.  **Syntax validation**: As the reader/converter parses each feature, if it encounters a syntax error it calls `ValidationEngine.handleSyntacticError`. The engine decides if the error should halt execution or not.
-2.  **Feature Semantic Validation:** After the feature is parsed, it is passed to `ValidationEngine.validateFeature()`. The engine then iterates through all registered `Validation` instances. If a validation implements `FeatureValidation<T>`, its `validateFeature()` method is called. These individual validations can immediately throw `ValidationException` or accumulate state for later annotation-level checks.
+2.  **Feature Semantic Validation:** After the feature is parsed, it is passed to `ValidationEngine.validateFeature()`. The engine then iterates through all registered `Validation` instances. If a validation implements `FeatureValidation`, its `validateFeature()` method is called. These individual validations can immediately throw `ValidationException` or accumulate state for later annotation-level checks.
 3.  **Annotation Semantic Validation:** When a reader/converter detects the completion of an annotation (e.g., upon encountering a delimiter or a change in sequence accession), it calls `ValidationEngine.validateAnnotation()`. This triggers annotation-level semantic validations across all registered `AnnotationValidation` instances.
 4.  **Error Handling:** All `ValidationException` instances generated by individual `Validation` implementations are passed to `ValidationEngine.handleValidationException()`, ensuring consistent logging, warning, or error throwing based on configured severities.
 
@@ -209,8 +206,8 @@ graph TD
 
 -   **Existing Validation Rules Document:** `docs/0002_validation_rules.md` (describes the foundational `ValidationRule`).
 -   **Relevant Code Directories (Proposed):**
-    -   `src/main/java/uk/ac/ebi/embl/converter/validation/`: Will contain `ValidationEngine.java` and `GFF3Validation.java`.
-    -   `src/main/java/uk/ac/ebi/embl/converter/validation/impl/`: New package for concrete `GFF3Validation` implementations.
+    -   `src/main/java/uk/ac/ebi/embl/converter/validation/`: Will contain `ValidationEngine.java` and `Validation.java`.
+    -   `src/main/java/uk/ac/ebi/embl/converter/validation/builtin/`: New package for concrete `Validation` implementations.
 -   **External Libraries:**
     -   SLF4j: For logging.
 -   **GFF3 Specifications:**
