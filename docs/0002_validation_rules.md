@@ -56,11 +56,6 @@ The validation rules framework is primarily used internally by the GFF3Tools to 
 
 **Potential Future Extensions / Improvements:**
 - **Rule Groups/Profiles:** Introduce the concept of rule groups or profiles, allowing users to enable/disable sets of rules or apply different severity configurations based on specific use cases (e.g., "strict validation profile," "lenient validation profile").
--   **Comprehensive Validation Engine:** A future enhancement could introduce a higher-level abstraction for validations. This new validation engine would manage the execution of validation rule logic, while still utilizing the existing `ValidationRule` and `RuleSeverityState` to handle the behavior based on configured severities. Furthermore, existing syntactic validations may also be migrated to this new engine. This would provide a more modular and extensible approach for complex validation checks and would separate the validation logic from the parser logic.
-
-**Related Issues / Out of Scope:**
-
-- **Complex Inter-Record Validation and Semantic Validation:** While the framework can handle individual record validation and some sequence-region checks, highly complex inter-record validation (e.g., ensuring consistency across multiple related GFF3 features that span many lines and require complex graph traversal) is currently outside the primary scope of this initial implementation and will be added in the future by a more comprehensive validation engine. 
 
 
 # Related Documentation & Resources
