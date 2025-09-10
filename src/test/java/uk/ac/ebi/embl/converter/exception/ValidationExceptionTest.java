@@ -15,20 +15,16 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
-import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 public class ValidationExceptionTest {
 
     @Test
     void testConstructor_ruleAndMessageOnly() {
-        ValidationRule rule = ValidationRule.GFF3_INVALID_RECORD;
+        String rule = "GFF3_INVALID_RECORD";
         String message = "Invalid format detected.";
         ValidationException exception = new ValidationException(rule, message);
 
-        assertEquals(
-                "Violation of rule GFF3_INVALID_RECORD: The record does not conform with the expected gff3 format (%s)"
-                        .formatted(message),
-                exception.getMessage());
+        assertEquals("Violation of rule GFF3_INVALID_RECORD: %s".formatted(message), exception.getMessage());
         assertEquals(rule, exception.getValidationRule());
         assertEquals(0, exception.getLine()); // Default line is 0
         assertEquals(CLIExitCode.VALIDATION_ERROR, exception.exitCode());
@@ -37,15 +33,12 @@ public class ValidationExceptionTest {
 
     @Test
     void testConstructor_ruleLineAndMessage() {
-        ValidationRule rule = ValidationRule.FLATFILE_NO_SOURCE;
+        String rule = "FLATFILE_NO_SOURCE";
         int line = 10;
         String message = "No source feature found.";
         ValidationException exception = new ValidationException(rule, line, message);
 
-        assertEquals(
-                "Violation of rule FLATFILE_NO_SOURCE on line 10: The flatfile contains no source feature (%s)"
-                        .formatted(message),
-                exception.getMessage());
+        assertEquals("Violation of rule FLATFILE_NO_SOURCE on line 10: %s".formatted(message), exception.getMessage());
         assertEquals(rule, exception.getValidationRule());
         assertEquals(line, exception.getLine());
         assertEquals(CLIExitCode.VALIDATION_ERROR, exception.exitCode());
@@ -54,7 +47,7 @@ public class ValidationExceptionTest {
 
     @Test
     void testExitCode() {
-        ValidationException exception = new ValidationException(ValidationRule.GFF3_INVALID_RECORD, "Any message");
+        ValidationException exception = new ValidationException("GFF3_INVALID_RECORD", "Any message");
         assertEquals(CLIExitCode.VALIDATION_ERROR, exception.exitCode());
     }
 }

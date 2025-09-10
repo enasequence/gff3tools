@@ -22,14 +22,12 @@ import uk.ac.ebi.embl.api.entry.location.CompoundLocation;
 import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
-import uk.ac.ebi.embl.converter.exception.UnmappedFFFeatureException;
 import uk.ac.ebi.embl.converter.exception.ValidationException;
 import uk.ac.ebi.embl.converter.gff3.*;
 import uk.ac.ebi.embl.converter.gff3.directives.GFF3SequenceRegion;
-import uk.ac.ebi.embl.converter.utils.ConversionEntry;
 import uk.ac.ebi.embl.converter.utils.ConversionUtils;
 import uk.ac.ebi.embl.converter.utils.Gff3Utils;
-import uk.ac.ebi.embl.converter.validation.RuleSeverityState;
+import uk.ac.ebi.embl.converter.validation.ValidationEngine;
 
 public class GFF3AnnotationFactory {
 
@@ -49,8 +47,10 @@ public class GFF3AnnotationFactory {
     Map<String, Integer> idMap = new HashMap<>();
 
     GFF3DirectivesFactory directivesFactory;
+    ValidationEngine validationEngine;
 
-    public GFF3AnnotationFactory(GFF3DirectivesFactory directivesFactory) {
+    public GFF3AnnotationFactory(ValidationEngine validationEngine, GFF3DirectivesFactory directivesFactory) {
+        this.validationEngine = validationEngine;
         this.directivesFactory = directivesFactory;
     }
 
@@ -69,7 +69,6 @@ public class GFF3AnnotationFactory {
             if (feature.getName().equalsIgnoreCase("source")) {
                 continue; // early exit
             }
-
             buildGeneFeatureMap(sequenceRegion, feature);
         }
 
@@ -89,6 +88,8 @@ public class GFF3AnnotationFactory {
         GFF3Annotation annotation = new GFF3Annotation();
         annotation.setSequenceRegion(sequenceRegion);
         annotation.setFeatures(features);
+
+        validationEngine.validateAnnotation(annotation, -1);
 
         return annotation;
     }
@@ -147,7 +148,7 @@ public class GFF3AnnotationFactory {
                 attributes.put("partial", partiality);
             }
 
-            gff3Features.add(new GFF3Feature(
+            GFF3Feature gff3Feature = new GFF3Feature(
                     id,
                     parentId,
                     sequenceRegion.accessionId(),
@@ -159,7 +160,9 @@ public class GFF3AnnotationFactory {
                     score,
                     getStrand(location, compoundLocation),
                     getPhase(ffFeature),
-                    attributes));
+                    attributes);
+            validationEngine.validateFeature(gff3Feature, -1);
+            gff3Features.add(gff3Feature);
         }
 
         return gff3Features;
@@ -352,46 +355,12 @@ public class GFF3AnnotationFactory {
 
     private String getGFF3FeatureName(Feature ffFeature) throws ValidationException {
 
-        String featureName = ffFeature.getName();
-        List<ConversionEntry> mappings = Optional.ofNullable(
-                        ConversionUtils.getFF2GFF3FeatureMap().get(featureName))
-                .orElse(Collections.emptyList());
-
-        // return the soTerm of the max qualifier mapping
-        Optional<String> soTerm = mappings.stream()
-                .filter(entry -> entry.getFeature().equalsIgnoreCase(ffFeature.getName()))
-                .filter(entry -> hasAllQualifiers(ffFeature, entry))
-                .max(Comparator.comparingInt(entry -> entry.getQualifiers().size()))
-                .map(ConversionEntry::getSOTerm);
+        Optional<String> soTerm = FeatureMapping.getGFF3FeatureName(ffFeature);
 
         if (soTerm.isEmpty()) {
-            RuleSeverityState.handleValidationException(new UnmappedFFFeatureException(featureName));
-            return featureName;
+            return ffFeature.getName();
         } else {
             return soTerm.get();
         }
-    }
-
-    private boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {
-        Map<String, String> requiredQualifiers = conversionEntry.getQualifiers();
-
-        boolean matchesAllQualifiers = true;
-        for (String expectedQualifierName : requiredQualifiers.keySet()) {
-            boolean qualifierMatches = false;
-            for (Qualifier featureQualifier : feature.getQualifiers(expectedQualifierName)) {
-                // When qualifier value is not found the value is considered "true"
-                String qualifierValue = featureQualifier.getValue() == null ? "true" : featureQualifier.getValue();
-                qualifierMatches = qualifierValue.equalsIgnoreCase(requiredQualifiers.get(expectedQualifierName));
-                if (qualifierMatches) {
-                    break;
-                }
-            }
-            matchesAllQualifiers = qualifierMatches;
-            if (!matchesAllQualifiers) {
-                break;
-            }
-        }
-
-        return matchesAllQualifiers;
     }
 }

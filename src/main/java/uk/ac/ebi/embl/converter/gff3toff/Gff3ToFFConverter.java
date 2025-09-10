@@ -11,17 +11,27 @@
 package uk.ac.ebi.embl.converter.gff3toff;
 
 import java.io.*;
+import java.util.List;
 import uk.ac.ebi.embl.converter.*;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.converter.validation.*;
 import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 
 public class Gff3ToFFConverter implements Converter {
 
+    ValidationEngine validationEngine;
+
+    public Gff3ToFFConverter(ValidationEngine validationEngine) {
+        this.validationEngine = validationEngine;
+    }
+
     public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException {
-        try (GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
+
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
+
             GFF3Mapper mapper = new GFF3Mapper();
             gff3Reader.readHeader();
             GFF3Annotation previousAnnotation = null;
@@ -43,9 +53,17 @@ public class Gff3ToFFConverter implements Converter {
             }
             // After the loop, write the last accumulated annotation.
             writeEntry(mapper, previousAnnotation, writer);
+
+            // Construct the GFF3File with the header, all annotations, and parsing errors.
+            // The parsingErrors are accumulated in the validationEngine.
+            List<ValidationException> parsingErrors = validationEngine.getParsingErrors();
+
         } catch (IOException e) {
             throw new ReadException(e);
         }
+
+        // TODO: Decide how to expose parsingErrors to the user of this converter.
+        // For now, they are simply collected in the validationEngine.
     }
 
     private boolean isSameAnnotation(GFF3Annotation previousAnnotation, GFF3Annotation currentAnnotation) {

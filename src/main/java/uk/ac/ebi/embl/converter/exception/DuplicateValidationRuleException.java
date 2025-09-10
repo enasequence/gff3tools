@@ -10,11 +10,8 @@
  */
 package uk.ac.ebi.embl.converter.exception;
 
-import lombok.Getter;
-
-@Getter
-public class InvalidGFF3RecordException extends ValidationException {
-    public InvalidGFF3RecordException(int line, String message) {
-        super("GFF3_INVALID_RECORD", line, message);
+public class DuplicateValidationRuleException extends RuntimeException {
+    public DuplicateValidationRuleException(String message) {
+        super(message);
     }
 }

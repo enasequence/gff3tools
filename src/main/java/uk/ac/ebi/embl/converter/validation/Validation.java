@@ -8,13 +8,8 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.exception;
+package uk.ac.ebi.embl.converter.validation;
 
-import lombok.Getter;
-
-@Getter
-public class InvalidGFF3RecordException extends ValidationException {
-    public InvalidGFF3RecordException(int line, String message) {
-        super("GFF3_INVALID_RECORD", line, message);
-    }
+public interface Validation {
+    String getValidationRule();
 }

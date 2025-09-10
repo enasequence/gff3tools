@@ -23,8 +23,23 @@ import uk.ac.ebi.embl.converter.TestUtils;
 import uk.ac.ebi.embl.converter.exception.*;
 import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.converter.validation.*;
+import uk.ac.ebi.embl.converter.validation.builtin.*;
 
 public class GFF3ReaderTest {
+
+    ValidationEngine getValidationEngine() {
+        ValidationEngineBuilder builder = getValidationEngineBuilder();
+        builder.registerValidation(new DuplicateSeqIdValidation());
+        return builder.build();
+    }
+
+    ValidationEngineBuilder getValidationEngineBuilder() {
+        ValidationEngineBuilder builder = new ValidationEngineBuilder();
+        builder.registerValidations(new Validation[] {});
+
+        return builder;
+    }
+
     @Test
     void canParseAllExamples() throws Exception {
         Map<String, Path> testFiles = TestUtils.getTestFiles("fftogff3_rules", ".gff3");
@@ -32,9 +47,11 @@ public class GFF3ReaderTest {
         for (String filePrefix : testFiles.keySet()) {
             File file = new File(testFiles.get(filePrefix).toUri());
 
+            ValidationEngine validationEngine = getValidationEngine();
+
             try (FileReader filerReader = new FileReader(file);
                     BufferedReader reader = new BufferedReader(filerReader);
-                    GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
+                    GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
                 gff3Reader.readHeader();
                 while (true) {
                     if (gff3Reader.readAnnotation() == null) break;
@@ -48,10 +65,11 @@ public class GFF3ReaderTest {
     @Test
     void testMissingHeader() throws Exception {
         File testFile = TestUtils.getResourceFile("validation_errors/empty_file.gff3");
+        ValidationEngine validationEngine = getValidationEngine();
 
         try (FileReader filerReader = new FileReader(testFile);
                 BufferedReader reader = new BufferedReader(filerReader);
-                GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
+                GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
             gff3Reader.readHeader();
         } catch (InvalidGFF3HeaderException e) {
             Assertions.assertTrue(e.getMessage().contains("GFF3 header not found"));
@@ -74,9 +92,11 @@ public class GFF3ReaderTest {
     @Test
     void testInvalidRecord() throws Exception {
         File testFile = TestUtils.getResourceFile("validation_errors/invalid_record.gff3");
+        ValidationEngine validationEngine = getValidationEngine();
+
         try (FileReader filerReader = new FileReader(testFile);
                 BufferedReader reader = new BufferedReader(filerReader);
-                GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
+                GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
             gff3Reader.readHeader(); // Read header first
             while (true) {
                 if (gff3Reader.readAnnotation() == null) {
@@ -93,14 +113,15 @@ public class GFF3ReaderTest {
     @Test
     void testUndefinedSeqIdException() throws Exception {
         File testFile = TestUtils.getResourceFile("validation_errors/undefined_seq_id.gff3");
+        ValidationEngine validationEngine = getValidationEngine();
 
         try (FileReader filerReader = new FileReader(testFile);
                 BufferedReader reader = new BufferedReader(filerReader);
-                GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
+                GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
             gff3Reader.readHeader();
             gff3Reader.readAnnotation();
         } catch (UndefinedSeqIdException e) {
-            Assertions.assertTrue(e.getMessage().contains(ValidationRule.GFF3_UNDEFINED_SEQID.getDescription()));
+            Assertions.assertTrue(e.getMessage().contains("GFF3_UNDEFINED_SEQID"));
             Assertions.assertEquals(2, e.getLine());
             return;
         }
@@ -110,13 +131,15 @@ public class GFF3ReaderTest {
     @Test
     void testUndefinedSeqIdNoExceptionWhenRuleOff() throws Exception {
         File testFile = TestUtils.getResourceFile("validation_errors/undefined_seq_id.gff3");
-        Map<ValidationRule, RuleSeverity> ruleSeverityMap = new HashMap<>();
-        ruleSeverityMap.put(ValidationRule.GFF3_UNDEFINED_SEQID, RuleSeverity.OFF);
-        RuleSeverityState.INSTANCE.putAll(ruleSeverityMap);
+        Map<String, RuleSeverity> ruleSeverityMap = new HashMap<>();
+        ruleSeverityMap.put("GFF3_UNDEFINED_SEQID", RuleSeverity.OFF);
+        ValidationEngineBuilder builder = getValidationEngineBuilder();
+        builder.overrideRuleSeverities(ruleSeverityMap);
+        ValidationEngine validationEngine = builder.build();
 
         try (FileReader filerReader = new FileReader(testFile);
                 BufferedReader reader = new BufferedReader(filerReader);
-                GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
+                GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
             gff3Reader.readHeader();
             GFF3Annotation annotation = gff3Reader.readAnnotation();
             Assertions.assertNotNull(annotation);
@@ -126,23 +149,21 @@ public class GFF3ReaderTest {
             Assertions.assertEquals(3, annotation.getFeatures().size());
             annotation = gff3Reader.readAnnotation();
             Assertions.assertNull(annotation);
-        } finally {
-            // Reset the rule severity to ERROR for other tests
-            ruleSeverityMap.put(ValidationRule.GFF3_UNDEFINED_SEQID, RuleSeverity.ERROR);
-            RuleSeverityState.INSTANCE.putAll(ruleSeverityMap);
         }
     }
 
     @Test
     void testInvalidRecordNoExceptionWhenRuleOff() throws Exception {
         File testFile = TestUtils.getResourceFile("validation_errors/invalid_record.gff3");
-        Map<ValidationRule, RuleSeverity> ruleSeverityMap = new HashMap<>();
-        ruleSeverityMap.put(ValidationRule.GFF3_INVALID_RECORD, RuleSeverity.OFF);
-        RuleSeverityState.INSTANCE.putAll(ruleSeverityMap);
+        Map<String, RuleSeverity> ruleSeverityMap = new HashMap<>();
+        ruleSeverityMap.put("GFF3_INVALID_RECORD", RuleSeverity.OFF);
+        ValidationEngineBuilder builder = getValidationEngineBuilder();
+        builder.overrideRuleSeverities(ruleSeverityMap);
+        ValidationEngine validationEngine = builder.build();
 
         try (FileReader filerReader = new FileReader(testFile);
                 BufferedReader reader = new BufferedReader(filerReader);
-                GFF3FileReader gff3Reader = new GFF3FileReader(reader)) {
+                GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
             gff3Reader.readHeader();
             GFF3Annotation annotation = null;
             while (true) {
@@ -158,10 +179,6 @@ public class GFF3ReaderTest {
             // The invalid record is skipped, so we expect 5 features instead of 6 if it
             // were valid
             Assertions.assertEquals(5, annotation.getFeatures().size());
-        } finally {
-            // Reset the rule severity to ERROR for other tests
-            ruleSeverityMap.put(ValidationRule.GFF3_INVALID_RECORD, RuleSeverity.ERROR);
-            RuleSeverityState.INSTANCE.putAll(ruleSeverityMap);
         }
     }
 
@@ -173,7 +190,9 @@ public class GFF3ReaderTest {
                 + "###\n"
                 + "seq1\tsource\tfeature2\t100\t200\t.\t+\t.\tID=feat2\n";
 
-        try (GFF3FileReader gff3Reader = new GFF3FileReader(new StringReader(gff3Content))) {
+        ValidationEngine validationEngine = getValidationEngine();
+
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, new StringReader(gff3Content))) {
             gff3Reader.readHeader();
 
             GFF3Annotation annotation1 = gff3Reader.readAnnotation();
@@ -205,7 +224,9 @@ public class GFF3ReaderTest {
                 + "seq1\tsource\tfeature2\t100\t200\t.\t+\t.\tID=feata2\n"
                 + "seq2\tsource\tfeature2\t1\t100\t.\t+\t.\tID=featb2\n";
 
-        try (GFF3FileReader gff3Reader = new GFF3FileReader(new StringReader(gff3Content))) {
+        ValidationEngine validationEngine = getValidationEngine();
+
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, new StringReader(gff3Content))) {
             gff3Reader.readHeader();
             gff3Reader.readAnnotation(); // Read first annotation
             gff3Reader.readAnnotation(); // Read second annotation
@@ -218,7 +239,9 @@ public class GFF3ReaderTest {
     }
 
     private void test(String attributeLine) throws Exception {
-        try (GFF3FileReader gff3Reader = new GFF3FileReader(new StringReader(attributeLine))) {
+        ValidationEngine validationEngine = getValidationEngine();
+
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, new StringReader(attributeLine))) {
             Map<String, Object> attrMap = gff3Reader.attributesFromString(attributeLine);
 
             assertEquals(attributeLine, getAttributeString(attrMap));

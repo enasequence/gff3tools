@@ -18,9 +18,18 @@ import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
 
 public class TestUtils {
 
-    public static BufferedReader getResourceReader(String resourceName) throws IOException {
-        FileReader reader = new FileReader(resourceName);
+    public static BufferedReader getResourceReaderWithPath(String path) throws IOException {
+        FileReader reader = new FileReader(path);
         return new BufferedReader(reader);
+    }
+
+    public static BufferedReader getResourceReader(String resourceName) throws IOException {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        URL resource = classLoader.getResource(resourceName);
+        if (resource != null) {
+            return getResourceReaderWithPath(resource.getPath());
+        }
+        return null;
     }
 
     public static Map<String, Path> getTestFiles(String resourceName, String extension) {

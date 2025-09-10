@@ -20,9 +20,16 @@ import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.converter.gff3.GFF3File;
 import uk.ac.ebi.embl.converter.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.converter.gff3.directives.GFF3Species;
+import uk.ac.ebi.embl.converter.validation.ValidationEngine;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 public class GFF3FileFactory {
+    ValidationEngine engine;
+
+    public GFF3FileFactory(ValidationEngine engine) {
+        this.engine = engine;
+    }
+
     public GFF3File from(EmblEntryReader entryReader, Entry masterEntry) throws ValidationException, ReadException {
         GFF3Header header = new GFF3Header("3.1.26");
         GFF3Species species = null;
@@ -34,12 +41,12 @@ public class GFF3FileFactory {
                 if (species == null) {
                     species = directivesFactory.createSpecies(entry, masterEntry);
                 }
-                annotations.add(new GFF3AnnotationFactory(directivesFactory).from(entry));
+                annotations.add(new GFF3AnnotationFactory(engine, directivesFactory).from(entry));
             }
         } catch (IOException e) {
             throw new ReadException(e);
         }
 
-        return new GFF3File(header, species, annotations);
+        return new GFF3File(header, species, annotations, engine.getParsingErrors());
     }
 }

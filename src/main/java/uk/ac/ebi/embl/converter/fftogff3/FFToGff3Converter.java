@@ -18,25 +18,28 @@ import java.nio.file.Path;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.converter.Converter;
 import uk.ac.ebi.embl.converter.exception.*;
-import uk.ac.ebi.embl.converter.gff3.GFF3File;
+import uk.ac.ebi.embl.converter.gff3.*;
+import uk.ac.ebi.embl.converter.validation.*;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 
 public class FFToGff3Converter implements Converter {
-
     // MasterFile will be used when converting reduced flatfile tto GFF3
     Path masterFilePath = null;
+    ValidationEngine validationEngine;
 
-    public FFToGff3Converter(Path masterFilePath) {
+    public FFToGff3Converter(ValidationEngine validationEngine, Path masterFilePath) {
+        this.validationEngine = validationEngine;
         this.masterFilePath = masterFilePath;
     }
 
     public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException {
+
         EmblEntryReader entryReader =
                 new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
-        GFF3FileFactory fftogff3 = new GFF3FileFactory();
+        GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine);
         GFF3File file = fftogff3.from(entryReader, getMasterEntry(masterFilePath));
         file.writeGFF3String(writer);
     }
@@ -48,7 +51,7 @@ public class FFToGff3Converter implements Converter {
     }
 
     private Entry getMasterEntry(Path masterFilePath) throws ReadException {
-        if(masterFilePath==null) {
+        if (masterFilePath == null) {
             return null;
         }
         try (BufferedReader inputReader = Files.newBufferedReader(masterFilePath)) {

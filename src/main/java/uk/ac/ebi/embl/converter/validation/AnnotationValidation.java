@@ -8,13 +8,11 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.converter.exception;
+package uk.ac.ebi.embl.converter.validation;
 
-import static uk.ac.ebi.embl.converter.validation.ValidationRule.FLATFILE_NO_ONTOLOGY_FEATURE;
+import uk.ac.ebi.embl.converter.exception.ValidationException;
+import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
 
-public class UnmappedFFFeatureException extends ValidationException {
-
-    public UnmappedFFFeatureException(String featureName) {
-        super(FLATFILE_NO_ONTOLOGY_FEATURE, featureName);
-    }
+public interface AnnotationValidation extends Validation {
+    void validateAnnotation(GFF3Annotation feature, int line) throws ValidationException;
 }

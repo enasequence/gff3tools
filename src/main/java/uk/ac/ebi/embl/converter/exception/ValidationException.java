@@ -11,21 +11,19 @@
 package uk.ac.ebi.embl.converter.exception;
 
 import uk.ac.ebi.embl.converter.cli.CLIExitCode;
-import uk.ac.ebi.embl.converter.validation.ValidationRule;
 
 public class ValidationException extends ExitException {
 
     private int line;
-    private ValidationRule rule;
+    private String rule;
 
-    public ValidationException(ValidationRule rule, String message) {
-        super("Violation of rule %s: %s (%s)".formatted(rule.toString(), rule.getDescription(), message));
+    public ValidationException(String rule, String message) {
+        super("Violation of rule %s: %s".formatted(rule.toString(), message));
         this.rule = rule;
     }
 
-    public ValidationException(ValidationRule rule, int line, String message) {
-        super("Violation of rule %s on line %d: %s (%s)"
-                .formatted(rule.toString(), line, rule.getDescription(), message));
+    public ValidationException(String rule, int line, String message) {
+        super("Violation of rule %s on line %d: %s".formatted(rule.toString(), line, message));
         this.line = line;
         this.rule = rule;
     }
@@ -34,7 +32,7 @@ public class ValidationException extends ExitException {
         return line;
     }
 
-    public ValidationRule getValidationRule() {
+    public String getValidationRule() {
         return this.rule;
     }
 
