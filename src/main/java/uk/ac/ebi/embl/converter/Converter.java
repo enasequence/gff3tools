@@ -13,9 +13,8 @@ package uk.ac.ebi.embl.converter;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import uk.ac.ebi.embl.converter.exception.*;
-import uk.ac.ebi.embl.converter.validation.*;
 
 public interface Converter {
-    public void convert(ValidationEngine validationEngine, BufferedReader reader, BufferedWriter writer)
+    public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException;
 }

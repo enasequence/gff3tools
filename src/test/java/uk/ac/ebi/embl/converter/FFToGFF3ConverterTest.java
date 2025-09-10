@@ -81,15 +81,16 @@ class FFToGFF3ConverterTest {
     }
 
     private void testConvert(Path inputFile, Path expectedFile, Path masterFile) {
-        FFToGff3Converter converter = new FFToGff3Converter(masterFile);
+        ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
+        engineBuilder.registerValidations(new Validation[] {new DuplicateSeqIdValidation()});
+        ValidationEngine engine = engineBuilder.build();
+        FFToGff3Converter converter = new FFToGff3Converter(engine, masterFile);
         try (BufferedReader testFileReader = Files.newBufferedReader(inputFile);
                 BufferedReader expectedFileReader = Files.newBufferedReader(expectedFile);
                 StringWriter stringWriter = new StringWriter();
                 BufferedWriter bufferedWriter = new BufferedWriter(stringWriter); ) {
-            ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
-            engineBuilder.registerValidations(new Validation[] {new DuplicateSeqIdValidation()});
-            ValidationEngine engine = engineBuilder.build();
-            converter.convert(engine, testFileReader, bufferedWriter);
+
+            converter.convert(testFileReader, bufferedWriter);
             bufferedWriter.flush();
 
             String expected = expectedFileReader.lines().collect(Collectors.joining("\n"));

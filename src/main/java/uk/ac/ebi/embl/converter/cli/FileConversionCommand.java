@@ -85,10 +85,9 @@ public class FileConversionCommand implements Runnable {
                         outputFilePath)) {
             fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
             toFileType = validateFileType(toFileType, outputFilePath, "-t");
-
-            Converter converter = getConverter(fromFileType, toFileType, masterFilePath);
             ValidationEngine engine = initValidationEngine(ruleOverrides);
-            converter.convert(engine, inputReader, outputWriter);
+            Converter converter = getConverter(engine, fromFileType, toFileType, masterFilePath);
+            converter.convert(inputReader, outputWriter);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
@@ -103,12 +102,15 @@ public class FileConversionCommand implements Runnable {
     }
 
     private Converter getConverter(
-            ConversionFileFormat inputFileType, ConversionFileFormat outputFileType, Path masterFilePath)
+            ValidationEngine engine,
+            ConversionFileFormat inputFileType,
+            ConversionFileFormat outputFileType,
+            Path masterFilePath)
             throws FormatSupportException {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
-            return new Gff3ToFFConverter();
+            return new Gff3ToFFConverter(engine);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
-            return new FFToGff3Converter(masterFilePath);
+            return new FFToGff3Converter(engine, masterFilePath);
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }

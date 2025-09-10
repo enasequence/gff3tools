@@ -21,7 +21,13 @@ import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 
 public class Gff3ToFFConverter implements Converter {
 
-    public void convert(ValidationEngine validationEngine, BufferedReader reader, BufferedWriter writer)
+    ValidationEngine validationEngine;
+
+    public Gff3ToFFConverter(ValidationEngine validationEngine) {
+        this.validationEngine = validationEngine;
+    }
+
+    public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException {
 
         try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
