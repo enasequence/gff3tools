@@ -6,6 +6,15 @@
 
 The document describes the Validation Engine for the GFF3Tools project. This engine centralises and manages the execution of various validation rules and allows for both real-time syntax-level validation and aggregated semantic validation.
 
+# Glossary
+
+- **Feature**: In the context of GFF3, a feature represents a biological annotation (e.g., gene, mRNA, exon) with specific attributes and genomic coordinates.
+- **Annotation**: A self-contained group of GFF3 features that together describe a complete biological entity or region, often with hierarchical relationships.
+- **Validation**: The actual validation logic to be performed on data. Implementations of the `Validation` interface define specific checks.
+- **Validation Engine**: The core component responsible for executing validation rules, managing their severity, and handling validation outcomes.
+- **RuleSeverity**: An enumeration defining the possible severity levels for a validation rule: `OFF`, `WARN`, and `ERROR`.
+
+
 # Motivation & Rationale
 
 The validation rules (`docs/0002_validation_rules.md`) provides a robust mechanism for defining rules and handling their severities. However, without a central validation engine the logic is scattered across various reader and converter classes (e.g., `GFF3FileReader`), leading to:
@@ -29,7 +38,7 @@ The rationale behind the chosen design emphasizes a clear separation of concerns
 - When an annotation is completed (e.g., upon encountering a delimiter or a change in sequence accession), the reader/converter will notify the `ValidationEngine` to perform any final annotation-level validations by calling `validateAnnotation`.
 
 **Extending the Framework (Adding New Validations):**
-- **Define a Validation Rule:** New validation checks will be implemented as classes that implement the `Validation` interface, typically also implementing `FeatureValidation<T>` or `AnnotationValidation<T>`.
+- **Define Validation Logic:** New validation checks will be implemented as classes that implement the `Validation` interface, typically also implementing `FeatureValidation` or `AnnotationValidation`.
 - **Register with the Engine:** New `Validation` implementations will be registered with the `ValidationEngine` during its initialization. The engine will then manage their execution based on configured severities.
 
 **Configuration:**

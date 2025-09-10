@@ -6,6 +6,14 @@
 
 This document describes the validation rules framework, a system designed to enforce data integrity and consistency across various data inputs within the GFF3Tools project. It provides a flexible and extensible mechanism for defining, applying, and reporting on validation rules.
 
+# Glossary
+
+- **Feature**: In the context of GFF3, a feature represents a biological annotation (e.g., gene, mRNA, exon) with specific attributes and genomic coordinates.
+- **Annotation**: A self-contained group of GFF3 features that together describe a complete biological entity or region, often with hierarchical relationships.
+- **Validation**: The actual validation logic to be performed on data. Implementations of the `Validation` interface define specific checks.
+- **Validation Engine**: The core component responsible for executing validation rules, managing their severity, and handling validation outcomes.
+- **RuleSeverity**: An enumeration defining the possible severity levels for a validation rule: `OFF`, `WARN`, and `ERROR`.
+
 # Motivation & Rationale
 
 The primary motivation for this framework is to ensure the quality and correctness of GFF3 data processed by the tools. Inconsistent or malformed data can lead to errors in downstream analysis, incorrect interpretations, and unreliable results. This framework addresses the need for a standardized and automated way to validate GFF3 files against a set of predefined rules.
@@ -23,14 +31,14 @@ The rationale behind the chosen design emphasizes extensibility, maintainability
 The validation rules framework is designed around a clear separation of concerns, with distinct components responsible for defining rules, managing their severity, and handling validation outcomes.
 
 **Main Components:**
-- **Validation** The actual validation logic to be performed.
+- **Validation** An interface that defines the core functionality required for a validation implementation to be loaded by the engine.
 - **Validation Engine** Manages the execution of the validations and handles the outcome of the validation deciding if necessary to halt the execution.
 - **RuleSeverity:** This enum defines the possible severity levels for a validation rule: `OFF`, `WARN`, and `ERROR`. These severities dictate how a rule violation should be treated by the `ValidationEngine`.
 
 **High-Level Interaction:**
-1.  **Rule Definition:** Developers define new validation rules by implementing classes that extend  the `Validation` interface.
+1.  **Validation Logic:** Developers define new validation logic by implementing classes that extend  the `Validation` interface.
 2.  **Severity Configuration:** Default severities for these validations are set in `default-rule-severities.properties`.
-3.  **Rule Execution:** The `ValidationEngine` executes validation logic. When a validation check fails, it identifies the `Validation` that was violated.
+3.  **Validation Execution:** The `ValidationEngine` executes validation logic. When a validation check fails, it identifies the `Validation` that was violated.
 4.  **Violation Handling:** The `ValidationEngine` consults the configured `RuleSeverity` for the violated `Validation` to determine the appropriate action:
     *   If the rule's severity is `OFF`, the violation is ignored.
     *   If the rule's severity is `WARN`, a warning message is logged.
