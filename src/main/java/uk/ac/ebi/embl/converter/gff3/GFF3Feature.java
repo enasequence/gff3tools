@@ -105,4 +105,12 @@ public class GFF3Feature {
         });
         return attrBuilder.toString();
     }
+
+    public long getLength() {
+        return Math.max(end - start + 1, 0);
+    }
+
+    public String getAttributeByName(String name) {
+        return (String) attributes.get(name);
+    }
 }

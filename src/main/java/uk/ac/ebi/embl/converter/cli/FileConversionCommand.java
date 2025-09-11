@@ -96,7 +96,7 @@ public class FileConversionCommand implements Runnable {
     private ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides)
             throws UnregisteredValidationRuleException {
         ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
-        engineBuilder.registerValidations(new Validation[] {new DuplicateSeqIdValidation()});
+        engineBuilder.registerValidations(ValidationRegistry.getValidations());
         engineBuilder.overrideRuleSeverities(ruleOverrides);
         return engineBuilder.build();
     }
