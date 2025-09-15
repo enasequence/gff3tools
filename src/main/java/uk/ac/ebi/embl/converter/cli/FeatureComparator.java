@@ -52,7 +52,7 @@ public class FeatureComparator {
         // A copy of the expected file(remove source feature, source qualifiers and sequence) for Comparision.
         String noSourceFile = createNoSourceFeatureFile(expectedFile);
 
-        FlatFileComparator flatfileComparator = getFeatureComparator(expectedFile);
+        FlatFileComparator flatfileComparator = getFeatureComparator();
 
         if (!flatfileComparator.compare(noSourceFile, actualFile)) {
             throw new FlatFileComparatorException("File comparison failed:  \n" + noSourceFile + "\n" + actualFile);
@@ -60,11 +60,11 @@ public class FeatureComparator {
         LOG.info("\n\nFeatures are identical for files: \n" + noSourceFile + "\n" + actualFile);
     }
 
-    private static FlatFileComparator getFeatureComparator(String expectedFile) throws IOException {
+    private static FlatFileComparator getFeatureComparator() throws IOException {
 
         FeatureComparatorOption options = new FeatureComparatorOption();
-        // Ignore the below FT lines
-        options.setIgnoreLine("FT   source"); // This has to be done as converter adds source featire
+        // Ignore the below FT lines from the actual file
+        options.setIgnoreLine("FT   source");
         options.setIgnoreLine("FT   region");
         options.setIgnoreLine("FT                   /circular_RNA");
 
