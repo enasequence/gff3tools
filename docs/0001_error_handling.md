@@ -25,7 +25,7 @@ When a new error scenario requires a specific program exit code and does not fit
 1.  **When to Add New `CLIExitCode` Values:** New `CLIExitCode` values should only be added when a truly distinct category of error emerges that cannot be logically grouped under existing codes. When adding a new code, consider the numerical spacing in the `CLIExitCode` enum (e.g., `READ_ERROR(10), WRITE_ERROR(11), NON_EXISTENT_FILE(12)`). This spacing allows for future expansion within a logical category (e.g., `13`, `14` for other IO errors). DO NOT RENUMBER EXISTING CODES, this would be a breaking change for automation pipelines.
 2.  **Single `CLIExitCode` Implementation:** For each distinct `CLIExitCode`, only one direct `ExitException` subclass should implement the `exitCode()` method to return that specific `CLIExitCode`.
 3.  **Inheritance for Related Exceptions:** If multiple exception classes logically correspond to the same `CLIExitCode`, they should extend the `ExitException` subclass that already implements that `CLIExitCode`. This ensures consistent exit behavior and reduces boilerplate.
-4.  **Extend `ExitException`:** The new exception class must extend `uk.ac.ebi.embl.converter.exception.ExitException` or one of its existing subclasses.
+4.  **Extend `ExitException`:** The new exception class must extend `uk.ac.ebi.embl.gff3tools.exception.ExitException` or one of its existing subclasses.
 5.  **Implement or Inherit `exitCode()`:** If the new exception is the *primary* class for a `CLIExitCode`, it must override the `exitCode()` method to return the chosen `CLIExitCode`. If it extends an existing `ExitException` subclass that already defines the appropriate `CLIExitCode`, there is no need to override `exitCode()`.
 
 **Example: Extending `ValidationException` for a specific validation failure**
@@ -151,20 +151,20 @@ This system ensures a clear separation of error types, immediate insight into pr
 
 # Detailed Design & Implementation
 
-The core components are `uk.ac.ebi.embl.converter.exception.ExitException` and `uk.ac.ebi.embl.converter.cli.CLIExitCode`.
+The core components are `uk.ac.ebi.embl.gff3tools.exception.ExitException` and `uk.ac.ebi.embl.gff3tools.cli.CLIExitCode`.
 
-**`uk.ac.ebi.embl.converter.exception.ExitException`:**
+**`uk.ac.ebi.embl.gff3tools.exception.ExitException`:**
 *   An abstract class extending `java.lang.Exception`.
 *   Abstract method: `public abstract CLIExitCode exitCode();`: Must be implemented by subclasses to provide the specific exit code.
 
-**`uk.ac.ebi.embl.converter.cli.CLIExitCode`:**
+**`uk.ac.ebi.embl.gff3tools.cli.CLIExitCode`:**
 *   An enum defining integer exit codes.
 *   Each enum constant represents a specific exit status (e.g., `GENERAL(1)`, `USAGE(2)`, `UNSUPPORTED_FORMAT_CONVERSION(3)`, `READ_ERROR(10)`, `WRITE_ERROR(11)`, `NON_EXISTENT_FILE(12)`, `VALIDATION_ERROR(20)`, `OUT_OF_MEMORY(30)`).
 *   Provides `asInt()` method to retrieve the integer value.
 
 **Example Implementations:**
 
-*   **`uk.ac.ebi.embl.converter.exception.ValidationException`:**
+*   **`uk.ac.ebi.embl.gff3tools.exception.ValidationException`:**
     ```java
     public class ValidationException extends ExitException {
         // ... constructors and methods
@@ -177,7 +177,7 @@ The core components are `uk.ac.ebi.embl.converter.exception.ExitException` and `
     Used for data validation failures, potentially including details like line number and validation rule.
 
 
-*   **`uk.ac.ebi.embl.converter.exception.InvalidGFF3HeaderException`:**
+*   **`uk.ac.ebi.embl.gff3tools.exception.InvalidGFF3HeaderException`:**
     ```java
     public class InvalidGFF3HeaderException extends ValidationException {
         public InvalidGFF3HeaderException(String message) {
@@ -212,10 +212,10 @@ The `Main` class integrates with `picocli` via `CommandLine.setExecutionExceptio
 
 # Related Documentation & Resources
 
-*   `uk.ac.ebi.embl.converter.exception.ExitException`
-*   `uk.ac.ebi.embl.converter.cli.CLIExitCode`
-*   `uk.ac.ebi.embl.converter.exception.CLIException`
-*   `uk.ac.ebi.embl.converter.exception.ReadException`
-*   `uk.ac.ebi.embl.converter.exception.ValidationException`
+*   `uk.ac.ebi.embl.gff3tools.exception.ExitException`
+*   `uk.ac.ebi.embl.gff3tools.cli.CLIExitCode`
+*   `uk.ac.ebi.embl.gff3tools.exception.CLIException`
+*   `uk.ac.ebi.embl.gff3tools.exception.ReadException`
+*   `uk.ac.ebi.embl.gff3tools.exception.ValidationException`
 *   `picocli` documentation: [https://picocli.info/](https://picocli.info/)
 
