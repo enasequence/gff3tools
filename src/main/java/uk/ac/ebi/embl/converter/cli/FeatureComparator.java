@@ -11,14 +11,9 @@
 package uk.ac.ebi.embl.converter.cli;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.api.entry.feature.Feature;
-import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.validation.helper.FlatFileComparator;
 import uk.ac.ebi.embl.api.validation.helper.FlatFileComparatorException;
 import uk.ac.ebi.embl.api.validation.helper.FlatFileComparatorOptions;
@@ -67,7 +62,6 @@ public class FeatureComparator {
         options.setIgnoreLine("FT   source");
         options.setIgnoreLine("FT   region");
         options.setIgnoreLine("FT                   /circular_RNA");
-
 
         return new FlatFileComparator(options);
     }
