@@ -16,11 +16,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.*;
-import uk.ac.ebi.embl.converter.exception.DuplicateValidationRuleException;
-import uk.ac.ebi.embl.converter.exception.UnregisteredValidationRuleException;
-import uk.ac.ebi.embl.converter.exception.ValidationException;
-import uk.ac.ebi.embl.converter.gff3.GFF3Annotation;
-import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.exception.DuplicateValidationRuleException;
+import uk.ac.ebi.embl.gff3tools.exception.UnregisteredValidationRuleException;
+import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.validation.*;
 
 public class ValidationEngineTest {
 

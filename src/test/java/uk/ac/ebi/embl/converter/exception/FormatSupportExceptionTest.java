@@ -14,8 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.converter.cli.CLIExitCode;
-import uk.ac.ebi.embl.converter.cli.ConversionFileFormat;
+import uk.ac.ebi.embl.gff3tools.cli.CLIExitCode;
+import uk.ac.ebi.embl.gff3tools.cli.ConversionFileFormat;
+import uk.ac.ebi.embl.gff3tools.exception.FormatSupportException;
 
 public class FormatSupportExceptionTest {
 

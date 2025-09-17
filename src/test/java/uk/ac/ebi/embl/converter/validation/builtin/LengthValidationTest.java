@@ -16,9 +16,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
-import uk.ac.ebi.embl.converter.exception.ValidationException;
-import uk.ac.ebi.embl.converter.gff3.GFF3Anthology;
-import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.validation.builtin.LengthValidation;
 
 public class LengthValidationTest {
 

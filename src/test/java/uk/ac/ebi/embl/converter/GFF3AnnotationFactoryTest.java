@@ -27,12 +27,12 @@ import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.api.entry.location.LocationFactory;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
-import uk.ac.ebi.embl.converter.exception.ValidationException;
-import uk.ac.ebi.embl.converter.fftogff3.GFF3AnnotationFactory;
-import uk.ac.ebi.embl.converter.fftogff3.GFF3DirectivesFactory;
-import uk.ac.ebi.embl.converter.gff3.*;
-import uk.ac.ebi.embl.converter.utils.ConversionUtils;
-import uk.ac.ebi.embl.converter.validation.*;
+import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3AnnotationFactory;
+import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3DirectivesFactory;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
 
 class GFF3AnnotationFactoryTest {
     static Map<String, Set<String>> featureRelationMap;

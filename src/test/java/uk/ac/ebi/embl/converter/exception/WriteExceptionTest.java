@@ -15,7 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.converter.cli.CLIExitCode;
+import uk.ac.ebi.embl.gff3tools.cli.CLIExitCode;
+import uk.ac.ebi.embl.gff3tools.exception.WriteException;
 
 public class WriteExceptionTest {
 

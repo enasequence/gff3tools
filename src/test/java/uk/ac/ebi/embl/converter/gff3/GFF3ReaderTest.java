@@ -20,10 +20,15 @@ import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
-import uk.ac.ebi.embl.converter.exception.*;
-import uk.ac.ebi.embl.converter.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.converter.validation.*;
-import uk.ac.ebi.embl.converter.validation.builtin.*;
+import uk.ac.ebi.embl.gff3tools.exception.*;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.gff3tools.validation.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.Validation;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
+import uk.ac.ebi.embl.gff3tools.validation.builtin.DuplicateSeqIdValidation;
 
 public class GFF3ReaderTest {
 

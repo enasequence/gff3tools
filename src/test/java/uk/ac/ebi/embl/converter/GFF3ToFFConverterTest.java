@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
-import uk.ac.ebi.embl.converter.cli.Main;
+import uk.ac.ebi.embl.gff3tools.cli.Main;
 
 class GFF3ToFFConverterTest {
 

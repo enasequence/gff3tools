@@ -19,12 +19,15 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.converter.fftogff3.*;
-import uk.ac.ebi.embl.converter.gff3.GFF3File;
-import uk.ac.ebi.embl.converter.validation.*;
-import uk.ac.ebi.embl.converter.validation.builtin.*;
+import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
+import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3FileFactory;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
+import uk.ac.ebi.embl.gff3tools.validation.Validation;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
+import uk.ac.ebi.embl.gff3tools.validation.builtin.DuplicateSeqIdValidation;
 
 class FFToGFF3ConverterTest {
 

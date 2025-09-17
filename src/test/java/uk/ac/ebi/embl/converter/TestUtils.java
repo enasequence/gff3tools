@@ -14,7 +14,7 @@ import java.io.*;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.*;
-import uk.ac.ebi.embl.converter.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 
 public class TestUtils {
 

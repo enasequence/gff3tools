@@ -18,7 +18,11 @@ import java.lang.reflect.Method;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
-import uk.ac.ebi.embl.converter.validation.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.cli.CliRulesOption;
+import uk.ac.ebi.embl.gff3tools.cli.ConversionFileFormat;
+import uk.ac.ebi.embl.gff3tools.cli.FileConversionCommand;
+import uk.ac.ebi.embl.gff3tools.cli.RuleConverter;
+import uk.ac.ebi.embl.gff3tools.validation.RuleSeverity;
 
 public class MainTest {
 

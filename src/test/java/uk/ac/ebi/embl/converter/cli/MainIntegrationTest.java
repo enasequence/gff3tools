@@ -25,6 +25,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.stubbing.Answer;
+import uk.ac.ebi.embl.gff3tools.cli.CLIExitCode;
+import uk.ac.ebi.embl.gff3tools.cli.Main;
 
 public class MainIntegrationTest {
 

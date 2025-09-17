@@ -17,6 +17,7 @@ import io.vavr.Tuple2;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 
 public class ConversionEntryTest {
 

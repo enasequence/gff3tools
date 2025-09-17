@@ -20,8 +20,10 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.converter.TestUtils;
-import uk.ac.ebi.embl.converter.exception.WriteException;
-import uk.ac.ebi.embl.converter.gff3.directives.GFF3SequenceRegion;
+import uk.ac.ebi.embl.gff3tools.exception.WriteException;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 
 public class GFF3AnnotationTest {
     @Test
