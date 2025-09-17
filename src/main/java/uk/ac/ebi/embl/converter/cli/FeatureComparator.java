@@ -17,6 +17,8 @@ import java.nio.file.StandardCopyOption;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
+import uk.ac.ebi.embl.api.entry.feature.Feature;
+import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.validation.helper.FlatFileComparator;
 import uk.ac.ebi.embl.api.validation.helper.FlatFileComparatorException;
 import uk.ac.ebi.embl.api.validation.helper.FlatFileComparatorOptions;
@@ -46,77 +48,32 @@ public class FeatureComparator {
     }
 
     public static void compare(String expectedFile, String actualFile) throws FlatFileComparatorException, IOException {
-        removeSourceFeatureFromExpected(expectedFile);
+
+        // A copy of the expected file(remove source feature, source qualifiers and sequence) for Comparision.
+        String noSourceFile = createNoSourceFeatureFile(expectedFile);
 
         FlatFileComparator flatfileComparator = getFeatureComparator();
 
-        if (!flatfileComparator.compare(expectedFile, actualFile)) {
-            throw new FlatFileComparatorException("File comparison failed:  \n" + expectedFile + "\n" + actualFile);
+        if (!flatfileComparator.compare(noSourceFile, actualFile)) {
+            throw new FlatFileComparatorException("File comparison failed:  \n" + noSourceFile + "\n" + actualFile);
         }
-        LOG.info("\n\nFeatures are identical for files: \n" + expectedFile + "\n" + actualFile);
+        LOG.info("\n\nFeatures are identical for files: \n" + noSourceFile + "\n" + actualFile);
     }
 
-    private static FlatFileComparator getFeatureComparator() {
+    private static FlatFileComparator getFeatureComparator() throws IOException {
+
         FeatureComparatorOption options = new FeatureComparatorOption();
-        // Ignore the below FT lines
-        options.setIgnoreLine("FT   source"); // This has to be done as converter adds source featire
+        // Ignore the below FT lines from the actual file
+        options.setIgnoreLine("FT   source");
         options.setIgnoreLine("FT   region");
         options.setIgnoreLine("FT                   /circular_RNA");
-        /*options.setIgnoreLine("FT                   /organism");
-        options.setIgnoreLine("FT                   /plasmid");
-        options.setIgnoreLine("FT                   /isolate");
-        options.setIgnoreLine("FT                   /mol_type");
 
-        options.setIgnoreLine("FT                   /circular_RNA=true");
 
-        // Added from feature table
-        options.setIgnoreLine("FT                   /altitude");
-        options.setIgnoreLine("FT                   /bio_material");
-        options.setIgnoreLine("FT                   /cell_line");
-        options.setIgnoreLine("FT                   /cell_type");
-        options.setIgnoreLine("FT                   /chromosome");
-        options.setIgnoreLine("FT                   /clone");
-        options.setIgnoreLine("FT                   /collected_by");
-        options.setIgnoreLine("FT                   /collection_date");
-        options.setIgnoreLine("FT                   /cultivar");
-        options.setIgnoreLine("FT                   /culture_collection");
-        options.setIgnoreLine("FT                   /dev_stage");
-        options.setIgnoreLine("FT                   /ecotype");
-        options.setIgnoreLine("FT                   /environmental_sample");
-        options.setIgnoreLine("FT                   /focus");
-        options.setIgnoreLine("FT                   /geo_loc_name");
-        options.setIgnoreLine("FT                   /germline");
-        options.setIgnoreLine("FT                   /haplogroup");
-        options.setIgnoreLine("FT                   /haplotype");
-        options.setIgnoreLine("FT                   /host");
-        options.setIgnoreLine("FT                   /isolate");
-        options.setIgnoreLine("FT                   /isolation_source");
-        options.setIgnoreLine("FT                   /lab_host");
-        options.setIgnoreLine("FT                   /lat_lon");
-        options.setIgnoreLine("FT                   /macronuclear");
-        options.setIgnoreLine("FT                   /mating_type");
-        options.setIgnoreLine("FT                   /metagenome_source");
-        options.setIgnoreLine("FT                   /note");
-        options.setIgnoreLine("FT                   /PCR_primers");
-        options.setIgnoreLine("FT                   /plasmid");
-        options.setIgnoreLine("FT                   /proviral");
-        options.setIgnoreLine("FT                   /rearranged");
-        options.setIgnoreLine("FT                   /segment");
-        options.setIgnoreLine("FT                   /serotype");
-        options.setIgnoreLine("FT                   /serovar");
-        options.setIgnoreLine("FT                   /sex");
-        options.setIgnoreLine("FT                   /specimen_voucher");
-        options.setIgnoreLine("FT                   /strain");
-        options.setIgnoreLine("FT                   /submitter_seqid");
-        options.setIgnoreLine("FT                   /sub_species");
-        options.setIgnoreLine("FT                   /tissue_type");
-        options.setIgnoreLine("FT                   /type_material");
-        options.setIgnoreLine("FT                   /variety");
-        options.setIgnoreLine("FT                   /country");*/
         return new FlatFileComparator(options);
     }
 
-    public static void removeSourceFeatureFromExpected(String file) throws IOException {
+    // Create a copy of the expected file, then remove the source feature, source qualifiers, and sequence
+    public static String createNoSourceFeatureFile(String file) throws IOException {
 
         String fileWithoutSource = file + "_no_source";
         try (BufferedReader reader = new BufferedReader(new FileReader(file));
@@ -131,8 +88,8 @@ public class FeatureComparator {
                 entryWriter.setShowAcStartLine(false);
                 entryWriter.write(writer);
             }
-            Files.move(Paths.get(fileWithoutSource), Paths.get(file), StandardCopyOption.REPLACE_EXISTING);
         }
+        return fileWithoutSource;
     }
 
     private static ReaderOptions getReaderOptions() {
