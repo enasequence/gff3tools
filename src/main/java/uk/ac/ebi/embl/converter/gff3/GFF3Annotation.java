@@ -123,4 +123,10 @@ public class GFF3Annotation implements IGFF3Feature {
                     .orElseThrow(RuntimeException::new);
         }
     }
+
+    public List<GFF3Feature> getFeaturesByName(String featureName) {
+        return features.stream()
+                .filter(ftr -> ftr.getName().equalsIgnoreCase(featureName))
+                .collect(Collectors.toList());
+    }
 }
