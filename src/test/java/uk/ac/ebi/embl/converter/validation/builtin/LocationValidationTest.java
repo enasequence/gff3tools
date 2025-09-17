@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.converter.validation.builtin;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,9 +29,12 @@ public class LocationValidationTest {
 
     private LocationValidation locationValidation;
 
+    private GFF3Annotation gff3Annotation;
+
     @BeforeEach
     public void setUp() {
         locationValidation = new LocationValidation();
+        gff3Annotation = new GFF3Annotation();
     }
 
     @Test
@@ -60,10 +64,9 @@ public class LocationValidationTest {
         GFF3Feature cds = TestUtils.createGFF3Feature(GFF3Anthology.CDS_FEATURE_NAME, 100L, 500L);
         GFF3Feature prop = TestUtils.createGFF3Feature(GFF3Anthology.PROPETIDE_FEATURE_NAME, 200L, 350L);
 
-        locationValidation.validateFeature(cds, 1);
-        locationValidation.validateFeature(prop, 2);
+        gff3Annotation.setFeatures(List.of(cds, prop));
 
-        Assertions.assertDoesNotThrow(() -> locationValidation.validateAnnotation(new GFF3Annotation(), 3));
+        Assertions.assertDoesNotThrow(() -> locationValidation.validateAnnotation(gff3Annotation, 1));
     }
 
     @Test
@@ -71,10 +74,10 @@ public class LocationValidationTest {
         GFF3Feature cds = TestUtils.createGFF3Feature(GFF3Anthology.CDS_FEATURE_NAME, 300L, 500L);
         GFF3Feature prop = TestUtils.createGFF3Feature(GFF3Anthology.PROPETIDE_FEATURE_NAME, 100L, 200L);
 
-        locationValidation.validateFeature(cds, 1);
-        locationValidation.validateFeature(prop, 2);
-        ValidationException exception = assertThrows(
-                ValidationException.class, () -> locationValidation.validateAnnotation(new GFF3Annotation(), 3));
+        gff3Annotation.setFeatures(List.of(cds, prop));
+
+        ValidationException exception =
+                assertThrows(ValidationException.class, () -> locationValidation.validateAnnotation(gff3Annotation, 3));
 
         assertTrue(exception.getMessage().contains("not inside any CDS"));
     }
@@ -85,11 +88,9 @@ public class LocationValidationTest {
         GFF3Feature sig = TestUtils.createGFF3Feature(GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME, 300L, 350L);
         GFF3Feature prop = TestUtils.createGFF3Feature(GFF3Anthology.PROPETIDE_FEATURE_NAME, 100L, 200L);
 
-        locationValidation.validateFeature(cds, 1);
-        locationValidation.validateFeature(sig, 2);
-        locationValidation.validateFeature(prop, 3);
+        gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
-        Assertions.assertDoesNotThrow(() -> locationValidation.validateAnnotation(new GFF3Annotation(), 4));
+        Assertions.assertDoesNotThrow(() -> locationValidation.validateAnnotation(gff3Annotation, 4));
     }
 
     @Test
@@ -98,12 +99,10 @@ public class LocationValidationTest {
         GFF3Feature sig = TestUtils.createGFF3Feature(GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME, 100L, 150L);
         GFF3Feature prop = TestUtils.createGFF3Feature(GFF3Anthology.PROPETIDE_FEATURE_NAME, 120L, 200L);
 
-        locationValidation.validateFeature(cds, 1);
-        locationValidation.validateFeature(sig, 2);
-        locationValidation.validateFeature(prop, 3);
+        gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
-        ValidationException ex = assertThrows(
-                ValidationException.class, () -> locationValidation.validateAnnotation(new GFF3Annotation(), 4));
+        ValidationException ex =
+                assertThrows(ValidationException.class, () -> locationValidation.validateAnnotation(gff3Annotation, 4));
 
         assertTrue(ex.getMessage().contains("overlaps with peptide features"));
     }

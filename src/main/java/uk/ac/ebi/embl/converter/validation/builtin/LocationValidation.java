@@ -24,8 +24,7 @@ public class LocationValidation implements FeatureValidation, AnnotationValidati
     public static final String VALIDATION_RULE = "GFF3_LOCATION_VALIDATION";
 
     private static final String INVALID_START_END_MESSAGE = "Invalid start/end for accession \"%s\"";
-    private static final String INVALID_PROPEPTIDE_CDS_LOCATION_MESSAGE =
-            "Propeptide [%d %d] not inside any CDS";
+    private static final String INVALID_PROPEPTIDE_CDS_LOCATION_MESSAGE = "Propeptide [%d %d] not inside any CDS";
     private static final String INVALID_PROPEPTIDE_PEPTIDE_LOCATION_MESSAGE =
             "Propeptide [%d %d] overlaps with peptide features";
 
