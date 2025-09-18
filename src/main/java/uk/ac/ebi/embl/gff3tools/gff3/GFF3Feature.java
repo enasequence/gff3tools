@@ -111,6 +111,11 @@ public class GFF3Feature {
     }
 
     public String getAttributeByName(String name) {
-        return (String) attributes.get(name);
+        String value = (String) attributes.get(name);
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    public boolean isAttributeExists(String name) {
+        return attributes.containsKey(name) && attributes.get(name) != null;
     }
 }

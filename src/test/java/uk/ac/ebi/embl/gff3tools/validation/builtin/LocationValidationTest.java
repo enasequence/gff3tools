@@ -16,12 +16,11 @@ import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 
 public class LocationValidationTest {
 
@@ -39,70 +38,70 @@ public class LocationValidationTest {
 
     @Test
     public void testLocationValidationSuccess() {
-        feature = TestUtils.createGFF3Feature(GFF3Anthology.CDS_FEATURE_NAME, 1L, 18L);
-        Assertions.assertDoesNotThrow(() -> locationValidation.validateFeature(feature, 1));
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS_REGION.name(), 1L, 18L);
+        Assertions.assertDoesNotThrow(() -> locationValidation.validateLocation(feature, 1));
     }
 
     @Test
     public void testLocationValidationFailure_StartEndZero() {
-        feature = TestUtils.createGFF3Feature(GFF3Anthology.CDS_FEATURE_NAME, 0L, 0L);
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS_REGION.name(), 0L, 0L);
         ValidationException exception =
-                assertThrows(ValidationException.class, () -> locationValidation.validateFeature(feature, 1));
+                assertThrows(ValidationException.class, () -> locationValidation.validateLocation(feature, 1));
         assertTrue(exception.getMessage().contains("Invalid start/end for accession"));
     }
 
     @Test
     public void testLocationValidationFailure_EndGreaterThanStart() {
-        feature = TestUtils.createGFF3Feature(Feature.CDS_FEATURE_NAME, 34L, 13L);
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS_REGION.name(), 34L, 13L);
         ValidationException exception =
-                assertThrows(ValidationException.class, () -> locationValidation.validateFeature(feature, 1));
+                assertThrows(ValidationException.class, () -> locationValidation.validateLocation(feature, 1));
         assertTrue(exception.getMessage().contains("Invalid start/end for accession"));
     }
 
     @Test
-    public void testAnnotation_PropetideCDSFeature_Success() throws ValidationException {
-        GFF3Feature cds = TestUtils.createGFF3Feature(GFF3Anthology.CDS_FEATURE_NAME, 100L, 500L);
-        GFF3Feature prop = TestUtils.createGFF3Feature(GFF3Anthology.PROPETIDE_FEATURE_NAME, 200L, 350L);
+    public void testAnnotation_PropetideCDSFeature_Success() {
+        GFF3Feature cds = TestUtils.createGFF3Feature(OntologyTerm.CDS_REGION.name(), 100L, 500L);
+        GFF3Feature prop = TestUtils.createGFF3Feature(OntologyTerm.PROPEPTIDE_REGION_OF_CDS.name(), 200L, 350L);
 
         gff3Annotation.setFeatures(List.of(cds, prop));
 
-        Assertions.assertDoesNotThrow(() -> locationValidation.validateAnnotation(gff3Annotation, 1));
+        Assertions.assertDoesNotThrow(() -> locationValidation.validateCdsLocation(gff3Annotation, 1));
     }
 
     @Test
-    public void testAnnotation_PropetideCDSFeature_Failure() throws ValidationException {
-        GFF3Feature cds = TestUtils.createGFF3Feature(GFF3Anthology.CDS_FEATURE_NAME, 300L, 500L);
-        GFF3Feature prop = TestUtils.createGFF3Feature(GFF3Anthology.PROPETIDE_FEATURE_NAME, 100L, 200L);
+    public void testAnnotation_PropetideCDSFeature_Failure() {
+        GFF3Feature cds = TestUtils.createGFF3Feature(OntologyTerm.CDS_REGION.name(), 300L, 500L);
+        GFF3Feature prop = TestUtils.createGFF3Feature(OntologyTerm.PROPEPTIDE_REGION_OF_CDS.name(), 100L, 200L);
 
         gff3Annotation.setFeatures(List.of(cds, prop));
 
         ValidationException exception =
-                assertThrows(ValidationException.class, () -> locationValidation.validateAnnotation(gff3Annotation, 3));
+                assertThrows(ValidationException.class, () -> locationValidation.validateCdsLocation(gff3Annotation, 3));
 
         assertTrue(exception.getMessage().contains("not inside any CDS"));
     }
 
     @Test
-    public void testAnnotation_PropetidePeptideFeature_Success() throws ValidationException {
-        GFF3Feature cds = TestUtils.createGFF3Feature(GFF3Anthology.CDS_FEATURE_NAME, 1L, 500L);
-        GFF3Feature sig = TestUtils.createGFF3Feature(GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME, 300L, 350L);
-        GFF3Feature prop = TestUtils.createGFF3Feature(GFF3Anthology.PROPETIDE_FEATURE_NAME, 100L, 200L);
+    public void testAnnotation_PropetidePeptideFeature_Success() {
+        GFF3Feature cds = TestUtils.createGFF3Feature(OntologyTerm.CDS_REGION.name(), 1L, 500L);
+        GFF3Feature sig = TestUtils.createGFF3Feature(OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(), 300L, 350L);
+        GFF3Feature prop = TestUtils.createGFF3Feature(OntologyTerm.PROPEPTIDE_REGION_OF_CDS.name(), 100L, 200L);
 
         gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
-        Assertions.assertDoesNotThrow(() -> locationValidation.validateAnnotation(gff3Annotation, 4));
+        Assertions.assertDoesNotThrow(() -> locationValidation.validateCdsLocation(gff3Annotation, 4));
     }
 
     @Test
-    public void testAnnotation_PropetidePeptideFeature_Failure() throws ValidationException {
-        GFF3Feature cds = TestUtils.createGFF3Feature(GFF3Anthology.CDS_FEATURE_NAME, 1L, 500L);
-        GFF3Feature sig = TestUtils.createGFF3Feature(GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME, 100L, 150L);
-        GFF3Feature prop = TestUtils.createGFF3Feature(GFF3Anthology.PROPETIDE_FEATURE_NAME, 120L, 200L);
+    public void testAnnotation_PropetidePeptideFeature_Failure() {
+        GFF3Feature cds = TestUtils.createGFF3Feature(OntologyTerm.CDS_REGION.name(), 1L, 500L);
+        GFF3Feature sig = TestUtils.createGFF3Feature(OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(), 100L, 150L);
+        GFF3Feature prop = TestUtils.createGFF3Feature(OntologyTerm.PROPEPTIDE_REGION_OF_CDS.name(), 120L, 200L);
 
         gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
         ValidationException ex =
-                assertThrows(ValidationException.class, () -> locationValidation.validateAnnotation(gff3Annotation, 4));
+                assertThrows(ValidationException.class, () -> locationValidation.validateCdsLocation(gff3Annotation, 4));
 
         assertTrue(ex.getMessage().contains("overlaps with peptide features"));
     }

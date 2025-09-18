@@ -15,17 +15,19 @@ import java.util.Set;
 
 public class GFF3Anthology {
 
-    public static final String MAP_PEPTIDE_FEATURE_NAME = "map_peptide";
+    public static final String MAT_PEPTIDE_FEATURE_NAME = "mat_peptide";
     public static final String SIG_PEPTIDE_FEATURE_NAME = "signal_peptide";
     public static final String CDS_FEATURE_NAME = "CDS";
     public static final String PROPETIDE_FEATURE_NAME = "propeptide";
+    public static final String T_RNA_FEATURE_NAME = "tRNA";
+    public static final String R_RNA_FEATURE_NAME = "rRNA";
+    public static final String M_RNA_FEATURE_NAME = "mRNA";
 
     public static final String EXON_FEATURE_NAME = "exon";
     public static final String CODING_EXON_FEATURE_NAME = "coding_exon";
     public static final String NONCODING_EXON_FEATURE_NAME = "noncoding_exon";
     public static final String FIVE_PRIME_CODING_EXON_FEATURE_NAME = "five_prime_coding_exon";
     public static final String INTERIOR_CODING_EXON_FEATURE_NAME = "interior_coding_exon";
-
     public static final String INTRON_FEATURE_NAME = "intron";
     public static final String SPLICEOSOMAL_INTRON_FEATURE_NAME = "spliceosomal_intron";
     public static final String AUTOCATALYTICALLY_SPLICED_INTRON_FEATURE_NAME = "autocatalytically_spliced_intron";
@@ -36,7 +38,6 @@ public class GFF3Anthology {
             NONCODING_EXON_FEATURE_NAME,
             FIVE_PRIME_CODING_EXON_FEATURE_NAME,
             INTERIOR_CODING_EXON_FEATURE_NAME);
-
     public static final Set<String> INTRON_EQUIVALENTS = Set.of(
             INTRON_FEATURE_NAME, SPLICEOSOMAL_INTRON_FEATURE_NAME, AUTOCATALYTICALLY_SPLICED_INTRON_FEATURE_NAME);
 }

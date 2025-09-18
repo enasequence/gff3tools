@@ -14,8 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
@@ -31,28 +31,35 @@ public class LocationValidation extends Validation {
     private static final String INVALID_PROPEPTIDE_PEPTIDE_LOCATION_MESSAGE =
             "Propeptide [%d %d] overlaps with peptide features";
 
-    @ValidationMethod(type = ValidationType.FEATURE)
-    public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
+    @ValidationMethod(rule = "GFF3_LOCATION_VALIDATION", type = ValidationType.FEATURE)
+    public void validateLocation(GFF3Feature feature, int line) throws ValidationException {
         long start = feature.getStart();
         long end = feature.getEnd();
 
         if (start <= 0 || end <= 0 || end < start) {
-            throw new ValidationException(
-                    VALIDATION_RULE, line, INVALID_START_END_MESSAGE.formatted(feature.accession()));
+            throw new ValidationException(line, INVALID_START_END_MESSAGE.formatted(feature.accession()));
         }
     }
 
-    @ValidationMethod(type = ValidationType.ANNOTATION)
-    public void validateAnnotation(GFF3Annotation annotation, int line) throws ValidationException {
-
-        // Annotation Level Validation
-        List<GFF3Feature> propFeatures = annotation.getFeaturesByName(GFF3Anthology.PROPETIDE_FEATURE_NAME);
-        List<GFF3Feature> cdsFeatures = annotation.getFeaturesByName(GFF3Anthology.CDS_FEATURE_NAME);
-
+    @ValidationMethod(rule = "GFF3_CDS_LOCATION_VALIDATION", type = ValidationType.ANNOTATION)
+    public void validateCdsLocation(GFF3Annotation annotation, int line) throws ValidationException {
+        List<GFF3Feature> propFeatures = new ArrayList<>();
+        List<GFF3Feature> cdsFeatures = new ArrayList<>();
         List<GFF3Feature> peptideFeatures = new ArrayList<>();
-        peptideFeatures.addAll(annotation.getFeaturesByName(GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME));
-        peptideFeatures.addAll(annotation.getFeaturesByName(GFF3Anthology.MAP_PEPTIDE_FEATURE_NAME));
 
+        for (GFF3Feature feature : annotation.getFeatures()) {
+            String featureName = feature.getName();
+            if (OntologyTerm.PROPEPTIDE_REGION_OF_CDS.name().equalsIgnoreCase(featureName)) {
+                propFeatures.add(feature);
+            }
+            if (OntologyTerm.CDS_REGION.name().equalsIgnoreCase(featureName)) {
+                cdsFeatures.add(feature);
+            }
+            if (OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name().equalsIgnoreCase(featureName)
+                    || OntologyTerm.MATURE_PROTEIN_REGION_OF_CDS.name().equalsIgnoreCase(featureName)) {
+                peptideFeatures.add(feature);
+            }
+        }
         for (GFF3Feature propFeature : propFeatures) {
 
             long start = propFeature.getStart();
