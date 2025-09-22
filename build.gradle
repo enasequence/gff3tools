@@ -43,7 +43,7 @@ spotless {
 }
 
 application {
-    mainClass.set("uk.ac.ebi.embl.converter.cli.Main")
+    mainClass.set("uk.ac.ebi.embl.gff3tools.cli.Main")
 }
 
 jar {
