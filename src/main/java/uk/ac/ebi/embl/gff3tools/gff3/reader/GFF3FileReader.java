@@ -10,9 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3.reader;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.Reader;
+import java.io.*;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -22,6 +20,7 @@ import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 
@@ -29,6 +28,8 @@ public class GFF3FileReader implements AutoCloseable {
 
     static Pattern VERSION_DIRECTIVE = Pattern.compile(
             "^##gff-version (?<version>(?<major>[0-9]+)(\\.(?<minor>[0-9]+)(:?\\.(?<patch>[0-9]+))?)?)\\s*$");
+    static Pattern SPECIES_DIRECTIVE = Pattern.compile(
+            "^##species (?<url>\\S*?[?&]name=(?<species>[A-Za-z]+(?:\\s[A-Za-z]+)*))\\s*$");
     static Pattern SEQUENCE_REGION_DIRECTIVE = Pattern.compile(
             "^##sequence-region\\s+(?<accession>(?<accessionId>[^.]+)(?:\\.(?<accessionVersion>\\d+))?)\\s+(?<start>[0-9]+)\\s+(?<end>[0-9]+)$");
     static Pattern RESOLUTION_DIRECTIVE = Pattern.compile("^###$");
@@ -42,6 +43,7 @@ public class GFF3FileReader implements AutoCloseable {
     String currentAccession;
     Map<String, GFF3SequenceRegion> accessionSequenceRegionMap = new HashMap<>();
     ValidationEngine validationEngine;
+    private String pushedBackLine = null;
 
     public GFF3FileReader(ValidationEngine validationEngine, Reader reader) {
         this.validationEngine = validationEngine;
@@ -50,7 +52,7 @@ public class GFF3FileReader implements AutoCloseable {
         currentAnnotation = new GFF3Annotation();
     }
 
-    public GFF3Annotation readAnnotation() throws IOException, ValidationException {
+    public GFF3Annotation readDirectivesAndFeatures() throws IOException, ValidationException {
 
         String line;
         while ((line = readLine()) != null) {
@@ -96,6 +98,49 @@ public class GFF3FileReader implements AutoCloseable {
             return finalAnnotation;
         }
         return null;
+    }
+
+    @FunctionalInterface
+    public interface AnnotationHandler<T> {
+        void handle(T entry) throws WriteException;
+    }
+
+    public void  readAnnotation(AnnotationHandler<GFF3Annotation> annotationHandler)
+            throws ValidationException, ReadException, WriteException {
+
+        try {
+            GFF3Annotation previousAnnotation = null;
+            GFF3Annotation currentAnnotation;
+            // The GFF3 reader returns an annotation every time it encounters a '###' directive or when the accession
+            // number of a feature changes.
+            // Since an EMBL Flat File (FF) cannot have multiple entries with the same accession, all annotations
+            // pertaining to the same accession
+            // must be merged into a single EmblEntry before being written to the output.
+
+            while ((currentAnnotation = readDirectivesAndFeatures()) != null) {
+                // Merge the annotations if the accession is the same
+                if (isSameAnnotation(previousAnnotation, currentAnnotation)) {
+                    previousAnnotation.merge(currentAnnotation);
+                } else {
+                    // The accession is different, so write the previous annotation to EMBL
+                    if (previousAnnotation != null) {
+                        // writeEntry(mapper, previousAnnotation, writer);
+                        annotationHandler.handle(previousAnnotation);
+                    }
+                    previousAnnotation = currentAnnotation;
+                }
+            }
+            // After the loop, write the last accumulated annotation.
+            // writeEntry(mapper, previousAnnotation, writer);
+            annotationHandler.handle(previousAnnotation);
+
+        } catch (IOException e) {
+            throw new ReadException(e);
+        }
+    }
+
+    private boolean isSameAnnotation(GFF3Annotation previousAnnotation, GFF3Annotation currentAnnotation) {
+        return previousAnnotation != null && currentAnnotation.getAccession().equals(previousAnnotation.getAccession());
     }
 
     private GFF3SequenceRegion getSequenceDirective(Matcher m) {
@@ -210,9 +255,47 @@ public class GFF3FileReader implements AutoCloseable {
         return null;
     }
 
+    public GFF3Species readSpecies() throws IOException, ValidationException {
+
+        String line;
+        while ((line = readLine()) != null) {
+            if (line.isBlank()) {
+                continue;
+            }
+
+            Matcher m = SPECIES_DIRECTIVE.matcher(line);
+            if (m.matches()) {
+                String species = m.group("url");
+                return new GFF3Species(species);
+            }else{
+                unreadLine(line);
+                return null;
+            }
+        }
+        return null;
+    }
+
+
+
     private String readLine() throws IOException {
+
+        // Return unread line if exist
+        if (pushedBackLine != null) {
+            String line = pushedBackLine;
+            pushedBackLine = null;
+            return line;
+        }
+
         this.lineCount++;
         return bufferedReader.readLine();
+    }
+
+
+    public void unreadLine(String line) {
+        if (pushedBackLine != null) {
+            throw new IllegalStateException("Already have a pushed-back line");
+        }
+        pushedBackLine = line;
     }
 
     private static String urlDecode(String s) {

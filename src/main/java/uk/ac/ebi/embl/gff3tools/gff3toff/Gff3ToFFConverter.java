@@ -32,43 +32,19 @@ public class Gff3ToFFConverter implements Converter {
 
         try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
 
-            GFF3Mapper mapper = new GFF3Mapper();
             gff3Reader.readHeader();
-            GFF3Annotation previousAnnotation = null;
-            GFF3Annotation currentAnnotation;
-            // The GFF3 reader returns an annotation every time it encounters a '###' directive or when the accession
-            // number of a feature changes.
-            // Since an EMBL Flat File (FF) cannot have multiple entries with the same accession, all annotations
-            // pertaining to the same accession
-            // must be merged into a single EmblEntry before being written to the output.
-            while ((currentAnnotation = gff3Reader.readAnnotation()) != null) {
-                // Merge the annotations if the accession is the same
-                if (isSameAnnotation(previousAnnotation, currentAnnotation)) {
-                    previousAnnotation.merge(currentAnnotation);
-                } else {
-                    // The accession is different, so write the previous annotation to EMBL
-                    if (previousAnnotation != null) writeEntry(mapper, previousAnnotation, writer);
-                    previousAnnotation = currentAnnotation;
-                }
-            }
-            // After the loop, write the last accumulated annotation.
-            writeEntry(mapper, previousAnnotation, writer);
+            //gff3Reader.readAnnotation(annotation -> writeEntry(new GFF3Mapper(), annotation, writer));
+            gff3Reader.readAnnotation(annotation -> writeEntry(new GFF3Mapper(), annotation, writer));
 
-            // Construct the GFF3File with the header, all annotations, and parsing errors.
-            // The parsingErrors are accumulated in the validationEngine.
+            // TODO: Decide how to expose parsingErrors to the user of this converter.// TODO: Decide how to expose parsingErrors to the user of this converter.
             List<ValidationException> parsingErrors = validationEngine.getParsingErrors();
 
         } catch (IOException e) {
-            throw new ReadException(e);
+            throw new RuntimeException(e);
         }
 
-        // TODO: Decide how to expose parsingErrors to the user of this converter.
-        // For now, they are simply collected in the validationEngine.
     }
 
-    private boolean isSameAnnotation(GFF3Annotation previousAnnotation, GFF3Annotation currentAnnotation) {
-        return previousAnnotation != null && currentAnnotation.getAccession().equals(previousAnnotation.getAccession());
-    }
 
     /**
      * Writes an EmblEntry to the provided BufferedWriter.

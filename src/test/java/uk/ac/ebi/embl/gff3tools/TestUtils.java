@@ -14,7 +14,13 @@ import java.io.*;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.*;
+
+import uk.ac.ebi.embl.gff3tools.exception.UnregisteredValidationRuleException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.validation.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationRegistry;
 
 public class TestUtils {
 
@@ -110,5 +116,14 @@ public class TestUtils {
                 "+",
                 "",
                 new HashMap<>());
+    }
+
+
+    public static ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides)
+            throws UnregisteredValidationRuleException {
+        ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
+        engineBuilder.registerValidations(ValidationRegistry.getValidations());
+        engineBuilder.overrideRuleSeverities(ruleOverrides);
+        return engineBuilder.build();
     }
 }

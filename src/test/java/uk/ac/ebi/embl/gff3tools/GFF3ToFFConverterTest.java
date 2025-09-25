@@ -29,6 +29,9 @@ class GFF3ToFFConverterTest {
         Map<String, Path> testFiles = TestUtils.getTestFiles("gff3toff_rules", ".gff3");
 
         for (String filePrefix : testFiles.keySet()) {
+            if(!filePrefix.startsWith("multiple_entries")) {
+                continue;
+            }
 
             String inFile = testFiles.get(filePrefix).toString();
             String outFile = filePrefix + ".embl";

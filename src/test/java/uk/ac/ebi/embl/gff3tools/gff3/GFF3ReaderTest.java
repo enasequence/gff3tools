@@ -54,7 +54,7 @@ public class GFF3ReaderTest {
                     GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
                 gff3Reader.readHeader();
                 while (true) {
-                    if (gff3Reader.readAnnotation() == null) break;
+                    if (gff3Reader.readDirectivesAndFeatures() == null) break;
                 }
             } catch (Exception e) {
                 fail(String.format("Error parsing file: %s", filePrefix), e);
@@ -99,7 +99,7 @@ public class GFF3ReaderTest {
                 GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
             gff3Reader.readHeader(); // Read header first
             while (true) {
-                if (gff3Reader.readAnnotation() == null) {
+                if (gff3Reader.readDirectivesAndFeatures() == null) {
                     fail(String.format("Expected exception when parsing file: %s", testFile.getPath()));
                 }
             }
@@ -119,7 +119,7 @@ public class GFF3ReaderTest {
                 BufferedReader reader = new BufferedReader(filerReader);
                 GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
             gff3Reader.readHeader();
-            gff3Reader.readAnnotation();
+            gff3Reader.readDirectivesAndFeatures();
         } catch (UndefinedSeqIdException e) {
             Assertions.assertTrue(e.getMessage().contains("GFF3_UNDEFINED_SEQID"));
             Assertions.assertEquals(2, e.getLine());
@@ -141,13 +141,13 @@ public class GFF3ReaderTest {
                 BufferedReader reader = new BufferedReader(filerReader);
                 GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
             gff3Reader.readHeader();
-            GFF3Annotation annotation = gff3Reader.readAnnotation();
+            GFF3Annotation annotation = gff3Reader.readDirectivesAndFeatures();
             Assertions.assertNotNull(annotation);
             Assertions.assertEquals(2, annotation.getFeatures().size());
-            annotation = gff3Reader.readAnnotation();
+            annotation = gff3Reader.readDirectivesAndFeatures();
             Assertions.assertNotNull(annotation);
             Assertions.assertEquals(3, annotation.getFeatures().size());
-            annotation = gff3Reader.readAnnotation();
+            annotation = gff3Reader.readDirectivesAndFeatures();
             Assertions.assertNull(annotation);
         }
     }
@@ -167,7 +167,7 @@ public class GFF3ReaderTest {
             gff3Reader.readHeader();
             GFF3Annotation annotation = null;
             while (true) {
-                GFF3Annotation currentAnnotation = gff3Reader.readAnnotation();
+                GFF3Annotation currentAnnotation = gff3Reader.readDirectivesAndFeatures();
                 if (currentAnnotation == null) break;
                 if (annotation == null) {
                     annotation = currentAnnotation;
@@ -195,21 +195,21 @@ public class GFF3ReaderTest {
         try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, new StringReader(gff3Content))) {
             gff3Reader.readHeader();
 
-            GFF3Annotation annotation1 = gff3Reader.readAnnotation();
+            GFF3Annotation annotation1 = gff3Reader.readDirectivesAndFeatures();
             Assertions.assertNotNull(annotation1);
             Assertions.assertEquals(1, annotation1.getFeatures().size());
             Assertions.assertEquals("seq1", annotation1.getFeatures().get(0).accession());
             Assertions.assertEquals(
                     "feat1", annotation1.getFeatures().get(0).getId().get());
 
-            GFF3Annotation annotation2 = gff3Reader.readAnnotation();
+            GFF3Annotation annotation2 = gff3Reader.readDirectivesAndFeatures();
             Assertions.assertNotNull(annotation2);
             Assertions.assertEquals(1, annotation2.getFeatures().size());
             Assertions.assertEquals("seq1", annotation2.getFeatures().get(0).accession());
             Assertions.assertEquals(
                     "feat2", annotation2.getFeatures().get(0).getId().get());
 
-            GFF3Annotation annotation3 = gff3Reader.readAnnotation();
+            GFF3Annotation annotation3 = gff3Reader.readDirectivesAndFeatures();
             Assertions.assertNull(annotation3);
         }
     }
@@ -228,9 +228,9 @@ public class GFF3ReaderTest {
 
         try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, new StringReader(gff3Content))) {
             gff3Reader.readHeader();
-            gff3Reader.readAnnotation(); // Read first annotation
-            gff3Reader.readAnnotation(); // Read second annotation
-            gff3Reader.readAnnotation(); // This should trigger the exception
+            gff3Reader.readDirectivesAndFeatures(); // Read first annotation
+            gff3Reader.readDirectivesAndFeatures(); // Read second annotation
+            gff3Reader.readDirectivesAndFeatures(); // This should trigger the exception
             fail("Expected DuplicateSeqIdException to be thrown.");
         } catch (DuplicateSeqIdException e) {
             Assertions.assertTrue(e.getMessage().contains("The seq id \"seq1\" was used previously"));
