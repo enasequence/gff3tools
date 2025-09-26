@@ -24,10 +24,26 @@ public record GFF3File(
         implements IGFF3Feature {
     @Override
     public void writeGFF3String(Writer writer) throws WriteException {
+        if(header!=null) {
+            this.header.writeGFF3String(writer);
+        }
+
+        if (this.species != null) {
+            this.species.writeGFF3String(writer);
+        }
+        for (GFF3Annotation annotation : annotations) {
+            annotation.writeGFF3String(writer);
+        }
+    }
+
+    public void writeHeaders(Writer writer) throws WriteException {
         this.header.writeGFF3String(writer);
         if (this.species != null) {
             this.species.writeGFF3String(writer);
         }
+    }
+
+    public void writeGAnnotations(Writer writer) throws WriteException {
         for (GFF3Annotation annotation : annotations) {
             annotation.writeGFF3String(writer);
         }
