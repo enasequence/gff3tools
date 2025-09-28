@@ -132,7 +132,9 @@ class GFF3FileReaderTest {
           output = testRead(input);*/
 
 
-         String input = "##gff-version 3\n"
+         String input = "##gff-version 3\n" +
+                 "##sequence-region seq0 1 100\n" +
+                 "##gff-version 3\n"
                 + "##sequence-region seq1 1 200\n"
                  + "seq1\tsource\tfeature1\t1\t100\t.\t+\t.\tID=feata1;\n\n"
                  + "##gff-version 3\n"
