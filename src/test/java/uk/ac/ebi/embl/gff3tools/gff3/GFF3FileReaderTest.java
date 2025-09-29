@@ -25,7 +25,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.builtin.*;
 
-public class GFF3ReaderTest {
+public class GFF3FileReaderTest {
 
     ValidationEngine getValidationEngine() {
         ValidationEngineBuilder builder = getValidationEngineBuilder();
