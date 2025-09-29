@@ -36,8 +36,7 @@ public class GFF3FileReader implements AutoCloseable {
     static Pattern COMMENT = Pattern.compile("^#.*$");
     static Pattern GFF3_FEATURE = Pattern.compile(
             "^(?<accession>(?<accessionId>[^.]+)(?:\\.(?<accessionVersion>\\d+))?)\\t(?<source>.+)\\t(?<name>.+)\\t(?<start>[0-9]+)\\t(?<end>[0-9]+)\\t(?<score>.+)\\t(?<strand>\\+|\\-|\\.|\\?)\\t(?<phase>.+)\\t(?<attributes>.+)?$");
-    public GFF3Species gff3Species;
-    Set <String> processedAccession;
+
 
     BufferedReader bufferedReader;
     int lineCount;
@@ -45,21 +44,19 @@ public class GFF3FileReader implements AutoCloseable {
     String currentAccession;
     Map<String, GFF3SequenceRegion> accessionSequenceRegionMap = new TreeMap<>();
     ValidationEngine validationEngine;
-    GFF3Entry gff3Entry;
+    public GFF3Species gff3Species;
+    private final Set <String> processedAccessions;
 
     public GFF3FileReader(ValidationEngine validationEngine, Reader reader) {
         this.validationEngine = validationEngine;
         this.bufferedReader = new BufferedReader(reader);
         lineCount = 0;
         currentAnnotation = new GFF3Annotation();
-        gff3Entry = new GFF3Entry();
-        processedAccession = new HashSet<>();
-
+        processedAccessions = new HashSet<>();
     }
 
-    public GFF3Annotation readDirectivesAndFeatures() throws IOException, ValidationException {
+    public GFF3Annotation readAnnotation() throws IOException, ValidationException {
 
-        GFF3SequenceRegion sequenceRegion = null;
         String line;
         while ((line = readLine()) != null) {
             if (line.isBlank()) {
@@ -73,40 +70,28 @@ public class GFF3FileReader implements AutoCloseable {
                 gff3Species = new GFF3Species(species);
             } else if ((m = SEQUENCE_REGION_DIRECTIVE.matcher(line)).matches()) {
                 // Create directive
-                 /*sequenceRegion = readSequenceRegion(m);
-
-                if (currentAnnotation.getSequenceRegion() != null && !currentAnnotation.getSequenceRegion().accessionId().equals(sequenceRegion.accessionId())) {
+                GFF3SequenceRegion sequenceRegion = readSequenceRegion(m);
+                accessionSequenceRegionMap.put(sequenceRegion.accession(), sequenceRegion);
+            } else if (RESOLUTION_DIRECTIVE.matcher(line).matches()) {
+                if (!currentAnnotation.getFeatures().isEmpty() || currentAnnotation.getSequenceRegion() != null) {
                     GFF3Annotation previousAnnotation = currentAnnotation;
                     currentAnnotation = new GFF3Annotation();
-                    currentAnnotation.setSequenceRegion(sequenceRegion);
                     validationEngine.validateAnnotation(previousAnnotation, lineCount);
                     return previousAnnotation;
                 }
-                currentAnnotation.setSequenceRegion(sequenceRegion);*/
-                GFF3SequenceRegion sequenceDirective = readSequenceRegion(m);
-                accessionSequenceRegionMap.put(sequenceDirective.accession(), sequenceDirective);
-
-            } else if (COMMENT.matcher(line).matches() || RESOLUTION_DIRECTIVE.matcher(line).matches()) {
+                continue;
+            } else if (COMMENT.matcher(line).matches()) {
                 // Skip comment
                 continue;
             } else if ((m = GFF3_FEATURE.matcher(line)).matches()) {
-                /*GFF3Feature feature = readFeature(m);
-                if(sequenceRegion ==null || !feature.getSeqId().equals(sequenceRegion.accessionId())) {
-                    validationEngine.handleSyntacticError(new UndefinedSeqIdException(
-                            lineCount, "Undefined sequence region for accession \"" + currentAccession + "\""));
-                    currentAnnotation.addFeature(feature);
-                }*/
 
                 GFF3Annotation a = parseAndAddFeature(m);
                 if (a != null) {
 
                     validationEngine.validateAnnotation(a, lineCount);
-                    processedAccession.add(a.getAccession());
+                    processedAccessions.add(a.getAccession());
                     return a;
                 }
-
-
-
             } else {
                 validationEngine.handleSyntacticError(
                         new InvalidGFF3RecordException(lineCount, "Invalid gff3 record \"" + line + "\""));
@@ -117,20 +102,20 @@ public class GFF3FileReader implements AutoCloseable {
             GFF3Annotation finalAnnotation = currentAnnotation;
             currentAnnotation = new GFF3Annotation();
             validationEngine.validateAnnotation(finalAnnotation, lineCount);
-            processedAccession.add(finalAnnotation.getAccession());
+            processedAccessions.add(finalAnnotation.getAccession());
             return finalAnnotation;
         }
 
+        // Handle all the GFF3 annotations without features.
         for (Map.Entry<String, GFF3SequenceRegion> e : accessionSequenceRegionMap.entrySet()) {
-            if (!processedAccession.contains(e.getKey())) {
-                String key = e.getKey();
-                GFF3SequenceRegion value = e.getValue();
+            if (!processedAccessions.contains(e.getKey())) {
+                String accession = e.getKey();
+                GFF3SequenceRegion sequenceRegion = e.getValue();
                 GFF3Annotation annotation = new GFF3Annotation();
-                annotation.setSequenceRegion(value);
+                annotation.setSequenceRegion(sequenceRegion);
                 validationEngine.validateAnnotation(annotation, lineCount);
-                processedAccession.add(key);
+                processedAccessions.add(accession);
                 return annotation;
-                // do something with key and value
             }
         }
         return null;
@@ -141,21 +126,22 @@ public class GFF3FileReader implements AutoCloseable {
         void handle(T entry) throws WriteException;
     }
 
-    public void readAnnotation(AnnotationHandler<GFF3Annotation> annotationHandler)
+    public void read(AnnotationHandler<GFF3Annotation> annotationHandler)
             throws ValidationException, ReadException, WriteException {
 
         try {
             GFF3Annotation previousAnnotation = null;
             GFF3Annotation currentAnnotation;
-            // The GFF3 reader returns an annotation every time it encounters a '###' directive or when the accession
-            // number of a feature changes.
-            // Since an EMBL Flat File (FF) cannot have multiple entries with the same accession, all annotations
-            // pertaining to the same accession
-            // must be merged into a single EmblEntry before being written to the output.
-
-            while ((currentAnnotation = readDirectivesAndFeatures()) != null) {
+             /**
+              The GFF3 reader returns an annotation every time it encounters a '###' directive or when the accession
+             number of a feature changes.
+             Since an EMBL Flat File (FF) cannot have multiple entries with the same accession, all annotations
+             pertaining to the same accession
+             must be merged into a single EmblEntry before being written to the output.
+              */
+            while ((currentAnnotation = readAnnotation()) != null) {
                 // Merge the annotations if the accession is the same
-                /*if (isSameAnnotation(previousAnnotation, currentAnnotation)) {
+                if (isSameAnnotation(previousAnnotation, currentAnnotation)) {
                     previousAnnotation.merge(currentAnnotation);
                 } else {
                     // The accession is different, so write the previous annotation to EMBL
@@ -164,11 +150,11 @@ public class GFF3FileReader implements AutoCloseable {
                         annotationHandler.handle(previousAnnotation);
                     }
                     previousAnnotation = currentAnnotation;
-                }*/
-                annotationHandler.handle(currentAnnotation);
+                }
+
             }
-            // After the loop, write the last accumulated annotation.
-            // writeEntry(mapper, previousAnnotation, writer);
+            // After the loop, handle the last accumulated annotation.
+            annotationHandler.handle(currentAnnotation);
 
 
         } catch (IOException e) {
@@ -189,45 +175,6 @@ public class GFF3FileReader implements AutoCloseable {
         long end = Long.parseLong(m.group("end"));
 
         return new GFF3SequenceRegion(accessionId, accessionVersion, start, end);
-    }
-
-    private GFF3Feature readFeature(Matcher m) throws ValidationException {
-
-        String accession = m.group("accession");
-        String accessionId = m.group("accessionId");
-        Optional<Integer> accessionVersion =
-                Optional.ofNullable(m.group("accessionVersion")).map(Integer::parseInt);
-        String source = m.group("source");
-        String name = m.group("name");
-        long start = Long.parseLong(m.group("start"));
-        long end = Long.parseLong(m.group("end"));
-        String score = m.group("score");
-        String strand = m.group("strand");
-        String phase = m.group("phase");
-        String attributes = m.group("attributes");
-
-        Map<String, Object> attributesMap = attributesFromString(attributes);
-
-        Optional<String> id = Optional.ofNullable((String) attributesMap.get("ID"));
-        Optional<String> parentId = Optional.ofNullable((String) attributesMap.get("Parent"));
-
-        GFF3Feature feature = new GFF3Feature(
-                id,
-                parentId,
-                accessionId,
-                accessionVersion,
-                source,
-                name,
-                start,
-                end,
-                score,
-                strand,
-                phase,
-                attributesMap);
-
-        validationEngine.validateFeature(feature, lineCount);
-        return feature;
-
     }
 
     private GFF3Annotation parseAndAddFeature(Matcher m) throws ValidationException {

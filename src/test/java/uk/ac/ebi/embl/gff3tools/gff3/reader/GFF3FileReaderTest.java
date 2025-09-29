@@ -188,7 +188,7 @@ class GFF3FileReaderTest {
 
             AtomicBoolean first = new AtomicBoolean(true);
 
-            reader.readAnnotation(annotation -> {
+            reader.read(annotation -> {
                 //assertNotNull(annotation);
                 //GFF3Species gff3Species = reader.getSpecies();
                 //GFF3File gff3File = new GFF3File(gff3Header, gff3Species, Arrays.asList(annotation),null);
