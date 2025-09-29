@@ -14,13 +14,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.*;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.builtin.*;
@@ -236,6 +241,96 @@ public class GFF3FileReaderTest {
             Assertions.assertTrue(e.getMessage().contains("The seq id \"seq1\" was used previously"));
             Assertions.assertEquals(6, e.getLine()); // Line 5 is where the duplicate sequence-region is
         }
+    }
+
+    @Test
+    void testReadSpecies_noSpecies() throws Exception {
+        // GFF3 with species
+        String input = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
+                + "##sequence-region BN000065.1 1 315242\n"
+                + "BN000065.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n\n"
+                + "##gff-version 3\n"
+                + "##species http://example.org?name=Homo sapiens\n"
+                + "##sequence-region BN000066.1 1 315242\n"
+                + "BN000066.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n\n";
+        String output = testReadWithHeaderOnEachAnnotation(input);
+        assertEquals(input, output);
+
+        // GFF3 with out species
+        input = "##gff-version 3\n" + "##sequence-region BN000065.1 1 315242\n"
+                + "BN000065.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n\n";
+        output = testReadWithHeaderOnEachAnnotation(input);
+        assertEquals(input, output);
+
+        // GFF3 header on wach annotation
+        input = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
+                + "##sequence-region BN000065.1 1 315242\n\n"
+                + "##gff-version 3\n"
+                + "##species http://example.org?name=Homo sapiens\n"
+                + "##sequence-region BN000066.1 1 315242\n\n";
+        output = testReadWithHeaderOnEachAnnotation(input);
+        assertEquals(input, output);
+
+        input = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
+                + "##sequence-region BN000065.1 1 315242\n\n"
+                + "##gff-version 3\n"
+                + "##species http://example.org?name=Homo sapiens\n"
+                + "##sequence-region BN000066.1 1 315242\n\n";
+        output = testReadWithHeaderOnce(input);
+        String inputWithoutRepeatingVersionAndSequence = input.replaceAll("##gff-version 3\\n", "");
+        inputWithoutRepeatingVersionAndSequence = inputWithoutRepeatingVersionAndSequence.replaceAll(
+                "##species http://example.org\\?name=Homo sapiens\n", "");
+        inputWithoutRepeatingVersionAndSequence = "##gff-version 3\n##species http://example.org?name=Homo sapiens\n"
+                + inputWithoutRepeatingVersionAndSequence;
+        assertEquals(inputWithoutRepeatingVersionAndSequence, output);
+
+        File testFile = TestUtils.getResourceFile("reader/version-in-all-annotation.gff3");
+        File expecttedFile = TestUtils.getResourceFile("reader/version-in-all-annotation-expected.gff3");
+        String expectedOutput = Files.readString(expecttedFile.toPath());
+        input = Files.readString(testFile.toPath());
+
+        output = testReadWithHeaderOnce(input);
+        assertEquals(expectedOutput, output);
+    }
+
+    private String testReadWithHeaderOnce(String input)
+            throws IOException, ValidationException, ReadException, WriteException {
+        StringWriter writer = new StringWriter();
+        try (GFF3FileReader reader = new GFF3FileReader(getValidationEngine(), new StringReader(input))) {
+            GFF3Header gff3Header = reader.readHeader();
+
+            AtomicBoolean first = new AtomicBoolean(true);
+
+            reader.read(annotation -> {
+                if (first.getAndSet(false)) {
+                    // first annotation → write header + species only once
+                    GFF3Species gff3Species = reader.getSpecies();
+                    GFF3File gff3File =
+                            new GFF3File(gff3Header, gff3Species, Collections.singletonList(annotation), null);
+                    gff3File.writeGFF3String(writer);
+                } else {
+                    // subsequent annotations → only write features
+                    GFF3File gff3File = new GFF3File(null, null, Collections.singletonList(annotation), null);
+                    gff3File.writeGFF3String(writer);
+                }
+            });
+        }
+        return writer.toString();
+    }
+
+    private String testReadWithHeaderOnEachAnnotation(String input)
+            throws IOException, ValidationException, ReadException, WriteException {
+        StringWriter writer = new StringWriter();
+        try (GFF3FileReader reader = new GFF3FileReader(getValidationEngine(), new StringReader(input))) {
+            GFF3Header gff3Header = reader.readHeader();
+
+            reader.read(annotation -> {
+                GFF3Species gff3Species = reader.getSpecies();
+                GFF3File gff3File = new GFF3File(gff3Header, gff3Species, Collections.singletonList(annotation), null);
+                gff3File.writeGFF3String(writer);
+            });
+        }
+        return writer.toString();
     }
 
     private void test(String attributeLine) throws Exception {

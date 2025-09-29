@@ -35,15 +35,14 @@ public class Gff3ToFFConverter implements Converter {
             gff3Reader.readHeader();
             gff3Reader.read(annotation -> writeEntry(new GFF3Mapper(), annotation, writer));
 
-            // TODO: Decide how to expose parsingErrors to the user of this converter.// TODO: Decide how to expose parsingErrors to the user of this converter.
+            // TODO: Decide how to expose parsingErrors to the user of this converter.// TODO: Decide how to expose
+            // parsingErrors to the user of this converter.
             List<ValidationException> parsingErrors = validationEngine.getParsingErrors();
 
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
     }
-
 
     /**
      * Writes an EmblEntry to the provided BufferedWriter.
