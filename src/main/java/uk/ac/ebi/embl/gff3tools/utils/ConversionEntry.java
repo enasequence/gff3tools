@@ -11,27 +11,22 @@
 package uk.ac.ebi.embl.gff3tools.utils;
 
 import io.vavr.Tuple2;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class ConversionEntry {
     String sOID;
     String sOTerm;
-    String definition;
     String feature;
     Map<String, String> qualifiers;
 
-    ConversionEntry(String[] tokens) {
-        this.sOID = tokens[0];
-        this.sOTerm = tokens[1];
-        this.definition = tokens[2];
-        this.feature = tokens[3];
+    public ConversionEntry(String sOID, String sOTerm, String insdcFeature, String... insdcQualifiers) {
+        this.sOID = sOID;
+        this.sOTerm = sOTerm;
+        this.feature = insdcFeature;
         this.qualifiers = new HashMap<>();
         // Splitting only Qualifier1 and Qualifier2 values
-        List<String> qualifiersTokens = Arrays.stream(tokens).skip(4).toList();
-        for (String token : qualifiersTokens) {
+        for (String token : insdcQualifiers) {
             qualifiers.putAll(parseQualifier(token).apply(Map::of));
         }
     }

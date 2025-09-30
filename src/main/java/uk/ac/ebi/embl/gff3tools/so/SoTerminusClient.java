@@ -11,6 +11,8 @@
 package uk.ac.ebi.embl.gff3tools.so;
 
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.IRI;
@@ -26,6 +28,7 @@ import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory;
 import org.semanticweb.owlapi.search.EntitySearcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 
 public class SoTerminusClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(SoTerminusClient.class);
@@ -163,12 +166,58 @@ public class SoTerminusClient {
     }
 
     /**
+     * Finds the SO ID for a given SO term (name or synonym).
+     *
+     * @param soTerm The SO term (e.g., "gene", "exon").
+     * @return The SO ID (e.g., "SO:0000704") if found, or null otherwise.
+     */
+    public String getSOId(String soTerm) {
+        if (soTerm == null || soTerm.isEmpty()) {
+            return null;
+        }
+        return findTermByNameOrSynonym(soTerm).orElse(null);
+    }
+
+    /**
      * Checks if a given string is a valid ontology ID with the format SO:0000123.
      * @param ontologyId The string to validate.
      * @return true if the string matches the expected format, false otherwise.
      */
     public boolean isValidOntologyId(String ontologyId) {
         return ontologyId != null && ontologyId.matches("SO:[0-9]{7}");
+    }
+
+    /**
+     * Debug method to print rdfs:label and oboInOwl:hasExactSynonym annotations for a given ontology ID.
+     * @param ontologyId The ontology ID to debug (e.g., "SO:0000123").
+     */
+    public void debugTermAnnotations(String ontologyId) {
+        if (ontology == null) {
+            LOGGER.warn("Ontology not loaded. Cannot debug term annotations.");
+            return;
+        }
+
+        String iriString = "http://purl.obolibrary.org/obo/" + ontologyId.replace(":", "_");
+        OWLClass owlClass = dataFactory.getOWLClass(IRI.create(iriString));
+
+        LOGGER.info("Debugging annotations for term: " + ontologyId);
+
+        // Get and print rdfs:label
+        EntitySearcher.getAnnotationObjects(owlClass, ontology, dataFactory.getRDFSLabel())
+                .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
+                .forEach(annotation -> LOGGER.info(" Annotation: " + annotation.getProperty() + "\n Label: " + ((OWLLiteral) annotation.getValue()).getLiteral()));
+                // .map(annotation -> ((OWLLiteral) annotation.getValue()).getLiteral())
+                // .forEach(label -> LOGGER.info("  RDFS Label: " + label));
+
+        // Get and print oboInOwl:hasExactSynonym
+        EntitySearcher.getAnnotations(
+                        owlClass,
+                        ontology,
+                        dataFactory.getOWLAnnotationProperty(
+                                IRI.create("http://www.geneontology.org/formats/oboInOwl#hasExactSynonym")))
+                .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
+                .map(annotation -> ((OWLLiteral) annotation.getValue()).getLiteral())
+                .forEach(synonym -> LOGGER.info("  Exact Synonym: " + synonym));
     }
 
     /**
@@ -197,5 +246,57 @@ public class SoTerminusClient {
                     .map((String termId) -> isChildOf(termId, "SO:0000110"))
                     .orElse(false);
         }
+    }
+
+    /**
+     * Retrieves a map of EMBL feature names to a list of corresponding SO terms.
+     * This method extracts feature names (rdfs:label or synonyms) from the loaded
+     * ontology and maps them to their respective SO terms.
+     *
+     * @return A map where the key is an EMBL feature name (String) and the value
+     *     is a List of SO terms (String) that correspond to that feature.
+     */
+    public Map<String, ConversionEntry> getFeatureMap() {
+        Map<String, ConversionEntry> featureMap = new HashMap<>();
+        if (ontology == null) {
+            LOGGER.warn("Ontology not loaded. Cannot retrieve feature map.");
+            return featureMap;
+        }
+
+        for (OWLClass owlClass : ontology.getClassesInSignature()) {
+            // Check if the term is a feature SO term
+            String soId = extractOntologyId(owlClass.getIRI());
+            if (soId != null && isFeatureSoTerm(soId)) {
+
+                // Get the RDFS Label
+                Optional<String> label =
+                  EntitySearcher.getAnnotations(owlClass, ontology, dataFactory.getRDFSLabel())
+                        .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
+                        .map(annotation -> ((OWLLiteral) annotation.getValue()).getLiteral())
+                        .findFirst();
+
+                if (label.isPresent()) {
+                    // Get INSDC_feature synonyms
+                    Optional<String> insdcFeature = EntitySearcher.getAnnotations(
+                                    owlClass,
+                                    ontology,
+                                    dataFactory.getOWLAnnotationProperty(
+                                            IRI.create("http://www.geneontology.org/formats/oboInOwl#hasExactSynonym")))
+                            .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
+                            .map(annotation -> ((OWLLiteral) annotation.getValue()).getLiteral())
+                            .filter(literal -> literal.startsWith("INSDC_feature"))
+                            .map(literal -> {
+                                String[] parts = literal.split(":");
+                                return parts[parts.length - 1];
+                            })
+                            .findFirst();
+
+                    if (insdcFeature.isPresent() && insdcFeature.get() != null && !insdcFeature.get().isEmpty()) {
+                      featureMap.put(soId, new ConversionEntry(soId, label.get(), insdcFeature.get()));
+                    }
+                }
+            }
+        }
+        return featureMap;
     }
 }

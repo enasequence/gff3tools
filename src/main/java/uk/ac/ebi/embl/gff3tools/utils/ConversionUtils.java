@@ -16,6 +16,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
+import uk.ac.ebi.embl.gff3tools.so.SoTerminusClient;
 
 public enum ConversionUtils {
     INSTANCE;
@@ -26,8 +27,10 @@ public enum ConversionUtils {
     // Map of child : list of possible parents
     // Uses sOTerms (gff3 feature names)
     private Map<String, Set<String>> featureRelations = null;
+    private SoTerminusClient soTerminusClient = null;
 
     private ConversionUtils() {
+        this.soTerminusClient = new SoTerminusClient();
         this.loadMaps();
     }
 
@@ -51,18 +54,33 @@ public enum ConversionUtils {
         return INSTANCE.gff32ffQualifiers;
     }
 
+    private void addConversionEntry(ConversionEntry conversionEntry) {
+        ff2gff3.putIfAbsent(conversionEntry.feature, new ArrayList<>());
+        ff2gff3.get(conversionEntry.feature).add(conversionEntry);
+        gff32ff.put(conversionEntry.sOID, conversionEntry);
+        gff32ff.put(conversionEntry.sOTerm, conversionEntry);
+    }
+
     private void loadMaps() {
         try {
             ff2gff3 = new HashMap<>();
             gff32ff = new HashMap<>();
+            for (Map.Entry<String, ConversionEntry> entry :
+                    soTerminusClient.getFeatureMap().entrySet()) {
+                ConversionEntry conversionEntry = entry.getValue();
+                addConversionEntry(conversionEntry);
+            }
+
             List<String> lines = readTsvFile("feature-mapping.tsv");
             lines.remove(0);
             for (String line : lines) {
-                ConversionEntry conversionEntry = new ConversionEntry(line.split("\t"));
-                ff2gff3.putIfAbsent(conversionEntry.feature, new ArrayList<>());
-                ff2gff3.get(conversionEntry.feature).add(conversionEntry);
-                gff32ff.putIfAbsent(conversionEntry.sOID, conversionEntry);
-                gff32ff.putIfAbsent(conversionEntry.sOTerm, conversionEntry);
+                String[] parts = line.split("\t");
+                ConversionEntry conversionEntry = new ConversionEntry(
+                        parts[0],
+                        parts[1],
+                        parts[3],
+                        Arrays.stream(parts).skip(4).toArray(n -> new String[n]));
+                addConversionEntry(conversionEntry);
             }
 
             ff2gff3Qualifiers = new HashMap<>();

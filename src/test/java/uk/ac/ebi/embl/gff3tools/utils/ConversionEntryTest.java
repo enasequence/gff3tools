@@ -25,7 +25,7 @@ public class ConversionEntryTest {
         Method method = ConversionEntry.class.getDeclaredMethod("parseQualifier", String.class);
         method.setAccessible(true);
 
-        ConversionEntry entry = new ConversionEntry(new String[] {"id", "term", "definition", "feature"});
+        ConversionEntry entry = new ConversionEntry("id", "term", "feature");
 
         Object res1 = method.invoke(entry, "/q1=\"q1value\"");
         assertEquals(new Tuple2<>("q1", "q1value"), res1);

@@ -93,4 +93,10 @@ public class SoTerminusClientTest {
         // "cds" (lowercase) should also work for "CDS"
         assertTrue(soTerminusClient.isFeatureSoTerm("cds"));
     }
+
+    @Test
+    public void debugGeneAnnotations() {
+        System.out.println("Debugging annotations for 'gene' (SO:0000704):");
+        soTerminusClient.debugTermAnnotations("SO:0000704");
+    }
 }

@@ -13,6 +13,8 @@ package uk.ac.ebi.embl.gff3tools;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.BufferedReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -34,8 +36,18 @@ class GFF3ToFFConverterTest {
             String outFile = filePrefix + ".embl";
             String[] args = {"conversion", inFile, outFile};
             try {
-                int exitCode = new CommandLine(new Main()).execute(args);
-                assertEquals(0, exitCode, "Wrong exit code on test file: " + filePrefix);
+                StringWriter err = new StringWriter();
+                StringWriter out = new StringWriter();
+                CommandLine command = new CommandLine(new Main());
+                command.setErr(new PrintWriter(err));
+                command.setOut(new PrintWriter(out));
+
+                int exitCode = command.execute(args);
+                assertEquals(
+                        0,
+                        exitCode,
+                        "Wrong exit code on test file: " + filePrefix + "\nout: " + out.toString() + "\nerr: "
+                                + err.toString());
             } catch (Exception e) {
                 fail("Error on test file: " + filePrefix + " - " + e.getMessage());
             }
