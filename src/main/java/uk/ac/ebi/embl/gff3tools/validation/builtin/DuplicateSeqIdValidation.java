@@ -45,6 +45,6 @@ public class DuplicateSeqIdValidation implements FeatureValidation, AnnotationVa
 
     @Override
     public void validateAnnotation(GFF3Annotation feature, int line) throws ValidationException {
-        currentAccession = null;
+
     }
 }

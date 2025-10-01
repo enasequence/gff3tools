@@ -24,7 +24,10 @@ public record GFF3File(
         implements IGFF3Feature {
     @Override
     public void writeGFF3String(Writer writer) throws WriteException {
-        this.header.writeGFF3String(writer);
+        if (header != null) {
+            this.header.writeGFF3String(writer);
+        }
+
         if (this.species != null) {
             this.species.writeGFF3String(writer);
         }
