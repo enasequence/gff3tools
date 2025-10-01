@@ -28,8 +28,7 @@ public class GFF3FileReader implements AutoCloseable {
 
     static Pattern VERSION_DIRECTIVE = Pattern.compile(
             "^##gff-version (?<version>(?<major>[0-9]+)(\\.(?<minor>[0-9]+)(:?\\.(?<patch>[0-9]+))?)?)\\s*$");
-    static Pattern SPECIES_DIRECTIVE =
-            Pattern.compile("^##species (?<species>.*)$");
+    static Pattern SPECIES_DIRECTIVE = Pattern.compile("^##species (?<species>.*)$");
     static Pattern SEQUENCE_REGION_DIRECTIVE = Pattern.compile(
             "^##sequence-region\\s+(?<accession>(?<accessionId>[^.]+)(?:\\.(?<accessionVersion>\\d+))?)\\s+(?<start>[0-9]+)\\s+(?<end>[0-9]+)$");
     static Pattern RESOLUTION_DIRECTIVE = Pattern.compile("^###$");
@@ -224,7 +223,6 @@ public class GFF3FileReader implements AutoCloseable {
 
         validationEngine.validateFeature(feature, lineCount);
         return feature;
-
     }
 
     private void validateAndSetSequenceRegion() throws ValidationException {
