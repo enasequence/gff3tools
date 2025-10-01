@@ -119,7 +119,7 @@ public class SoTerminusClient {
 
         for (OWLClass owlClass : ontology.getClassesInSignature()) {
             // Check rdfs:label
-            Optional<String> label = EntitySearcher.getAnnotations(owlClass, ontology, dataFactory.getRDFSLabel())
+            Optional<String> label = EntitySearcher.getAnnotationObjects(owlClass, ontology, dataFactory.getRDFSLabel())
                     .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
                     .map(annotation ->
                             ((OWLLiteral) annotation.getValue()).getLiteral().toLowerCase())
@@ -134,7 +134,7 @@ public class SoTerminusClient {
             }
 
             // Check oboInOwl:hasExactSynonym
-            Optional<String> synonym = EntitySearcher.getAnnotations(
+            Optional<String> synonym = EntitySearcher.getAnnotationObjects(
                             owlClass,
                             ontology,
                             dataFactory.getOWLAnnotationProperty(
@@ -205,12 +205,13 @@ public class SoTerminusClient {
         // Get and print rdfs:label
         EntitySearcher.getAnnotationObjects(owlClass, ontology, dataFactory.getRDFSLabel())
                 .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
-                .forEach(annotation -> LOGGER.info(" Annotation: " + annotation.getProperty() + "\n Label: " + ((OWLLiteral) annotation.getValue()).getLiteral()));
-                // .map(annotation -> ((OWLLiteral) annotation.getValue()).getLiteral())
-                // .forEach(label -> LOGGER.info("  RDFS Label: " + label));
+                .forEach(annotation -> LOGGER.info(" Annotation: " + annotation.getProperty() + "\n Label: "
+                        + ((OWLLiteral) annotation.getValue()).getLiteral()));
+        // .map(annotation -> ((OWLLiteral) annotation.getValue()).getLiteral())
+        // .forEach(label -> LOGGER.info("  RDFS Label: " + label));
 
         // Get and print oboInOwl:hasExactSynonym
-        EntitySearcher.getAnnotations(
+        EntitySearcher.getAnnotationObjects(
                         owlClass,
                         ontology,
                         dataFactory.getOWLAnnotationProperty(
@@ -269,15 +270,14 @@ public class SoTerminusClient {
             if (soId != null && isFeatureSoTerm(soId)) {
 
                 // Get the RDFS Label
-                Optional<String> label =
-                  EntitySearcher.getAnnotations(owlClass, ontology, dataFactory.getRDFSLabel())
+                Optional<String> label = EntitySearcher.getAnnotationObjects(owlClass, ontology, dataFactory.getRDFSLabel())
                         .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
                         .map(annotation -> ((OWLLiteral) annotation.getValue()).getLiteral())
                         .findFirst();
 
                 if (label.isPresent()) {
                     // Get INSDC_feature synonyms
-                    Optional<String> insdcFeature = EntitySearcher.getAnnotations(
+                    Optional<String> insdcFeature = EntitySearcher.getAnnotationObjects(
                                     owlClass,
                                     ontology,
                                     dataFactory.getOWLAnnotationProperty(
@@ -291,8 +291,10 @@ public class SoTerminusClient {
                             })
                             .findFirst();
 
-                    if (insdcFeature.isPresent() && insdcFeature.get() != null && !insdcFeature.get().isEmpty()) {
-                      featureMap.put(soId, new ConversionEntry(soId, label.get(), insdcFeature.get()));
+                    if (insdcFeature.isPresent()
+                            && insdcFeature.get() != null
+                            && !insdcFeature.get().isEmpty()) {
+                        featureMap.put(soId, new ConversionEntry(soId, label.get(), insdcFeature.get()));
                     }
                 }
             }
