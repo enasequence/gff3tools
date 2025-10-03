@@ -15,12 +15,15 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 
 public class FeatureMapping {
+
+    static Pattern WILDCARD_TEXT = Pattern.compile("^\\<.+\\>$");
 
     public static Optional<String> getGFF3FeatureName(Feature ffFeature) {
         String featureName = ffFeature.getName();
@@ -44,7 +47,9 @@ public class FeatureMapping {
             for (Qualifier featureQualifier : feature.getQualifiers(expectedQualifierName)) {
                 // When qualifier value is not found the value is considered "true"
                 String qualifierValue = featureQualifier.getValue() == null ? "true" : featureQualifier.getValue();
-                qualifierMatches = qualifierValue.equalsIgnoreCase(requiredQualifiers.get(expectedQualifierName));
+
+                qualifierMatches = WILDCARD_TEXT.matcher(qualifierValue).matches()
+                        || qualifierValue.equalsIgnoreCase(requiredQualifiers.get(expectedQualifierName));
                 if (qualifierMatches) {
                     break;
                 }

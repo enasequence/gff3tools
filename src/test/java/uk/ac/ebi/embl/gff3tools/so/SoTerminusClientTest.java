@@ -11,9 +11,14 @@
 package uk.ac.ebi.embl.gff3tools.so;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Map;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 
 public class SoTerminusClientTest {
 
@@ -95,8 +100,41 @@ public class SoTerminusClientTest {
     }
 
     @Test
-    public void debugGeneAnnotations() {
-        System.out.println("Debugging annotations for 'gene' (SO:0000704):");
-        soTerminusClient.debugTermAnnotations("SO:0000704");
+    public void testGetFeatureMap() {
+        Map<String, ConversionEntry> featureMap = soTerminusClient.getFeatureMap();
+        assertNotNull(featureMap);
+        assertFalse(featureMap.isEmpty());
+
+        // Test for CDS (SO:0000316)
+        String cdsSoId = "SO:0000316";
+        assertTrue(featureMap.containsKey(cdsSoId));
+        ConversionEntry cdsEntry = featureMap.get(cdsSoId);
+        assertEquals(cdsSoId, cdsEntry.getSOID());
+        assertEquals("CDS", cdsEntry.getSOTerm());
+        assertEquals("CDS", cdsEntry.getFeature());
+
+        // Test for gene (SO:0000704)
+        String geneSoId = "SO:0000704";
+        assertTrue(featureMap.containsKey(geneSoId));
+        ConversionEntry geneEntry = featureMap.get(geneSoId);
+        assertEquals(geneSoId, geneEntry.getSOID());
+        assertEquals("gene", geneEntry.getSOTerm());
+        assertEquals("gene", geneEntry.getFeature());
+
+        // Test for exon (SO:0000147)
+        String exonSoId = "SO:0000147";
+        assertTrue(featureMap.containsKey(exonSoId));
+        ConversionEntry exonEntry = featureMap.get(exonSoId);
+        assertEquals(exonSoId, exonEntry.getSOID());
+        assertEquals("exon", exonEntry.getSOTerm());
+        assertEquals("exon", exonEntry.getFeature());
+
+        // Test for mRNA (SO:0000234)
+        String mRNAsoId = "SO:0000234";
+        assertTrue(featureMap.containsKey(mRNAsoId));
+        ConversionEntry mRNAEntry = featureMap.get(mRNAsoId);
+        assertEquals(mRNAsoId, mRNAEntry.getSOID());
+        assertEquals("mRNA", mRNAEntry.getSOTerm());
+        assertEquals("mRNA", mRNAEntry.getFeature());
     }
 }

@@ -65,11 +65,6 @@ public enum ConversionUtils {
         try {
             ff2gff3 = new HashMap<>();
             gff32ff = new HashMap<>();
-            for (Map.Entry<String, ConversionEntry> entry :
-                    soTerminusClient.getFeatureMap().entrySet()) {
-                ConversionEntry conversionEntry = entry.getValue();
-                addConversionEntry(conversionEntry);
-            }
 
             List<String> lines = readTsvFile("feature-mapping.tsv");
             lines.remove(0);
@@ -80,6 +75,12 @@ public enum ConversionUtils {
                         parts[1],
                         parts[3],
                         Arrays.stream(parts).skip(4).toArray(n -> new String[n]));
+                addConversionEntry(conversionEntry);
+            }
+
+            for (Map.Entry<String, ConversionEntry> entry :
+                    soTerminusClient.getFeatureMap().entrySet()) {
+                ConversionEntry conversionEntry = entry.getValue();
                 addConversionEntry(conversionEntry);
             }
 

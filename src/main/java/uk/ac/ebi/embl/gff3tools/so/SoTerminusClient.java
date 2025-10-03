@@ -143,7 +143,18 @@ public class SoTerminusClient {
                     .map(annotation ->
                             ((OWLLiteral) annotation.getValue()).getLiteral().toLowerCase())
                     .filter(literal -> literal.equals(searchLower))
-                    .findFirst();
+                    .findFirst()
+                    .or(() -> EntitySearcher.getAnnotationObjects(
+                                    owlClass,
+                                    ontology,
+                                    dataFactory.getOWLAnnotationProperty(IRI.create(
+                                            "http://www.geneontology.org/formats/oboInOwl#hasNarrowSynonym")))
+                            .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
+                            .map(annotation -> ((OWLLiteral) annotation.getValue())
+                                    .getLiteral()
+                                    .toLowerCase())
+                            .filter(literal -> literal.equals(searchLower))
+                            .findFirst());
 
             if (synonym.isPresent()) {
                 String soId = extractOntologyId(owlClass.getIRI());
@@ -270,7 +281,8 @@ public class SoTerminusClient {
             if (soId != null && isFeatureSoTerm(soId)) {
 
                 // Get the RDFS Label
-                Optional<String> label = EntitySearcher.getAnnotationObjects(owlClass, ontology, dataFactory.getRDFSLabel())
+                Optional<String> label = EntitySearcher.getAnnotationObjects(
+                                owlClass, ontology, dataFactory.getRDFSLabel())
                         .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
                         .map(annotation -> ((OWLLiteral) annotation.getValue()).getLiteral())
                         .findFirst();
@@ -296,6 +308,29 @@ public class SoTerminusClient {
                             && !insdcFeature.get().isEmpty()) {
                         featureMap.put(soId, new ConversionEntry(soId, label.get(), insdcFeature.get()));
                     }
+
+                    // Get INSDC_feature synonyms
+                    insdcFeature = EntitySearcher.getAnnotationObjects(
+                                    owlClass,
+                                    ontology,
+                                    dataFactory.getOWLAnnotationProperty(
+                                            IRI.create("http://www.geneontology.org/formats/oboInOwl#hasNarrowSynonym")))
+                            .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
+                            .map(annotation -> ((OWLLiteral) annotation.getValue()).getLiteral())
+                            .filter(literal -> literal.startsWith("INSDC_feature"))
+                            .map(literal -> {
+                                String[] parts = literal.split(":");
+                                return parts[parts.length - 1];
+                            })
+                            .findFirst();
+
+
+                    if (insdcFeature.isPresent()
+                            && insdcFeature.get() != null
+                            && !insdcFeature.get().isEmpty()) {
+                        featureMap.put(soId, new ConversionEntry(soId, label.get(), insdcFeature.get()));
+                    }
+
                 }
             }
         }
