@@ -12,7 +12,7 @@ package uk.ac.ebi.embl.gff3tools.gff3;
 
 import java.io.Writer;
 import java.util.List;
-import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.exception.Gff3toolsException;
 import uk.ac.ebi.embl.gff3tools.exception.WriteException;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 
@@ -20,7 +20,7 @@ public record GFF3File(
         GFF3Header header,
         GFF3Species species,
         List<GFF3Annotation> annotations,
-        List<ValidationException> parsingErrors)
+        List<Gff3toolsException> parsingErrors)
         implements IGFF3Feature {
     @Override
     public void writeGFF3String(Writer writer) throws WriteException {

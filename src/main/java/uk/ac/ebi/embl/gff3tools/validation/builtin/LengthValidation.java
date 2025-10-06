@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.exception.ValidationWarning;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.FeatureValidation;
@@ -32,7 +33,7 @@ public class LengthValidation implements FeatureValidation {
     }
 
     @Override
-    public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
+    public void validateFeature(GFF3Feature feature, int line) throws ValidationException, ValidationWarning {
         String featureName = feature.getName();
         long length = feature.getLength();
 
@@ -45,7 +46,7 @@ public class LengthValidation implements FeatureValidation {
             throw new ValidationException(
                     VALIDATION_RULE, line, INVALID_INTRON_LENGTH_MESSAGE.formatted(feature.accession()));
         } else if ((GFF3Anthology.EXON_EQUIVALENTS.contains(featureName)) && length < EXON_FETURE_LENGTH) {
-            throw new ValidationException(
+            throw new ValidationWarning(
                     VALIDATION_RULE, line, INVALID_EXON_LENGTH_MESSAGE.formatted(feature.accession()));
         }
     }

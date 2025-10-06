@@ -15,7 +15,9 @@ import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.ac.ebi.embl.gff3tools.exception.Gff3toolsException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.exception.ValidationWarning;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 
@@ -25,7 +27,7 @@ public class ValidationEngine {
     private final List<FeatureValidation> activeFeatureValidations;
     private final List<AnnotationValidation> activeAnnotationValidations;
     private final Map<String, RuleSeverity> severityMap;
-    private final List<ValidationException> parsingErrors;
+    private final List<Gff3toolsException> parsingErrors;
 
     ValidationEngine(
             List<FeatureValidation> activeFeatureValidations,
@@ -52,6 +54,8 @@ public class ValidationEngine {
                 validation.validateFeature(feature, line);
             } catch (ValidationException exception) {
                 handleValidationException(exception);
+            } catch (ValidationWarning warning) {
+                handleValidationWarnings(warning);
             }
         }
     }
@@ -70,7 +74,7 @@ public class ValidationEngine {
         handleValidationException(exception);
     }
 
-    public List<ValidationException> getParsingErrors() {
+    public List<Gff3toolsException> getParsingErrors() {
         return parsingErrors;
     }
 
@@ -85,6 +89,18 @@ public class ValidationEngine {
             }
             case ERROR -> {
                 throw exception;
+            }
+        }
+    }
+
+    private void handleValidationWarnings(ValidationWarning warning) throws ValidationException {
+        String rule = warning.getValidationRule().toString();
+        RuleSeverity severity = Optional.ofNullable(severityMap.get(rule)).orElse(RuleSeverity.WARN);
+        switch (severity) {
+            case OFF -> {}
+            case WARN, ERROR -> {
+                this.parsingErrors.add(warning);
+                LOG.warn(warning.getMessage());
             }
         }
     }

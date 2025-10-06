@@ -37,7 +37,7 @@ public class Gff3ToFFConverter implements Converter {
 
             // TODO: Decide how to expose parsingErrors to the user of this converter.// TODO: Decide how to expose
             // parsingErrors to the user of this converter.
-            List<ValidationException> parsingErrors = validationEngine.getParsingErrors();
+            List<Gff3toolsException> parsingErrors = validationEngine.getParsingErrors();
 
         } catch (IOException e) {
             throw new RuntimeException(e);

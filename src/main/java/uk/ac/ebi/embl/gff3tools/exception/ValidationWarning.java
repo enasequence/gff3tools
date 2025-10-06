@@ -10,16 +10,27 @@
  */
 package uk.ac.ebi.embl.gff3tools.exception;
 
-import uk.ac.ebi.embl.gff3tools.cli.CLIExitCode;
+public class ValidationWarning extends Gff3toolsException {
 
-public abstract class ExitException extends Gff3toolsException {
-    public ExitException(final String message, final Exception cause) {
-        super(message, cause);
+    private int line;
+    private String rule;
+
+    public ValidationWarning(String rule, String message) {
+        super("Violation of rule %s: %s".formatted(rule.toString(), message));
+        this.rule = rule;
     }
 
-    public ExitException(final String message) {
-        super(message);
+    public ValidationWarning(String rule, int line, String message) {
+        super("Violation of rule %s on line %d: %s".formatted(rule.toString(), line, message));
+        this.line = line;
+        this.rule = rule;
     }
 
-    public abstract CLIExitCode exitCode();
+    public int getLine() {
+        return line;
+    }
+
+    public String getValidationRule() {
+        return this.rule;
+    }
 }

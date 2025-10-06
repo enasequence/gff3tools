@@ -8,12 +8,14 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.validation;
+package uk.ac.ebi.embl.gff3tools.exception;
 
-import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
-import uk.ac.ebi.embl.gff3tools.exception.ValidationWarning;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+public abstract class Gff3toolsException extends Exception {
+    public Gff3toolsException(final String message, final Exception cause) {
+        super(message, cause);
+    }
 
-public interface FeatureValidation extends Validation {
-    void validateFeature(GFF3Feature feature, int line) throws ValidationException, ValidationWarning;
+    public Gff3toolsException(final String message) {
+        super(message);
+    }
 }

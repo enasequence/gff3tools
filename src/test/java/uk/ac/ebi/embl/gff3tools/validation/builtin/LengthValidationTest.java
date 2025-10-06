@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.exception.ValidationWarning;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 
@@ -68,8 +69,8 @@ public class LengthValidationTest {
     @Test
     public void testExonValidationFailure() {
         feature = TestUtils.createGFF3Feature(GFF3Anthology.EXON_FEATURE_NAME, 1L, 14L);
-        ValidationException exception =
-                assertThrows(ValidationException.class, () -> lengthValidation.validateFeature(feature, 1));
+        ValidationWarning exception =
+                assertThrows(ValidationWarning.class, () -> lengthValidation.validateFeature(feature, 1));
         assertTrue(exception.getMessage().contains("Exon feature length is invalid for accession"));
     }
 }
