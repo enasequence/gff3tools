@@ -52,7 +52,7 @@ public class Gff3ToFFConverter implements Converter {
      * @param writer The BufferedWriter to write the EmblEntry to.
      * @throws WriteException if an error occurs during writing.
      */
-    private void writeEntry(GFF3Mapper mapper, GFF3Annotation annotation, BufferedWriter writer) throws WriteException {
+    private void writeEntry(GFF3Mapper mapper, GFF3Annotation annotation, BufferedWriter writer) throws WriteException, ValidationException {
         if (annotation != null) {
             EmblEntryWriter entryWriter = new EmblEntryWriter(mapper.mapGFF3ToEntry(annotation));
             entryWriter.setShowAcStartLine(false);

@@ -21,6 +21,7 @@ import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.qualifier.QualifierFactory;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
+import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
@@ -47,7 +48,7 @@ public class GFF3Mapper {
         entry = null;
     }
 
-    public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) {
+    public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) throws ValidationException {
 
         parentFeatures.clear();
         joinableFeatureMap.clear();
@@ -81,7 +82,7 @@ public class GFF3Mapper {
         return entry;
     }
 
-    private void mapGFF3Feature(GFF3Feature gff3Feature) {
+    private void mapGFF3Feature(GFF3Feature gff3Feature) throws ValidationException {
 
         Map<String, Object> attributes = gff3Feature.getAttributes();
         String featureHashId = (String) attributes.getOrDefault("ID", gff3Feature.hashCodeString());
@@ -107,18 +108,35 @@ public class GFF3Mapper {
             parentFeatureLocation.addLocation(location);
         } else {
             String gff3FeatureName = gff3Feature.getName();
-            String featureName = ConversionUtils.getINSDCFeatureForSOTerm(gff3FeatureName);
-            ffFeature = featureFactory.createFeature(featureName);
-            CompoundLocation<Location> locations = new Join();
-            if (location.isComplement()) {
-                locations.setComplement(true);
-                location.setComplement(false);
+            ConversionEntry conversionEntry = ConversionUtils.getINSDCFeatureForSOTerm(gff3FeatureName);
+            if (conversionEntry != null) {
+                ffFeature = featureFactory.createFeature(conversionEntry.getFeature());
+                CompoundLocation<Location> locations = new Join();
+                if (location.isComplement()) {
+                    locations.setComplement(true);
+                    location.setComplement(false);
+                }
+                locations.addLocation(location);
+                ffFeature.setLocations(locations);
+
+                ffFeature.addQualifiers(mapGFF3Attributes(attributes));
+
+                for (Map.Entry<String, String> entry: conversionEntry.getQualifiers().entrySet()) {
+                    if (ffFeature.getQualifiers(entry.getKey()).isEmpty()) {
+                        String value = entry.getValue();
+                        if (value == null || value.isEmpty()) {
+                            ffFeature.addQualifier(entry.getKey());
+                        } else {
+                            ffFeature.addQualifier(entry.getKey(), value);
+                        }
+                    }
+                }
+
+                joinableFeatureMap.put(featureHashId, ffFeature);
+                entry.addFeature(ffFeature);
+            } else {
+                throw new ValidationException("GFF3_UNMAPPED_FEATURE", "The gff3 feature \"%s\" has no equivalent INSDC mapping".formatted(gff3FeatureName));
             }
-            locations.addLocation(location);
-            ffFeature.setLocations(locations);
-            ffFeature.addQualifiers(mapGFF3Attributes(attributes));
-            joinableFeatureMap.put(featureHashId, ffFeature);
-            entry.addFeature(ffFeature);
         }
         if (ffFeature.getQualifiers("gene").isEmpty()) {
             String gene = getGeneForFeature(gff3Feature);

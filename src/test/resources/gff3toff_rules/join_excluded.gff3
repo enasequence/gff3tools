@@ -1,8 +1,8 @@
 ##gff-version 3.1.26
 ##sequence-region TEST01.1 1 1000
 TEST01.1	.	gene	1	1000	.	+	.	ID=gene_matK;gene=matK;
-TEST01.1	.	protein_binding_site	1	500	.	+	.	gene=matK;ID=protein_bind;
-TEST01.1	.	protein_binding_site	100	150	.	+	.	gene=matK;ID=protein_bind_1;
+TEST01.1	.	protein_binding_site	1	500	.	+	.	gene=matK;ID=protein_bind;bound_moiety=GAL4
+TEST01.1	.	protein_binding_site	100	150	.	+	.	gene=matK;ID=protein_bind_1;bound_moiety=GAL4
 TEST01.1	.	repeat_region	200	250	.	+	.	gene=matK;ID=repeat_region;
 TEST01.1	.	repeat_region	300	350	.	+	.	gene=matK;ID=repeat_region_1;
 TEST01.1	.	gap	400	450	.	+	.	gene=matK;ID=gap;

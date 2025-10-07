@@ -13,12 +13,16 @@ FT   gene            1..1000
 FT                   /gene="matK"
 FT   protein_bind    1..500
 FT                   /gene="matK"
+FT                   /bound_moiety="GAL4"
 FT   protein_bind    100..150
 FT                   /gene="matK"
+FT                   /bound_moiety="GAL4"
 FT   repeat_region   200..250
 FT                   /gene="matK"
+FT                   /rpt_type=other
 FT   repeat_region   300..350
 FT                   /gene="matK"
+FT                   /rpt_type=other
 FT   assembly_gap    400..450
 FT                   /gene="matK"
 FT   assembly_gap    500..550

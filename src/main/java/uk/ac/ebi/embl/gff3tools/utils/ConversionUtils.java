@@ -53,7 +53,7 @@ public enum ConversionUtils {
     }
 
     // Returns the EMBL feature name for an SOTerm
-    public static String getINSDCFeatureForSOTerm(String SOTerm) {
+    public static ConversionEntry getINSDCFeatureForSOTerm(String SOTerm) {
         ConversionEntry conversionEntry = INSTANCE.gff32ff.get(SOTerm);
         if (conversionEntry == null) {
             Stream<String> parents = INSTANCE.ontologyClient.getParents(SOTerm);
@@ -65,11 +65,8 @@ public enum ConversionUtils {
                 }
             }
         }
-        if (conversionEntry == null) {
-            return null;
-        }  else {
-            return conversionEntry.getFeature();
-        }
+
+        return conversionEntry;
     }
 
     private void addConversionEntry(ConversionEntry conversionEntry) {
