@@ -1,0 +1,4 @@
+##gff-version 3.1.26
+##sequence-region TEST01.1 1 822
+TEST01.1	.	ncRNA_gene	1	822	.	+	.	ID=ncRNA_gene_matK;gene=matK;
+TEST01.1	.	binding_site	1	822	.	+	.	ID=binding_site_matK;bound_moiety=test;gene=matK;
