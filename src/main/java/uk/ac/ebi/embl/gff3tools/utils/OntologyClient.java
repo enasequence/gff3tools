@@ -12,7 +12,6 @@ package uk.ac.ebi.embl.gff3tools.utils;
 
 import java.io.InputStream;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.semanticweb.owlapi.apibinding.OWLManager;
@@ -178,22 +177,22 @@ public class OntologyClient {
         // 1. Check if the string is a valid ontology ID format
         if (isValidOntologyId(soTerm)) {
             // 2. If it's a valid ID, check if the term is defined in the ontology as a child of feature
-            return isChildOf(soTerm, "SO:0000110");
+            return isChildOf(soTerm, OntologyTerm.FEATURE.ID);
         } else {
             // 3. If not a valid ID, attempt to find the term by name or synonym
             return findTermByNameOrSynonym(soTerm)
                     // 4. If valid, check if is a child of feature.
-                    .map((String termId) -> isChildOf(termId, "SO:0000110"))
+                    .map((String termId) -> isChildOf(termId, OntologyTerm.FEATURE.ID))
                     .orElse(false);
         }
     }
 
+    ///  Returns the list of parents (as SOIds) for a given SOTerm.
     public Stream<String> getParents(String SOTerm) {
         if (SOTerm == null || SOTerm.isEmpty()) {
             return Stream.empty();
         }
 
-        // 1. Check if the string is a valid ontology ID format
         if (isValidOntologyId(SOTerm)) {
             OWLClass owlClass = dataFactory.getOWLClass(
                     IRI.create("http://purl.obolibrary.org/obo/" + SOTerm.replace(":", "_")));
@@ -202,115 +201,10 @@ public class OntologyClient {
                     .map(HasIRI::getIRI)
                     .map(this::extractOntologyId);
         } else {
-            // 3. If not a valid ID, attempt to find the term by name or synonym
             return findTermByNameOrSynonym(SOTerm)
-                    // 4. If valid, check if is a child of feature.
-                    .map(this::getParents).orElse(Stream.empty());
+                    .map(this::getParents)
+                    .orElse(Stream.empty());
 
         }
-    }
-
-    /**
-     * Retrieves a map of EMBL feature names to a list of corresponding SO terms.
-     * This method extracts feature names (rdfs:label or synonyms) from the loaded
-     * ontology and maps them to their respective SO terms.
-     *
-     * @return A map where the key is an EMBL feature name (String) and the value
-     *     is a List of SO terms (String) that correspond to that feature.
-     */
-    public Map<String, ConversionEntry> getFeatureMap() {
-        Map<String, ConversionEntry> featureMap = new HashMap<>();
-        if (ontology == null) {
-            LOGGER.warn("Ontology not loaded. Cannot retrieve feature map.");
-            return featureMap;
-        }
-
-        for (OWLClass owlClass : ontology.getClassesInSignature()) {
-            // Check if the term is a feature SO term
-            String soId = extractOntologyId(owlClass.getIRI());
-            if (soId != null && isFeatureSoTerm(soId)) {
-
-                // Get the RDFS Label
-                Optional<String> label = EntitySearcher.getAnnotationObjects(
-                                owlClass, ontology, dataFactory.getRDFSLabel())
-                        .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
-                        .map(annotation -> ((OWLLiteral) annotation.getValue()).getLiteral())
-                        .findFirst();
-
-                if (label.isPresent()) {
-
-                    ArrayList<OWLAnnotation> annotations = new ArrayList<>();
-
-                    // Get INSDC_feature synonyms
-                    annotations.addAll(EntitySearcher.getAnnotationObjects(
-                                    owlClass,
-                                    ontology,
-                                    dataFactory.getOWLAnnotationProperty(
-                                            IRI.create("http://www.geneontology.org/formats/oboInOwl#hasExactSynonym")))
-                            .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
-                            .filter(annotation -> ((OWLLiteral) annotation.getValue())
-                                    .getLiteral()
-                                    .startsWith("INSDC_feature"))
-                            .toList());
-
-                    annotations.addAll(EntitySearcher.getAnnotationObjects(
-                                    owlClass,
-                                    ontology,
-                                    dataFactory.getOWLAnnotationProperty(
-                                            IRI.create("http://www.geneontology.org/formats/oboInOwl#hasBroadSynonym")))
-                            .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
-                            .filter(annotation -> ((OWLLiteral) annotation.getValue())
-                                    .getLiteral()
-                                    .startsWith("INSDC_feature"))
-                            .toList());
-
-                    annotations.addAll(EntitySearcher.getAnnotationObjects(
-                                    owlClass,
-                                    ontology,
-                                    dataFactory.getOWLAnnotationProperty(IRI.create(
-                                            "http://www.geneontology.org/formats/oboInOwl#hasNarrowSynonym")))
-                            .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
-                            .filter(annotation -> ((OWLLiteral) annotation.getValue())
-                                    .getLiteral()
-                                    .startsWith("INSDC_feature"))
-                            .toList());
-
-                    // Qualifier notes
-                    Set<String> notes = EntitySearcher.getAnnotationObjects(
-                                    owlClass,
-                                    ontology,
-                                    dataFactory.getOWLAnnotationProperty(
-                                            IRI.create("http://www.geneontology.org/formats/oboInOwl#hasExactSynonym")))
-                            .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
-                            .filter(annotation -> ((OWLLiteral) annotation.getValue())
-                                    .getLiteral()
-                                    .startsWith("INSDC_note"))
-                            .map(annotation -> {
-                                String literal = ((OWLLiteral) annotation.getValue()).getLiteral();
-                                String[] parts = literal.split(":");
-                                return parts[parts.length - 1];
-                            })
-                            .collect(Collectors.toSet());
-
-                    for (OWLAnnotation annotation : annotations) {
-                        String literal = ((OWLLiteral) annotation.getValue()).getLiteral();
-                        String[] parts = literal.split(":");
-                        String featureName = parts[parts.length - 1];
-
-                        if (!notes.isEmpty())
-                            for (String note : notes) {
-                                featureMap.put(
-                                        soId,
-                                        new ConversionEntry(
-                                                soId, label.get(), featureName, "/note=%s".formatted(note)));
-                            }
-                        else {
-                            featureMap.put(soId, new ConversionEntry(soId, label.get(), featureName));
-                        }
-                    }
-                }
-            }
-        }
-        return featureMap;
     }
 }

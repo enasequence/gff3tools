@@ -52,6 +52,7 @@ public enum ConversionUtils {
         return INSTANCE.gff32ffQualifiers;
     }
 
+    // Returns the EMBL feature name for an SOTerm
     public static String getINSDCFeatureForSOTerm(String SOTerm) {
         ConversionEntry conversionEntry = INSTANCE.gff32ff.get(SOTerm);
         if (conversionEntry == null) {
@@ -94,12 +95,6 @@ public enum ConversionUtils {
                         Arrays.stream(parts).skip(4).toArray(n -> new String[n]));
                 addConversionEntry(conversionEntry);
             }
-
-            // for (Map.Entry<String, ConversionEntry> entry :
-            //         ontologyClient.getFeatureMap().entrySet()) {
-            //     ConversionEntry conversionEntry = entry.getValue();
-            //     addConversionEntry(conversionEntry);
-            // }
 
             ff2gff3Qualifiers = new HashMap<>();
             gff32ffQualifiers = new HashMap<>();

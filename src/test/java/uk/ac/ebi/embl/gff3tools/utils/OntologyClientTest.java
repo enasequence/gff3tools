@@ -97,43 +97,4 @@ public class OntologyClientTest {
         // "cds" (lowercase) should also work for "CDS"
         assertTrue(ontologyClient.isFeatureSoTerm("cds"));
     }
-
-    @Test
-    public void testGetFeatureMap() {
-        Map<String, ConversionEntry> featureMap = ontologyClient.getFeatureMap();
-        assertNotNull(featureMap);
-        assertFalse(featureMap.isEmpty());
-
-        // Test for CDS (SO:0000316)
-        String cdsSoId = "SO:0000316";
-        assertTrue(featureMap.containsKey(cdsSoId));
-        ConversionEntry cdsEntry = featureMap.get(cdsSoId);
-        assertEquals(cdsSoId, cdsEntry.getSOID());
-        assertEquals("CDS", cdsEntry.getSOTerm());
-        assertEquals("CDS", cdsEntry.getFeature());
-
-        // Test for gene (SO:0000704)
-        String geneSoId = "SO:0000704";
-        assertTrue(featureMap.containsKey(geneSoId));
-        ConversionEntry geneEntry = featureMap.get(geneSoId);
-        assertEquals(geneSoId, geneEntry.getSOID());
-        assertEquals("gene", geneEntry.getSOTerm());
-        assertEquals("gene", geneEntry.getFeature());
-
-        // Test for exon (SO:0000147)
-        String exonSoId = "SO:0000147";
-        assertTrue(featureMap.containsKey(exonSoId));
-        ConversionEntry exonEntry = featureMap.get(exonSoId);
-        assertEquals(exonSoId, exonEntry.getSOID());
-        assertEquals("exon", exonEntry.getSOTerm());
-        assertEquals("exon", exonEntry.getFeature());
-
-        // Test for mRNA (SO:0000234)
-        String mRNAsoId = "SO:0000234";
-        assertTrue(featureMap.containsKey(mRNAsoId));
-        ConversionEntry mRNAEntry = featureMap.get(mRNAsoId);
-        assertEquals(mRNAsoId, mRNAEntry.getSOID());
-        assertEquals("mRNA", mRNAEntry.getSOTerm());
-        assertEquals("mRNA", mRNAEntry.getFeature());
-    }
 }
