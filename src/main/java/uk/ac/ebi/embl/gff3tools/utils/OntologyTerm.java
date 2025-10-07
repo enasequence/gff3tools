@@ -12,7 +12,17 @@ package uk.ac.ebi.embl.gff3tools.utils;
 
 public enum OntologyTerm {
     FEATURE("SO:0000110"),
-    REGION("SO:0000001");
+    REGION("SO:0000001"),
+    OPERON("SO:0000178"),
+    CDS("SO:0000316"),
+    PSEUDOGENIC_CDS("SO:0002087"),
+    SIGNAL_PEPTIDE("SO:0000418"),
+    TRANSIT_PEPTIDE("SO:0000725"),
+    RRNA("SO:0000252"),
+    PSEUDOGENIC_RRNA("SO:0000777"),
+    PSEUDOGENE("SO:0000336"),
+    GENE("SO:0000704"),
+    UNITARY_PSEUDOGENE("SO:0001759");
 
     public final String ID;
 

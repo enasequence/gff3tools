@@ -31,7 +31,7 @@ public class DuplicateFeatureValidationTest {
     }
 
     @Test
-    public void testAnnotation_DuplicateFeature_SuccessNoDuplicates() throws ValidationException {
+    public void testAnnotationDuplicateFeatureSuccessNoDuplicates() {
         List<GFF3Feature> features = List.of(
                 TestUtils.createGFF3Feature(
                         Feature.CDS_FEATURE_NAME,
@@ -54,7 +54,7 @@ public class DuplicateFeatureValidationTest {
     }
 
     @Test
-    public void testAnnotation_DuplicateFeature_SuccessWithDuplicateProteinId() throws ValidationException {
+    public void testAnnotationDuplicateFeatureSuccessWithDuplicateProteinId() {
         List<GFF3Feature> features = List.of(
                 TestUtils.createGFF3Feature(
                         Feature.CDS_FEATURE_NAME,
@@ -78,7 +78,7 @@ public class DuplicateFeatureValidationTest {
     }
 
     @Test
-    public void testAnnotation_PropetideCDSFeature_Failure() throws ValidationException {
+    public void testAnnotationPropetideCDSFeatureFailure() throws ValidationException {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 Feature.CDS_FEATURE_NAME,
                 "CDS",
