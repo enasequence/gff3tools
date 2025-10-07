@@ -25,7 +25,9 @@ FT   assembly_gap    500..550
 FT                   /gene="matK"
 FT   misc_feature    600..650
 FT                   /gene="matk"
+FT                   /note="sequence_comparison"
 FT   misc_feature    700..750
 FT                   /gene="matK"
+FT                   /note="sequence_comparison"
 XX
 //

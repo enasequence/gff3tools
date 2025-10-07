@@ -1,10 +1,10 @@
 ##gff-version 3.1.26
 ##species https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=54126
 ##sequence-region OZ077731.1 1 60
-OZ077731.1	.	assembly_gap	4885412	4885511	.	+	.	ID=assembly_gap;estimated_length=100;gap_type=within scaffold;linkage_evidence=unspecified;
-OZ077731.1	.	assembly_gap	13975760	13975859	.	+	.	ID=assembly_gap_1;estimated_length=100;gap_type=within scaffold;linkage_evidence=unspecified;
-OZ077731.1	.	assembly_gap	17142005	17142104	.	+	.	ID=assembly_gap_2;estimated_length=100;gap_type=within scaffold;linkage_evidence=unspecified;
-OZ077731.1	.	assembly_gap	30688363	30688462	.	+	.	ID=assembly_gap_3;estimated_length=100;gap_type=within scaffold;linkage_evidence=unspecified;
-OZ077731.1	.	assembly_gap	34912230	34912329	.	+	.	ID=assembly_gap_4;estimated_length=100;gap_type=within scaffold;linkage_evidence=unspecified;
-OZ077731.1	.	assembly_gap	37059966	37060065	.	+	.	ID=assembly_gap_5;estimated_length=100;gap_type=within scaffold;linkage_evidence=unspecified;
-OZ077731.1	.	assembly_gap	37147416	37147515	.	+	.	ID=assembly_gap_6;estimated_length=100;gap_type=within scaffold;linkage_evidence=unspecified;
+OZ077731.1	.	gap	4885412	4885511	.	+	.	ID=gap;estimated_length=100;gap_type=within scaffold;linkage_evidence=unspecified;
+OZ077731.1	.	gap	13975760	13975859	.	+	.	ID=gap_1;estimated_length=100;gap_type=within scaffold;linkage_evidence=unspecified;
+OZ077731.1	.	gap	17142005	17142104	.	+	.	ID=gap_2;estimated_length=100;gap_type=within scaffold;linkage_evidence=unspecified;
+OZ077731.1	.	gap	30688363	30688462	.	+	.	ID=gap_3;estimated_length=100;gap_type=within scaffold;linkage_evidence=unspecified;
+OZ077731.1	.	gap	34912230	34912329	.	+	.	ID=gap_4;estimated_length=100;gap_type=within scaffold;linkage_evidence=unspecified;
+OZ077731.1	.	gap	37059966	37060065	.	+	.	ID=gap_5;estimated_length=100;gap_type=within scaffold;linkage_evidence=unspecified;
+OZ077731.1	.	gap	37147416	37147515	.	+	.	ID=gap_6;estimated_length=100;gap_type=within scaffold;linkage_evidence=unspecified;
