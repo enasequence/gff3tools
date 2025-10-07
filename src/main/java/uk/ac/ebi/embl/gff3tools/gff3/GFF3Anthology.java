@@ -17,14 +17,14 @@ public class GFF3Anthology {
     public static final String MAP_PEPTIDE_FEATURE_NAME = "map_peptide";
     public static final String SIG_PEPTIDE_FEATURE_NAME = "signal_peptide";
     public static final String CDS_FEATURE_NAME = "CDS";
+    public static final String PSEUDOGENIC_CDS_FEATURE_NAME = "pseudogenic_CDS";
     public static final String PROPETIDE_FEATURE_NAME = "propeptide";
-
+    public static final String R_RNA_FEATURE_NAME = "rRNA";
     public static final String EXON_FEATURE_NAME = "exon";
     public static final String CODING_EXON_FEATURE_NAME = "coding_exon";
     public static final String NONCODING_EXON_FEATURE_NAME = "noncoding_exon";
     public static final String FIVE_PRIME_CODING_EXON_FEATURE_NAME = "five_prime_coding_exon";
     public static final String INTERIOR_CODING_EXON_FEATURE_NAME = "interior_coding_exon";
-
     public static final String INTRON_FEATURE_NAME = "intron";
     public static final String SPLICEOSOMAL_INTRON_FEATURE_NAME = "spliceosomal_intron";
     public static final String AUTOCATALYTICALLY_SPLICED_INTRON_FEATURE_NAME = "autocatalytically_spliced_intron";
@@ -35,7 +35,25 @@ public class GFF3Anthology {
             NONCODING_EXON_FEATURE_NAME,
             FIVE_PRIME_CODING_EXON_FEATURE_NAME,
             INTERIOR_CODING_EXON_FEATURE_NAME);
-
     public static final Set<String> INTRON_EQUIVALENTS = Set.of(
             INTRON_FEATURE_NAME, SPLICEOSOMAL_INTRON_FEATURE_NAME, AUTOCATALYTICALLY_SPLICED_INTRON_FEATURE_NAME);
+    public static final String GENE_FEATURE_NAME = "gene";
+
+    public static final String PROCESSED_PSEUDOGENE_FEATURE_NAME = "processed_pseudogene";
+    public static final String NON_PROCESSED_PSEUDOGENE_FEATURE_NAME = "non_processed_pseudogene";
+    public static final String UNITARY_PSEUDOGENE_FEATURE_NAME = "unitary_pseudogene";
+    public static final String ALLELIC_PSEUDOGENE_FEATURE_NAME = "allelic_pseudogene";
+    public static final String PSEUDOGENE_FEATURE_NAME = "pseudogene";
+    public static final String NCRNA_GENE_FEATURE_NAME = "ncRNA_gene";
+
+    public static final Set<String> GENE_EQUIVALENTS = Set.of(
+            PROCESSED_PSEUDOGENE_FEATURE_NAME,
+            NON_PROCESSED_PSEUDOGENE_FEATURE_NAME,
+            UNITARY_PSEUDOGENE_FEATURE_NAME,
+            ALLELIC_PSEUDOGENE_FEATURE_NAME,
+            PSEUDOGENE_FEATURE_NAME,
+            NCRNA_GENE_FEATURE_NAME);
+
+    public static final Set<String> CDS_EQUIVALENTS = Set.of(CDS_FEATURE_NAME, PSEUDOGENIC_CDS_FEATURE_NAME);
+    public static final String OPERON_FEATURE_NAME = "operon";
 }
