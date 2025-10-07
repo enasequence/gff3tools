@@ -13,7 +13,6 @@ package uk.ac.ebi.embl.gff3tools.utils;
 import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Stream;
-
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.reasoner.OWLReasoner;
@@ -89,7 +88,6 @@ public class OntologyClient {
         }
 
         final String searchLower = nameOrSynonym.toLowerCase();
-
 
         for (OWLClass owlClass : ontology.getClassesInSignature()) {
             // Check rdfs:label
@@ -194,17 +192,14 @@ public class OntologyClient {
         }
 
         if (isValidOntologyId(SOTerm)) {
-            OWLClass owlClass = dataFactory.getOWLClass(
-                    IRI.create("http://purl.obolibrary.org/obo/" + SOTerm.replace(":", "_")));
+            OWLClass owlClass =
+                    dataFactory.getOWLClass(IRI.create("http://purl.obolibrary.org/obo/" + SOTerm.replace(":", "_")));
             return reasoner.getSuperClasses(owlClass, false)
                     .entities()
                     .map(HasIRI::getIRI)
                     .map(this::extractOntologyId);
         } else {
-            return findTermByNameOrSynonym(SOTerm)
-                    .map(this::getParents)
-                    .orElse(Stream.empty());
-
+            return findTermByNameOrSynonym(SOTerm).map(this::getParents).orElse(Stream.empty());
         }
     }
 }

@@ -10,7 +10,6 @@
  */
 package uk.ac.ebi.embl.gff3tools.fftogff3;
 
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +29,9 @@ public class FeatureMapping {
         String featureName = ffFeature.getName();
         List<ConversionEntry> mappings = Optional.ofNullable(
                         ConversionUtils.getFF2GFF3FeatureMap().get(featureName))
-                .orElseThrow(() -> new ValidationException("EMBL_UNMAPPED_FEATURE", "There is no SO Term mapping for INSDC feature \"%s\"".formatted(featureName)));
+                .orElseThrow(() -> new ValidationException(
+                        "EMBL_UNMAPPED_FEATURE",
+                        "There is no SO Term mapping for INSDC feature \"%s\"".formatted(featureName)));
 
         return mappings.stream()
                 .filter(entry -> entry.getFeature().equalsIgnoreCase(ffFeature.getName()))

@@ -121,7 +121,8 @@ public class GFF3Mapper {
 
                 ffFeature.addQualifiers(mapGFF3Attributes(attributes));
 
-                for (Map.Entry<String, String> entry: conversionEntry.getQualifiers().entrySet()) {
+                for (Map.Entry<String, String> entry :
+                        conversionEntry.getQualifiers().entrySet()) {
                     if (ffFeature.getQualifiers(entry.getKey()).isEmpty()) {
                         String value = entry.getValue();
                         if (value == null || value.isEmpty()) {
@@ -135,7 +136,9 @@ public class GFF3Mapper {
                 joinableFeatureMap.put(featureHashId, ffFeature);
                 entry.addFeature(ffFeature);
             } else {
-                throw new ValidationException("GFF3_UNMAPPED_FEATURE", "The gff3 feature \"%s\" has no equivalent INSDC mapping".formatted(gff3FeatureName));
+                throw new ValidationException(
+                        "GFF3_UNMAPPED_FEATURE",
+                        "The gff3 feature \"%s\" has no equivalent INSDC mapping".formatted(gff3FeatureName));
             }
         }
         if (ffFeature.getQualifiers("gene").isEmpty()) {

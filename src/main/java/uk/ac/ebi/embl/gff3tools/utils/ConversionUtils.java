@@ -10,8 +10,6 @@
  */
 package uk.ac.ebi.embl.gff3tools.utils;
 
-import uk.ac.ebi.embl.gff3tools.fftogff3.FeatureMapping;
-
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;

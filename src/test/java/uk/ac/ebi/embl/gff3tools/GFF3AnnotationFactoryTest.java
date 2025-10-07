@@ -175,7 +175,8 @@ class GFF3AnnotationFactoryTest {
         try {
             method.invoke(gFF3AnnotationFactory, unmappedFeature);
             fail("Should have thrown an exception");
-        } catch (InvocationTargetException ignored) {}
+        } catch (InvocationTargetException ignored) {
+        }
     }
 
     @Test
