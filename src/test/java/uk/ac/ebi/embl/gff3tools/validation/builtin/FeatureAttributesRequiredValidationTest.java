@@ -17,15 +17,10 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class FeatureAttributesRequiredValidationTest {
 
-    private GFF3Feature feature;
     private FeatureAttributesRequiredValidation attributesRequiredValidation;
-    private GFF3Annotation gff3Annotation;
 
     @BeforeEach
-    public void setUp() {
-        attributesRequiredValidation = new FeatureAttributesRequiredValidation();
-        gff3Annotation = new GFF3Annotation();
-    }
+    public void setUp() { attributesRequiredValidation = new FeatureAttributesRequiredValidation(); }
 
 
     public static <E> E getRandomEntryFromSet(Set<String> set) {
@@ -38,7 +33,7 @@ public class FeatureAttributesRequiredValidationTest {
     @Test
     public void testFeatureAttriuteRequiredValidationSuccess() {
         String featureName = getRandomEntryFromSet(GFF3Anthology.ATTRIBUTES_REQUIRED_FEATURE_SET);
-        feature = TestUtils.createGFF3Feature(featureName, ".", new HashMap<>(){{
+        GFF3Feature feature = TestUtils.createGFF3Feature(featureName, ".", new HashMap<>(){{
             put("attributeKey", "attributeValue");
         }});
 
@@ -46,9 +41,9 @@ public class FeatureAttributesRequiredValidationTest {
     }
 
     @Test
-    public void testFeatureAttriuteRequiredValidationFail() {
+    public void testFeatureAttriuteRequiredValidationFailure() {
         String featureName = getRandomEntryFromSet(GFF3Anthology.ATTRIBUTES_REQUIRED_FEATURE_SET);
-        feature = TestUtils.createGFF3Feature(featureName, new HashMap<>());
+        GFF3Feature feature = TestUtils.createGFF3Feature(featureName, new HashMap<>());
 
         Assertions.assertThrows(ValidationException.class, () -> attributesRequiredValidation.validateFeature(feature, 1));
     }
