@@ -10,6 +10,9 @@
  */
 package uk.ac.ebi.embl.gff3tools.utils;
 
+import uk.ac.ebi.embl.api.entry.feature.Feature;
+import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
+
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -124,5 +127,40 @@ public enum ConversionUtils {
         } catch (Exception e) {
             throw new RuntimeException("Error reading file: " + fileName, e);
         }
+    }
+
+    public static Optional<String> getGFF3FeatureName(Feature ffFeature) {
+        String featureName = ffFeature.getName();
+        List<ConversionEntry> mappings = Optional.ofNullable(
+                        ConversionUtils.getFF2GFF3FeatureMap().get(featureName))
+                .orElse(Collections.emptyList());
+
+        return mappings.stream()
+                .filter(entry -> entry.getFeature().equalsIgnoreCase(ffFeature.getName()))
+                .filter(entry -> hasAllQualifiers(ffFeature, entry))
+                .max(Comparator.comparingInt(entry -> entry.getQualifiers().size()))
+                .map(ConversionEntry::getSOTerm);
+    }
+
+    private static boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {
+        Map<String, String> requiredQualifiers = conversionEntry.getQualifiers();
+
+        boolean matchesAllQualifiers = true;
+        for (String expectedQualifierName : requiredQualifiers.keySet()) {
+            boolean qualifierMatches = false;
+            for (Qualifier featureQualifier : feature.getQualifiers(expectedQualifierName)) {
+                // When qualifier value is not found the value is considered "true"
+                String qualifierValue = featureQualifier.getValue() == null ? "true" : featureQualifier.getValue();
+                qualifierMatches = qualifierValue.equalsIgnoreCase(requiredQualifiers.get(expectedQualifierName));
+                if (qualifierMatches) {
+                    break;
+                }
+            }
+            matchesAllQualifiers = qualifierMatches;
+            if (!matchesAllQualifiers) {
+                break;
+            }
+        }
+        return matchesAllQualifiers;
     }
 }

@@ -355,7 +355,7 @@ public class GFF3AnnotationFactory {
 
     private String getGFF3FeatureName(Feature ffFeature) throws ValidationException {
 
-        Optional<String> soTerm = FeatureMapping.getGFF3FeatureName(ffFeature);
+        Optional<String> soTerm = ConversionUtils.getGFF3FeatureName(ffFeature);
 
         if (soTerm.isEmpty()) {
             return ffFeature.getName();
