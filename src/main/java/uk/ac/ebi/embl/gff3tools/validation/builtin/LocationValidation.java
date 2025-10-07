@@ -49,11 +49,12 @@ public class LocationValidation implements FeatureValidation, AnnotationValidati
 
         // Annotation Level Validation
         List<GFF3Feature> propFeatures = annotation.getFeaturesByName(GFF3Anthology.PROPETIDE_FEATURE_NAME);
-        List<GFF3Feature> cdsFeatures = annotation.getFeaturesByName(GFF3Anthology.CDS_FEATURE_NAME);
+        List<GFF3Feature> cdsFeatures = annotation.getFeaturesByEquivalents(GFF3Anthology.CDS_EQUIVALENTS);
 
         List<GFF3Feature> peptideFeatures = new ArrayList<>();
         peptideFeatures.addAll(annotation.getFeaturesByName(GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME));
-        peptideFeatures.addAll(annotation.getFeaturesByName(GFF3Anthology.MAP_PEPTIDE_FEATURE_NAME));
+        peptideFeatures.addAll(annotation.getFeaturesByName(
+                GFF3Anthology.MAP_PEPTIDE_FEATURE_NAME)); // TODO: map_peptide is not available in the topology
 
         for (GFF3Feature propFeature : propFeatures) {
 

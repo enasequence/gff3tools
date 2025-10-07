@@ -12,12 +12,14 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 
 public class LengthValidationTest {
@@ -71,5 +73,46 @@ public class LengthValidationTest {
         ValidationException exception =
                 assertThrows(ValidationException.class, () -> lengthValidation.validateFeature(feature, 1));
         assertTrue(exception.getMessage().contains("Exon feature length is invalid for accession"));
+    }
+
+    @Test
+    public void testCDSIntronLengthValidationSuccess() {
+        feature = TestUtils.createGFF3Feature(GFF3Anthology.CDS_FEATURE_NAME, 1L, 30L);
+        Assertions.assertDoesNotThrow(() -> lengthValidation.validateFeature(feature, 1));
+    }
+
+    @Test
+    public void testCDSIntronLengthWithAttributesValidationSuccess() {
+        feature = TestUtils.createGFF3Feature(
+                GFF3Anthology.CDS_FEATURE_NAME,
+                GFF3Anthology.CDS_FEATURE_NAME,
+                Map.of(GFF3Attributes.RIBOSOMAL_SLIPPAGE, "ribosomal_slippage"));
+        Assertions.assertDoesNotThrow(() -> lengthValidation.validateFeature(feature, 1));
+    }
+
+    @Test
+    public void testCDSIntronLengthWithPseudoAttributeValidationSuccess() {
+        feature = TestUtils.createGFF3Feature(
+                GFF3Anthology.CDS_FEATURE_NAME,
+                GFF3Anthology.CDS_FEATURE_NAME,
+                Map.of(GFF3Attributes.PSEUDOGENE, "pseudogene "));
+        Assertions.assertDoesNotThrow(() -> lengthValidation.validateFeature(feature, 1));
+    }
+
+    @Test
+    public void testCDSIntronLengthWithSplicingAttributeValidationSuccess() {
+        feature = TestUtils.createGFF3Feature(
+                GFF3Anthology.CDS_FEATURE_NAME,
+                GFF3Anthology.CDS_FEATURE_NAME,
+                Map.of(GFF3Attributes.TRANS_SPLICING, "trans_splicing "));
+        Assertions.assertDoesNotThrow(() -> lengthValidation.validateFeature(feature, 1));
+    }
+
+    @Test
+    public void testCDSIntronLengthWithAttributesValidationFailure() {
+        feature = TestUtils.createGFF3Feature(GFF3Anthology.CDS_FEATURE_NAME, 1L, 9L);
+        ValidationException exception =
+                assertThrows(ValidationException.class, () -> lengthValidation.validateFeature(feature, 1));
+        assertTrue(exception.getMessage().contains("Intron usually expected to be at least"));
     }
 }
