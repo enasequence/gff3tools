@@ -146,4 +146,22 @@ public class TestUtils {
                 "",
                 attributes);
     }
+
+    public static GFF3Feature createGFF3Feature(
+            String featureName, String parentFeatureName, String seqId, Map<String, Object> attributes) {
+
+        return new GFF3Feature(
+                Optional.of(featureName),
+                Optional.of(parentFeatureName),
+                seqId,
+                Optional.empty(),
+                ".",
+                featureName,
+                1,
+                800,
+                ".",
+                "+",
+                "",
+                attributes);
+    }
 }
