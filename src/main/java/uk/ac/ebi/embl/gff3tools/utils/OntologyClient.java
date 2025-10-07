@@ -8,7 +8,7 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.so;
+package uk.ac.ebi.embl.gff3tools.utils;
 
 import java.io.InputStream;
 import java.util.HashMap;
@@ -28,15 +28,14 @@ import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory;
 import org.semanticweb.owlapi.search.EntitySearcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 
-public class SoTerminusClient {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SoTerminusClient.class);
+public class OntologyClient {
+    private static final Logger LOGGER = LoggerFactory.getLogger(OntologyClient.class);
     private OWLOntology ontology;
     private OWLDataFactory dataFactory;
     private OWLReasoner reasoner;
 
-    public SoTerminusClient() {
+    public OntologyClient() {
         this.dataFactory = OWLManager.createOWLOntologyManager().getOWLDataFactory();
         loadOntology();
     }

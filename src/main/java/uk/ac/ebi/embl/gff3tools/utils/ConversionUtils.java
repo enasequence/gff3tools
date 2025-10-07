@@ -16,7 +16,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
-import uk.ac.ebi.embl.gff3tools.so.SoTerminusClient;
 
 public enum ConversionUtils {
     INSTANCE;
@@ -27,10 +26,10 @@ public enum ConversionUtils {
     // Map of child : list of possible parents
     // Uses sOTerms (gff3 feature names)
     private Map<String, Set<String>> featureRelations = null;
-    private SoTerminusClient soTerminusClient = null;
+    private OntologyClient ontologyClient = null;
 
     private ConversionUtils() {
-        this.soTerminusClient = new SoTerminusClient();
+        this.ontologyClient = new OntologyClient();
         this.loadMaps();
     }
 
@@ -79,7 +78,7 @@ public enum ConversionUtils {
             }
 
             for (Map.Entry<String, ConversionEntry> entry :
-                    soTerminusClient.getFeatureMap().entrySet()) {
+                    ontologyClient.getFeatureMap().entrySet()) {
                 ConversionEntry conversionEntry = entry.getValue();
                 addConversionEntry(conversionEntry);
             }

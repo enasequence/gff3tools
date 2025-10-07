@@ -12,17 +12,17 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.so.SoTerminusClient;
+import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.validation.FeatureValidation;
 
 public class OntologyValidation implements FeatureValidation {
 
     public static final String VALIDATION_RULE = "GFF3_ONTOLOGY_FEATURE";
 
-    SoTerminusClient soClient;
+    OntologyClient soClient;
 
     public OntologyValidation() {
-        soClient = new SoTerminusClient();
+        soClient = new OntologyClient();
     }
 
     @Override
