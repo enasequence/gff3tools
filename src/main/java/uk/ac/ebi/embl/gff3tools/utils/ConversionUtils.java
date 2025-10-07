@@ -10,12 +10,15 @@
  */
 package uk.ac.ebi.embl.gff3tools.utils;
 
+import uk.ac.ebi.embl.gff3tools.fftogff3.FeatureMapping;
+
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public enum ConversionUtils {
     INSTANCE;
@@ -45,12 +48,27 @@ public enum ConversionUtils {
         return INSTANCE.featureRelations;
     }
 
-    public static Map<String, ConversionEntry> getGFF32FFFeatureMap() {
-        return INSTANCE.gff32ff;
-    }
-
     public static Map<String, String> getGFF32FFQualifierMap() {
         return INSTANCE.gff32ffQualifiers;
+    }
+
+    public static String getINSDCFeatureForSOTerm(String SOTerm) {
+        ConversionEntry conversionEntry = INSTANCE.gff32ff.get(SOTerm);
+        if (conversionEntry == null) {
+            Stream<String> parents = INSTANCE.ontologyClient.getParents(SOTerm);
+            for (Iterator<String> it = parents.iterator(); it.hasNext(); ) {
+                String parent = it.next();
+                conversionEntry = INSTANCE.gff32ff.get(parent);
+                if (conversionEntry != null) {
+                    break;
+                }
+            }
+        }
+        if (conversionEntry == null) {
+            return null;
+        }  else {
+            return conversionEntry.getFeature();
+        }
     }
 
     private void addConversionEntry(ConversionEntry conversionEntry) {
