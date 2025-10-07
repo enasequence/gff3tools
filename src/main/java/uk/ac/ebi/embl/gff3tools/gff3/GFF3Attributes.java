@@ -14,4 +14,13 @@ public class GFF3Attributes {
 
     public static String PROTEIN_ID = "protein_id";
     public static String ATTRIBUTE_ID = "ID";
+    public static final String PSEUDO = "pseudo";
+    public static final String PSEUDOGENE = "pseudogene";
+    public static final String PRODUCT = "product";
+    public static final String GAP_TYPE = "gap_type";
+    public static final String ARTIFICIAL_LOCATION = "artificial_location";
+    public static final String TRANS_SPLICING = "trans_splicing";
+    public static final String RIBOSOMAL_SLIPPAGE = "ribosomal_slippage";
+    public static final String LINKAGE_EVIDENCE = "linkage_evidence";
+    public static final String ESTIMATED_LENGTH = "estimated_length";
 }
