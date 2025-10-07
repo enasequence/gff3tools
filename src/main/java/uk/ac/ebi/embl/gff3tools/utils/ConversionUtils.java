@@ -77,11 +77,11 @@ public enum ConversionUtils {
                 addConversionEntry(conversionEntry);
             }
 
-            for (Map.Entry<String, ConversionEntry> entry :
-                    ontologyClient.getFeatureMap().entrySet()) {
-                ConversionEntry conversionEntry = entry.getValue();
-                addConversionEntry(conversionEntry);
-            }
+            // for (Map.Entry<String, ConversionEntry> entry :
+            //         ontologyClient.getFeatureMap().entrySet()) {
+            //     ConversionEntry conversionEntry = entry.getValue();
+            //     addConversionEntry(conversionEntry);
+            // }
 
             ff2gff3Qualifiers = new HashMap<>();
             gff32ffQualifiers = new HashMap<>();

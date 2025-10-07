@@ -20,6 +20,8 @@ public class ConversionEntry {
     String feature;
     Map<String, String> qualifiers;
 
+    // TODO: This format of passing in qualifiers is too specific of the TSV file.
+    // We should update this to take in the already parsed qualifier key - value pairs.
     public ConversionEntry(String sOID, String sOTerm, String insdcFeature, String... insdcQualifiers) {
         this.sOID = sOID;
         this.sOTerm = sOTerm;

@@ -172,8 +172,10 @@ class GFF3AnnotationFactoryTest {
         assertEquals("snoRNA", mappedFeatureWithQualifiersResult2);
 
         Feature unmappedFeature = featureFactory.createFeature("unmapped");
-        Object unmappedFeatureResult = method.invoke(gFF3AnnotationFactory, unmappedFeature);
-        assertEquals("unmapped", unmappedFeatureResult);
+        try {
+            method.invoke(gFF3AnnotationFactory, unmappedFeature);
+            fail("Should have thrown an exception");
+        } catch (InvocationTargetException ignored) {}
     }
 
     @Test

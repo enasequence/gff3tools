@@ -33,9 +33,7 @@ public class Gff3ToFFConverter implements Converter {
         try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
 
             gff3Reader.readHeader();
-            gff3Reader.read(
-                    annotation -> writeEntry(new GFF3Mapper(), annotation, writer)
-            );
+            gff3Reader.read(annotation -> writeEntry(new GFF3Mapper(), annotation, writer));
 
             // TODO: Decide how to expose parsingErrors to the user of this converter.// TODO: Decide how to expose
             // parsingErrors to the user of this converter.
