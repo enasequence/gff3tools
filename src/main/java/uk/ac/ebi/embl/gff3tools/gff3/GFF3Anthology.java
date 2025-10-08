@@ -17,6 +17,7 @@ public class GFF3Anthology {
     public static final String MAP_PEPTIDE_FEATURE_NAME = "map_peptide";
     public static final String SIG_PEPTIDE_FEATURE_NAME = "signal_peptide";
     public static final String CDS_FEATURE_NAME = "CDS";
+    public static final String PSEUDOGENIC_CDS_FEATURE_NAME = "pseudogenic_CDS";
     public static final String PROPETIDE_FEATURE_NAME = "propeptide";
 
     public static final String EXON_FEATURE_NAME = "exon";
@@ -38,4 +39,10 @@ public class GFF3Anthology {
 
     public static final Set<String> INTRON_EQUIVALENTS = Set.of(
             INTRON_FEATURE_NAME, SPLICEOSOMAL_INTRON_FEATURE_NAME, AUTOCATALYTICALLY_SPLICED_INTRON_FEATURE_NAME);
+    public static final String GENE_FEATURE_NAME = "gene";
+
+    public static final Set<String> CDS_EQUIVALENTS = Set.of(CDS_FEATURE_NAME, PSEUDOGENIC_CDS_FEATURE_NAME);
+
+    public static final String GAP_FEATURE_NAME = "gap";
+    public static final String ASSEMBLY_GAP_FEATURE_NAME = "assembly_gap";
 }
