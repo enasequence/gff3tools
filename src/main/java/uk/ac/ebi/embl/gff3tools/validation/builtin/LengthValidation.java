@@ -39,7 +39,9 @@ public class LengthValidation implements FeatureValidation {
 
         if (GFF3Anthology.PROPETIDE_FEATURE_NAME.equalsIgnoreCase(featureName) && feature.getLength() % 3 != 0) {
             throw new ValidationException(
-                    INTRON_LENGTH_VALIDATION_RULE, line, INVALID_PROPEPTIDE_LENGTH_MESSAGE.formatted(feature.accession()));
+                    INTRON_LENGTH_VALIDATION_RULE,
+                    line,
+                    INVALID_PROPEPTIDE_LENGTH_MESSAGE.formatted(feature.accession()));
         }
 
         if ((GFF3Anthology.INTRON_EQUIVALENTS.contains(featureName)) && length < INTRON_FETURE_LENGTH) {

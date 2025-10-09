@@ -28,6 +28,11 @@ public class FFToGff3Converter implements Converter {
     Path masterFilePath = null;
     ValidationEngine validationEngine;
 
+    public FFToGff3Converter(ValidationEngine validationEngine) {
+        this.validationEngine = validationEngine;
+    }
+
+    // Constructor to be used only by the processing pipeline which converts reduced flatfile
     public FFToGff3Converter(ValidationEngine validationEngine, Path masterFilePath) {
         this.validationEngine = validationEngine;
         this.masterFilePath = masterFilePath;
