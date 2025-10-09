@@ -17,6 +17,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public enum ConversionUtils {
     INSTANCE;
@@ -28,6 +30,7 @@ public enum ConversionUtils {
     // Uses sOTerms (gff3 feature names)
     private Map<String, Set<String>> featureRelations = null;
     private OntologyClient ontologyClient = null;
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConversionUtils.class);
 
     private ConversionUtils() {
         this.ontologyClient = new OntologyClient();
@@ -54,11 +57,15 @@ public enum ConversionUtils {
     public static ConversionEntry getINSDCFeatureForSOTerm(String SOTerm) {
         ConversionEntry conversionEntry = INSTANCE.gff32ff.get(SOTerm);
         if (conversionEntry == null) {
+            LOGGER.debug("SOTerm \"%s\" not found in tsv mapping. Search for matches using ontology parents"
+                    .formatted(SOTerm));
             Stream<String> parents = INSTANCE.ontologyClient.getParents(SOTerm);
             for (Iterator<String> it = parents.iterator(); it.hasNext(); ) {
                 String parent = it.next();
                 conversionEntry = INSTANCE.gff32ff.get(parent);
                 if (conversionEntry != null) {
+                    LOGGER.debug("SOTerm \"%s\" mapped to INSDC feature \"%s\" using ontology through parent \"%s\""
+                            .formatted(SOTerm, conversionEntry.feature, parent));
                     break;
                 }
             }
