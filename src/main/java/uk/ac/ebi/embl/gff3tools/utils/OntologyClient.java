@@ -24,6 +24,8 @@ import org.slf4j.LoggerFactory;
 
 public class OntologyClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(OntologyClient.class);
+    static final String GENEONTOLOGY_IRI_BASE = "http://www.geneontology.org/formats/oboInOwl";
+    static final String OBOLIBRARY_IRI_BASE = "http://purl.obolibrary.org/obo/";
     private OWLOntology ontology;
     private OWLDataFactory dataFactory;
     private OWLReasoner reasoner;
@@ -65,10 +67,10 @@ public class OntologyClient {
             return false;
         }
 
-        OWLClass childClass = dataFactory.getOWLClass(
-                IRI.create("http://purl.obolibrary.org/obo/" + childOntologyId.replace(":", "_")));
-        OWLClass parentClass = dataFactory.getOWLClass(
-                IRI.create("http://purl.obolibrary.org/obo/" + parentOntologyId.replace(":", "_")));
+        OWLClass childClass =
+                dataFactory.getOWLClass(IRI.create(OBOLIBRARY_IRI_BASE + childOntologyId.replace(":", "_")));
+        OWLClass parentClass =
+                dataFactory.getOWLClass(IRI.create(OBOLIBRARY_IRI_BASE + parentOntologyId.replace(":", "_")));
 
         // Check if childClass is a subclass of parentClass, excluding the case where they are the same class
         return reasoner.getSubClasses(parentClass, false).getFlattened().stream()
@@ -110,7 +112,7 @@ public class OntologyClient {
                             owlClass,
                             ontology,
                             dataFactory.getOWLAnnotationProperty(
-                                    IRI.create("http://www.geneontology.org/formats/oboInOwl#hasExactSynonym")))
+                                    IRI.create(GENEONTOLOGY_IRI_BASE + "#hasExactSynonym")))
                     .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
                     .map(annotation ->
                             ((OWLLiteral) annotation.getValue()).getLiteral().toLowerCase())
@@ -119,8 +121,8 @@ public class OntologyClient {
                     .or(() -> EntitySearcher.getAnnotationObjects(
                                     owlClass,
                                     ontology,
-                                    dataFactory.getOWLAnnotationProperty(IRI.create(
-                                            "http://www.geneontology.org/formats/oboInOwl#hasNarrowSynonym")))
+                                    dataFactory.getOWLAnnotationProperty(
+                                            IRI.create(GENEONTOLOGY_IRI_BASE + "#hasNarrowSynonym")))
                             .filter(annotation -> annotation.getValue() instanceof OWLLiteral)
                             .map(annotation -> ((OWLLiteral) annotation.getValue())
                                     .getLiteral()
@@ -142,7 +144,7 @@ public class OntologyClient {
     private String extractOntologyId(IRI iri) {
         // Extract the SO ID from the full IRI, e.g., http://purl.obolibrary.org/obo/SO_0000123 -> SO:0000123
         String iriString = iri.toString();
-        if (iriString.startsWith("http://purl.obolibrary.org/obo/SO_")) {
+        if (iriString.startsWith(OBOLIBRARY_IRI_BASE + "SO_")) {
             return "SO:" + iriString.substring(iriString.lastIndexOf('_') + 1);
         }
         return null;
@@ -192,8 +194,7 @@ public class OntologyClient {
         }
 
         if (isValidOntologyId(SOTerm)) {
-            OWLClass owlClass =
-                    dataFactory.getOWLClass(IRI.create("http://purl.obolibrary.org/obo/" + SOTerm.replace(":", "_")));
+            OWLClass owlClass = dataFactory.getOWLClass(IRI.create(OBOLIBRARY_IRI_BASE + SOTerm.replace(":", "_")));
             return reasoner.getSuperClasses(owlClass, false)
                     .entities()
                     .map(HasIRI::getIRI)
