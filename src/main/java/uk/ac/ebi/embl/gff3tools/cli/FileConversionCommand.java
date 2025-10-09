@@ -109,7 +109,11 @@ public class FileConversionCommand implements Runnable {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
             return new Gff3ToFFConverter(engine);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
-            return new FFToGff3Converter(engine, masterFilePath);
+
+            return masterFilePath == null
+                    ? new FFToGff3Converter(engine, masterFilePath)
+                    : new FFToGff3Converter(engine);
+
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }
