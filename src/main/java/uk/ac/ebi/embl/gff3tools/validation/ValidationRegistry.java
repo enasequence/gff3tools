@@ -10,14 +10,16 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation;
 
-import uk.ac.ebi.embl.gff3tools.validation.builtin.DuplicateFeatureValidation;
-import uk.ac.ebi.embl.gff3tools.validation.builtin.LengthValidation;
-import uk.ac.ebi.embl.gff3tools.validation.builtin.LocationValidation;
+import uk.ac.ebi.embl.gff3tools.validation.builtin.*;
 
 public class ValidationRegistry {
     private static final Validation[] VALIDATIONS = new Validation[] {
         // new DuplicateSeqIdValidation(),
-        new LocationValidation(), new LengthValidation(), new DuplicateFeatureValidation()
+        new LocationValidation(),
+        new LengthValidation(),
+        new DuplicateFeatureValidation(),
+        new AttributesRelationValidation(),
+        new AttributesValueValidation()
     };
 
     public static Validation[] getValidations() {
