@@ -14,11 +14,12 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.FeatureValidation;
+import uk.ac.ebi.embl.gff3tools.validation.Validation;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationMethod;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationType;
 
-public class LengthValidation implements FeatureValidation {
+public class LengthValidation implements Validation {
 
-    public static final String INTRON_LENGTH_VALIDATION_RULE = "GFF3_INTRON_LENGTH_VALIDATION";
-    public static final String EXON_LENGTH_VALIDATION_RULE = "GFF3_EXON_LENGTH_VALIDATION";
     public static long INTRON_FETURE_LENGTH = 10;
     public static long EXON_FETURE_LENGTH = 15;
 
@@ -27,29 +28,24 @@ public class LengthValidation implements FeatureValidation {
     private static final String INVALID_INTRON_LENGTH_MESSAGE = "Intron feature length is invalid for accession \"%s\"";
     private static final String INVALID_EXON_LENGTH_MESSAGE = "Exon feature length is invalid for accession \"%s\"";
 
-    @Override
-    public String getValidationRule() {
-        return INTRON_LENGTH_VALIDATION_RULE;
-    }
 
-    @Override
+    @ValidationMethod(type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
         String featureName = feature.getName();
         long length = feature.getLength();
 
         if (GFF3Anthology.PROPETIDE_FEATURE_NAME.equalsIgnoreCase(featureName) && feature.getLength() % 3 != 0) {
             throw new ValidationException(
-                    INTRON_LENGTH_VALIDATION_RULE,
                     line,
                     INVALID_PROPEPTIDE_LENGTH_MESSAGE.formatted(feature.accession()));
         }
 
         if ((GFF3Anthology.INTRON_EQUIVALENTS.contains(featureName)) && length < INTRON_FETURE_LENGTH) {
             throw new ValidationException(
-                    INTRON_LENGTH_VALIDATION_RULE, line, INVALID_INTRON_LENGTH_MESSAGE.formatted(feature.accession()));
+                    line, INVALID_INTRON_LENGTH_MESSAGE.formatted(feature.accession()));
         } else if ((GFF3Anthology.EXON_EQUIVALENTS.contains(featureName)) && length < EXON_FETURE_LENGTH) {
             throw new ValidationException(
-                    EXON_LENGTH_VALIDATION_RULE, line, INVALID_EXON_LENGTH_MESSAGE.formatted(feature.accession()));
+                     line, INVALID_EXON_LENGTH_MESSAGE.formatted(feature.accession()));
         }
     }
 }

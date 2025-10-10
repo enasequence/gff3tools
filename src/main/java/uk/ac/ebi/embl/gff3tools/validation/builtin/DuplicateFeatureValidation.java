@@ -16,9 +16,11 @@ import java.util.Objects;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.validation.FeatureValidation;
+import uk.ac.ebi.embl.gff3tools.validation.*;
 
-public class DuplicateFeatureValidation implements FeatureValidation {
+@ValidationClass
+public class DuplicateFeatureValidation implements Validation {
+
 
     private record ProteinAttributePair(String proteinId, String attributeId) {
 
@@ -34,12 +36,8 @@ public class DuplicateFeatureValidation implements FeatureValidation {
     private static final String DUPLICATE_PROTEIN_ID_MESSAGE =
             "Duplicate Protein Id \"%s\" found. First occurrence at line %d, conflicting occurrence at line %d";
 
-    @Override
-    public String getValidationRule() {
-        return VALIDATION_RULE;
-    }
 
-    @Override
+    @ValidationMethod(type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
         String proteinId = feature.getAttributeByName(GFF3Attributes.PROTEIN_ID);
         String attributeId = feature.getAttributeByName(GFF3Attributes.ATTRIBUTE_ID);

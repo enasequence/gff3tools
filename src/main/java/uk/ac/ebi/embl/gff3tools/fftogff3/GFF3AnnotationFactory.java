@@ -89,7 +89,7 @@ public class GFF3AnnotationFactory {
         annotation.setSequenceRegion(sequenceRegion);
         annotation.setFeatures(features);
 
-        validationEngine.validateAnnotation(annotation, -1);
+        validationEngine.validate(annotation, -1);
 
         return annotation;
     }
@@ -161,7 +161,7 @@ public class GFF3AnnotationFactory {
                     getStrand(location, compoundLocation),
                     getPhase(ffFeature),
                     attributes);
-            validationEngine.validateFeature(gff3Feature, -1);
+            validationEngine.validate(gff3Feature, -1);
             gff3Features.add(gff3Feature);
         }
 

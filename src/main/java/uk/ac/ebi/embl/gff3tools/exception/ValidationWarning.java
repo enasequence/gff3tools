@@ -12,29 +12,23 @@ package uk.ac.ebi.embl.gff3tools.exception;
 
 import uk.ac.ebi.embl.gff3tools.cli.CLIExitCode;
 
-public class ValidationException extends ExitException {
+public class ValidationWarning extends Exception {
 
     private int line;
     private String rule;
 
-    public ValidationException(String rule, String message) {
+    public ValidationWarning(String rule, String message) {
         super("Violation of rule %s: %s".formatted(rule.toString(), message));
         this.rule = rule;
     }
 
-    public ValidationException(String rule, int line, String message) {
+    public ValidationWarning(String rule, int line, String message) {
         super("Violation of rule %s on line %d: %s".formatted(rule.toString(), line, message));
         this.line = line;
         this.rule = rule;
     }
 
-    public ValidationException( int line, String message) {
-        super("Violation of rule on line %d: %s".formatted( line, message));
-        this.line = line;
-        this.rule = rule;
-    }
-
-    public ValidationException(String message) {
+    public ValidationWarning(String message) {
         super(message);
     }
 
@@ -46,8 +40,5 @@ public class ValidationException extends ExitException {
         return this.rule;
     }
 
-    @Override
-    public CLIExitCode exitCode() {
-        return CLIExitCode.VALIDATION_ERROR;
-    }
+
 }

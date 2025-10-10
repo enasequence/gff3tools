@@ -15,22 +15,18 @@ import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.validation.AnnotationValidation;
-import uk.ac.ebi.embl.gff3tools.validation.FeatureValidation;
+import uk.ac.ebi.embl.gff3tools.validation.*;
 
-public class DuplicateSeqIdValidation implements FeatureValidation, AnnotationValidation {
+@ValidationClass
+public class DuplicateSeqIdValidation implements Validation {
 
     public static final String VALIDATION_RULE = "GFF3_DUPLICATE_SEQID";
 
     private HashSet<String> processedAnnotations = new HashSet<>();
     private String currentAccession = null;
 
-    @Override
-    public String getValidationRule() {
-        return VALIDATION_RULE;
-    }
 
-    @Override
+    @ValidationMethod(type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
         String accession = feature.accession();
 
@@ -42,7 +38,4 @@ public class DuplicateSeqIdValidation implements FeatureValidation, AnnotationVa
             currentAccession = accession;
         }
     }
-
-    @Override
-    public void validateAnnotation(GFF3Annotation feature, int line) throws ValidationException {}
 }

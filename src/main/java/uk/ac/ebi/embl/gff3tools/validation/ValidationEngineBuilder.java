@@ -18,22 +18,17 @@ import uk.ac.ebi.embl.gff3tools.exception.UnregisteredValidationRuleException;
 
 public class ValidationEngineBuilder {
 
-    private final List<Validation> allValidations;
-    private final List<FeatureValidation> activeFeatureValidations;
-    private final List<AnnotationValidation> activeAnnotationValidations;
+
     private final HashSet<String> registeredValidationRules;
     private Map<String, RuleSeverity> severityMap;
 
     public ValidationEngineBuilder() {
-        this.allValidations = new ArrayList<>();
-        this.activeFeatureValidations = new ArrayList<>();
-        this.activeAnnotationValidations = new ArrayList<>();
         this.registeredValidationRules = new HashSet<>();
         this.severityMap = loadDefaultSeverities();
     }
 
     public void registerValidation(Validation validation) throws DuplicateValidationRuleException {
-        String validationRule = validation.getValidationRule();
+        /*String validationRule = validation.getValidationRule();
         if (registeredValidationRules.contains(validationRule)) {
             throw new DuplicateValidationRuleException(
                     "Validation rule with name '" + validationRule + "' is already registered.");
@@ -47,19 +42,19 @@ public class ValidationEngineBuilder {
         }
 
         allValidations.add(validation);
-        registeredValidationRules.add(validationRule);
+        registeredValidationRules.add(validationRule);*/
     }
 
     public void registerValidations(Validation[] validations)
             throws ClassCastException, DuplicateValidationRuleException {
-        for (Validation v : validations) {
+       /* for (Validation v : validations) {
             registerValidation(v);
-        }
+        }*/
     }
 
     public ValidationEngine build() {
-        reevaluateActiveValidations();
-        return new ValidationEngine(activeFeatureValidations, activeAnnotationValidations, severityMap);
+        /*reevaluateActiveValidations();*/
+        return new ValidationEngine(severityMap);
     }
 
     public void overrideRuleSeverities(Map<String, RuleSeverity> map) throws UnregisteredValidationRuleException {
@@ -90,7 +85,7 @@ public class ValidationEngineBuilder {
         return severities;
     }
 
-    private void reevaluateActiveValidations() {
+   /* private void reevaluateActiveValidations() {
         activeFeatureValidations.clear();
         activeAnnotationValidations.clear();
 
@@ -105,5 +100,5 @@ public class ValidationEngineBuilder {
                 }
             }
         }
-    }
+    }*/
 }

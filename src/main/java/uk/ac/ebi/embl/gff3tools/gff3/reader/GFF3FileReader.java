@@ -74,7 +74,7 @@ public class GFF3FileReader implements AutoCloseable {
                 if (!currentAnnotation.getFeatures().isEmpty() || currentAnnotation.getSequenceRegion() != null) {
                     GFF3Annotation previousAnnotation = currentAnnotation;
                     currentAnnotation = new GFF3Annotation();
-                    validationEngine.validateAnnotation(previousAnnotation, lineCount);
+                    validationEngine.validate(previousAnnotation, lineCount);
                     return previousAnnotation;
                 }
                 continue;
@@ -97,7 +97,7 @@ public class GFF3FileReader implements AutoCloseable {
                     validateAndSetSequenceRegion();
 
                     if (!previousAnnotation.getFeatures().isEmpty()) {
-                        validationEngine.validateAnnotation(previousAnnotation, lineCount);
+                        validationEngine.validate(previousAnnotation, lineCount);
                         processedAccessions.add(previousAnnotation.getAccession());
                         return previousAnnotation;
                     }
@@ -115,7 +115,7 @@ public class GFF3FileReader implements AutoCloseable {
         if (!currentAnnotation.getFeatures().isEmpty() || currentAnnotation.getSequenceRegion() != null) {
             GFF3Annotation finalAnnotation = currentAnnotation;
             currentAnnotation = new GFF3Annotation();
-            validationEngine.validateAnnotation(finalAnnotation, lineCount);
+            validationEngine.validate(finalAnnotation, lineCount);
             processedAccessions.add(finalAnnotation.getAccession());
             return finalAnnotation;
         }
@@ -125,7 +125,7 @@ public class GFF3FileReader implements AutoCloseable {
             if (!processedAccessions.contains(accession)) {
                 GFF3Annotation annotation = new GFF3Annotation();
                 annotation.setSequenceRegion(accessionSequenceRegionMap.get(accession));
-                validationEngine.validateAnnotation(annotation, lineCount);
+                validationEngine.validate(annotation, lineCount);
                 processedAccessions.add(accession);
                 return annotation;
             }
@@ -221,7 +221,7 @@ public class GFF3FileReader implements AutoCloseable {
                 phase,
                 attributesMap);
 
-        validationEngine.validateFeature(feature, lineCount);
+        validationEngine.validate(feature, lineCount);
         return feature;
     }
 

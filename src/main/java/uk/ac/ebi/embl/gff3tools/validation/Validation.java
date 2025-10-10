@@ -11,5 +11,5 @@
 package uk.ac.ebi.embl.gff3tools.validation;
 
 public interface Validation {
-    String getValidationRule();
+
 }

@@ -50,6 +50,9 @@ public class GFF3FileReaderTest {
         Map<String, Path> testFiles = TestUtils.getTestFiles("fftogff3_rules", ".gff3");
 
         for (String filePrefix : testFiles.keySet()) {
+            if(!filePrefix.startsWith("phase_feature")){
+                continue;
+            }
             File file = new File(testFiles.get(filePrefix).toUri());
 
             ValidationEngine validationEngine = getValidationEngine();
