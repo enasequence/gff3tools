@@ -57,14 +57,14 @@ public enum ConversionUtils {
     public static ConversionEntry getINSDCFeatureForSOTerm(String SOTerm) {
         ConversionEntry conversionEntry = INSTANCE.gff32ff.get(SOTerm);
         if (conversionEntry == null) {
-            LOGGER.debug("SOTerm \"%s\" not found in tsv mapping. Search for matches using ontology parents"
+            LOGGER.info("SOTerm \"%s\" not found in tsv mapping. Search for matches using ontology parents"
                     .formatted(SOTerm));
             Stream<String> parents = INSTANCE.ontologyClient.getParents(SOTerm);
             for (Iterator<String> it = parents.iterator(); it.hasNext(); ) {
                 String parent = it.next();
                 conversionEntry = INSTANCE.gff32ff.get(parent);
                 if (conversionEntry != null) {
-                    LOGGER.debug("SOTerm \"%s\" mapped to INSDC feature \"%s\" using ontology through parent \"%s\""
+                    LOGGER.info("SOTerm \"%s\" mapped to INSDC feature \"%s\" using ontology through parent \"%s\""
                             .formatted(SOTerm, conversionEntry.feature, parent));
                     break;
                 }
