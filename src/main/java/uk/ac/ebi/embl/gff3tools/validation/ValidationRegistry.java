@@ -22,7 +22,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.ac.ebi.embl.gff3tools.validation.builtin.*;
 
 public class ValidationRegistry {
     private static final ValidationRegistry INSTANCE = new ValidationRegistry();
