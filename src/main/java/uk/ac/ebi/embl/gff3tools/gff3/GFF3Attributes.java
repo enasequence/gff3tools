@@ -12,6 +12,19 @@ package uk.ac.ebi.embl.gff3tools.gff3;
 
 public class GFF3Attributes {
 
-    public static String PROTEIN_ID = "protein_id";
-    public static String ATTRIBUTE_ID = "ID";
+    public static final String PROTEIN_ID = "protein_id";
+    public static final String ATTRIBUTE_ID = "ID";
+    public static final String LOCUS_TAG = "locus_tag";
+    public static final String PSEUDO = "pseudo";
+    public static final String PSEUDOGENE = "pseudogene";
+    public static final String PRODUCT = "product";
+    public static final String GENE = "gene";
+    public static final String OPERON = "operon";
+    public static final String ARTIFICIAL_LOCATION = "artificial_location";
+    public static final String TRANS_SPLICING = "trans_splicing";
+    public static final String RIBOSOMAL_SLIPPAGE = "ribosomal_slippage";
+    public static final String ANTI_CODON = "anticodon";
+    public static final String TRANSL_EXCEPT = "transl_except";
+    public static final String TERM_AMINO_ACID = "TERM";
+    public static final String GENE_SYNONYM = "gene_synonym";
 }

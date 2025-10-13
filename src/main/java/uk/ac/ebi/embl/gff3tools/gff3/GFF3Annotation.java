@@ -14,10 +14,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -127,6 +124,12 @@ public class GFF3Annotation implements IGFF3Feature {
     public List<GFF3Feature> getFeaturesByName(String featureName) {
         return features.stream()
                 .filter(ftr -> ftr.getName().equalsIgnoreCase(featureName))
+                .collect(Collectors.toList());
+    }
+
+    public List<GFF3Feature> getFeaturesByEquivalents(Set<String> featureEquivalents) {
+        return features.stream()
+                .filter(ftr -> featureEquivalents.contains(ftr.getName()))
                 .collect(Collectors.toList());
     }
 }
