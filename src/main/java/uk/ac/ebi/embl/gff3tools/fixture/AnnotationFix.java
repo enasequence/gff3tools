@@ -8,14 +8,10 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.gff3;
+package uk.ac.ebi.embl.gff3tools.fixture;
 
-public class GFF3Attributes {
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 
-    public static String PROTEIN_ID = "protein_id";
-    public static String ATTRIBUTE_ID = "ID";
-    public static String COMPARE = "compare";
-    public static String CITATION = "citation";
-    public static String OLD_LOCUS_TAG = "old_locus_tag";
-    public static String LOCUS_TAG = "locus_tag";
+public interface AnnotationFix {
+    GFF3Annotation fixAnnotation(GFF3Annotation gff3Annotation);
 }
