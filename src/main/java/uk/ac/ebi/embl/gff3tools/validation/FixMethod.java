@@ -10,8 +10,19 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation;
 
-public enum ValidationType {
-    FEATURE,
-    ANNOTATION,
-    SYNTACTIC
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface FixMethod {
+    String rule() default "";
+
+    ValidationType type();
+
+    RuleSeverity severity() default RuleSeverity.ERROR;
+
+    String description() default "";
 }

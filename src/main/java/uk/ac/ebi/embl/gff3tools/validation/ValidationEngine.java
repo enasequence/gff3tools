@@ -10,13 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation;
 
-import java.lang.reflect.Method;
 import java.util.*;
-
-import io.github.classgraph.ClassGraph;
-import io.github.classgraph.ClassInfo;
-import io.github.classgraph.ClassInfoList;
-import io.github.classgraph.ScanResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -26,44 +20,81 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 public class ValidationEngine {
     private static Logger LOG = LoggerFactory.getLogger(ValidationEngine.class);
 
-    private final Map<String, RuleSeverity> severityMap;
     private final List<ValidationException> parsingErrors;
     public ValidationConfig validationConfig;
-    private List<Validation> validations =  new ArrayList();
+    public ValidationRegistry validationRegistry;
 
-
-
-    ValidationEngine(
-            Map<String, RuleSeverity> severityMap) {
-        this.severityMap = severityMap;
+    ValidationEngine(ValidationConfig validationConfig, ValidationRegistry validationRegistry) {
         this.parsingErrors = new java.util.ArrayList<>();
-        validationConfig = new ValidationConfig(severityMap, new HashMap<>());
-        ValidationRegistry.clearRegistry();
+        this.validationConfig = validationConfig;
+        this.validationRegistry = validationRegistry;
     }
 
+    public <T> void validate(T target, int line) throws ValidationException {
 
-    public <T> void validate(T target, int line) throws ValidationException, ClassCastException {
+        executeFixs(target, line);
         executeValidations(target, line);
-        /*for (AnnotationValidation validation : activeAnnotationValidations) {
+    }
+
+    public <T> void executeValidations(T target, int line) throws ValidationException {
+        List<ValidatorDescriptor> validators = ValidationRegistry.getValidations(validationConfig);
+
+        for (ValidatorDescriptor validator : validators) {
+
+            ValidationMethod methodAnnotation = validator.method().getAnnotation(ValidationMethod.class);
+            RuleSeverity ruleSeverity =
+                    validationConfig.getSeverity(methodAnnotation.rule(), methodAnnotation.severity());
+
+            if (ruleSeverity == RuleSeverity.OFF) continue;
+
             try {
-                validation.validateAnnotation(annotation, line);
-            } catch (ValidationException exception) {
-                handleValidationException(exception);
+                if (methodAnnotation.type() == ValidationType.FEATURE && target instanceof GFF3Feature) {
+                    validator.method().invoke(validator.instance(), target, line);
+                } else if (methodAnnotation.type() == ValidationType.ANNOTATION && target instanceof GFF3Annotation) {
+                    validator.method().invoke(validator.instance(), target, line);
+                }
+
+            } catch (Exception e) {
+                handleRuleException(e.getCause(), ruleSeverity);
             }
-        }*/
+        }
+    }
+
+    public <T> void executeFixs(T target, int line) throws ValidationException {
+        List<ValidatorDescriptor> validators = ValidationRegistry.getInstance().getFixs(validationConfig);
+
+        for (ValidatorDescriptor validator : validators) {
+
+            FixMethod methodAnnotation = validator.method().getAnnotation(FixMethod.class);
+            RuleSeverity ruleSeverity =
+                    validationConfig.getSeverity(methodAnnotation.rule(), methodAnnotation.severity());
+
+            if (ruleSeverity == RuleSeverity.OFF) continue;
+
+            try {
+                if (methodAnnotation.type() == ValidationType.FEATURE && target instanceof GFF3Feature) {
+                    validator.method().invoke(validator.instance(), target, line);
+                } else if (methodAnnotation.type() == ValidationType.ANNOTATION && target instanceof GFF3Annotation) {
+                    validator.method().invoke(validator.instance(), target, line);
+                }
+
+            } catch (Exception e) {
+                handleRuleException(e.getCause(), ruleSeverity);
+            }
+        }
     }
 
     public void handleSyntacticError(ValidationException exception) throws ValidationException {
-        handleValidationException(exception);
+        handleSyntacticValidationException(exception);
     }
 
     public List<ValidationException> getParsingErrors() {
         return parsingErrors;
     }
 
-    private void handleValidationException(ValidationException exception) throws ValidationException {
+    private void handleSyntacticValidationException(ValidationException exception) throws ValidationException {
         String rule = exception.getValidationRule().toString();
-        RuleSeverity severity = Optional.ofNullable(severityMap.get(rule)).orElse(RuleSeverity.ERROR);
+        RuleSeverity severity = validationConfig.getSeverity(rule, RuleSeverity.ERROR);
         switch (severity) {
             case OFF -> {}
             case WARN -> {
@@ -76,34 +107,15 @@ public class ValidationEngine {
         }
     }
 
-    public <T> void executeValidations(T target, int line) throws ValidationException {
-        List<ValidatorDescriptor> validators =
-                ValidationRegistry.getValidators(validationConfig);
-
-        for (ValidatorDescriptor descriptor : validators) {
-            ValidationMethod vm = descriptor.method().getAnnotation(ValidationMethod.class);
-            RuleSeverity ruleSeverity = validationConfig.getSeverity(vm.rule(), vm.severity());
-
-            if (ruleSeverity == RuleSeverity.OFF) continue;
-
-            try {
-                if (vm.type() == ValidationType.FEATURE && target instanceof GFF3Feature) {
-                    descriptor.method().invoke(descriptor.instance(), target, line);
-                } else if (vm.type() == ValidationType.ANNOTATION && target instanceof GFF3Annotation) {
-                    descriptor.method().invoke(descriptor.instance(), target, line);
-                }
-
-            } catch (Exception e) {
-                String msg = e.getMessage();
-                if (ruleSeverity == RuleSeverity.WARN) {
-                    System.out.println("[WARN] " + msg);
-                } else if (ruleSeverity == RuleSeverity.ERROR) {
-                    throw new ValidationException(msg);
-                } else {
-                   throw new RuntimeException(e);
-                }
+    private void handleRuleException(Throwable cause, RuleSeverity severity) throws ValidationException {
+        if (cause instanceof ValidationException ve) {
+            if (severity == RuleSeverity.WARN) {
+                parsingErrors.add(ve);
+            } else if (severity == RuleSeverity.ERROR) {
+                throw ve;
             }
+        } else {
+            throw new RuntimeException(cause);
         }
-
     }
 }

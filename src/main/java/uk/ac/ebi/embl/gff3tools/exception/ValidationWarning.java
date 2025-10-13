@@ -10,8 +10,6 @@
  */
 package uk.ac.ebi.embl.gff3tools.exception;
 
-import uk.ac.ebi.embl.gff3tools.cli.CLIExitCode;
-
 public class ValidationWarning extends Exception {
 
     private int line;
@@ -39,6 +37,4 @@ public class ValidationWarning extends Exception {
     public String getValidationRule() {
         return this.rule;
     }
-
-
 }

@@ -10,8 +10,14 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation;
 
-public enum ValidationType {
-    FEATURE,
-    ANNOTATION,
-    SYNTACTIC
+import java.lang.annotation.*;
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface Gff3Validation {
+    String name() default "";
+
+    String description() default "";
+
+    boolean enabled() default true;
 }

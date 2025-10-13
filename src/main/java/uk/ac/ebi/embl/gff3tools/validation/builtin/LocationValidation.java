@@ -18,7 +18,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 
-@ValidationClass
+@Gff3Validation
 public class LocationValidation implements Validation {
 
     public static final String VALIDATION_RULE = "GFF3_LOCATION_VALIDATION";
@@ -27,7 +27,6 @@ public class LocationValidation implements Validation {
     private static final String INVALID_PROPEPTIDE_CDS_LOCATION_MESSAGE = "Propeptide [%d %d] not inside any CDS";
     private static final String INVALID_PROPEPTIDE_PEPTIDE_LOCATION_MESSAGE =
             "Propeptide [%d %d] overlaps with peptide features";
-
 
     @ValidationMethod(type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {

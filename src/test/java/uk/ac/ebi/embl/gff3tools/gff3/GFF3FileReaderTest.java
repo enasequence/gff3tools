@@ -34,13 +34,11 @@ public class GFF3FileReaderTest {
 
     ValidationEngine getValidationEngine() {
         ValidationEngineBuilder builder = getValidationEngineBuilder();
-        builder.registerValidation(new DuplicateSeqIdValidation());
         return builder.build();
     }
 
     ValidationEngineBuilder getValidationEngineBuilder() {
         ValidationEngineBuilder builder = new ValidationEngineBuilder();
-        builder.registerValidations(new Validation[] {});
 
         return builder;
     }
@@ -50,7 +48,7 @@ public class GFF3FileReaderTest {
         Map<String, Path> testFiles = TestUtils.getTestFiles("fftogff3_rules", ".gff3");
 
         for (String filePrefix : testFiles.keySet()) {
-            if(!filePrefix.startsWith("phase_feature")){
+            if (!filePrefix.startsWith("phase_feature")) {
                 continue;
             }
             File file = new File(testFiles.get(filePrefix).toUri());

@@ -11,43 +11,42 @@
 package uk.ac.ebi.embl.gff3tools.validation;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
+import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.*;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.MockitoAnnotations;
+import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.DuplicateValidationRuleException;
-import uk.ac.ebi.embl.gff3tools.exception.UnregisteredValidationRuleException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 
 public class ValidationEngineTest {
 
-    @Test
-    public void testRegisterValidation() throws DuplicateValidationRuleException {
-        ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
-        Validation mockValidation = new Validation() {
-        };
-        validationEngineBuilder.registerValidation(mockValidation);
-        ValidationEngine validationEngine = validationEngineBuilder.build();
-        //assertEquals(0, validationEngine.getFeatureValidations().size());
-        //assertEquals(0, validationEngine.getAnnotationValidations().size());
+    @Mock
+    private ValidationConfig validationConfig;
+
+    @Mock
+    private ValidationRegistry validationRegistry;
+
+    private ValidationEngine engine;
+
+    @BeforeEach
+    void setup() {
+        MockitoAnnotations.openMocks(this);
+        engine = new ValidationEngine(validationConfig, validationRegistry);
     }
 
     @Test
-    public void testValidate_successfulValidation()
-            throws ValidationException, DuplicateValidationRuleException {
+    public void testValidate_successfulValidation() throws ValidationException, DuplicateValidationRuleException {
         ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
-        final boolean[] validated = {false};
-        FeatureValidation mockFeatureValidation = new FeatureValidation() {
-            @Override
-            public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
-                validated[0] = true;
-            }
 
-        };
-        validationEngineBuilder.registerValidation(mockFeatureValidation);
         ValidationEngine validationEngine = validationEngineBuilder.build();
         validationEngine.validate(
                 new GFF3Feature(
@@ -57,145 +56,186 @@ public class ValidationEngineTest {
                         Optional.empty(),
                         "",
                         "",
-                        0L,
                         1L,
+                        2L,
                         "",
                         "",
                         "",
                         new HashMap<>()),
                 1);
-        assertTrue(validated[0]);
+        assertTrue(validationEngine.getParsingErrors().isEmpty());
     }
 
     @Test
-    public void testValidate_noClassCastExceptionWithIncompatibleValidation()
-            throws ValidationException, DuplicateValidationRuleException {
+    public void testValidate_failingValidation() throws ValidationException, DuplicateValidationRuleException {
         ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
 
-        AnnotationValidation mockAnnotationValidation = new AnnotationValidation() {
-            @Override
-            public void validateAnnotation(GFF3Annotation annotation, int line) throws ValidationException {
-                // This method won't be called by validateFeature
-            }
-        };
-        validationEngineBuilder.registerValidation(mockAnnotationValidation);
         ValidationEngine validationEngine = validationEngineBuilder.build();
-        // This should not throw ClassCastException as validateFeature only iterates over FeatureValidations
-        validationEngine.validate(
-                new GFF3Feature(
-                        Optional.empty(),
-                        Optional.empty(),
-                        "",
-                        Optional.empty(),
-                        "",
-                        "",
-                        0L,
-                        1L,
-                        "",
-                        "",
-                        "",
-                        new HashMap<>()),
-                1);
+
+        GFF3Feature invalidFeature = new GFF3Feature(
+                Optional.empty(), Optional.empty(), "", Optional.empty(), "", "", 0L, 2L, "", "", "", new HashMap<>());
+        ValidationException ex =
+                Assertions.assertThrows(ValidationException.class, () -> validationEngine.validate(invalidFeature, 1));
+
+        Assertions.assertAll(() -> Assertions.assertTrue(ex.getMessage()
+                .contains("Violation of rule GFF3_LOCATION_VALIDATION on line 1: Invalid start/end for accession")));
     }
 
-    @Test
-    public void testValidateAnnotation_successfulValidation()
-            throws ValidationException, DuplicateValidationRuleException {
-        ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
+    // ------------------------------------------------------------
+    // 1. Execute validations (normal flow)
+    // ------------------------------------------------------------
 
-        final boolean[] validated = {false};
-        AnnotationValidation mockAnnotationValidation = new AnnotationValidation() {
-            @Override
-            public void validateAnnotation(GFF3Annotation annotation, int line) throws ValidationException {
-                validated[0] = true;
+    @Test
+    void testExecuteValidations_invokesFeatureValidation() throws Exception {
+        // Mock method with @ValidationMethod
+        class DummyValidator {
+            @ValidationMethod(rule = "RULE_X", type = ValidationType.FEATURE)
+            public void validate(GFF3Feature f, int line) {
+                // f.setAttribute("validated", "true");
             }
-        };
-        validationEngineBuilder.registerValidation(mockAnnotationValidation);
-        ValidationEngine validationEngine = validationEngineBuilder.build();
-        validationEngine.validate(new GFF3Annotation(), -1);
-        assertTrue(validated[0]);
+        }
+
+        Method m = DummyValidator.class.getDeclaredMethod("validate", GFF3Feature.class, int.class);
+        DummyValidator instance = spy(new DummyValidator());
+
+        ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyValidator.class, instance, m);
+        List<ValidatorDescriptor> descriptors = List.of(descriptor);
+
+        when(validationConfig.getSeverity("RULE_X", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
+        try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
+
+            mocked.when(() -> ValidationRegistry.getValidations(validationConfig))
+                    .thenReturn(descriptors);
+
+            GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
+            engine.executeValidations(feature, 10);
+
+            verify(instance, times(1)).validate(feature, 10);
+        }
     }
 
+    // ------------------------------------------------------------
+    // 2. Skip when OFF
+    // ------------------------------------------------------------
     @Test
-    public void testValidateAnnotation_noClassCastExceptionWithIncompatibleValidation()
-            throws ValidationException, DuplicateValidationRuleException {
-        ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
-
-        FeatureValidation mockFeatureValidation = new FeatureValidation() {
-            @Override
-            public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
-                // This method won't be called by validateAnnotation
+    void testExecuteValidations_skipsWhenOff() throws Exception {
+        class DummyValidator {
+            @ValidationMethod(rule = "RULE_OFF", type = ValidationType.FEATURE)
+            public void validate(GFF3Feature f, int line) {
+                fail("Should not be invoked when rule is OFF");
             }
-        };
-        validationEngineBuilder.registerValidation(mockFeatureValidation);
-        ValidationEngine validationEngine = validationEngineBuilder.build();
-        // This should not throw ClassCastException as validateAnnotation only iterates over AnnotationValidations
-        validationEngine.validate(new GFF3Annotation(), -1);
+        }
+
+        Method m = DummyValidator.class.getDeclaredMethod("validate", GFF3Feature.class, int.class);
+        ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyValidator.class, new DummyValidator(), m);
+        List<ValidatorDescriptor> descriptors = List.of(descriptor);
+
+        when(validationConfig.getSeverity("RULE_OFF", RuleSeverity.ERROR)).thenReturn(RuleSeverity.OFF);
+
+        try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
+            mocked.when(() -> ValidationRegistry.getValidations(validationConfig))
+                    .thenReturn(descriptors);
+            GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
+            assertDoesNotThrow(() -> engine.executeValidations(feature, 1));
+        }
     }
 
+    // ------------------------------------------------------------
+    // 3. Handle WARN and ERROR severities
+    // ------------------------------------------------------------
     @Test
-    public void testRegisterValidation_throwsDuplicateValidationRuleException() {
-        ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
-        Validation mockValidation1 = new Validation() {
+    void testExecuteValidations_warnAddsToParsingErrors() throws Exception {
+        class DummyValidator {
+            @ValidationMethod(rule = "RULE_WARN", type = ValidationType.FEATURE)
+            public void validate(GFF3Feature f, int line) throws ValidationException {
+                throw new ValidationException("warning triggered");
+            }
+        }
 
-        };
-        Validation mockValidation2 = new Validation() {
-        };
+        Method m = DummyValidator.class.getDeclaredMethod("validate", GFF3Feature.class, int.class);
+        ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyValidator.class, new DummyValidator(), m);
+        List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
-        try {
-            validationEngineBuilder.registerValidation(mockValidation1);
-            assertThrows(
-                    DuplicateValidationRuleException.class,
-                    () -> validationEngineBuilder.registerValidation(mockValidation2));
-        } catch (DuplicateValidationRuleException e) {
-            fail("Should not throw DuplicateValidationRuleException on first registration");
+        when(validationConfig.getSeverity("RULE_WARN", RuleSeverity.ERROR)).thenReturn(RuleSeverity.WARN);
+        try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
+            mocked.when(() -> ValidationRegistry.getValidations(validationConfig))
+                    .thenReturn(descriptors);
+
+            GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
+            engine.executeValidations(feature, 1);
+            assertEquals(1, engine.getParsingErrors().size());
         }
     }
 
     @Test
-    public void testSetActiveValidations()
-            throws ValidationException, DuplicateValidationRuleException, UnregisteredValidationRuleException {
-        ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
+    void testExecuteValidations_errorThrowsException() throws Exception {
+        class DummyValidator {
+            @ValidationMethod(rule = "RULE_ERR", type = ValidationType.FEATURE)
+            public void validate(GFF3Feature f, int line) throws ValidationException {
+                throw new ValidationException("error triggered");
+            }
+        }
 
-        FeatureValidation featureValidation1 = new FeatureValidation() {
-            @Override
-            public void validateFeature(GFF3Feature feature, int line) throws ValidationException {}
+        Method m = DummyValidator.class.getDeclaredMethod("validate", GFF3Feature.class, int.class);
+        ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyValidator.class, new DummyValidator(), m);
+        List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
-        };
-        FeatureValidation featureValidation2 = new FeatureValidation() {
-            @Override
-            public void validateFeature(GFF3Feature feature, int line) throws ValidationException {}
+        when(validationConfig.getSeverity("RULE_ERR", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
+        try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
+            mocked.when(() -> ValidationRegistry.getValidations(validationConfig))
+                    .thenReturn(descriptors);
 
-        };
-        AnnotationValidation annotationValidation1 = new AnnotationValidation() {
-            @Override
-            public void validateAnnotation(GFF3Annotation annotation, int line) throws ValidationException {}
-        };
+            GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
+            ValidationException ex =
+                    assertThrows(ValidationException.class, () -> engine.executeValidations(feature, 1));
+            assertEquals("error triggered", ex.getMessage());
+        }
+    }
 
-        validationEngineBuilder.registerValidation(featureValidation1);
-        validationEngineBuilder.registerValidation(featureValidation2);
-        validationEngineBuilder.registerValidation(annotationValidation1);
+    // ------------------------------------------------------------
+    // 4. Execute fixes
+    // ------------------------------------------------------------
+    @Test
+    void testExecuteFixs_invokesFixForAnnotation() throws Exception {
+        class DummyFix {
+            @FixMethod(rule = "FIX_1", type = ValidationType.ANNOTATION)
+            public void fix(GFF3Annotation a, int line) {}
+        }
 
-        // Initially all registered validations should be active
-        ValidationEngine validationEngine = validationEngineBuilder.build();
-       // assertEquals(2, validationEngine.getFeatureValidations().size());
-       // assertEquals(1, validationEngine.getAnnotationValidations().size());
+        Method m = DummyFix.class.getDeclaredMethod("fix", GFF3Annotation.class, int.class);
+        DummyFix instance = spy(new DummyFix());
+        ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyFix.class, instance, m);
+        List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
-        // Set active validations to include only FeatureRule1 and AnnotationRule1
-        validationEngineBuilder.overrideRuleSeverities(
-                Map.of("FeatureRule2", RuleSeverity.OFF, "AnnotationRule1", RuleSeverity.WARN));
-        validationEngine = validationEngineBuilder.build();
+        when(validationConfig.getSeverity("FIX_1", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
+        try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
+            mocked.when(() -> ValidationRegistry.getFixs(validationConfig)).thenReturn(descriptors);
 
-       /* assertEquals(1, validationEngine.getFeatureValidations().size());
-        assertTrue(validationEngine.getFeatureValidations().contains(featureValidation1));
-        assertEquals(1, validationEngine.getAnnotationValidations().size());
-        assertTrue(validationEngine.getAnnotationValidations().contains(annotationValidation1));*/
+            engine.executeFixs(new GFF3Annotation(), 5);
 
-        // Test with empty set
-        validationEngineBuilder.overrideRuleSeverities(
-                Map.of("FeatureRule1", RuleSeverity.OFF, "AnnotationRule1", RuleSeverity.OFF));
-        validationEngine = validationEngineBuilder.build();
-      //  assertEquals(0, validationEngine.getFeatureValidations().size());
-       // assertEquals(0, validationEngine.getAnnotationValidations().size());
+            verify(instance, times(1)).fix(any(), eq(5));
+        }
+    }
+
+    // ------------------------------------------------------------
+    // 5. Handle syntactic validation exception
+    // ------------------------------------------------------------
+    @Test
+    void testHandleSyntacticValidation_warnAddsToParsingErrors() throws ValidationException {
+        ValidationException vex = new ValidationException("rule", "warn");
+        when(validationConfig.getSeverity(vex.getValidationRule().toString(), RuleSeverity.ERROR))
+                .thenReturn(RuleSeverity.WARN);
+
+        engine.handleSyntacticError(vex);
+        assertEquals(1, engine.getParsingErrors().size());
+    }
+
+    @Test
+    void testHandleSyntacticValidation_errorThrows() {
+        ValidationException vex = new ValidationException("rule", "fatal");
+        when(validationConfig.getSeverity(vex.getValidationRule().toString(), RuleSeverity.ERROR))
+                .thenReturn(RuleSeverity.ERROR);
+
+        assertThrows(ValidationException.class, () -> engine.handleSyntacticError(vex));
     }
 }

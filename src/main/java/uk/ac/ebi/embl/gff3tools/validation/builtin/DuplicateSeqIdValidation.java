@@ -13,18 +13,14 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 import java.util.HashSet;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 
-@ValidationClass
+@Gff3Validation
 public class DuplicateSeqIdValidation implements Validation {
-
-    public static final String VALIDATION_RULE = "GFF3_DUPLICATE_SEQID";
 
     private HashSet<String> processedAnnotations = new HashSet<>();
     private String currentAccession = null;
-
 
     @ValidationMethod(type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {

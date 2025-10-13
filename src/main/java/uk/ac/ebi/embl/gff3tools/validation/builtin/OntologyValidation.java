@@ -13,8 +13,8 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
-import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
+import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.FeatureValidation;
 
 public class OntologyValidation implements FeatureValidation {
