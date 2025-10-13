@@ -74,6 +74,10 @@ public enum ConversionUtils {
         return conversionEntry;
     }
 
+    public static String getSOId(String SOTerm) {
+        return INSTANCE.ontologyClient.findTermByNameOrSynonym(SOTerm).orElse(null);
+    }
+
     private void addConversionEntry(ConversionEntry conversionEntry) {
         ff2gff3.putIfAbsent(conversionEntry.feature, new ArrayList<>());
         ff2gff3.get(conversionEntry.feature).add(conversionEntry);

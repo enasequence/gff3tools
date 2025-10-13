@@ -27,6 +27,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
+import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 
 public class GFF3Mapper {
 
@@ -108,8 +109,14 @@ public class GFF3Mapper {
             parentFeatureLocation.addLocation(location);
         } else {
             String gff3FeatureName = gff3Feature.getName();
+            String gff3Id = ConversionUtils.getSOId(gff3FeatureName);
             ConversionEntry conversionEntry = ConversionUtils.getINSDCFeatureForSOTerm(gff3FeatureName);
-            if (conversionEntry != null) {
+            if (attributes.get("Is_circular") != null && OntologyTerm.REGION.ID.equalsIgnoreCase(gff3Id)) {
+                // Do not convert "region" features. These are added when doing EMBL->GFF3 mapping to
+                // represent circular topologies. The topology in the EMBL mapping will be provided
+                // by the fasta headers.
+                return;
+            } else if (conversionEntry != null) {
                 ffFeature = featureFactory.createFeature(conversionEntry.getFeature());
                 CompoundLocation<Location> locations = new Join();
                 if (location.isComplement()) {
