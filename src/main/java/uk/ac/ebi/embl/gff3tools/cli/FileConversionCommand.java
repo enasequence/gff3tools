@@ -95,10 +95,15 @@ public class FileConversionCommand implements Runnable {
     private ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides)
             throws UnregisteredValidationRuleException {
         ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
-        engineBuilder.overrideRuleSeverities(ruleOverrides);
+        engineBuilder.overrideMethodRules(ruleOverrides);
+
+        // TODO: override validator
+        // engineBuilder.overrideClassRules()
+
 
         // TODO: Create and set connection
         // engineBuilder.setConnection(connection);
+
 
         return engineBuilder.build();
     }

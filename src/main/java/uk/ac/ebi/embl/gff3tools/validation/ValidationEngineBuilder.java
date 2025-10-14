@@ -34,11 +34,11 @@ public class ValidationEngineBuilder {
         return new ValidationEngine(validationConfig, validationRegistry);
     }
 
-    public void overrideRuleSeverities(Map<String, RuleSeverity> map) throws UnregisteredValidationRuleException {
+    public void overrideMethodRules(Map<String, RuleSeverity> map) throws UnregisteredValidationRuleException {
         this.validationConfig.getRuleOverrides().putAll(map);
     }
 
-    public void overrideValidatorSeverities(Map<String, Boolean> map) throws UnregisteredValidationRuleException {
+    public void overrideClassRules(Map<String, Boolean> map) throws UnregisteredValidationRuleException {
         this.validationConfig.getValidatorOverrides().putAll(map);
     }
 
@@ -47,9 +47,7 @@ public class ValidationEngineBuilder {
     }
 
     public void initValidationRegistry() {
-        validationRegistry = ValidationRegistry.getInstance();
-        validationRegistry.setConnection(connection);
-        validationRegistry.initRegistry(validationConfig);
+        validationRegistry = ValidationRegistry.getInstance(validationConfig, connection);
     }
 
     private ValidationConfig getValidationConfig() {

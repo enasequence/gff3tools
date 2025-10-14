@@ -28,14 +28,15 @@ class ValidationRegistryTest {
 
     @BeforeEach
     void setUp() {
-        registry = ValidationRegistry.getInstance();
+
         validationConfig = mock(ValidationConfig.class);
+        registry = ValidationRegistry.getInstance(validationConfig,null);
     }
 
     @Test
     @DisplayName("Should return the same instance (singleton)")
     void testSingletonInstance() {
-        ValidationRegistry another = ValidationRegistry.getInstance();
+        ValidationRegistry another = ValidationRegistry.getInstance(validationConfig,null);
         assertSame(registry, another, "ValidationRegistry must be a singleton");
     }
 
@@ -72,12 +73,12 @@ class ValidationRegistryTest {
         when(validationConfig.isValidatorEnabled(any(Annotation.class))).thenReturn(true);
 
         // Access private build() via reflection
-        Method buildMethod = ValidationRegistry.class.getDeclaredMethod("build", List.class, ValidationConfig.class);
+        Method buildMethod = ValidationRegistry.class.getDeclaredMethod("build", List.class);
         buildMethod.setAccessible(true);
 
         @SuppressWarnings("unchecked")
         List<ValidatorDescriptor> result =
-                (List<ValidatorDescriptor>) buildMethod.invoke(registry, classInfos, validationConfig);
+                (List<ValidatorDescriptor>) buildMethod.invoke(registry, classInfos);
 
         // Assertions
         assertEquals(2, result.size(), "Should build validators for both Gff3Validation and Gff3Fix");
@@ -109,7 +110,7 @@ class ValidationRegistryTest {
         // Inject cachedValidators
         setCachedValidators(all);
 
-        List<ValidatorDescriptor> result = ValidationRegistry.getValidations(validationConfig);
+        List<ValidatorDescriptor> result = registry.getValidations();
         assertEquals(1, result.size());
         assertEquals(ValClass.class, result.get(0).clazz());
     }
@@ -135,7 +136,7 @@ class ValidationRegistryTest {
 
         setCachedValidators(all);
 
-        List<ValidatorDescriptor> result = registry.getFixs(validationConfig);
+        List<ValidatorDescriptor> result = registry.getFixs();
         assertEquals(1, result.size());
         assertEquals(FixClass.class, result.get(0).clazz());
     }
@@ -191,7 +192,6 @@ class ValidationRegistryTest {
                 .getDeclaredMethod("checkUniqueValidationRules", ClassInfoList.class);
         privateMethod.setAccessible(true);
 
-        ValidationRegistry registry =  ValidationRegistry.getInstance();
 
         // Should NOT throw since rules are unique
         assertDoesNotThrow(() -> privateMethod.invoke(registry, validationList));
@@ -216,11 +216,11 @@ class ValidationRegistryTest {
         }
     }
 
-    private static void invokeCheckUniqueValidationRules(ClassInfoList list) {
+    private  void invokeCheckUniqueValidationRules(ClassInfoList list) {
         try {
             Method m = ValidationRegistry.class.getDeclaredMethod("checkUniqueValidationRules", ClassInfoList.class);
             m.setAccessible(true);
-            m.invoke(ValidationRegistry.getInstance(), list);
+            m.invoke(registry, list);
         } catch (RuntimeException re) {
             throw re;
         } catch (Exception e) {

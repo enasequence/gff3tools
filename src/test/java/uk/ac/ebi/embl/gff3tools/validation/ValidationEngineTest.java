@@ -104,7 +104,7 @@ public class ValidationEngineTest {
         when(validationConfig.getSeverity("RULE_X", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
         try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
 
-            mocked.when(() -> ValidationRegistry.getValidations(validationConfig))
+            mocked.when(validationRegistry::getValidations)
                     .thenReturn(descriptors);
 
             GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
@@ -133,7 +133,7 @@ public class ValidationEngineTest {
         when(validationConfig.getSeverity("RULE_OFF", RuleSeverity.ERROR)).thenReturn(RuleSeverity.OFF);
 
         try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
-            mocked.when(() -> ValidationRegistry.getValidations(validationConfig))
+            mocked.when(validationRegistry::getValidations)
                     .thenReturn(descriptors);
             GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
             assertDoesNotThrow(() -> engine.executeValidations(feature, 1));
@@ -158,7 +158,7 @@ public class ValidationEngineTest {
 
         when(validationConfig.getSeverity("RULE_WARN", RuleSeverity.ERROR)).thenReturn(RuleSeverity.WARN);
         try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
-            mocked.when(() -> ValidationRegistry.getValidations(validationConfig))
+            mocked.when(validationRegistry::getValidations)
                     .thenReturn(descriptors);
 
             GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
@@ -182,7 +182,7 @@ public class ValidationEngineTest {
 
         when(validationConfig.getSeverity("RULE_ERR", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
         try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
-            mocked.when(() -> ValidationRegistry.getValidations(validationConfig))
+            mocked.when(validationRegistry::getValidations)
                     .thenReturn(descriptors);
 
             GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
@@ -209,7 +209,7 @@ public class ValidationEngineTest {
 
         when(validationConfig.getSeverity("FIX_1", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
         try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
-            mocked.when(() -> ValidationRegistry.getFixs(validationConfig)).thenReturn(descriptors);
+            mocked.when(() -> validationRegistry.getFixs()).thenReturn(descriptors);
 
             engine.executeFixs(new GFF3Annotation(), 5);
 

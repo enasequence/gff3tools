@@ -30,25 +30,28 @@ public class ValidationRegistry {
     private static final ValidationRegistry INSTANCE = new ValidationRegistry();
     private static final Logger LOG = LoggerFactory.getLogger(ValidationRegistry.class);
     private static volatile List<ValidatorDescriptor> cachedValidators;
-
-    private Connection connection;
+    private static ValidationConfig validationConfig;
+    private static Connection connection;
 
     private ValidationRegistry() {}
 
-    public static ValidationRegistry getInstance() {
+    public static ValidationRegistry getInstance(ValidationConfig config, Connection con) {
+        validationConfig = config;
+        connection = con;
+        INSTANCE.initRegistry();
         return INSTANCE;
     }
 
     /**
      * Creates list of validations and fixes
      */
-    public void initRegistry(ValidationConfig validationConfig) {
+    private void initRegistry() {
         synchronized (ValidationRegistry.class) {
-            cachedValidators = build(getValidationList(), validationConfig);
+            cachedValidators = build(getValidationList());
         }
     }
 
-    private List<ValidatorDescriptor> build(List<ClassInfo> validationList, ValidationConfig validationConfig) {
+    private List<ValidatorDescriptor> build(List<ClassInfo> validationList) {
         List<ValidatorDescriptor> descriptors = new ArrayList<>();
 
         for (ClassInfo classInfo : validationList) {
@@ -127,7 +130,7 @@ public class ValidationRegistry {
     /**
      * Returns only classes annotated with @ValidationClass.
      */
-    public static List<ValidatorDescriptor> getValidations(ValidationConfig config) {
+    public  List<ValidatorDescriptor> getValidations() {
         return cachedValidators.stream()
                 .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Validation.class))
                 .collect(Collectors.toList());
@@ -136,7 +139,7 @@ public class ValidationRegistry {
     /**
      * Returns only classes annotated with @FixClass.
      */
-    public static List<ValidatorDescriptor> getFixs(ValidationConfig config) {
+    public List<ValidatorDescriptor> getFixs() {
         return cachedValidators.stream()
                 .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Fix.class))
                 .collect(Collectors.toList());
@@ -190,9 +193,5 @@ public class ValidationRegistry {
         }
 
         return rule;
-    }
-
-    public void setConnection(Connection connection) {
-        this.connection = connection;
     }
 }

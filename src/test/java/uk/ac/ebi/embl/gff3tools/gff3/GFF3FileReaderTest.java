@@ -28,7 +28,6 @@ import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.validation.*;
-import uk.ac.ebi.embl.gff3tools.validation.builtin.*;
 
 public class GFF3FileReaderTest {
 
@@ -140,7 +139,7 @@ public class GFF3FileReaderTest {
         Map<String, RuleSeverity> ruleSeverityMap = new HashMap<>();
         ruleSeverityMap.put("GFF3_UNDEFINED_SEQID", RuleSeverity.OFF);
         ValidationEngineBuilder builder = getValidationEngineBuilder();
-        builder.overrideRuleSeverities(ruleSeverityMap);
+        builder.overrideMethodRules(ruleSeverityMap);
         ValidationEngine validationEngine = builder.build();
 
         try (FileReader filerReader = new FileReader(testFile);
@@ -164,7 +163,7 @@ public class GFF3FileReaderTest {
         Map<String, RuleSeverity> ruleSeverityMap = new HashMap<>();
         ruleSeverityMap.put("GFF3_INVALID_RECORD", RuleSeverity.OFF);
         ValidationEngineBuilder builder = getValidationEngineBuilder();
-        builder.overrideRuleSeverities(ruleSeverityMap);
+        builder.overrideMethodRules(ruleSeverityMap);
         ValidationEngine validationEngine = builder.build();
 
         try (FileReader filerReader = new FileReader(testFile);
