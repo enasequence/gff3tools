@@ -8,17 +8,15 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.validation;
+package uk.ac.ebi.embl.gff3tools.utils;
 
-import uk.ac.ebi.embl.gff3tools.validation.builtin.*;
+public enum OntologyTerm {
+    FEATURE("SO:0000110"),
+    REGION("SO:0000001");
 
-public class ValidationRegistry {
-    private static final Validation[] VALIDATIONS = new Validation[] {
-        // new DuplicateSeqIdValidation(),
-        new OntologyValidation(), new LocationValidation(), new LengthValidation(), new DuplicateFeatureValidation()
-    };
+    public final String ID;
 
-    public static Validation[] getValidations() {
-        return VALIDATIONS;
+    OntologyTerm(String id) {
+        this.ID = id;
     }
 }

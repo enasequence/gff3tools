@@ -16,6 +16,9 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public enum ConversionUtils {
     INSTANCE;
@@ -26,8 +29,11 @@ public enum ConversionUtils {
     // Map of child : list of possible parents
     // Uses sOTerms (gff3 feature names)
     private Map<String, Set<String>> featureRelations = null;
+    private OntologyClient ontologyClient = null;
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConversionUtils.class);
 
     private ConversionUtils() {
+        this.ontologyClient = new OntologyClient();
         this.loadMaps();
     }
 
@@ -43,26 +49,57 @@ public enum ConversionUtils {
         return INSTANCE.featureRelations;
     }
 
-    public static Map<String, ConversionEntry> getGFF32FFFeatureMap() {
-        return INSTANCE.gff32ff;
-    }
-
     public static Map<String, String> getGFF32FFQualifierMap() {
         return INSTANCE.gff32ffQualifiers;
+    }
+
+    // Returns the EMBL feature name for an SOTerm
+    public static ConversionEntry getINSDCFeatureForSOTerm(String SOTerm) {
+        ConversionEntry conversionEntry = INSTANCE.gff32ff.get(SOTerm);
+        if (conversionEntry == null) {
+            LOGGER.info("SOTerm \"%s\" not found in tsv mapping. Search for matches using ontology parents"
+                    .formatted(SOTerm));
+            Stream<String> parents = INSTANCE.ontologyClient.getParents(SOTerm);
+            for (Iterator<String> it = parents.iterator(); it.hasNext(); ) {
+                String parent = it.next();
+                conversionEntry = INSTANCE.gff32ff.get(parent);
+                if (conversionEntry != null) {
+                    LOGGER.info("SOTerm \"%s\" mapped to INSDC feature \"%s\" using ontology through parent \"%s\""
+                            .formatted(SOTerm, conversionEntry.feature, parent));
+                    break;
+                }
+            }
+        }
+
+        return conversionEntry;
+    }
+
+    public static OntologyClient getOntologyClient() {
+        return INSTANCE.ontologyClient;
+    }
+
+    private void addConversionEntry(ConversionEntry conversionEntry) {
+        ff2gff3.putIfAbsent(conversionEntry.feature, new ArrayList<>());
+        ff2gff3.get(conversionEntry.feature).add(conversionEntry);
+        gff32ff.put(conversionEntry.sOTerm, conversionEntry);
+        gff32ff.put(conversionEntry.sOID, conversionEntry);
     }
 
     private void loadMaps() {
         try {
             ff2gff3 = new HashMap<>();
             gff32ff = new HashMap<>();
+
             List<String> lines = readTsvFile("feature-mapping.tsv");
             lines.remove(0);
             for (String line : lines) {
-                ConversionEntry conversionEntry = new ConversionEntry(line.split("\t"));
-                ff2gff3.putIfAbsent(conversionEntry.feature, new ArrayList<>());
-                ff2gff3.get(conversionEntry.feature).add(conversionEntry);
-                gff32ff.putIfAbsent(conversionEntry.sOID, conversionEntry);
-                gff32ff.putIfAbsent(conversionEntry.sOTerm, conversionEntry);
+                String[] parts = line.split("\t");
+                ConversionEntry conversionEntry = new ConversionEntry(
+                        parts[0].trim(),
+                        parts[1],
+                        parts[3],
+                        Arrays.stream(parts).skip(4).toArray(n -> new String[n]));
+                addConversionEntry(conversionEntry);
             }
 
             ff2gff3Qualifiers = new HashMap<>();

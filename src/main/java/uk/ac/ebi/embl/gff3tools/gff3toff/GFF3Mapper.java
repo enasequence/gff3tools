@@ -11,6 +11,8 @@
 package uk.ac.ebi.embl.gff3tools.gff3toff;
 
 import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.EntryFactory;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
@@ -21,11 +23,13 @@ import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.qualifier.QualifierFactory;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
+import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
+import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 
 public class GFF3Mapper {
 
@@ -35,6 +39,7 @@ public class GFF3Mapper {
     private final QualifierFactory qualifierFactory = new QualifierFactory();
     private final LocationFactory locationFactory = new LocationFactory();
     private final SequenceFactory sequenceFactory = new SequenceFactory();
+    private static final Logger LOGGER = LoggerFactory.getLogger(GFF3Mapper.class);
 
     Map<String, GFF3Feature> parentFeatures;
     // Used to keep track of features that will be merged using a location join
@@ -47,7 +52,7 @@ public class GFF3Mapper {
         entry = null;
     }
 
-    public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) {
+    public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) throws ValidationException {
 
         parentFeatures.clear();
         joinableFeatureMap.clear();
@@ -81,7 +86,7 @@ public class GFF3Mapper {
         return entry;
     }
 
-    private void mapGFF3Feature(GFF3Feature gff3Feature) {
+    private void mapGFF3Feature(GFF3Feature gff3Feature) throws ValidationException {
 
         Map<String, Object> attributes = gff3Feature.getAttributes();
         String featureHashId = (String) attributes.getOrDefault("ID", gff3Feature.hashCodeString());
@@ -107,21 +112,54 @@ public class GFF3Mapper {
             parentFeatureLocation.addLocation(location);
         } else {
             String gff3FeatureName = gff3Feature.getName();
-            // Get featureName from Ontology map if it exists.
-            ConversionEntry conversionEntry =
-                    ConversionUtils.getGFF32FFFeatureMap().get(gff3FeatureName);
-            String featureName = (conversionEntry != null) ? conversionEntry.getFeature() : gff3FeatureName;
-            ffFeature = featureFactory.createFeature(featureName);
-            CompoundLocation<Location> locations = new Join();
-            if (location.isComplement()) {
-                locations.setComplement(true);
-                location.setComplement(false);
+            String gff3Id;
+            if (ConversionUtils.getOntologyClient().isValidOntologyId(gff3FeatureName)) {
+                gff3Id = gff3FeatureName;
+            } else {
+                gff3Id = ConversionUtils.getOntologyClient()
+                        .findTermByNameOrSynonym(gff3FeatureName)
+                        .orElse(null);
             }
-            locations.addLocation(location);
-            ffFeature.setLocations(locations);
-            ffFeature.addQualifiers(mapGFF3Attributes(attributes));
-            joinableFeatureMap.put(featureHashId, ffFeature);
-            entry.addFeature(ffFeature);
+            if (attributes.get("Is_circular") != null && OntologyTerm.REGION.ID.equalsIgnoreCase(gff3Id)) {
+                // Do not convert "region" features. These are added when doing EMBL->GFF3 mapping to
+                // represent circular topologies. The topology in the EMBL mapping will be provided
+                // by the fasta headers.
+                return;
+            }
+            LOGGER.debug("Found GFF3ID: \"%s\" for feature \"%s\"".formatted(gff3Id, gff3FeatureName));
+            ConversionEntry conversionEntry = ConversionUtils.getINSDCFeatureForSOTerm(gff3Id);
+            if (conversionEntry != null) {
+                ffFeature = featureFactory.createFeature(conversionEntry.getFeature());
+                CompoundLocation<Location> locations = new Join();
+                if (location.isComplement()) {
+                    locations.setComplement(true);
+                    location.setComplement(false);
+                }
+                locations.addLocation(location);
+                ffFeature.setLocations(locations);
+
+                ffFeature.addQualifiers(mapGFF3Attributes(attributes));
+
+                // Add qualifiers from feature mapping when it's not present in the flat file qualifier
+                for (Map.Entry<String, String> entry :
+                        conversionEntry.getQualifiers().entrySet()) {
+                    if (ffFeature.getQualifiers(entry.getKey()).isEmpty()) {
+                        String value = entry.getValue();
+                        if (value == null || value.isEmpty()) {
+                            ffFeature.addQualifier(entry.getKey());
+                        } else {
+                            ffFeature.addQualifier(entry.getKey(), value);
+                        }
+                    }
+                }
+
+                joinableFeatureMap.put(featureHashId, ffFeature);
+                entry.addFeature(ffFeature);
+            } else {
+                throw new ValidationException(
+                        "GFF3_UNMAPPED_FEATURE",
+                        "The gff3 feature \"%s\" has no equivalent INSDC mapping".formatted(gff3FeatureName));
+            }
         }
         if (ffFeature.getQualifiers("gene").isEmpty()) {
             String gene = getGeneForFeature(gff3Feature);

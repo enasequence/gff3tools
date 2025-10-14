@@ -10,23 +10,28 @@
  */
 package uk.ac.ebi.embl.gff3tools.fftogff3;
 
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
+import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 
 public class FeatureMapping {
 
-    public static Optional<String> getGFF3FeatureName(Feature ffFeature) {
+    static Pattern WILDCARD_TEXT = Pattern.compile("^\\<.+\\>$");
+
+    public static Optional<String> getGFF3FeatureName(Feature ffFeature) throws ValidationException {
         String featureName = ffFeature.getName();
         List<ConversionEntry> mappings = Optional.ofNullable(
                         ConversionUtils.getFF2GFF3FeatureMap().get(featureName))
-                .orElse(Collections.emptyList());
+                .orElseThrow(() -> new ValidationException(
+                        "EMBL_UNMAPPED_FEATURE",
+                        "There is no SO Term mapping for INSDC feature \"%s\"".formatted(featureName)));
 
         return mappings.stream()
                 .filter(entry -> entry.getFeature().equalsIgnoreCase(ffFeature.getName()))
@@ -44,7 +49,11 @@ public class FeatureMapping {
             for (Qualifier featureQualifier : feature.getQualifiers(expectedQualifierName)) {
                 // When qualifier value is not found the value is considered "true"
                 String qualifierValue = featureQualifier.getValue() == null ? "true" : featureQualifier.getValue();
-                qualifierMatches = qualifierValue.equalsIgnoreCase(requiredQualifiers.get(expectedQualifierName));
+                String expectedQualifierValue = requiredQualifiers.get(expectedQualifierName);
+                // Tries to find the exact match or finds qualifiers with a wildcard value with the format:
+                //  /qualifier_name=<any text> example: /estimated_length=<length of feature>
+                qualifierMatches = WILDCARD_TEXT.matcher(expectedQualifierValue).matches()
+                        || qualifierValue.equalsIgnoreCase(expectedQualifierValue);
                 if (qualifierMatches) {
                     break;
                 }

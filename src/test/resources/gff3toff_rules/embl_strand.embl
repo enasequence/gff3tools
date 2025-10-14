@@ -9,7 +9,8 @@ XX
 FH   Key             Location/Qualifiers
 FH
 FT   source          1..15215371
-FT   region          1..15215371
+FT   repeat_region   1..15215371
+FT                   /rpt_type=other
 FT                   /Alias=OX276421.1
 XX
 //

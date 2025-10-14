@@ -1,11 +1,11 @@
 ##gff-version 3.1.26
 ##sequence-region TEST01.1 1 1000
 TEST01.1	.	gene	1	1000	.	+	.	ID=gene_matK;gene=matK;
-TEST01.1	.	protein_bind	1	500	.	+	.	gene=matK;ID=protein_bind;
-TEST01.1	.	protein_bind	100	150	.	+	.	gene=matK;ID=protein_bind_1;
+TEST01.1	.	protein_binding_site	1	500	.	+	.	gene=matK;ID=protein_bind;bound_moiety=GAL4
+TEST01.1	.	protein_binding_site	100	150	.	+	.	gene=matK;ID=protein_bind_1;bound_moiety=GAL4
 TEST01.1	.	repeat_region	200	250	.	+	.	gene=matK;ID=repeat_region;
 TEST01.1	.	repeat_region	300	350	.	+	.	gene=matK;ID=repeat_region_1;
-TEST01.1	.	assembly_gap	400	450	.	+	.	gene=matK;ID=assembly_gap;
-TEST01.1	.	assembly_gap	500	550	.	+	.	gene=matK;ID=assembly_gap_1;
-TEST01.1	.	misc_feature	600	650	.	+	.	gene=matk;ID=misc_feature;
-TEST01.1	.	misc_feature	700	750	.	+	.	gene=matK;ID=misc_feature_1;
+TEST01.1	.	gap	400	450	.	+	.	gene=matK;ID=gap;
+TEST01.1	.	gap	500	550	.	+	.	gene=matK;ID=gap_1;
+TEST01.1	.	sequence_comparison	600	650	.	+	.	gene=matk;ID=sequence_comparison;note=sequence_comparison;
+TEST01.1	.	sequence_comparison	700	750	.	+	.	gene=matK;ID=sequence_comparison_1;note=sequence_comparison;
