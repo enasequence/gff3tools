@@ -30,13 +30,13 @@ class ValidationRegistryTest {
     void setUp() {
 
         validationConfig = mock(ValidationConfig.class);
-        registry = ValidationRegistry.getInstance(validationConfig,null);
+        registry = ValidationRegistry.getInstance(validationConfig, null);
     }
 
     @Test
     @DisplayName("Should return the same instance (singleton)")
     void testSingletonInstance() {
-        ValidationRegistry another = ValidationRegistry.getInstance(validationConfig,null);
+        ValidationRegistry another = ValidationRegistry.getInstance(validationConfig, null);
         assertSame(registry, another, "ValidationRegistry must be a singleton");
     }
 
@@ -77,8 +77,7 @@ class ValidationRegistryTest {
         buildMethod.setAccessible(true);
 
         @SuppressWarnings("unchecked")
-        List<ValidatorDescriptor> result =
-                (List<ValidatorDescriptor>) buildMethod.invoke(registry, classInfos);
+        List<ValidatorDescriptor> result = (List<ValidatorDescriptor>) buildMethod.invoke(registry, classInfos);
 
         // Assertions
         assertEquals(2, result.size(), "Should build validators for both Gff3Validation and Gff3Fix");
@@ -188,10 +187,9 @@ class ValidationRegistryTest {
         ClassInfoList validationList = new ClassInfoList();
         validationList.add(mockClassInfo);
 
-        Method privateMethod = ValidationRegistry.class
-                .getDeclaredMethod("checkUniqueValidationRules", ClassInfoList.class);
+        Method privateMethod =
+                ValidationRegistry.class.getDeclaredMethod("checkUniqueValidationRules", ClassInfoList.class);
         privateMethod.setAccessible(true);
-
 
         // Should NOT throw since rules are unique
         assertDoesNotThrow(() -> privateMethod.invoke(registry, validationList));
@@ -216,7 +214,7 @@ class ValidationRegistryTest {
         }
     }
 
-    private  void invokeCheckUniqueValidationRules(ClassInfoList list) {
+    private void invokeCheckUniqueValidationRules(ClassInfoList list) {
         try {
             Method m = ValidationRegistry.class.getDeclaredMethod("checkUniqueValidationRules", ClassInfoList.class);
             m.setAccessible(true);

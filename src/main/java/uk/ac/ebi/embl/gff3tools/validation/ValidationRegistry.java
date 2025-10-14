@@ -102,8 +102,7 @@ public class ValidationRegistry {
     }
 
     private boolean isMethodAnnotationPresent(Method method) {
-        return method.isAnnotationPresent(ValidationMethod.class)
-                || method.isAnnotationPresent(FixMethod.class);
+        return method.isAnnotationPresent(ValidationMethod.class) || method.isAnnotationPresent(FixMethod.class);
     }
 
     private List<ClassInfo> getValidationList() {
@@ -130,7 +129,7 @@ public class ValidationRegistry {
     /**
      * Returns only classes annotated with @ValidationClass.
      */
-    public  List<ValidatorDescriptor> getValidations() {
+    public List<ValidatorDescriptor> getValidations() {
         return cachedValidators.stream()
                 .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Validation.class))
                 .collect(Collectors.toList());
@@ -153,7 +152,7 @@ public class ValidationRegistry {
             Class<?> clazz = validator.loadClass();
             for (Method method : clazz.getDeclaredMethods()) {
                 Annotation vm;
-                if ((vm = getMethodAnnotation(method))!=null) {
+                if ((vm = getMethodAnnotation(method)) != null) {
                     String rule = getRule(vm);
 
                     // Skip empty rule
@@ -161,20 +160,20 @@ public class ValidationRegistry {
 
                     // Enforce uniqueness
                     if (!ruleNames.add(rule)) {
-                        throw new DuplicateValidationRuleException("Duplicate validation rule detected: " + rule + " in class "
-                                + validator.getClass().getName());
+                        throw new DuplicateValidationRuleException("Duplicate validation rule detected: " + rule
+                                + " in class " + validator.getClass().getName());
                     }
                 }
             }
 
             if (!classNames.add(clazz.getName())) {
-                throw new DuplicateValidationRuleException("Duplicate validation/Fix name detected: " + clazz.getName() + " in class "
-                        + validator.getClass().getName());
+                throw new DuplicateValidationRuleException("Duplicate validation/Fix name detected: " + clazz.getName()
+                        + " in class " + validator.getClass().getName());
             }
         }
     }
 
-    private Annotation getMethodAnnotation(Method method ) {
+    private Annotation getMethodAnnotation(Method method) {
         for (Class<? extends Annotation> type : List.of(ValidationMethod.class, FixMethod.class)) {
             if (method.isAnnotationPresent(type)) {
                 return method.getAnnotation(type);
@@ -183,13 +182,13 @@ public class ValidationRegistry {
         return null;
     }
 
-    private String getRule(Annotation method ) {
+    private String getRule(Annotation method) {
 
         String rule = "";
         if (method instanceof ValidationMethod) {
-            rule =  ((ValidationMethod)method).rule();
-        }else if (method instanceof FixMethod) {
-            rule =  ((FixMethod)method).rule();
+            rule = ((ValidationMethod) method).rule();
+        } else if (method instanceof FixMethod) {
+            rule = ((FixMethod) method).rule();
         }
 
         return rule;
