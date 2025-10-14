@@ -10,8 +10,12 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.Map;
+import lombok.Getter;
 
+@Getter
 public class ValidationConfig {
     private final Map<String, RuleSeverity> ruleOverrides;
     private final Map<String, Boolean> validatorOverrides;
@@ -27,5 +31,19 @@ public class ValidationConfig {
 
     public boolean isValidatorEnabled(String validatorName, boolean defaultEnabled) {
         return validatorOverrides.getOrDefault(validatorName, defaultEnabled);
+    }
+
+    public boolean isValidatorEnabled(Annotation annotation) {
+        try {
+            Method nameMethod = annotation.annotationType().getMethod("name");
+            Method enabledMethod = annotation.annotationType().getMethod("enabled");
+
+            String name = (String) nameMethod.invoke(annotation);
+            boolean enabled = (Boolean) enabledMethod.invoke(annotation);
+
+            return validatorOverrides.getOrDefault(name, enabled);
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid validator annotation: " + annotation.annotationType(), e);
+        }
     }
 }

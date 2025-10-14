@@ -19,7 +19,7 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationType;
 
 @Gff3Validation
-public class LengthValidation implements Validation {
+public class LengthValidation extends Validation {
 
     public static long INTRON_FETURE_LENGTH = 10;
     public static long EXON_FETURE_LENGTH = 15;

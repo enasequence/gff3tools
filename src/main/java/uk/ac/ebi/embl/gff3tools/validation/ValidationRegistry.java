@@ -14,7 +14,9 @@ import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.ScanResult;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -27,6 +29,8 @@ public class ValidationRegistry {
     private static final ValidationRegistry INSTANCE = new ValidationRegistry();
     private static final Logger LOG = LoggerFactory.getLogger(ValidationRegistry.class);
     private static volatile List<ValidatorDescriptor> cachedValidators;
+
+    private Connection connection;
 
     private ValidationRegistry() {}
 
@@ -49,17 +53,27 @@ public class ValidationRegistry {
         for (ClassInfo classInfo : validationList) {
             Class<?> clazz = classInfo.loadClass();
 
-            if (!clazz.isAnnotationPresent(Gff3Validation.class)) continue;
-            Gff3Validation vmeta = clazz.getAnnotation(Gff3Validation.class);
-            boolean enabled = validationConfig.isValidatorEnabled(vmeta.name(), vmeta.enabled());
-            if (!enabled) continue;
+            Annotation vmeta = getValidationAnnotation(clazz);
+            if (vmeta == null) {
+                // no @Gff3Validation or @Gff3Fix
+                continue;
+            }
+
+            boolean enabled = validationConfig.isValidatorEnabled(vmeta);
+            if (!enabled) {
+                continue;
+            }
 
             try {
                 // Instantiate once
                 Object instance = clazz.getDeclaredConstructor().newInstance();
 
+                // Set connection to all the validations and fixes
+                ((Validation) instance).setConnection(connection);
+
                 for (Method method : clazz.getDeclaredMethods()) {
-                    if (method.isAnnotationPresent(ValidationMethod.class)) {
+                    if (method.isAnnotationPresent(ValidationMethod.class)
+                            || method.isAnnotationPresent(FixMethod.class)) {
                         method.setAccessible(true);
                         descriptors.add(new ValidatorDescriptor(clazz, instance, method));
                     }
@@ -72,6 +86,15 @@ public class ValidationRegistry {
 
         LOG.info("Initialized {} validator methods", descriptors.size());
         return descriptors;
+    }
+
+    private Annotation getValidationAnnotation(Class<?> clazz) {
+        for (Class<? extends Annotation> type : List.of(Gff3Validation.class, Gff3Fix.class)) {
+            if (clazz.isAnnotationPresent(type)) {
+                return clazz.getAnnotation(type);
+            }
+        }
+        return null;
     }
 
     private List<ClassInfo> getValidationList() {
@@ -141,5 +164,9 @@ public class ValidationRegistry {
                         + validator.getClass().getName());
             }
         }
+    }
+
+    public void setConnection(Connection connection) {
+        this.connection = connection;
     }
 }

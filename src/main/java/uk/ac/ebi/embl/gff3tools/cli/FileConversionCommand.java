@@ -96,6 +96,9 @@ public class FileConversionCommand implements Runnable {
             throws UnregisteredValidationRuleException {
         ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
         engineBuilder.overrideRuleSeverities(ruleOverrides);
+
+        // TODO: Create and set connection
+        // engineBuilder.setConnection(connection);
         return engineBuilder.build();
     }
 

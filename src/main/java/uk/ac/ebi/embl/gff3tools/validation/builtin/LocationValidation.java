@@ -19,7 +19,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 
 @Gff3Validation
-public class LocationValidation implements Validation {
+public class LocationValidation extends Validation {
 
     public static final String VALIDATION_RULE = "GFF3_LOCATION_VALIDATION";
 

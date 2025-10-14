@@ -12,24 +12,20 @@ package uk.ac.ebi.embl.gff3tools.validation;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.Connection;
 import java.util.*;
 import uk.ac.ebi.embl.gff3tools.exception.UnregisteredValidationRuleException;
 
 public class ValidationEngineBuilder {
 
-    private Map<String, RuleSeverity> severityOverrides;
-    private Map<String, Boolean> validatorOverrides;
-
     private final ValidationConfig validationConfig;
     public ValidationRegistry validationRegistry;
+    private Connection connection;
 
     public ValidationEngineBuilder() {
 
-        // Loads severityOverrides and validatorOverrides
-        loadDefaultSeverities();
-
-        // ValidationConfig with default conf.
-        validationConfig = new ValidationConfig(severityOverrides, validatorOverrides);
+        // Loads default severity rules and validatorOverrides
+        validationConfig = getValidationConfig();
 
         initValidationRegistry();
     }
@@ -39,21 +35,26 @@ public class ValidationEngineBuilder {
     }
 
     public void overrideRuleSeverities(Map<String, RuleSeverity> map) throws UnregisteredValidationRuleException {
-        this.severityOverrides.putAll(map);
+        this.validationConfig.getRuleOverrides().putAll(map);
     }
 
     public void overrideValidatorSeverities(Map<String, Boolean> map) throws UnregisteredValidationRuleException {
-        this.validatorOverrides.putAll(map);
+        this.validationConfig.getValidatorOverrides().putAll(map);
+    }
+
+    public void setConnection(Connection connection) throws UnregisteredValidationRuleException {
+        this.connection = connection;
     }
 
     public void initValidationRegistry() {
         validationRegistry = ValidationRegistry.getInstance();
+        validationRegistry.setConnection(connection);
         validationRegistry.initRegistry(validationConfig);
     }
 
-    private void loadDefaultSeverities() {
-        severityOverrides = new HashMap<>();
-        validatorOverrides = new HashMap<>();
+    private ValidationConfig getValidationConfig() {
+        Map<String, RuleSeverity> severityOverrides = new HashMap<>();
+        Map<String, Boolean> validatorOverrides = new HashMap<>();
         try (InputStream input = ValidationEngineBuilder.class
                 .getClassLoader()
                 .getResourceAsStream("default-rule-severities.properties")) {
@@ -77,26 +78,9 @@ public class ValidationEngineBuilder {
                     validatorOverrides.put(validationClass, validationOn);
                 }
             });
-
+            return new ValidationConfig(severityOverrides, validatorOverrides);
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
     }
-
-    /* private void reevaluateActiveValidations() {
-        activeFeatureValidations.clear();
-        activeAnnotationValidations.clear();
-
-        for (Validation validation : allValidations) {
-            String validationRule = validation.getValidationRule();
-            if (severityMap.getOrDefault(validationRule, RuleSeverity.ERROR) != RuleSeverity.OFF) {
-                if (validation instanceof FeatureValidation) {
-                    activeFeatureValidations.add((FeatureValidation) validation);
-                }
-                if (validation instanceof AnnotationValidation) {
-                    activeAnnotationValidations.add((AnnotationValidation) validation);
-                }
-            }
-        }
-    }*/
 }

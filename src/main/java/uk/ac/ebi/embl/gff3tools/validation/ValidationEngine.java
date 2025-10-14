@@ -30,6 +30,9 @@ public class ValidationEngine {
         this.validationRegistry = validationRegistry;
     }
 
+    /**
+     * Executes validations and fixes for the passed GFF3Feature ans GFF3Annotation
+     */
     public <T> void validate(T target, int line) throws ValidationException {
 
         executeFixs(target, line);

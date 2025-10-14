@@ -10,4 +10,13 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation;
 
-public interface Validation {}
+import java.sql.Connection;
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter
+@Getter
+public class Validation {
+
+    private Connection connection;
+}

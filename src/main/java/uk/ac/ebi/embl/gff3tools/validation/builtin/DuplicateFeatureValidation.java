@@ -19,7 +19,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 
 @Gff3Validation(name = "DUPLICATE_FEATURE_VALIDATION")
-public class DuplicateFeatureValidation implements Validation {
+public class DuplicateFeatureValidation extends Validation {
 
     private record ProteinAttributePair(String proteinId, String attributeId) {
 

@@ -15,8 +15,10 @@ import static org.mockito.Mockito.*;
 
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.*;
 
 class ValidationRegistryTest {
@@ -37,35 +39,52 @@ class ValidationRegistryTest {
         assertSame(registry, another, "ValidationRegistry must be a singleton");
     }
 
-    // Mock a fake validator class annotated with @Gff3Validation
     @Gff3Validation(name = "length", enabled = true)
-    static class DummyValidator {
-        public DummyValidator() {}
+    static class DummyValidation extends Validation {
+        public DummyValidation() {}
 
         @ValidationMethod(rule = "RULE_1", type = ValidationType.FEATURE)
         public void validate() {}
     }
 
+    @Gff3Fix(name = "fix_length", enabled = true)
+    static class DummyFix extends Validation {
+        public DummyFix() {}
+
+        @FixMethod(rule = "FIX_RULE_1", type = ValidationType.FEATURE)
+        public void fix() {}
+    }
+
     @Test
-    @DisplayName("Should initialize registry and cache validators correctly")
+    @DisplayName("Should initialize registry and cache validators correctly for Gff3Validation and Gff3Fix")
     void testInitRegistryBuildsValidators() throws Exception {
+        // Define dummy classes to simulate both annotation types
 
-        // Mock ClassInfo and ScanResult
-        ClassInfo mockClassInfo = mock(ClassInfo.class);
-        doReturn(DummyValidator.class).when(mockClassInfo).loadClass();
+        // Prepare mocks
+        ClassInfo mockValidationInfo = mock(ClassInfo.class);
+        ClassInfo mockFixInfo = mock(ClassInfo.class);
+        doReturn(DummyValidation.class).when(mockValidationInfo).loadClass();
+        doReturn(DummyFix.class).when(mockFixInfo).loadClass();
 
-        List<ClassInfo> classInfos = List.of(mockClassInfo);
-        when(validationConfig.isValidatorEnabled("length", true)).thenReturn(true);
+        List<ClassInfo> classInfos = List.of(mockValidationInfo, mockFixInfo);
 
-        // Call private build() via reflection
+        // Mock config to return true for both annotation types
+        when(validationConfig.isValidatorEnabled(any(Annotation.class))).thenReturn(true);
+
+        // Access private build() via reflection
         Method buildMethod = ValidationRegistry.class.getDeclaredMethod("build", List.class, ValidationConfig.class);
         buildMethod.setAccessible(true);
+
         @SuppressWarnings("unchecked")
         List<ValidatorDescriptor> result =
                 (List<ValidatorDescriptor>) buildMethod.invoke(registry, classInfos, validationConfig);
 
-        assertEquals(1, result.size(), "Should create one validator descriptor");
-        assertEquals(DummyValidator.class, result.get(0).clazz());
+        // Assertions
+        assertEquals(2, result.size(), "Should build validators for both Gff3Validation and Gff3Fix");
+
+        Set<Class<?>> classes = result.stream().map(ValidatorDescriptor::clazz).collect(Collectors.toSet());
+        assertTrue(classes.contains(DummyValidation.class), "Should include DummyValidation");
+        assertTrue(classes.contains(DummyFix.class), "Should include DummyFix");
     }
 
     @Test

@@ -47,6 +47,6 @@ public class GFF3FileFactory {
             throw new ReadException(e);
         }
 
-        return new GFF3File(header, species, annotations, null);
+        return new GFF3File(header, species, annotations, engine.getParsingErrors());
     }
 }

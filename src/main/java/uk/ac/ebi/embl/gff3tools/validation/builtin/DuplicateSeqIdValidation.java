@@ -17,7 +17,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 
 @Gff3Validation
-public class DuplicateSeqIdValidation implements Validation {
+public class DuplicateSeqIdValidation extends Validation {
 
     private HashSet<String> processedAnnotations = new HashSet<>();
     private String currentAccession = null;
