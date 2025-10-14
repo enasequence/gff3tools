@@ -11,6 +11,10 @@
 package uk.ac.ebi.embl.gff3tools.gff3toff;
 
 import java.util.*;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.EntryFactory;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
@@ -37,6 +41,7 @@ public class GFF3Mapper {
     private final QualifierFactory qualifierFactory = new QualifierFactory();
     private final LocationFactory locationFactory = new LocationFactory();
     private final SequenceFactory sequenceFactory = new SequenceFactory();
+    private static final Logger LOGGER = LoggerFactory.getLogger(GFF3Mapper.class);
 
     Map<String, GFF3Feature> parentFeatures;
     // Used to keep track of features that will be merged using a location join
@@ -109,14 +114,23 @@ public class GFF3Mapper {
             parentFeatureLocation.addLocation(location);
         } else {
             String gff3FeatureName = gff3Feature.getName();
-            String gff3Id = ConversionUtils.getSOId(gff3FeatureName);
-            ConversionEntry conversionEntry = ConversionUtils.getINSDCFeatureForSOTerm(gff3FeatureName);
+            String gff3Id;
+            if (ConversionUtils.getOntologyClient().isValidOntologyId(gff3FeatureName)) {
+                gff3Id = gff3FeatureName;
+            } else {
+                gff3Id = ConversionUtils.getOntologyClient()
+                        .findTermByNameOrSynonym(gff3FeatureName)
+                        .orElse(null);
+            }
             if (attributes.get("Is_circular") != null && OntologyTerm.REGION.ID.equalsIgnoreCase(gff3Id)) {
                 // Do not convert "region" features. These are added when doing EMBL->GFF3 mapping to
                 // represent circular topologies. The topology in the EMBL mapping will be provided
                 // by the fasta headers.
                 return;
-            } else if (conversionEntry != null) {
+            }
+            LOGGER.debug("Found GFF3ID: \"%s\" for feature \"%s\"".formatted(gff3Id, gff3FeatureName));
+            ConversionEntry conversionEntry = ConversionUtils.getINSDCFeatureForSOTerm(gff3Id);
+            if (conversionEntry != null) {
                 ffFeature = featureFactory.createFeature(conversionEntry.getFeature());
                 CompoundLocation<Location> locations = new Join();
                 if (location.isComplement()) {

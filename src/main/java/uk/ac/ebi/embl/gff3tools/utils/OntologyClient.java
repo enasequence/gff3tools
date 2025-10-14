@@ -145,7 +145,7 @@ public class OntologyClient {
         // Extract the SO ID from the full IRI, e.g., http://purl.obolibrary.org/obo/SO_0000123 -> SO:0000123
         String iriString = iri.toString();
         if (iriString.startsWith(OBOLIBRARY_IRI_BASE + "SO_")) {
-            return "SO:" + iriString.substring(iriString.lastIndexOf('_') + 1);
+            return "SO:" + iriString.substring(iriString.lastIndexOf('_') + 1).trim();
         }
         return null;
     }

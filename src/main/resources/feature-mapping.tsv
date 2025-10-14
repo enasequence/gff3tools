@@ -222,4 +222,4 @@ SO:0000205 	three_prime_UTR	A region at the 3' end of a mature transcript (follo
 SO:0000204 	five_prime_UTR	A region at the 5' end of a mature transcript (preceding the initiation codon) that is not translated into a protein.	5'UTR
 SO:0002072	sequence_comparison	A position or feature where two sequences have been compared.	misc_feature	/note="sequence_comparison"
 SO:0000730	gap	A gap in the sequence of known length. The unknown bases are filled in with N&apos;s	assembly_gap
-SO:0000115	gene	A region (or regions) that includes all of the sequence elements necessary to encode a functional transcript. A gene may include regulatory regions, transcribed regions and/or other functional sequence regions.	gene
+SO:0000704	gene	A region (or regions) that includes all of the sequence elements necessary to encode a functional transcript. A gene may include regulatory regions, transcribed regions and/or other functional sequence regions.	gene

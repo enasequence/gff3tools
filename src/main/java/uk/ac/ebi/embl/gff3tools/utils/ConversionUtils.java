@@ -74,15 +74,15 @@ public enum ConversionUtils {
         return conversionEntry;
     }
 
-    public static String getSOId(String SOTerm) {
-        return INSTANCE.ontologyClient.findTermByNameOrSynonym(SOTerm).orElse(null);
+    public static OntologyClient getOntologyClient() {
+        return INSTANCE.ontologyClient;
     }
 
     private void addConversionEntry(ConversionEntry conversionEntry) {
         ff2gff3.putIfAbsent(conversionEntry.feature, new ArrayList<>());
         ff2gff3.get(conversionEntry.feature).add(conversionEntry);
-        gff32ff.put(conversionEntry.sOID, conversionEntry);
         gff32ff.put(conversionEntry.sOTerm, conversionEntry);
+        gff32ff.put(conversionEntry.sOID, conversionEntry);
     }
 
     private void loadMaps() {
@@ -95,7 +95,7 @@ public enum ConversionUtils {
             for (String line : lines) {
                 String[] parts = line.split("\t");
                 ConversionEntry conversionEntry = new ConversionEntry(
-                        parts[0],
+                        parts[0].trim(),
                         parts[1],
                         parts[3],
                         Arrays.stream(parts).skip(4).toArray(n -> new String[n]));
