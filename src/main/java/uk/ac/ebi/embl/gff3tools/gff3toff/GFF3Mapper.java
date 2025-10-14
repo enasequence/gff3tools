@@ -140,9 +140,9 @@ public class GFF3Mapper {
                 locations.addLocation(location);
                 ffFeature.setLocations(locations);
 
-                // Add qualifiers from feature mapping when it's not present in the flat file qualifier
                 ffFeature.addQualifiers(mapGFF3Attributes(attributes));
 
+                // Add qualifiers from feature mapping when it's not present in the flat file qualifier
                 for (Map.Entry<String, String> entry :
                         conversionEntry.getQualifiers().entrySet()) {
                     if (ffFeature.getQualifiers(entry.getKey()).isEmpty()) {
