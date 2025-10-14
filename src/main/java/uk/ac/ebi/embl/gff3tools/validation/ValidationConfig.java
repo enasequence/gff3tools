@@ -29,10 +29,6 @@ public class ValidationConfig {
         return ruleOverrides.getOrDefault(rule, defaultAction);
     }
 
-    public boolean isValidatorEnabled(String validatorName, boolean defaultEnabled) {
-        return validatorOverrides.getOrDefault(validatorName, defaultEnabled);
-    }
-
     public boolean isValidatorEnabled(Annotation annotation) {
         try {
             Method nameMethod = annotation.annotationType().getMethod("name");

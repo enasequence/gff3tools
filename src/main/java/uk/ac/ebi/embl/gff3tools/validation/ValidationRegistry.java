@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.ac.ebi.embl.gff3tools.exception.DuplicateValidationRuleException;
 
 public class ValidationRegistry {
     private static final ValidationRegistry INSTANCE = new ValidationRegistry();
@@ -53,7 +54,7 @@ public class ValidationRegistry {
         for (ClassInfo classInfo : validationList) {
             Class<?> clazz = classInfo.loadClass();
 
-            Annotation vmeta = getValidationAnnotation(clazz);
+            Annotation vmeta = getClassAnnotation(clazz);
             if (vmeta == null) {
                 // no @Gff3Validation or @Gff3Fix
                 continue;
@@ -73,8 +74,7 @@ public class ValidationRegistry {
                 ((Validation) instance).setConnection(connection);
 
                 for (Method method : clazz.getDeclaredMethods()) {
-                    if (method.isAnnotationPresent(ValidationMethod.class)
-                            || method.isAnnotationPresent(FixMethod.class)) {
+                    if (isMethodAnnotationPresent(method)) {
                         method.setAccessible(true);
                         descriptors.add(new ValidatorDescriptor(clazz, instance, method));
                     }
@@ -89,7 +89,7 @@ public class ValidationRegistry {
         return descriptors;
     }
 
-    private Annotation getValidationAnnotation(Class<?> clazz) {
+    private Annotation getClassAnnotation(Class<?> clazz) {
         for (Class<? extends Annotation> type : List.of(Gff3Validation.class, Gff3Fix.class)) {
             if (clazz.isAnnotationPresent(type)) {
                 return clazz.getAnnotation(type);
@@ -98,13 +98,17 @@ public class ValidationRegistry {
         return null;
     }
 
+    private boolean isMethodAnnotationPresent(Method method) {
+        return method.isAnnotationPresent(ValidationMethod.class)
+                || method.isAnnotationPresent(FixMethod.class);
+    }
+
     private List<ClassInfo> getValidationList() {
         ClassInfoList validationList = new ClassInfoList();
         try (ScanResult scan = new ClassGraph()
                 .enableClassInfo()
                 .enableAllInfo()
-                .whitelistPackages(ValidationRegistry.class.getPackage().getName())
-                // .rejectClasses("*$*")
+                .acceptPackages(ValidationRegistry.class.getPackage().getName())
                 .scan()) {
 
             //  collect @ValidationClass annotated classes
@@ -145,26 +149,47 @@ public class ValidationRegistry {
         for (ClassInfo validator : validationList) {
             Class<?> clazz = validator.loadClass();
             for (Method method : clazz.getDeclaredMethods()) {
-                if (method.isAnnotationPresent(ValidationMethod.class)) {
-                    ValidationMethod vm = method.getAnnotation(ValidationMethod.class);
-                    String rule = vm.rule().trim();
+                Annotation vm;
+                if ((vm = getMethodAnnotation(method))!=null) {
+                    String rule = getRule(vm);
 
                     // Skip empty rule
                     if (rule.isEmpty()) continue;
 
                     // Enforce uniqueness
                     if (!ruleNames.add(rule)) {
-                        throw new RuntimeException("Duplicate validation rule detected: " + rule + " in class "
+                        throw new DuplicateValidationRuleException("Duplicate validation rule detected: " + rule + " in class "
                                 + validator.getClass().getName());
                     }
                 }
             }
 
             if (!classNames.add(clazz.getName())) {
-                throw new RuntimeException("Duplicate validation/Fix name detected: " + clazz.getName() + " in class "
+                throw new DuplicateValidationRuleException("Duplicate validation/Fix name detected: " + clazz.getName() + " in class "
                         + validator.getClass().getName());
             }
         }
+    }
+
+    private Annotation getMethodAnnotation(Method method ) {
+        for (Class<? extends Annotation> type : List.of(ValidationMethod.class, FixMethod.class)) {
+            if (method.isAnnotationPresent(type)) {
+                return method.getAnnotation(type);
+            }
+        }
+        return null;
+    }
+
+    private String getRule(Annotation method ) {
+
+        String rule = "";
+        if (method instanceof ValidationMethod) {
+            rule =  ((ValidationMethod)method).rule();
+        }else if (method instanceof FixMethod) {
+            rule =  ((FixMethod)method).rule();
+        }
+
+        return rule;
     }
 
     public void setConnection(Connection connection) {

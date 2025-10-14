@@ -149,7 +149,7 @@ class ValidationRegistryTest {
             @ValidationMethod(rule = "DUP_RULE", type = ValidationType.FEATURE)
             private void validate1() {}
 
-            @ValidationMethod(rule = "DUP_RULE", type = ValidationType.FEATURE)
+            @FixMethod(rule = "DUP_RULE", type = ValidationType.FEATURE)
             private void validate2() {}
         }
 
@@ -166,6 +166,35 @@ class ValidationRegistryTest {
         assertTrue(ex.getCause().getCause().getLocalizedMessage().contains("Duplicate validation rule detected"));
 
         doReturn(null).when(mockClassInfo).loadClass();
+    }
+
+    @Test
+    @DisplayName("Should not throw when validation rules are unique")
+    void testUniqueValidationRulesPass() throws Exception {
+
+        @Gff3Validation(name = "unique")
+        class UniqueRuleValidator {
+            @ValidationMethod(rule = "RULE_1", type = ValidationType.FEATURE)
+            public void validate1() {}
+
+            @ValidationMethod(rule = "RULE_2", type = ValidationType.FEATURE)
+            public void validate2() {}
+        }
+
+        ClassInfo mockClassInfo = mock(ClassInfo.class);
+        doReturn(UniqueRuleValidator.class).when(mockClassInfo).loadClass();
+
+        ClassInfoList validationList = new ClassInfoList();
+        validationList.add(mockClassInfo);
+
+        Method privateMethod = ValidationRegistry.class
+                .getDeclaredMethod("checkUniqueValidationRules", ClassInfoList.class);
+        privateMethod.setAccessible(true);
+
+        ValidationRegistry registry =  ValidationRegistry.getInstance();
+
+        // Should NOT throw since rules are unique
+        assertDoesNotThrow(() -> privateMethod.invoke(registry, validationList));
     }
 
     // Utility methods
