@@ -14,13 +14,17 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
+@AllArgsConstructor
 @RequiredArgsConstructor
 @Getter
 @Setter
+@Builder(toBuilder = true)
 public class GFF3Feature {
     // Non-Mutable members used in constructor
     final Optional<String> id;
@@ -112,5 +116,9 @@ public class GFF3Feature {
 
     public String getAttributeByName(String name) {
         return (String) attributes.get(name);
+    }
+
+    public GFF3Feature setAttribute(Map<String, Object> updatedAttributes, GFF3Feature feature) {
+        return feature.toBuilder().attributes(Map.copyOf(updatedAttributes)).build();
     }
 }
