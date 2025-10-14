@@ -59,6 +59,7 @@ public class ValidationRegistry {
                 continue;
             }
 
+            // Checks validation is enabled
             boolean enabled = validationConfig.isValidatorEnabled(vmeta);
             if (!enabled) {
                 continue;
