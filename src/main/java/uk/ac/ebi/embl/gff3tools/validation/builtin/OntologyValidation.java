@@ -21,7 +21,6 @@ public class OntologyValidation implements FeatureValidation {
 
     public static final String VALIDATION_RULE = "GFF3_ONTOLOGY_FEATURE";
 
-    OntologyClient soClient;
 
     @ValidationMethod(rule = VALIDATION_RULE, type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
