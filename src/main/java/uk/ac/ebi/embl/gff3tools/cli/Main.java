@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import uk.ac.ebi.embl.gff3tools.exception.CLIException;
-import uk.ac.ebi.embl.gff3tools.validation.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 @Command(
         name = "gff3tools",

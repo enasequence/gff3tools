@@ -15,6 +15,7 @@ import java.io.InputStream;
 import java.sql.Connection;
 import java.util.*;
 import uk.ac.ebi.embl.gff3tools.exception.UnregisteredValidationRuleException;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 public class ValidationEngineBuilder {
 
@@ -27,7 +28,7 @@ public class ValidationEngineBuilder {
         // Loads default severity rules and validatorOverrides
         validationConfig = getValidationConfig();
 
-        // NOTE: initValidationRegistry() is a one liner and its not used anywhere else. Just move it here. 
+        // NOTE: initValidationRegistry() is a one liner and its not used anywhere else. Just move it here.
         initValidationRegistry();
     }
 
@@ -54,6 +55,7 @@ public class ValidationEngineBuilder {
     private ValidationConfig getValidationConfig() {
         Map<String, RuleSeverity> severityOverrides = new HashMap<>();
         Map<String, Boolean> validatorOverrides = new HashMap<>();
+        Map<String, Boolean> fixOverrides = new HashMap<>();
         try (InputStream input = ValidationEngineBuilder.class
                 .getClassLoader()
                 .getResourceAsStream("default-rule-severities.properties")) {
@@ -78,13 +80,17 @@ public class ValidationEngineBuilder {
                     String rule = k.replace("rule.", "");
                     RuleSeverity severity = RuleSeverity.valueOf(v);
                     severityOverrides.put(rule, severity);
+                } else if (k.startsWith("fix")) {
+                    String rule = k.replace("fix.", "");
+                    boolean fix = v.equalsIgnoreCase("ON");
+                    fixOverrides.put(rule, fix);
                 } else if (k.startsWith("class")) {
                     String validationClass = k.replace("class.", "");
                     boolean validationOn = v.equalsIgnoreCase("on");
                     validatorOverrides.put(validationClass, validationOn);
                 }
             });
-            return new ValidationConfig(severityOverrides, validatorOverrides);
+            return new ValidationConfig(severityOverrides, validatorOverrides, fixOverrides);
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }

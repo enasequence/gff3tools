@@ -8,22 +8,17 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-// NOTE: Should we add a new package "meta" for the annotations and related abstractions?
-package uk.ac.ebi.embl.gff3tools.validation;
+package uk.ac.ebi.embl.gff3tools.validation.meta;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface FixMethod {
+public @interface ValidationMethod {
     String rule() default "";
 
     ValidationType type();
 
-    // NOTE: I do not think fixes need severity, if anything they need a simple on/off switch
     RuleSeverity severity() default RuleSeverity.ERROR;
 
     String description() default "";

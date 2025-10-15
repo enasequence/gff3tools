@@ -26,6 +26,7 @@ import uk.ac.ebi.embl.gff3tools.exception.DuplicateValidationRuleException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 public class ValidationEngineTest {
 
@@ -203,7 +204,7 @@ public class ValidationEngineTest {
         ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyFix.class, instance, m);
         List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
-        when(validationConfig.getSeverity("FIX_1", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
+        when(validationConfig.getFix("FIX_1", true)).thenReturn(true);
         try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
             mocked.when(() -> validationRegistry.getFixs()).thenReturn(descriptors);
 

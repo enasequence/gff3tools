@@ -14,19 +14,29 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Map;
 import lombok.Getter;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 @Getter
 public class ValidationConfig {
     private final Map<String, RuleSeverity> ruleOverrides;
     private final Map<String, Boolean> validatorOverrides;
+    private final Map<String, Boolean> fixOverrides;
 
-    public ValidationConfig(Map<String, RuleSeverity> ruleOverrides, Map<String, Boolean> validatorOverrides) {
+    public ValidationConfig(
+            Map<String, RuleSeverity> ruleOverrides,
+            Map<String, Boolean> validatorOverrides,
+            Map<String, Boolean> fixOverrides) {
         this.ruleOverrides = ruleOverrides != null ? ruleOverrides : Map.of();
         this.validatorOverrides = validatorOverrides != null ? validatorOverrides : Map.of();
+        this.fixOverrides = fixOverrides != null ? fixOverrides : Map.of();
     }
 
     public RuleSeverity getSeverity(String rule, RuleSeverity defaultAction) {
         return ruleOverrides.getOrDefault(rule, defaultAction);
+    }
+
+    public boolean getFix(String rule, boolean defaultEnabled) {
+        return fixOverrides.getOrDefault(rule, defaultEnabled);
     }
 
     // NOTE: Document this method.

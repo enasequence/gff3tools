@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.gff3tools.exception.DuplicateValidationRuleException;
+import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 public class ValidationRegistry {
     private static final ValidationRegistry INSTANCE = new ValidationRegistry();

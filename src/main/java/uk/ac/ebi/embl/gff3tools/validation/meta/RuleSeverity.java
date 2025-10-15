@@ -8,30 +8,20 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.validation;
+package uk.ac.ebi.embl.gff3tools.validation.meta;
 
-import java.lang.reflect.Method;
-// NOTE: Can we treat this as a data class? Just a nit
-public class ValidatorDescriptor {
-    Class<?> clazz;
-    private final Object instance;
-    private final Method method;
+public enum RuleSeverity {
+    OFF(0),
+    WARN(1),
+    ERROR(2);
 
-    public ValidatorDescriptor(Class<?> clazz, Object instance, Method method) {
-        this.clazz = clazz;
-        this.instance = instance;
-        this.method = method;
+    private int severity;
+
+    RuleSeverity(int severity) {
+        this.severity = severity;
     }
 
-    public Class<?> clazz() {
-        return clazz;
-    }
-
-    public Object instance() {
-        return instance;
-    }
-
-    public Method method() {
-        return method;
+    public int getSeverity() {
+        return severity;
     }
 }

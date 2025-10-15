@@ -20,6 +20,7 @@ import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.*;
+import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 class ValidationRegistryTest {
 

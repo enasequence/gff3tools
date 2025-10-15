@@ -30,6 +30,7 @@ import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.gff3tools.validation.*;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 // Using pandoc CLI interface conventions
 @CommandLine.Command(name = "conversion", description = "Performs format conversions to or from gff3")

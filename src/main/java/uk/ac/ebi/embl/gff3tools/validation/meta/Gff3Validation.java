@@ -8,10 +8,16 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.validation;
+package uk.ac.ebi.embl.gff3tools.validation.meta;
 
-public enum ValidationType {
-    FEATURE,
-    ANNOTATION,
-    SYNTACTIC
+import java.lang.annotation.*;
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface Gff3Validation {
+    String name() default "";
+
+    String description() default "";
+
+    boolean enabled() default true;
 }

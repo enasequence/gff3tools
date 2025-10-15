@@ -13,14 +13,15 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
-import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.validation.*;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation
 public class OntologyValidation extends Validation {
 
     public static final String VALIDATION_RULE = "GFF3_ONTOLOGY_FEATURE";
-
 
     @ValidationMethod(rule = VALIDATION_RULE, type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
