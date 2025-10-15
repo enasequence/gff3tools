@@ -15,9 +15,9 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.validation.*;
-import uk.ac.ebi.embl.gff3tools.validation.FeatureValidation;
 
-public class OntologyValidation implements FeatureValidation {
+@Gff3Validation
+public class OntologyValidation extends Validation {
 
     public static final String VALIDATION_RULE = "GFF3_ONTOLOGY_FEATURE";
 
