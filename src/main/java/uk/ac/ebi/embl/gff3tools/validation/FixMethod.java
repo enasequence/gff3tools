@@ -8,6 +8,7 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
+// NOTE: Should we add a new package "meta" for the annotations and related abstractions?
 package uk.ac.ebi.embl.gff3tools.validation;
 
 import java.lang.annotation.ElementType;
@@ -22,6 +23,7 @@ public @interface FixMethod {
 
     ValidationType type();
 
+    // NOTE: I do not think fixes need severity, if anything they need a simple on/off switch
     RuleSeverity severity() default RuleSeverity.ERROR;
 
     String description() default "";

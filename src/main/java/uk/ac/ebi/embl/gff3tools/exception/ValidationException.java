@@ -28,6 +28,8 @@ public class ValidationException extends ExitException {
         this.rule = rule;
     }
 
+    // NOTE: the rule is fairly important as it allows the user to toggle the behavior using the CLI
+    // or configuration file. We MUST provide it as feedback.
     public ValidationException(int line, String message) {
         super("Violation of rule on line %d: %s".formatted(line, message));
         this.line = line;

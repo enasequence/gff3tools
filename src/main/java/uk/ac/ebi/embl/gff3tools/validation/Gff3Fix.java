@@ -8,6 +8,7 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
+// NOTE: Move to its own meta package
 package uk.ac.ebi.embl.gff3tools.validation;
 
 import java.lang.annotation.ElementType;

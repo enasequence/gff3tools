@@ -11,7 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.validation;
 
 import java.lang.reflect.Method;
-
+// NOTE: Can we treat this as a data class? Just a nit
 public class ValidatorDescriptor {
     Class<?> clazz;
     private final Object instance;

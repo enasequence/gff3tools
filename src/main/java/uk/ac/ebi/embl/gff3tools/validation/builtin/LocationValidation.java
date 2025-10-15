@@ -28,6 +28,7 @@ public class LocationValidation extends Validation {
     private static final String INVALID_PROPEPTIDE_PEPTIDE_LOCATION_MESSAGE =
             "Propeptide [%d %d] overlaps with peptide features";
 
+    // NOTE: Validation must be named
     @ValidationMethod(type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
         long start = feature.getStart();

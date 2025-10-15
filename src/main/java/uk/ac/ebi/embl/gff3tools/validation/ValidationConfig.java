@@ -29,6 +29,8 @@ public class ValidationConfig {
         return ruleOverrides.getOrDefault(rule, defaultAction);
     }
 
+    // NOTE: Document this method.
+    // ???: Is this used by the validation engine? If so, does this work both for methods & classes?
     public boolean isValidatorEnabled(Annotation annotation) {
         try {
             Method nameMethod = annotation.annotationType().getMethod("name");

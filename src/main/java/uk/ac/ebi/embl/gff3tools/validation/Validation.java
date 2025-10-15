@@ -18,5 +18,6 @@ import lombok.Setter;
 @Getter
 public class Validation {
 
+    // NOTE: Lets not get ahead of ourselves. (remove this line)
     private Connection connection;
 }

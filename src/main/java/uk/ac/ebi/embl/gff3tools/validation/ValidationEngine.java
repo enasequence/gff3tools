@@ -56,6 +56,8 @@ public class ValidationEngine {
                 } else if (methodAnnotation.type() == ValidationType.ANNOTATION && target instanceof GFF3Annotation) {
                     validator.method().invoke(validator.instance(), target, line);
                 }
+                // NOTE: Else case where we either throw or log an error.
+                // (BUG either in the validation definition or the validation engine call)
 
             } catch (Exception e) {
                 handleRuleException(e.getCause(), ruleSeverity);
@@ -63,12 +65,16 @@ public class ValidationEngine {
         }
     }
 
+    // NOTE: executeFixes
     public <T> void executeFixs(T target, int line) throws ValidationException {
+        // NOTE: validationRegistry.getFixes();
         List<ValidatorDescriptor> validators = validationRegistry.getFixs();
 
         for (ValidatorDescriptor validator : validators) {
 
             FixMethod methodAnnotation = validator.method().getAnnotation(FixMethod.class);
+            // NOTE: As mentioned before, fixes should have a simple switch "enabled" instead of severities.
+            // Should use separate validations from fixes.
             RuleSeverity ruleSeverity =
                     validationConfig.getSeverity(methodAnnotation.rule(), methodAnnotation.severity());
 
@@ -95,6 +101,7 @@ public class ValidationEngine {
         return parsingErrors;
     }
 
+    // NOTE: This method and handleSyntacticError can be merged.
     private void handleSyntacticValidationException(ValidationException exception) throws ValidationException {
         String rule = exception.getValidationRule().toString();
         RuleSeverity severity = validationConfig.getSeverity(rule, RuleSeverity.ERROR);

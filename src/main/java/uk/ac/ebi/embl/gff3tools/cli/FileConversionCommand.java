@@ -98,6 +98,7 @@ public class FileConversionCommand implements Runnable {
         engineBuilder.overrideMethodRules(ruleOverrides);
 
         // TODO: override validator
+        // NOTE: Do we have a ticket to track progress on this implementation?
         // engineBuilder.overrideClassRules()
 
         // TODO: Create and set connection
