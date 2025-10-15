@@ -188,9 +188,9 @@ public class GFF3FileReaderTest {
     void testDirectiveResolution() throws Exception {
         String gff3Content = "##gff-version 3.2.1\n"
                 + "##sequence-region seq1 1 200\n"
-                + "seq1\tsource\tfeature1\t1\t100\t.\t+\t.\tID=feat1\n"
+                + "seq1\tsource\tgene\t1\t100\t.\t+\t.\tID=feat1\n"
                 + "###\n"
-                + "seq1\tsource\tfeature2\t100\t200\t.\t+\t.\tID=feat2\n";
+                + "seq1\tsource\tgene\t100\t200\t.\t+\t.\tID=feat2\n";
 
         ValidationEngine validationEngine = getValidationEngine();
 
@@ -220,11 +220,11 @@ public class GFF3FileReaderTest {
     void testSequenceRegionAfterFeatures() throws Exception {
         String gff3Content = "##gff-version 3.2.1\n"
                 + "##sequence-region seq1 1 200\n"
-                + "seq1\tsource\tfeature1\t1\t100\t.\t+\t.\tID=feata1\n"
+                + "seq1\tsource\tgene\t1\t100\t.\t+\t.\tID=feata1\n"
                 + "##sequence-region seq2 1 200\n"
-                + "seq2\tsource\tfeature1\t1\t100\t.\t+\t.\tID=featb1\n"
-                + "seq1\tsource\tfeature2\t100\t200\t.\t+\t.\tID=feata2\n"
-                + "seq2\tsource\tfeature2\t1\t100\t.\t+\t.\tID=featb2\n";
+                + "seq2\tsource\tgene\t1\t100\t.\t+\t.\tID=featb1\n"
+                + "seq1\tsource\tgene\t100\t200\t.\t+\t.\tID=feata2\n"
+                + "seq2\tsource\tgene\t1\t100\t.\t+\t.\tID=featb2\n";
 
         ValidationEngine validationEngine = getValidationEngine();
 

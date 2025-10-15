@@ -2,26 +2,26 @@
 ##sequence-region seq0 1 100
 ##gff-version 3
 ##sequence-region seq1 1 200
-seq1	source	feature1	1	100	.	+	.	ID=feata1;
+seq1	source	gene	1	100	.	+	.	ID=feata1;
 
 ##gff-version 3
 ##sequence-region seq2 1 200
-seq2	source	feature1	1	100	.	+	.	ID=featb1;
-seq2	source	feature2	1	100	.	+	.	ID=featb2;
+seq2	source	gene	1	100	.	+	.	ID=featb1;
+seq2	source	gene	1	100	.	+	.	ID=featb2;
 
 ##gff-version 3
 ##sequence-region seq3 1 200
-seq3	source	feature2	1	100	.	+	.	ID=featb2;
+seq3	source	gene	1	100	.	+	.	ID=featb2;
 
 ##gff-version 3
 ##sequence-region seq4 1 200
 
 ##gff-version 3
 ##sequence-region seq5 1 200
-seq5	source	feature2	1	100	.	+	.	ID=featb2;
-seq5	source	feature2	1	100	.	+	.	ID=featb2;
+seq5	source	gene	1	100	.	+	.	ID=featb2;
+seq5	source	gene	1	100	.	+	.	ID=featb2;
 ###
-seq5	source	feature2	1	100	.	+	.	ID=featb2;
+seq5	source	gene	1	100	.	+	.	ID=featb2;
 
 ##gff-version 3
 ##sequence-region seq6 1 200

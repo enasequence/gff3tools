@@ -55,7 +55,7 @@ public class ValidationEngineTest {
                         "",
                         Optional.empty(),
                         "",
-                        "",
+                        "gene",
                         1L,
                         2L,
                         "",
