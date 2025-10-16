@@ -28,8 +28,8 @@ public class ValidationEngineBuilder {
         // Loads default severity rules and validatorOverrides
         validationConfig = getValidationConfig();
 
-        // NOTE: initValidationRegistry() is a one liner and its not used anywhere else. Just move it here.
-        initValidationRegistry();
+        // Init validation validationRegistry
+        validationRegistry = ValidationRegistry.getInstance(validationConfig, connection);
     }
 
     public ValidationEngine build() {
@@ -46,10 +46,6 @@ public class ValidationEngineBuilder {
 
     public void setConnection(Connection connection) throws UnregisteredValidationRuleException {
         this.connection = connection;
-    }
-
-    public void initValidationRegistry() {
-        validationRegistry = ValidationRegistry.getInstance(validationConfig, connection);
     }
 
     private ValidationConfig getValidationConfig() {
@@ -69,13 +65,6 @@ public class ValidationEngineBuilder {
                 String k = (String) key;
                 String v = (String) value;
 
-                // NOTE: Not too happy we need to add prefixes to differentiate them.
-                // Also, its not possible by doing this to validate if the user has a typo in the validation name.
-                // We should error if the validation name does not exist.
-                //
-                // I think ideally we should pre-load the validations, then check the names agains what was loaded
-                // so we can provide good user feedback.
-                // This is why we had the loading and enabling in two different stages before.
                 if (k.startsWith("rule")) {
                     String rule = k.replace("rule.", "");
                     RuleSeverity severity = RuleSeverity.valueOf(v);
