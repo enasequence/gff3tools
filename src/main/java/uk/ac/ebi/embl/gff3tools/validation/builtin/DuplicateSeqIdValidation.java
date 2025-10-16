@@ -13,24 +13,19 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 import java.util.HashSet;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.validation.AnnotationValidation;
-import uk.ac.ebi.embl.gff3tools.validation.FeatureValidation;
+import uk.ac.ebi.embl.gff3tools.validation.*;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-public class DuplicateSeqIdValidation implements FeatureValidation, AnnotationValidation {
-
-    public static final String VALIDATION_RULE = "GFF3_DUPLICATE_SEQID";
+@Gff3Validation
+public class DuplicateSeqIdValidation extends Validation {
 
     private HashSet<String> processedAnnotations = new HashSet<>();
     private String currentAccession = null;
 
-    @Override
-    public String getValidationRule() {
-        return VALIDATION_RULE;
-    }
-
-    @Override
+    @ValidationMethod(type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
         String accession = feature.accession();
 
@@ -42,7 +37,4 @@ public class DuplicateSeqIdValidation implements FeatureValidation, AnnotationVa
             currentAccession = accession;
         }
     }
-
-    @Override
-    public void validateAnnotation(GFF3Annotation feature, int line) throws ValidationException {}
 }

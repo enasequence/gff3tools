@@ -10,15 +10,188 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation;
 
-import uk.ac.ebi.embl.gff3tools.validation.builtin.*;
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassInfo;
+import io.github.classgraph.ClassInfoList;
+import io.github.classgraph.ScanResult;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.sql.Connection;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import uk.ac.ebi.embl.gff3tools.exception.DuplicateValidationRuleException;
+import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 public class ValidationRegistry {
-    private static final Validation[] VALIDATIONS = new Validation[] {
-        // new DuplicateSeqIdValidation(),
-        new OntologyValidation(), new LocationValidation(), new LengthValidation(), new DuplicateFeatureValidation()
-    };
+    private static final ValidationRegistry INSTANCE = new ValidationRegistry();
+    private static final Logger LOG = LoggerFactory.getLogger(ValidationRegistry.class);
+    private static volatile List<ValidatorDescriptor> cachedValidators;
+    private static ValidationConfig validationConfig;
+    private static Connection connection;
 
-    public static Validation[] getValidations() {
-        return VALIDATIONS;
+    private ValidationRegistry() {}
+
+    public static ValidationRegistry getInstance(ValidationConfig config, Connection con) {
+        validationConfig = config;
+        connection = con;
+        INSTANCE.initRegistry();
+        return INSTANCE;
+    }
+
+    /**
+     * Creates list of validations and fixes
+     */
+    private void initRegistry() {
+        synchronized (ValidationRegistry.class) {
+            cachedValidators = build(getValidationList());
+        }
+    }
+
+    private List<ValidatorDescriptor> build(List<ClassInfo> validationList) {
+        List<ValidatorDescriptor> descriptors = new ArrayList<>();
+
+        for (ClassInfo classInfo : validationList) {
+            Class<?> clazz = classInfo.loadClass();
+
+            Annotation vmeta = getClassAnnotation(clazz);
+            if (vmeta == null) {
+                // no @Gff3Validation or @Gff3Fix
+                continue;
+            }
+
+            // Checks validation is enabled
+            boolean enabled = validationConfig.isValidatorEnabled(vmeta);
+            if (!enabled) {
+                continue;
+            }
+
+            try {
+                // Instantiate once
+                Object instance = clazz.getDeclaredConstructor().newInstance();
+
+                // Set connection to all the validations and fixes
+                ((Validation) instance).setConnection(connection);
+
+                for (Method method : clazz.getDeclaredMethods()) {
+                    if (isMethodAnnotationPresent(method)) {
+                        method.setAccessible(true);
+                        descriptors.add(new ValidatorDescriptor(clazz, instance, method));
+                    }
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(
+                        String.format("Failed to initialize validator {}: {}", clazz.getName(), e.getMessage()));
+            }
+        }
+
+        LOG.info("Initialized {} validator methods", descriptors.size());
+        return descriptors;
+    }
+
+    private Annotation getClassAnnotation(Class<?> clazz) {
+        for (Class<? extends Annotation> type : List.of(Gff3Validation.class, Gff3Fix.class)) {
+            if (clazz.isAnnotationPresent(type)) {
+                return clazz.getAnnotation(type);
+            }
+        }
+        return null;
+    }
+
+    private boolean isMethodAnnotationPresent(Method method) {
+        return method.isAnnotationPresent(ValidationMethod.class) || method.isAnnotationPresent(FixMethod.class);
+    }
+
+    private List<ClassInfo> getValidationList() {
+        ClassInfoList validationList = new ClassInfoList();
+        try (ScanResult scan = new ClassGraph()
+                .enableClassInfo()
+                .enableAllInfo()
+                .acceptPackages(ValidationRegistry.class.getPackage().getName())
+                .scan()) {
+
+            //  collect @ValidationClass annotated classes
+            validationList.addAll(scan.getClassesWithAnnotation(Gff3Validation.class.getName())
+                    .filter(ci -> !ci.getName().contains("$") && !ci.isSynthetic()));
+
+            //  collect @FixClass annotated classes
+            validationList.addAll(scan.getClassesWithAnnotation(Gff3Fix.class.getName())
+                    .filter(ci -> !ci.getName().contains("$") && !ci.isSynthetic()));
+
+            checkUniqueValidationRules(validationList);
+            return validationList;
+        }
+    }
+
+    /**
+     * Returns only classes annotated with @ValidationClass.
+     */
+    public List<ValidatorDescriptor> getValidations() {
+        return cachedValidators.stream()
+                .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Validation.class))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Returns only classes annotated with @FixClass.
+     */
+    public List<ValidatorDescriptor> getFixs() {
+        return cachedValidators.stream()
+                .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Fix.class))
+                .collect(Collectors.toList());
+    }
+
+    private void checkUniqueValidationRules(ClassInfoList validationList) {
+        Set<String> ruleNames = new HashSet<>();
+        Set<String> classNames = new HashSet<>();
+
+        for (ClassInfo validator : validationList) {
+            Class<?> clazz = validator.loadClass();
+            for (Method method : clazz.getDeclaredMethods()) {
+                Annotation vm;
+                if ((vm = getMethodAnnotation(method)) != null) {
+                    String rule = getRule(vm);
+
+                    // Skip empty rule
+                    if (rule.isEmpty()) continue;
+
+                    // Enforce uniqueness
+                    if (!ruleNames.add(rule)) {
+                        throw new DuplicateValidationRuleException("Duplicate validation rule detected: " + rule
+                                + " in class " + validator.getClass().getName());
+                    }
+                }
+            }
+
+            if (!classNames.add(clazz.getName())) {
+                throw new DuplicateValidationRuleException("Duplicate validation/Fix name detected: " + clazz.getName()
+                        + " in class " + validator.getClass().getName());
+            }
+        }
+    }
+
+    private Annotation getMethodAnnotation(Method method) {
+        for (Class<? extends Annotation> type : List.of(ValidationMethod.class, FixMethod.class)) {
+            if (method.isAnnotationPresent(type)) {
+                return method.getAnnotation(type);
+            }
+        }
+        return null;
+    }
+
+    private String getRule(Annotation method) {
+
+        String rule = "";
+        if (method instanceof ValidationMethod) {
+            rule = ((ValidationMethod) method).rule();
+        } else if (method instanceof FixMethod) {
+            rule = ((FixMethod) method).rule();
+        }
+
+        return rule;
     }
 }

@@ -8,20 +8,21 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.validation;
+package uk.ac.ebi.embl.gff3tools.validation.meta;
 
-public enum RuleSeverity {
-    OFF(0),
-    WARN(1),
-    ERROR(2);
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-    private int severity;
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface FixMethod {
+    String rule() default "";
 
-    RuleSeverity(int severity) {
-        this.severity = severity;
-    }
+    ValidationType type();
 
-    public int getSeverity() {
-        return severity;
-    }
+    boolean enabled() default true;
+
+    String description() default "";
 }

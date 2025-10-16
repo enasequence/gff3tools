@@ -28,19 +28,17 @@ import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.validation.*;
-import uk.ac.ebi.embl.gff3tools.validation.builtin.*;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 public class GFF3FileReaderTest {
 
     ValidationEngine getValidationEngine() {
         ValidationEngineBuilder builder = getValidationEngineBuilder();
-        builder.registerValidation(new DuplicateSeqIdValidation());
         return builder.build();
     }
 
     ValidationEngineBuilder getValidationEngineBuilder() {
         ValidationEngineBuilder builder = new ValidationEngineBuilder();
-        builder.registerValidations(new Validation[] {});
 
         return builder;
     }
@@ -139,7 +137,7 @@ public class GFF3FileReaderTest {
         Map<String, RuleSeverity> ruleSeverityMap = new HashMap<>();
         ruleSeverityMap.put("GFF3_UNDEFINED_SEQID", RuleSeverity.OFF);
         ValidationEngineBuilder builder = getValidationEngineBuilder();
-        builder.overrideRuleSeverities(ruleSeverityMap);
+        builder.overrideMethodRules(ruleSeverityMap);
         ValidationEngine validationEngine = builder.build();
 
         try (FileReader filerReader = new FileReader(testFile);
@@ -163,7 +161,7 @@ public class GFF3FileReaderTest {
         Map<String, RuleSeverity> ruleSeverityMap = new HashMap<>();
         ruleSeverityMap.put("GFF3_INVALID_RECORD", RuleSeverity.OFF);
         ValidationEngineBuilder builder = getValidationEngineBuilder();
-        builder.overrideRuleSeverities(ruleSeverityMap);
+        builder.overrideMethodRules(ruleSeverityMap);
         ValidationEngine validationEngine = builder.build();
 
         try (FileReader filerReader = new FileReader(testFile);
@@ -191,9 +189,9 @@ public class GFF3FileReaderTest {
     void testDirectiveResolution() throws Exception {
         String gff3Content = "##gff-version 3.2.1\n"
                 + "##sequence-region seq1 1 200\n"
-                + "seq1\tsource\tfeature1\t1\t100\t.\t+\t.\tID=feat1\n"
+                + "seq1\tsource\tgene\t1\t100\t.\t+\t.\tID=feat1\n"
                 + "###\n"
-                + "seq1\tsource\tfeature2\t100\t200\t.\t+\t.\tID=feat2\n";
+                + "seq1\tsource\tgene\t100\t200\t.\t+\t.\tID=feat2\n";
 
         ValidationEngine validationEngine = getValidationEngine();
 
@@ -223,11 +221,11 @@ public class GFF3FileReaderTest {
     void testSequenceRegionAfterFeatures() throws Exception {
         String gff3Content = "##gff-version 3.2.1\n"
                 + "##sequence-region seq1 1 200\n"
-                + "seq1\tsource\tfeature1\t1\t100\t.\t+\t.\tID=feata1\n"
+                + "seq1\tsource\tgene\t1\t100\t.\t+\t.\tID=feata1\n"
                 + "##sequence-region seq2 1 200\n"
-                + "seq2\tsource\tfeature1\t1\t100\t.\t+\t.\tID=featb1\n"
-                + "seq1\tsource\tfeature2\t100\t200\t.\t+\t.\tID=feata2\n"
-                + "seq2\tsource\tfeature2\t1\t100\t.\t+\t.\tID=featb2\n";
+                + "seq2\tsource\tgene\t1\t100\t.\t+\t.\tID=featb1\n"
+                + "seq1\tsource\tgene\t100\t200\t.\t+\t.\tID=feata2\n"
+                + "seq2\tsource\tgene\t1\t100\t.\t+\t.\tID=featb2\n";
 
         ValidationEngine validationEngine = getValidationEngine();
 

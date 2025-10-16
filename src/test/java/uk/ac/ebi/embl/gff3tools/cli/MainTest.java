@@ -18,7 +18,7 @@ import java.lang.reflect.Method;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import picocli.CommandLine;
-import uk.ac.ebi.embl.gff3tools.validation.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 public class MainTest {
 

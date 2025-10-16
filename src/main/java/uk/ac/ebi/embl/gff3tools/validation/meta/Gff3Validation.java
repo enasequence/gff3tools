@@ -8,11 +8,16 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.validation;
+package uk.ac.ebi.embl.gff3tools.validation.meta;
 
-import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
+import java.lang.annotation.*;
 
-public interface AnnotationValidation extends Validation {
-    void validateAnnotation(GFF3Annotation feature, int line) throws ValidationException;
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface Gff3Validation {
+    String name() default "";
+
+    String description() default "";
+
+    boolean enabled() default true;
 }

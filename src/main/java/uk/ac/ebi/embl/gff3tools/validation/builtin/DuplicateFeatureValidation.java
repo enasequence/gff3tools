@@ -16,9 +16,13 @@ import java.util.Objects;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.validation.FeatureValidation;
+import uk.ac.ebi.embl.gff3tools.validation.*;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-public class DuplicateFeatureValidation implements FeatureValidation {
+@Gff3Validation(name = "DUPLICATE_FEATURE_VALIDATION")
+public class DuplicateFeatureValidation extends Validation {
 
     private record ProteinAttributePair(String proteinId, String attributeId) {
 
@@ -28,18 +32,12 @@ public class DuplicateFeatureValidation implements FeatureValidation {
         }
     }
 
-    public static final String VALIDATION_RULE = "GFF3_DUPLICATE_FEATURE_VALIDATION";
     private final Map<String, Integer> proteinIdMap = new HashMap<>();
     private final Map<ProteinAttributePair, Integer> proteinAttributeMap = new HashMap<>();
     private static final String DUPLICATE_PROTEIN_ID_MESSAGE =
             "Duplicate Protein Id \"%s\" found. First occurrence at line %d, conflicting occurrence at line %d";
 
-    @Override
-    public String getValidationRule() {
-        return VALIDATION_RULE;
-    }
-
-    @Override
+    @ValidationMethod(rule = "GFF3_DUPLICATE_FEATURE_VALIDATION", type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
         String proteinId = feature.getAttributeByName(GFF3Attributes.PROTEIN_ID);
         String attributeId = feature.getAttributeByName(GFF3Attributes.ATTRIBUTE_ID);
@@ -50,7 +48,7 @@ public class DuplicateFeatureValidation implements FeatureValidation {
                 if (!proteinAttributeMap.containsKey(proteinAttributePair)) {
                     int prevLine = proteinIdMap.get(proteinId);
                     throw new ValidationException(
-                            VALIDATION_RULE, line, DUPLICATE_PROTEIN_ID_MESSAGE.formatted(proteinId, prevLine, line));
+                            line, DUPLICATE_PROTEIN_ID_MESSAGE.formatted(proteinId, prevLine, line));
                 }
             } else {
                 proteinIdMap.put(proteinId, line);

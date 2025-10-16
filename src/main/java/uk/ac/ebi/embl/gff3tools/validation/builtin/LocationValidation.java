@@ -16,10 +16,13 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.validation.AnnotationValidation;
-import uk.ac.ebi.embl.gff3tools.validation.FeatureValidation;
+import uk.ac.ebi.embl.gff3tools.validation.*;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-public class LocationValidation implements FeatureValidation, AnnotationValidation {
+@Gff3Validation
+public class LocationValidation extends Validation {
 
     public static final String VALIDATION_RULE = "GFF3_LOCATION_VALIDATION";
 
@@ -28,12 +31,7 @@ public class LocationValidation implements FeatureValidation, AnnotationValidati
     private static final String INVALID_PROPEPTIDE_PEPTIDE_LOCATION_MESSAGE =
             "Propeptide [%d %d] overlaps with peptide features";
 
-    @Override
-    public String getValidationRule() {
-        return VALIDATION_RULE;
-    }
-
-    @Override
+    @ValidationMethod(type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
         long start = feature.getStart();
         long end = feature.getEnd();
@@ -44,7 +42,7 @@ public class LocationValidation implements FeatureValidation, AnnotationValidati
         }
     }
 
-    @Override
+    @ValidationMethod(type = ValidationType.ANNOTATION)
     public void validateAnnotation(GFF3Annotation annotation, int line) throws ValidationException {
 
         // Annotation Level Validation

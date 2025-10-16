@@ -28,6 +28,15 @@ public class ValidationException extends ExitException {
         this.rule = rule;
     }
 
+    public ValidationException(int line, String message) {
+        super("Violation of rule on line %d: %s".formatted(line, message));
+        this.line = line;
+    }
+
+    public ValidationException(String message) {
+        super(message);
+    }
+
     public int getLine() {
         return line;
     }

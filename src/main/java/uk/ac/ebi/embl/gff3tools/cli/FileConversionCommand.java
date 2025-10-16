@@ -30,6 +30,7 @@ import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.gff3tools.validation.*;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 // Using pandoc CLI interface conventions
 @CommandLine.Command(name = "conversion", description = "Performs format conversions to or from gff3")
@@ -95,8 +96,17 @@ public class FileConversionCommand implements Runnable {
     private ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides)
             throws UnregisteredValidationRuleException {
         ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
-        engineBuilder.registerValidations(ValidationRegistry.getValidations());
-        engineBuilder.overrideRuleSeverities(ruleOverrides);
+        engineBuilder.overrideMethodRules(ruleOverrides);
+
+        // TODO: override validator
+        // engineBuilder.overrideClassRules()
+
+        // TODO: override validator
+        // engineBuilder.overrideMethodFixs()
+
+        // TODO: Create and set connection
+        // engineBuilder.setConnection(connection);
+
         return engineBuilder.build();
     }
 

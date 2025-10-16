@@ -8,15 +8,30 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.validation;
+package uk.ac.ebi.embl.gff3tools.validation.meta;
 
-import java.sql.Connection;
-import lombok.Getter;
-import lombok.Setter;
+import java.lang.reflect.Method;
 
-@Setter
-@Getter
-public class Validation {
+public class ValidatorDescriptor {
+    Class<?> clazz;
+    private final Object instance;
+    private final Method method;
 
-    private Connection connection;
+    public ValidatorDescriptor(Class<?> clazz, Object instance, Method method) {
+        this.clazz = clazz;
+        this.instance = instance;
+        this.method = method;
+    }
+
+    public Class<?> clazz() {
+        return clazz;
+    }
+
+    public Object instance() {
+        return instance;
+    }
+
+    public Method method() {
+        return method;
+    }
 }

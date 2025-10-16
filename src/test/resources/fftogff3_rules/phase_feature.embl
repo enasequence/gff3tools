@@ -35,7 +35,7 @@ FT                   /number=1
 FT   CDS             133822..190207
 FT                   /gene="matK"
 FT                   /product="matK protein"
-FT                   /protein_id="CAD29848.1"
+FT                   /protein_id="CAD29849.1"
 FT                   /codon_start="1"
 FT                   /translation="MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEDQKGLV
 FT                   ASYQVGQDLTVMAAIGLGFLTSSFRRHSWSSVAFNLFMLALGVQWAILLDGFLSQFPSG
@@ -53,7 +53,7 @@ FT                   /number=1
 FT   CDS             133822..190207
 FT                   /gene="RHCE"
 FT                   /product="RHCE protein"
-FT                   /protein_id="CAD29848.1"
+FT                   /protein_id="CAD29850.1"
 FT                   /codon_start="2"
 FT                   /translation="MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEDQKGLV
 FT                   ASYQVGQDLTVMAAIGLGFLTSSFRRHSWSSVAFNLFMLALGVQWAILLDGFLSQFPSG
@@ -71,7 +71,7 @@ FT                   /number=1
 FT   CDS             133822..190207
 FT                   /gene="SMP1"
 FT                   /product="SMP1 protein"
-FT                   /protein_id="CAD29848.1"
+FT                   /protein_id="CAD29851.1"
 FT                   /codon_start="3"
 FT                   /translation="MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEDQKGLV
 FT                   ASYQVGQDLTVMAAIGLGFLTSSFRRHSWSSVAFNLFMLALGVQWAILLDGFLSQFPSG

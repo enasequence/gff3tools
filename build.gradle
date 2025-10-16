@@ -10,7 +10,7 @@ plugins {
 base {
     archivesName = 'gff3tools'
     group = 'uk.ac.ebi.ena'
-    version = '1.1.1'
+    version = '1.2.0'
 }
 
 java {
@@ -74,6 +74,7 @@ dependencies {
     implementation 'org.slf4j:slf4j-api:2.0.9'
     implementation 'net.sourceforge.owlapi:owlapi-apibinding:5.1.20'
     implementation 'net.sourceforge.owlapi:owlapi-distribution:5.1.20'
+    implementation("io.github.classgraph:classgraph:4.8.181")
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.mockito:mockito-core:5.12.0'
