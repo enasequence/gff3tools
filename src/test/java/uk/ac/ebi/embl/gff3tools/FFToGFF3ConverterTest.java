@@ -35,9 +35,6 @@ class FFToGFF3ConverterTest {
 
         for (String filePrefix : testFiles.keySet()) {
             ValidationEngineBuilder builder = new ValidationEngineBuilder();
-            if (!filePrefix.startsWith("source_with_taxon_and_organism")) {
-                continue;
-            }
 
             try (BufferedReader testFileReader = TestUtils.getResourceReaderWithPath(
                     testFiles.get(filePrefix).toString())) {

@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.util.*;
-import uk.ac.ebi.embl.gff3tools.exception.UnregisteredValidationRuleException;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 public class ValidationEngineBuilder {
@@ -36,15 +35,19 @@ public class ValidationEngineBuilder {
         return new ValidationEngine(validationConfig, validationRegistry);
     }
 
-    public void overrideMethodRules(Map<String, RuleSeverity> map) throws UnregisteredValidationRuleException {
+    public void overrideMethodRules(Map<String, RuleSeverity> map) {
         this.validationConfig.getRuleOverrides().putAll(map);
     }
 
-    public void overrideClassRules(Map<String, Boolean> map) throws UnregisteredValidationRuleException {
+    public void overrideMethodFixs(Map<String, Boolean> map) {
+        this.validationConfig.getFixOverrides().putAll(map);
+    }
+
+    public void overrideClassRules(Map<String, Boolean> map) {
         this.validationConfig.getValidatorOverrides().putAll(map);
     }
 
-    public void setConnection(Connection connection) throws UnregisteredValidationRuleException {
+    public void setConnection(Connection connection) {
         this.connection = connection;
     }
 

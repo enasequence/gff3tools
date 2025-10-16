@@ -115,7 +115,7 @@ public class ValidationEngine {
             if (severity == RuleSeverity.WARN) {
                 parsingErrors.add(new ValidationException(rule, ve.getMessage()));
             } else if (severity == RuleSeverity.ERROR) {
-                throw ve;
+                throw new ValidationException(rule, ve.getMessage());
             } else {
                 throw ve;
             }

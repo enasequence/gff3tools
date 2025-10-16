@@ -29,7 +29,6 @@ public class LengthValidation extends Validation {
     private static final String INVALID_INTRON_LENGTH_MESSAGE = "Intron feature length is invalid for accession \"%s\"";
     private static final String INVALID_EXON_LENGTH_MESSAGE = "Exon feature length is invalid for accession \"%s\"";
 
-    // NOTE: This needs to be splitted and the validations must be named.
     @ValidationMethod(type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
         String featureName = feature.getName();

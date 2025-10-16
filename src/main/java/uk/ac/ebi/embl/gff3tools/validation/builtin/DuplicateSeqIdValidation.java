@@ -25,7 +25,6 @@ public class DuplicateSeqIdValidation extends Validation {
     private HashSet<String> processedAnnotations = new HashSet<>();
     private String currentAccession = null;
 
-    // NOTE: We need to name the validation. What happens if we do not name it? What does this mean?
     @ValidationMethod(type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
         String accession = feature.accession();
