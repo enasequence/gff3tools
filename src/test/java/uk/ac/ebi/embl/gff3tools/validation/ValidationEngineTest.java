@@ -185,7 +185,7 @@ public class ValidationEngineTest {
             GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
             ValidationException ex =
                     assertThrows(ValidationException.class, () -> engine.executeValidations(feature, 1));
-            assertEquals("error triggered", ex.getMessage());
+            assertEquals("Violation of rule RULE_ERR on line 0: error triggered", ex.getMessage());
         }
     }
 
