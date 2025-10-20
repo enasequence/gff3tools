@@ -235,7 +235,10 @@ public class GFF3FileReaderTest {
             gff3Reader.readAnnotation(); // This should trigger an exception
             fail("Expected DuplicateSeqIdException to be thrown.");
         } catch (ValidationException e) {
-            Assertions.assertTrue(e.getMessage().contains("Violation of rule GFF3_DUPLICATE_SEQID on line 6: The seq id \"seq1\" was used previously"));
+            Assertions.assertTrue(
+                    e.getMessage()
+                            .contains(
+                                    "Violation of rule GFF3_DUPLICATE_SEQID on line 6: The seq id \"seq1\" was used previously"));
             Assertions.assertEquals(6, e.getLine()); // Line 5 is where the duplicate sequence-region is
         }
     }
