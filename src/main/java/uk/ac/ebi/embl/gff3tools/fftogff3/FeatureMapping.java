@@ -38,14 +38,20 @@ public class FeatureMapping {
                 .map(ConversionEntry::getSOTerm);
     }
 
-    public static List<String> getGFF3FeatureCandidateNames(String featureName) {
+    public static List<String> getGFF3FeatureCandidateNames(String ffFeatureName) {
         List<ConversionEntry> mappings = Optional.ofNullable(
-                        ConversionUtils.getFF2GFF3FeatureMap().get(featureName))
+                        ConversionUtils.getFF2GFF3FeatureMap().get(ffFeatureName))
                 .orElse(new ArrayList<>());
 
         if (mappings.isEmpty()) return Collections.emptyList();
 
         return mappings.stream().map(ConversionEntry::getSOTerm).collect(Collectors.toList());
+    }
+
+    public static Optional<String> getGFF3Attribute(String ffQualifierName) {
+        return Optional.ofNullable(
+                ConversionUtils.getFF2GFF3QualifierMap().get(ffQualifierName)
+        );
     }
 
     private static boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {
