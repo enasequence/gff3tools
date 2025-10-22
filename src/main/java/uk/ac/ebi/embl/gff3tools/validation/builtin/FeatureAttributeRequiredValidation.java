@@ -42,7 +42,7 @@ public class FeatureAttributeRequiredValidation extends Validation {
         String featureName = feature.getName();
 
         if (GFF3Anthology.FF_FEATURE_SET_ATTRIBUTES_REQUIRED.contains(featureName)
-                && feature.getAttributes().keySet().equals(Set.of("ID", "parent"))){
+                && feature.getAttributes().keySet().equals(Set.of("ID", "Parent"))){
             throw new ValidationException(line, NO_QUALIFIERS_MESSAGE.formatted(feature.accession(), featureName));
         }
     }
