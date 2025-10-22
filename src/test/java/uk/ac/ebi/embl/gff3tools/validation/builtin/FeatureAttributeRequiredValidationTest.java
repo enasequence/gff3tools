@@ -55,7 +55,7 @@ public class FeatureAttributeRequiredValidationTest {
     @Test
     public void testFeatureAttriuteRequiredValidationFailure() {
         String featureName = getRandomEntryFromSet(validation.featuresToValidate);
-        GFF3Feature feature = TestUtils.createGFF3Feature(featureName, new HashMap<>(){
+        GFF3Feature feature = TestUtils.createGFF3Feature(featureName, new HashMap<>() {
             {
                 put("ID", "O1");
                 put("Parent", "mom");

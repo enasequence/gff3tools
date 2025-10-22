@@ -12,9 +12,7 @@ package uk.ac.ebi.embl.gff3tools.fftogff3;
 
 import java.util.*;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;

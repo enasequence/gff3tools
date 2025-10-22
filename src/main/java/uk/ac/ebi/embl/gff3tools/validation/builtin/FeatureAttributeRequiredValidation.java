@@ -31,7 +31,7 @@ public class FeatureAttributeRequiredValidation extends Validation {
 
     public FeatureAttributeRequiredValidation() {
         for (String ff_feature : GFF3Anthology.FF_FEATURE_SET_ATTRIBUTES_REQUIRED) {
-            //the feature name could be an ID or a name
+            // the feature name could be an ID or a name
             GFF3Anthology.FF_FEATURE_SET_ATTRIBUTES_REQUIRED.stream()
                     .flatMap(FeatureMapping::getGFF3FeatureCandidateISOIDsNoQualifiersRequired)
                     .forEach(featuresToValidate::add);
@@ -41,7 +41,7 @@ public class FeatureAttributeRequiredValidation extends Validation {
         }
     }
 
-    @ValidationMethod(rule="ATTRIBUTE_IS_PRESENT", severity= RuleSeverity.WARN, type = ValidationType.FEATURE)
+    @ValidationMethod(rule = "ATTRIBUTE_IS_PRESENT", severity = RuleSeverity.WARN, type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
         String featureName = feature.getName();
 
