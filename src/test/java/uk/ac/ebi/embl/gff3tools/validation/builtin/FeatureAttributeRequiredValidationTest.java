@@ -20,16 +20,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 
 public class FeatureAttributeRequiredValidationTest {
 
-    private FeatureAttributeRequiredValidation attributesRequiredValidation;
+    private FeatureAttributeRequiredValidation validation;
 
     @BeforeEach
     public void setUp() {
-        attributesRequiredValidation = new FeatureAttributeRequiredValidation();
+        validation = new FeatureAttributeRequiredValidation();
     }
 
     public static <E> E getRandomEntryFromSet(Set<String> set) {
@@ -41,22 +40,22 @@ public class FeatureAttributeRequiredValidationTest {
 
     @Test
     public void testFeatureAttriuteRequiredValidationSuccess() {
-        String featureName = getRandomEntryFromSet(GFF3Anthology.ATTRIBUTES_REQUIRED_FEATURE_SET);
+        String featureName = getRandomEntryFromSet(validation.featuresWithAttributesRequired);
         GFF3Feature feature = TestUtils.createGFF3Feature(featureName, ".", new HashMap<>() {
             {
                 put("attributeKey", "attributeValue");
             }
         });
 
-        Assertions.assertDoesNotThrow(() -> attributesRequiredValidation.validateFeature(feature, 1));
+        Assertions.assertDoesNotThrow(() -> validation.validateFeature(feature, 1));
     }
 
     @Test
     public void testFeatureAttriuteRequiredValidationFailure() {
-        String featureName = getRandomEntryFromSet(GFF3Anthology.ATTRIBUTES_REQUIRED_FEATURE_SET);
+        String featureName = getRandomEntryFromSet(validation.featuresWithAttributesRequired);
         GFF3Feature feature = TestUtils.createGFF3Feature(featureName, new HashMap<>());
 
         Assertions.assertThrows(
-                ValidationException.class, () -> attributesRequiredValidation.validateFeature(feature, 1));
+                ValidationException.class, () -> validation.validateFeature(feature, 1));
     }
 }

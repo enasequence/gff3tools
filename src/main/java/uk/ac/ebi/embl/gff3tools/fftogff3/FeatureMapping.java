@@ -10,11 +10,10 @@
  */
 package uk.ac.ebi.embl.gff3tools.fftogff3;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -38,6 +37,18 @@ public class FeatureMapping {
                 .filter(entry -> hasAllQualifiers(ffFeature, entry))
                 .max(Comparator.comparingInt(entry -> entry.getQualifiers().size()))
                 .map(ConversionEntry::getSOTerm);
+    }
+
+    public static List<String> getGFF3FeatureCandidateNames(String featureName){
+        List<ConversionEntry> mappings = Optional.ofNullable(
+                        ConversionUtils.getFF2GFF3FeatureMap().get(featureName))
+                .orElse(new ArrayList<>());
+
+        if (mappings.isEmpty()) return Collections.emptyList();
+
+        return mappings.stream()
+                .map(ConversionEntry::getSOTerm)
+                .collect(Collectors.toList());
     }
 
     private static boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {

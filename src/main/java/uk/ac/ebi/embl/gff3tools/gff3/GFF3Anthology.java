@@ -10,7 +10,9 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class GFF3Anthology {
@@ -40,23 +42,13 @@ public class GFF3Anthology {
     public static final Set<String> INTRON_EQUIVALENTS = Set.of(
             INTRON_FEATURE_NAME, SPLICEOSOMAL_INTRON_FEATURE_NAME, AUTOCATALYTICALLY_SPLICED_INTRON_FEATURE_NAME);
 
-    public static final HashSet<String> ATTRIBUTES_REQUIRED_FEATURE_SET = new HashSet<>() {
-        {
-            add("binding_site");
-            add("sequence_difference");
-            add("inversion");
-            add("insertion");
-            add("deletion");
-            add("sequence_feature");
-            add("biological_region");
-            add("meiotic_recombination_region");
-            add("mitotic_recombination_region");
-            add("non_allelic_homologous_recombination_region");
-            add("chromosome_breakpoint");
-            add("recombination_feature");
-            add("transcript");
-            add("pseudogenic_transcript");
-            add("sequence_secondary_structure");
-        }
-    };
+    public static final List<String> FF_FEATURE_SET_ATTRIBUTES_REQUIRED = List.of(
+            "misc_binding",
+            "misc_difference",
+            "misc_feature",
+            "misc_recomb",
+            "misc_RNA",
+            "misc_signal",
+            "misc_structure"
+    );
 }
