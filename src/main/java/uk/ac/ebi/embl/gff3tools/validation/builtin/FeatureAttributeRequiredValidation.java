@@ -18,29 +18,34 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation
 public class FeatureAttributeRequiredValidation extends Validation {
 
-    public HashSet<String> featuresWithAttributesRequired = new HashSet<>();
+    public HashSet<String> featuresToValidate = new HashSet<>();
     private static final String NO_QUALIFIERS_MESSAGE =
             "No attributes are present for accession \"%s\" on feature \"%s\" ";
 
     public FeatureAttributeRequiredValidation() {
         for (String ff_feature : GFF3Anthology.FF_FEATURE_SET_ATTRIBUTES_REQUIRED) {
-            var aliases = FeatureMapping.getGFF3FeatureCandidateNames(ff_feature);
-            if (aliases.isEmpty()) continue;
-            featuresWithAttributesRequired.addAll(aliases);
+            //the feature name could be an ID or a name
+            GFF3Anthology.FF_FEATURE_SET_ATTRIBUTES_REQUIRED.stream()
+                    .flatMap(FeatureMapping::getGFF3FeatureCandidateISOIDsNoQualifiersRequired)
+                    .forEach(featuresToValidate::add);
+            GFF3Anthology.FF_FEATURE_SET_ATTRIBUTES_REQUIRED.stream()
+                    .flatMap(FeatureMapping::getGFF3FeatureCandidateNamesNoQualifiersRequired)
+                    .forEach(featuresToValidate::add);
         }
     }
 
-    @ValidationMethod(type = ValidationType.FEATURE)
+    @ValidationMethod(rule="ATTRIBUTE_IS_PRESENT", severity= RuleSeverity.WARN, type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
         String featureName = feature.getName();
 
-        if (featuresWithAttributesRequired.contains(featureName)
+        if (featuresToValidate.contains(featureName)
                 && feature.getAttributes().keySet().equals(Set.of("ID", "Parent"))) {
             throw new ValidationException(line, NO_QUALIFIERS_MESSAGE.formatted(feature.accession(), featureName));
         }

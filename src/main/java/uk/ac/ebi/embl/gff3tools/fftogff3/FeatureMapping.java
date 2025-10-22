@@ -13,6 +13,8 @@ package uk.ac.ebi.embl.gff3tools.fftogff3;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -38,20 +40,38 @@ public class FeatureMapping {
                 .map(ConversionEntry::getSOTerm);
     }
 
-    public static List<String> getGFF3FeatureCandidateNames(String ffFeatureName) {
-        List<ConversionEntry> mappings = Optional.ofNullable(
-                        ConversionUtils.getFF2GFF3FeatureMap().get(ffFeatureName))
-                .orElse(new ArrayList<>());
+    public static Stream<String> getGFF3FeatureCandidateNames(String ffFeatureName) {
+        return Optional.ofNullable(ConversionUtils.getFF2GFF3FeatureMap().get(ffFeatureName))
+                .orElse(Collections.emptyList())
+                .stream()
+                .map(ConversionEntry::getSOTerm);
+    }
 
-        if (mappings.isEmpty()) return Collections.emptyList();
+    public static Stream<String> getGFF3FeatureCandidateNamesNoQualifiersRequired(String ffFeatureName) {
+        return Optional.ofNullable(ConversionUtils.getFF2GFF3FeatureMap().get(ffFeatureName))
+                .orElse(Collections.emptyList())
+                .stream()
+                .filter(entry -> entry.getQualifiers().isEmpty())
+                .map(ConversionEntry::getSOTerm);
+    }
 
-        return mappings.stream().map(ConversionEntry::getSOTerm).collect(Collectors.toList());
+    public static Stream<String> getGFF3FeatureCandidateISOIDs(String ffFeatureName) {
+        return Optional.ofNullable(ConversionUtils.getFF2GFF3FeatureMap().get(ffFeatureName))
+                .orElse(Collections.emptyList())
+                .stream()
+                .map(ConversionEntry::getSOID);
+    }
+
+    public static Stream<String> getGFF3FeatureCandidateISOIDsNoQualifiersRequired(String ffFeatureName) {
+        return Optional.ofNullable(ConversionUtils.getFF2GFF3FeatureMap().get(ffFeatureName))
+                .orElse(Collections.emptyList())
+                .stream()
+                .filter(entry -> entry.getQualifiers().isEmpty())
+                .map(ConversionEntry::getSOID);
     }
 
     public static Optional<String> getGFF3Attribute(String ffQualifierName) {
-        return Optional.ofNullable(
-                ConversionUtils.getFF2GFF3QualifierMap().get(ffQualifierName)
-        );
+        return Optional.ofNullable(ConversionUtils.getFF2GFF3QualifierMap().get(ffQualifierName));
     }
 
     private static boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {
