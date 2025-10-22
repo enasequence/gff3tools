@@ -39,13 +39,4 @@ public class GFF3Anthology {
 
     public static final Set<String> INTRON_EQUIVALENTS = Set.of(
             INTRON_FEATURE_NAME, SPLICEOSOMAL_INTRON_FEATURE_NAME, AUTOCATALYTICALLY_SPLICED_INTRON_FEATURE_NAME);
-
-    public static final List<String> FF_FEATURE_SET_ATTRIBUTES_REQUIRED = List.of(
-            "misc_binding",
-            "misc_difference",
-            "misc_feature",
-            "misc_recomb",
-            "misc_RNA",
-            "misc_signal",
-            "misc_structure");
 }

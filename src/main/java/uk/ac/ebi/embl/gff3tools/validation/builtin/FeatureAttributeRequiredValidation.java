@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FeatureMapping;
@@ -25,20 +26,27 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 @Gff3Validation
 public class FeatureAttributeRequiredValidation extends Validation {
 
+    public static final List<String> FF_FEATURE_SET_ATTRIBUTES_REQUIRED = List.of(
+            "misc_binding",
+            "misc_difference",
+            "misc_feature",
+            "misc_recomb",
+            "misc_RNA",
+            "misc_signal",
+            "misc_structure");
+
     public HashSet<String> featuresToValidate = new HashSet<>();
     private static final String NO_QUALIFIERS_MESSAGE =
             "No attributes are present for accession \"%s\" on feature \"%s\" ";
 
     public FeatureAttributeRequiredValidation() {
-        for (String ff_feature : GFF3Anthology.FF_FEATURE_SET_ATTRIBUTES_REQUIRED) {
-            // the feature name could be an ID or a name
-            GFF3Anthology.FF_FEATURE_SET_ATTRIBUTES_REQUIRED.stream()
-                    .flatMap(FeatureMapping::getGFF3FeatureCandidateISOIDsNoQualifiersRequired)
-                    .forEach(featuresToValidate::add);
-            GFF3Anthology.FF_FEATURE_SET_ATTRIBUTES_REQUIRED.stream()
-                    .flatMap(FeatureMapping::getGFF3FeatureCandidateNamesNoQualifiersRequired)
-                    .forEach(featuresToValidate::add);
-        }
+        // the feature name could be an ID or a name
+        FF_FEATURE_SET_ATTRIBUTES_REQUIRED.stream()
+                .flatMap(FeatureMapping::getGFF3FeatureCandidateISOIDsNoQualifiersRequired)
+                .forEach(featuresToValidate::add);
+        FF_FEATURE_SET_ATTRIBUTES_REQUIRED.stream()
+                .flatMap(FeatureMapping::getGFF3FeatureCandidateNamesNoQualifiersRequired)
+                .forEach(featuresToValidate::add);
     }
 
     @ValidationMethod(rule = "ATTRIBUTE_IS_PRESENT", severity = RuleSeverity.WARN, type = ValidationType.FEATURE)
@@ -46,7 +54,8 @@ public class FeatureAttributeRequiredValidation extends Validation {
         String featureName = feature.getName();
 
         if (featuresToValidate.contains(featureName)
-                && feature.getAttributes().keySet().equals(Set.of("ID", "Parent"))) {
+                && (feature.getAttributes().keySet().equals(Set.of("ID", "Parent"))
+                    || feature.getAttributes().keySet().equals(Set.of("ID")))) {
             throw new ValidationException(line, NO_QUALIFIERS_MESSAGE.formatted(feature.accession(), featureName));
         }
     }
