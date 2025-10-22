@@ -10,8 +10,6 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -49,6 +47,5 @@ public class GFF3Anthology {
             "misc_recomb",
             "misc_RNA",
             "misc_signal",
-            "misc_structure"
-    );
+            "misc_structure");
 }

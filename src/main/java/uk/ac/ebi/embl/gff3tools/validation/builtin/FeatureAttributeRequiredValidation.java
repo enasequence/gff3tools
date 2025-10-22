@@ -10,6 +10,8 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
+import java.util.HashSet;
+import java.util.Set;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FeatureMapping;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
@@ -19,9 +21,6 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-import java.util.HashSet;
-import java.util.Set;
-
 @Gff3Validation
 public class FeatureAttributeRequiredValidation extends Validation {
 
@@ -30,9 +29,9 @@ public class FeatureAttributeRequiredValidation extends Validation {
             "No attributes are present for accession \"%s\" on feature \"%s\" ";
 
     public FeatureAttributeRequiredValidation() {
-        for (String ff_feature : GFF3Anthology.FF_FEATURE_SET_ATTRIBUTES_REQUIRED){
+        for (String ff_feature : GFF3Anthology.FF_FEATURE_SET_ATTRIBUTES_REQUIRED) {
             var aliases = FeatureMapping.getGFF3FeatureCandidateNames(ff_feature);
-            if (aliases.isEmpty())continue;
+            if (aliases.isEmpty()) continue;
             featuresWithAttributesRequired.addAll(aliases);
         }
     }
@@ -41,8 +40,8 @@ public class FeatureAttributeRequiredValidation extends Validation {
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
         String featureName = feature.getName();
 
-        if (GFF3Anthology.FF_FEATURE_SET_ATTRIBUTES_REQUIRED.contains(featureName)
-                && feature.getAttributes().keySet().equals(Set.of("ID", "Parent"))){
+        if (featuresWithAttributesRequired.contains(featureName)
+                && feature.getAttributes().keySet().equals(Set.of("ID", "Parent"))) {
             throw new ValidationException(line, NO_QUALIFIERS_MESSAGE.formatted(feature.accession(), featureName));
         }
     }

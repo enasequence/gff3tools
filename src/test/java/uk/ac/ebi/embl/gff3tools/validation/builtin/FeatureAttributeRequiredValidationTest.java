@@ -43,6 +43,8 @@ public class FeatureAttributeRequiredValidationTest {
         String featureName = getRandomEntryFromSet(validation.featuresWithAttributesRequired);
         GFF3Feature feature = TestUtils.createGFF3Feature(featureName, ".", new HashMap<>() {
             {
+                put("ID", "O1");
+                put("Parent", "mom");
                 put("attributeKey", "attributeValue");
             }
         });
@@ -53,9 +55,13 @@ public class FeatureAttributeRequiredValidationTest {
     @Test
     public void testFeatureAttriuteRequiredValidationFailure() {
         String featureName = getRandomEntryFromSet(validation.featuresWithAttributesRequired);
-        GFF3Feature feature = TestUtils.createGFF3Feature(featureName, new HashMap<>());
+        GFF3Feature feature = TestUtils.createGFF3Feature(featureName, new HashMap<>(){
+            {
+                put("ID", "O1");
+                put("Parent", "mom");
+            }
+        });
 
-        Assertions.assertThrows(
-                ValidationException.class, () -> validation.validateFeature(feature, 1));
+        Assertions.assertThrows(ValidationException.class, () -> validation.validateFeature(feature, 1));
     }
 }

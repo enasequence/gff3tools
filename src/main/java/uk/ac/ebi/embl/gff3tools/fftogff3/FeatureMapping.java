@@ -13,7 +13,6 @@ package uk.ac.ebi.embl.gff3tools.fftogff3;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -39,16 +38,14 @@ public class FeatureMapping {
                 .map(ConversionEntry::getSOTerm);
     }
 
-    public static List<String> getGFF3FeatureCandidateNames(String featureName){
+    public static List<String> getGFF3FeatureCandidateNames(String featureName) {
         List<ConversionEntry> mappings = Optional.ofNullable(
                         ConversionUtils.getFF2GFF3FeatureMap().get(featureName))
                 .orElse(new ArrayList<>());
 
         if (mappings.isEmpty()) return Collections.emptyList();
 
-        return mappings.stream()
-                .map(ConversionEntry::getSOTerm)
-                .collect(Collectors.toList());
+        return mappings.stream().map(ConversionEntry::getSOTerm).collect(Collectors.toList());
     }
 
     private static boolean hasAllQualifiers(Feature feature, ConversionEntry conversionEntry) {
