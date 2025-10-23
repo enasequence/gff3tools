@@ -12,11 +12,13 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 
@@ -46,9 +48,45 @@ public class LengthValidationTest {
     }
 
     @Test
+    public void testPropetideValidationInvalidName() {
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), 1L, 180L);
+        Assertions.assertDoesNotThrow(() -> lengthValidation.validatePropeptideLength(feature, 1));
+    }
+
+    @Test
     public void testIntronValidationSuccess() {
         feature = TestUtils.createGFF3Feature(OntologyTerm.SPLICEOSOMAL_INTRON.name(), 1L, 20L);
         Assertions.assertDoesNotThrow(() -> lengthValidation.validateIntronLength(feature, 1));
+    }
+
+    @Test
+    public void testIntronValidationForCDSSuccess() {
+        feature = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(),
+                1L,
+                5L,
+                Map.of(
+                        GFF3Attributes.RIBOSOMAL_SLIPPAGE,
+                        "ribsomal_slippage",
+                        GFF3Attributes.TRANS_SPLICING,
+                        "trans_splicing",
+                        GFF3Attributes.ARTIFICIAL_LOCATION,
+                        "artificial_location"));
+        Assertions.assertDoesNotThrow(() -> lengthValidation.validateIntronLength(feature, 1));
+    }
+
+    @Test
+    public void testIntronValidationForCDSSuccessWithPseudo() {
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), 1L, 5L, Map.of(GFF3Attributes.PSEUDO, "pseudo"));
+        Assertions.assertDoesNotThrow(() -> lengthValidation.validateIntronLength(feature, 1));
+    }
+
+    @Test
+    public void testIntronValidationForCDSFailure() {
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), 1L, 5L);
+        ValidationException exception =
+                assertThrows(ValidationException.class, () -> lengthValidation.validateIntronLength(feature, 1));
+        assertTrue(exception.getMessage().contains("Intron usually expected to be at least 10 nt long"));
     }
 
     @Test

@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Set;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FeatureMapping;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
@@ -55,7 +54,7 @@ public class FeatureAttributeRequiredValidation extends Validation {
 
         if (featuresToValidate.contains(featureName)
                 && (feature.getAttributes().keySet().equals(Set.of("ID", "Parent"))
-                    || feature.getAttributes().keySet().equals(Set.of("ID")))) {
+                        || feature.getAttributes().keySet().equals(Set.of("ID")))) {
             throw new ValidationException(line, NO_QUALIFIERS_MESSAGE.formatted(feature.accession(), featureName));
         }
     }

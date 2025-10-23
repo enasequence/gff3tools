@@ -51,4 +51,7 @@ public class GFF3Attributes {
     public static final String UNITARY = "unitary";
     public static final String ALLELIC = "allelic";
     public static final String UNKNOWN = "unknown";
+    public static final String ARTIFICIAL_LOCATION = "artificial_location";
+    public static final String RIBOSOMAL_SLIPPAGE = "ribosomal_slippage";
+    public static final String TRANS_SPLICING = "trans_splicing";
 }
