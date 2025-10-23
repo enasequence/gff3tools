@@ -45,10 +45,13 @@ public class GFF3Attributes {
     public static final String MACRO_NUCLEAR = "macronuclear";
     public static final String GENE = "gene";
     public static final String MOL_TYPE = "mol_type";
-    public static final String CIRCULAR_RNA = "circular_RNA";
+    public static final String CIRCULAR_RNA = "Is_circular";
     public static final String PROCESSED = "processed";
     public static final String UNPROCESSED = "unprocessed";
     public static final String UNITARY = "unitary";
     public static final String ALLELIC = "allelic";
     public static final String UNKNOWN = "unknown";
+    public static final String ARTIFICIAL_LOCATION = "artificial_location";
+    public static final String RIBOSOMAL_SLIPPAGE = "ribosomal_slippage";
+    public static final String TRANS_SPLICING = "trans_splicing";
 }

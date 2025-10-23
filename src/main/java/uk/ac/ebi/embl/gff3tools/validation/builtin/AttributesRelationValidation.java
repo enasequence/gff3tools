@@ -16,14 +16,14 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
+import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.validation.Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 public class AttributesRelationValidation extends Validation {
-
-    public static final String VALIDATION_RULE = "GFF3_ATTRIBUTES_VALIDATION";
 
     private static final String ERROR_MUTUALLY_EXCLUSIVE_BY_VALUE =
             "Attribute \"%s\" must not exist when qualifier \"%s\" has value \"%s\"";
@@ -50,8 +50,9 @@ public class AttributesRelationValidation extends Validation {
             Map.of("clone", Set.of("sub_clone", "clone_lib"));
 
     public static final String MITOCHONDRION = "mitochondrion";
-    public static final String ENVIRONMENTAL_SAMPLE_VALUE_PATTERN = "^(uncultured).*";
     public static final String PROVIRAL_VALUE_PATTERN = ".*endogenous retrovirus$";
+
+    private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
 
     private static final Map<String, Set<String>> MUTUALLY_EXCLUSIVE = Map.of(
             GFF3Attributes.PROVIRAL, Set.of(GFF3Attributes.VIRION),
@@ -81,23 +82,7 @@ public class AttributesRelationValidation extends Validation {
             GFF3Attributes.GERM_LINE, Map.of(GFF3Attributes.MOL_TYPE, Set.of("mRNA")),
             GFF3Attributes.MACRO_NUCLEAR, Map.of(GFF3Attributes.ORGANELLE, Set.of(MITOCHONDRION)));
 
-    @ValidationMethod(rule = "GFF3_CIRCULAR_RNA_VALIDATION", type = ValidationType.FEATURE)
-    public void validateCircularRNAAttribute(GFF3Feature feature, int line) throws ValidationException {
-
-        String featureName = feature.getName();
-        if (feature.isAttributeExists(GFF3Attributes.CIRCULAR_RNA)) {
-            // TODO: Need to check if this needs to be done for child of CDS, rRNA, tRNA
-            Set<String> allowedFeatures =
-                    Set.of(OntologyTerm.CDS.name(), OntologyTerm.TRNA.name(), OntologyTerm.MRNA.name());
-
-            if (!allowedFeatures.contains(featureName)) {
-                throw new ValidationException(
-                        VALIDATION_RULE, line, CIRCULAR_RNA_ATTRIBUTE_ERROR.formatted(featureName));
-            }
-        }
-    }
-
-    @ValidationMethod(rule = "GFF3_EXCLUSIVE_ATTRIBUTES_VALIDATION", type = ValidationType.FEATURE)
+    @ValidationMethod(rule = "EXCLUSIVE_ATTRIBUTES", type = ValidationType.FEATURE)
     public void validateExclusiveAttributes(GFF3Feature feature, int line) throws ValidationException {
         for (Map.Entry<String, Set<String>> entry : EXCLUSIVE_ATTRIBUTES.entrySet()) {
             String key = entry.getKey();
@@ -109,14 +94,13 @@ public class AttributesRelationValidation extends Validation {
                 String otherValue = feature.getAttributeByName(other);
 
                 if (keyValue.equals(otherValue)) {
-                    throw new ValidationException(
-                            VALIDATION_RULE, line, EXCLUSIVE_ATTRIBUTES_SAME_VALUE.formatted(key, other));
+                    throw new ValidationException(line, EXCLUSIVE_ATTRIBUTES_SAME_VALUE.formatted(key, other));
                 }
             }
         }
     }
 
-    @ValidationMethod(rule = "GFF3_REQUIRED_ATTRIBUTES_VALIDATION", type = ValidationType.ANNOTATION)
+    @ValidationMethod(rule = "REQUIRED_ATTRIBUTES", type = ValidationType.ANNOTATION)
     public void validateRequiredAttributes(GFF3Annotation annotation, int line) throws ValidationException {
         Set<String> presentQualifiers = annotation.getFeatures().stream()
                 .flatMap(f -> f.getAttributes().keySet().stream())
@@ -125,14 +109,12 @@ public class AttributesRelationValidation extends Validation {
         if (presentQualifiers.contains(GFF3Attributes.SATELLITE)) {
             if (!presentQualifiers.contains(GFF3Attributes.MAP)) {
                 throw new ValidationException(
-                        VALIDATION_RULE,
                         line,
                         REQUIRED_ATTRIBUTES_MISSING_IN_ANNOTATION.formatted(
                                 GFF3Attributes.MAP, GFF3Attributes.SATELLITE));
             }
             if (!presentQualifiers.contains(GFF3Attributes.PCR_PRIMERS)) {
                 throw new ValidationException(
-                        VALIDATION_RULE,
                         line,
                         REQUIRED_ATTRIBUTES_MISSING_IN_ANNOTATION.formatted(
                                 GFF3Attributes.PCR_PRIMERS, GFF3Attributes.SATELLITE));
@@ -140,27 +122,28 @@ public class AttributesRelationValidation extends Validation {
         }
     }
 
-    @ValidationMethod(rule = "GFF3_MUTUALLY_REQUIRED_ATTRIBUTES_VALIDATION", type = ValidationType.FEATURE)
+    @ValidationMethod(rule = "MUTUALLY_REQUIRED_ATTRIBUTES", type = ValidationType.FEATURE)
     public void validateMutuallyRequiredAttributes(GFF3Feature feature, int line) throws ValidationException {
 
         for (Map.Entry<String, Set<String>> entry : MUTUALLY_REQUIRED.entrySet()) {
             String presentQualifier = entry.getKey();
             Set<String> requiredQualifiers = entry.getValue();
 
-            if (feature.isAttributeExists(presentQualifier)) {
+            if (feature.hasAttribute(presentQualifier)) {
                 for (String required : requiredQualifiers) {
-                    if (!feature.isAttributeExists(required)) {
+                    if (!feature.hasAttribute(required)) {
                         throw new ValidationException(
-                                VALIDATION_RULE,
-                                line,
-                                REQUIRED_ATTRIBUTES_MISSING_IN_FEATURE.formatted(required, presentQualifier));
+                                line, REQUIRED_ATTRIBUTES_MISSING_IN_FEATURE.formatted(required, presentQualifier));
                     }
                 }
             }
         }
     }
 
-    @ValidationMethod(rule = "GFF3_MUTUALLY_EXCLUSIVE_ATTRIBUTES_VALIDATION", type = ValidationType.FEATURE)
+    @ValidationMethod(
+            rule = "MUTUALLY_EXCLUSIVE_ATTRIBUTES",
+            type = ValidationType.FEATURE,
+            severity = RuleSeverity.WARN)
     public void validateMutuallyExclusiveAttributes(GFF3Feature feature, int line) throws ValidationException {
         Set<String> featureAttributeKeys = new HashSet<>(feature.getAttributes().keySet());
         featureAttributeKeys.retainAll(MUTUALLY_EXCLUSIVE.keySet());
@@ -172,28 +155,25 @@ public class AttributesRelationValidation extends Validation {
         for (String key : featureAttributeKeys) {
 
             for (String value : MUTUALLY_EXCLUSIVE.get(key)) {
-                if (feature.isAttributeExists(value)) {
+                if (feature.hasAttribute(value)) {
                     if (GFF3Attributes.PSEUDO.equals(key) || GFF3Attributes.PSEUDOGENE.equals(key)) {
                         throw new ValidationException(
-                                VALIDATION_RULE,
-                                line,
-                                ERROR_PSEUDO_PRODUCT_CONFLICT.formatted(key, value, value, GFF3Attributes.NOTE));
+                                line, ERROR_PSEUDO_PRODUCT_CONFLICT.formatted(key, value, value, GFF3Attributes.NOTE));
                     } else {
-                        throw new ValidationException(
-                                VALIDATION_RULE, line, ERROR_MUTUALLY_EXCLUSIVE.formatted(key, value));
+                        throw new ValidationException(line, ERROR_MUTUALLY_EXCLUSIVE.formatted(key, value));
                     }
                 }
             }
         }
     }
 
-    @ValidationMethod(rule = "GFF3_MUTUALLY_EXCLUSIVE__ATTRIBUTES_VALUE_VALIDATION", type = ValidationType.FEATURE)
+    @ValidationMethod(rule = "MUTUALLY_EXCLUSIVE_ATTRIBUTES_VALUE", type = ValidationType.FEATURE)
     public void validateMutuallyExclusiveAttributesByValue(GFF3Feature feature, int line) throws ValidationException {
         for (Map.Entry<String, Map<String, Set<String>>> entry : MUTUALLY_EXCLUSIVE_BY_VALUE.entrySet()) {
             String disallowedQualifier = entry.getKey();
             Map<String, Set<String>> conditions = entry.getValue();
 
-            if (feature.isAttributeExists(disallowedQualifier)) {
+            if (feature.hasAttribute(disallowedQualifier)) {
                 for (Map.Entry<String, Set<String>> condition : conditions.entrySet()) {
                     String conditionQualifier = condition.getKey();
                     Set<String> disallowedValues = condition.getValue();
@@ -201,7 +181,6 @@ public class AttributesRelationValidation extends Validation {
                     String actualValue = feature.getAttributeByName(conditionQualifier);
                     if (actualValue != null && disallowedValues.contains(actualValue)) {
                         throw new ValidationException(
-                                VALIDATION_RULE,
                                 line,
                                 ERROR_MUTUALLY_EXCLUSIVE_BY_VALUE.formatted(
                                         disallowedQualifier, conditionQualifier, actualValue));

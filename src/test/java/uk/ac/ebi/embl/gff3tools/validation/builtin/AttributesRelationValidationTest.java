@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -42,8 +41,8 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateMutuallyRequiredAttributesSuccess() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CLONE, "clone", GFF3Attributes.SUB_CLONE, "subClone"));
         Assertions.assertDoesNotThrow(
                 () -> attributesRelationValidation.validateMutuallyRequiredAttributes(feature, 1));
@@ -52,9 +51,7 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateMutuallyRequiredAttributesFailure() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.SUB_CLONE, "subclone"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.SUB_CLONE, "subclone"));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class,
@@ -66,8 +63,8 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateMutuallyExclusiveAttributesSuccess() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.PSEUDO, "pseudo", GFF3Attributes.VARIETY, "variety"));
         Assertions.assertDoesNotThrow(
                 () -> attributesRelationValidation.validateMutuallyExclusiveAttributes(feature, 1));
@@ -76,8 +73,8 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateMutuallyExclusiveAttributesFailure_PseudoCases() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.PSEUDO, "pseudo", GFF3Attributes.PRODUCT, "product"));
 
         ValidationException ex = Assertions.assertThrows(
@@ -92,8 +89,8 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateMutuallyExclusiveAttributesFailure() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.REARRANGED, "rearranged", GFF3Attributes.GERM_LINE, "germLine"));
 
         ValidationException ex = Assertions.assertThrows(
@@ -108,9 +105,7 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateMutuallyExclusiveAttributes() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.PROTEIN_ID, "proteinID"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.PROTEIN_ID, "proteinID"));
 
         Assertions.assertDoesNotThrow(
                 () -> attributesRelationValidation.validateMutuallyExclusiveAttributes(feature, 1));
@@ -119,8 +114,8 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateMutuallyExclusiveAttributesByValueSuccess() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.ORGANELLE, "organelle", GFF3Attributes.MACRO_NUCLEAR, "macronuclear"));
 
         Assertions.assertDoesNotThrow(
@@ -130,8 +125,8 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateMutuallyExclusiveAttributesByValueGeneSuccess() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.GENE, "18S rRNA", GFF3Attributes.MACRO_NUCLEAR, "macronuclear"));
 
         Assertions.assertDoesNotThrow(
@@ -141,8 +136,8 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateMutuallyExclusiveAttributesByValueFailure() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.ORGANELLE, MITOCHONDRION, GFF3Attributes.MACRO_NUCLEAR, "macronuclear"));
 
         ValidationException ex = Assertions.assertThrows(
@@ -158,8 +153,8 @@ public class AttributesRelationValidationTest {
     public void testValidateMutuallyExclusiveAttributesByValueGeneFailure() {
         String rRna = "18S rRNA";
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.GENE, rRna, GFF3Attributes.ORGANELLE, "organelle"));
 
         ValidationException ex = Assertions.assertThrows(
@@ -174,12 +169,10 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateRequiredAttributesInAnnotationSuccess() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.PROTEIN_ID, "proteinID"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.PROTEIN_ID, "proteinID"));
         GFF3Feature sig = TestUtils.createGFF3Feature(
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(
                         GFF3Attributes.SATELLITE,
                         "satellite",
@@ -188,8 +181,8 @@ public class AttributesRelationValidationTest {
                         GFF3Attributes.PCR_PRIMERS,
                         "pcr"));
         GFF3Feature prop = TestUtils.createGFF3Feature(
-                GFF3Anthology.PROPETIDE_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.PROPEPTIDE.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
         gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
@@ -199,16 +192,14 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateRequiredAttributesInAnnotationFailure() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.PROTEIN_ID, "proteinID"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.PROTEIN_ID, "proteinID"));
         GFF3Feature sig = TestUtils.createGFF3Feature(
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.SATELLITE, "satellite", GFF3Attributes.MAP, "map"));
         GFF3Feature prop = TestUtils.createGFF3Feature(
-                GFF3Anthology.PROPETIDE_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.PROPEPTIDE.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
         gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
@@ -224,8 +215,8 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateExclusiveAttributesSubCloneSuccess() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CLONE, "clone", GFF3Attributes.SUB_CLONE, "subClone"));
         Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateExclusiveAttributes(feature, 1));
     }
@@ -233,8 +224,8 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateExclusiveAttributesCloneLibSuccess() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(
                         GFF3Attributes.CLONE,
                         "clone",
@@ -248,8 +239,8 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateExclusiveAttributesSubClonFailure() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CLONE, "clone", GFF3Attributes.SUB_CLONE, "clone"));
 
         ValidationException ex = Assertions.assertThrows(
@@ -263,8 +254,8 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateExclusiveAttributesFailure() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(
                         GFF3Attributes.CLONE,
                         "clone",
@@ -284,49 +275,10 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateExclusiveAttributesFailureEmptyValue() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CLONE, "", GFF3Attributes.SUB_CLONE, "subclone", GFF3Attributes.CLONE_LIB, ""));
 
         Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateExclusiveAttributes(feature, 1));
-    }
-
-    @Test
-    public void testValidateFeatureCircularRNASuccess() {
-        GFF3Feature cds = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(),
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.CIRCULAR_RNA, "circularRNA"));
-        GFF3Feature trna = TestUtils.createGFF3Feature(
-                OntologyTerm.TRNA.name(),
-                GFF3Anthology.T_RNA_FEATURE_NAME,
-                Map.of(GFF3Attributes.CIRCULAR_RNA, "tRnaCircularRNA"));
-        GFF3Feature mrna = TestUtils.createGFF3Feature(
-                OntologyTerm.MRNA.name(),
-                GFF3Anthology.M_RNA_FEATURE_NAME,
-                Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
-
-        Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateCircularRNAAttribute(cds, 1));
-        Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateCircularRNAAttribute(trna, 2));
-        Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateCircularRNAAttribute(mrna, 3));
-    }
-
-    @Test
-    public void testValidateFeatureCircularRNAFailure() {
-        GFF3Feature cds = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(),
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.CIRCULAR_RNA, "circularRNA"));
-        GFF3Feature trna = TestUtils.createGFF3Feature(
-                OntologyTerm.PROPEPTIDE.name(),
-                GFF3Anthology.PROPETIDE_FEATURE_NAME,
-                Map.of(GFF3Attributes.CIRCULAR_RNA, "tRnaCircularRNA"));
-
-        Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateCircularRNAAttribute(cds, 1));
-        ValidationException ex = Assertions.assertThrows(
-                ValidationException.class, () -> attributesRelationValidation.validateCircularRNAAttribute(trna, 2));
-
-        Assertions.assertTrue(ex.getMessage()
-                .contains("Attribute circularRNA is not allowed in feature \"%s\"".formatted(trna.getName())));
     }
 }

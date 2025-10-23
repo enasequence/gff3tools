@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -42,8 +41,8 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateAttributesPatternTRNASuccess() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.T_RNA_FEATURE_NAME,
-                GFF3Anthology.T_RNA_FEATURE_NAME,
+                OntologyTerm.TRNA.name(),
+                OntologyTerm.TRNA.name(),
                 Map.of(GFF3Attributes.PRODUCT, "transfer RNA-leucine"));
 
         Assertions.assertDoesNotThrow(() -> attributesValueValidation.validateAttributeValuePattern(feature, 1));
@@ -53,7 +52,7 @@ public class AttributesValueValidationTest {
     public void testValidateAttributesPatternTRNAFailure() {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.TRNA.name(),
-                GFF3Anthology.T_RNA_FEATURE_NAME,
+                OntologyTerm.TRNA.name(),
                 Map.of(GFF3Attributes.PRODUCT, "transfer RNA-synthetase alpha"));
 
         ValidationException ex = Assertions.assertThrows(
@@ -67,8 +66,8 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateAttributesPatternRRNASuccess() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.R_RNA_FEATURE_NAME,
-                GFF3Anthology.R_RNA_FEATURE_NAME,
+                OntologyTerm.RRNA.name(),
+                OntologyTerm.RRNA.name(),
                 Map.of(GFF3Attributes.PRODUCT, "12S ribosomal RNA"));
 
         Assertions.assertDoesNotThrow(() -> attributesValueValidation.validateAttributeValuePattern(feature, 1));
@@ -78,7 +77,7 @@ public class AttributesValueValidationTest {
     public void testValidateAttributesPatternRRNAFailure() {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.RRNA.name(),
-                GFF3Anthology.R_RNA_FEATURE_NAME,
+                OntologyTerm.RRNA.name(),
                 Map.of(GFF3Attributes.PRODUCT, "16S ribosomalRNA "));
 
         ValidationException ex = Assertions.assertThrows(
@@ -92,8 +91,8 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateAttributesPatternSuccessForNote() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.NOTE, "notes", GFF3Attributes.PROVIRAL, "HERV-K endogenous retrovirus"));
 
         Assertions.assertDoesNotThrow(() -> attributesValueValidation.validateAttributeValuePattern(feature, 1));
@@ -102,7 +101,7 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateAttributesPatternSuccessForNoteWithoutProviral() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME, GFF3Anthology.CDS_FEATURE_NAME, Map.of(GFF3Attributes.NOTE, "notes"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.NOTE, "notes"));
 
         Assertions.assertDoesNotThrow(() -> attributesValueValidation.validateAttributeValuePattern(feature, 1));
     }
@@ -110,12 +109,12 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateAttributesPatternFailureForNote() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.NOTE, "notes", GFF3Attributes.PROVIRAL, "HERV-K endegenous retravirus"));
 
         ValidationException ex = Assertions.assertThrows(
-                ValidationException.class, () -> attributesValueValidation.validateAttributeValuePattern(feature, 1));
+                ValidationException.class, () -> attributesValueValidation.validateProviralAttribute(feature, 1));
 
         Assertions.assertTrue(ex.getMessage()
                 .contains("Attribute \"%s\" value should match the pattern \"%s\""
@@ -123,55 +122,16 @@ public class AttributesValueValidationTest {
     }
 
     @Test
-    public void testValidateAttributesPatternSuccessForOrganism() {
-        feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(
-                        GFF3Attributes.ORGANISM,
-                        "organism",
-                        GFF3Attributes.ISOLATION_SOURCE,
-                        "isolation_source",
-                        GFF3Attributes.ENVIRONMENTAL_SAMPLE,
-                        "uncultured bacterium"));
-
-        Assertions.assertDoesNotThrow(() -> attributesValueValidation.validateAttributeValuePattern(feature, 1));
-    }
-
-    @Test
-    public void testValidateAttributesPatternFailureForOrganism() {
-        feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(
-                        GFF3Attributes.ORGANISM,
-                        "organism",
-                        GFF3Attributes.ISOLATION_SOURCE,
-                        "isolation_source",
-                        GFF3Attributes.ENVIRONMENTAL_SAMPLE,
-                        "soil microbe"));
-
-        ValidationException ex = Assertions.assertThrows(
-                ValidationException.class, () -> attributesValueValidation.validateAttributeValuePattern(feature, 1));
-
-        Assertions.assertTrue(ex.getMessage()
-                .contains("Attribute \"%s\" value should match the pattern \"%s\""
-                        .formatted(GFF3Attributes.ENVIRONMENTAL_SAMPLE, ENVIRONMENTAL_SAMPLE_VALUE_PATTERN)));
-    }
-
-    @Test
     public void testValidateAttributeValueDependencySuccessNoGene() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.ORGANELLE, "mitochondria"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.ORGANELLE, "mitochondria"));
         GFF3Feature sig = TestUtils.createGFF3Feature(
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
                 Map.of(GFF3Attributes.GENE, ""));
         GFF3Feature prop = TestUtils.createGFF3Feature(
-                GFF3Anthology.PROPETIDE_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.PROPEPTIDE.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
         gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
@@ -182,14 +142,14 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateAttributeValueDependencyNoOrganelleSuccess() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME, GFF3Anthology.CDS_FEATURE_NAME, Map.of(GFF3Attributes.GENE, "123"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.GENE, "123"));
         GFF3Feature sig = TestUtils.createGFF3Feature(
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
                 Map.of(GFF3Attributes.ORGANELLE, ""));
         GFF3Feature prop = TestUtils.createGFF3Feature(
-                GFF3Anthology.PROPETIDE_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.PROPEPTIDE.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
         gff3Annotation.setFeatures(List.of(cds, prop));
 
@@ -200,16 +160,14 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateAttributeValueDependencySuccess() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.GENE, "12S rRNA"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.GENE, "12S rRNA"));
         GFF3Feature sig = TestUtils.createGFF3Feature(
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
                 Map.of(GFF3Attributes.ORGANELLE, "mitochondrion"));
         GFF3Feature prop = TestUtils.createGFF3Feature(
-                GFF3Anthology.PROPETIDE_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.PROPEPTIDE.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
         gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
@@ -220,16 +178,14 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateAttributeValueDependencyFailureEmptyValue() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.GENE, "12S rRNA"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.GENE, "12S rRNA"));
         GFF3Feature sig = TestUtils.createGFF3Feature(
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
                 Map.of(GFF3Attributes.ORGANELLE, ""));
         GFF3Feature prop = TestUtils.createGFF3Feature(
-                GFF3Anthology.PROPETIDE_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.PROPEPTIDE.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
         gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
@@ -246,16 +202,14 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateAttributeValueDependencyFailureInvalidValue() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.GENE, "12S rRNA"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.GENE, "12S rRNA"));
         GFF3Feature sig = TestUtils.createGFF3Feature(
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
                 Map.of(GFF3Attributes.ORGANELLE, "org"));
         GFF3Feature prop = TestUtils.createGFF3Feature(
-                GFF3Anthology.PROPETIDE_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.PROPEPTIDE.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
         gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
@@ -272,16 +226,14 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateAttributeValueDependencyWithOtherValue() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.GENE, "12S tRNA"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.GENE, "12S tRNA"));
         GFF3Feature sig = TestUtils.createGFF3Feature(
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
                 Map.of(GFF3Attributes.ORGANELLE, "organelle"));
         GFF3Feature prop = TestUtils.createGFF3Feature(
-                GFF3Anthology.PROPETIDE_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.PROPEPTIDE.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
         gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
@@ -290,35 +242,9 @@ public class AttributesValueValidationTest {
     }
 
     @Test
-    public void testValidatePseudoGeneValueSuccess() {
-        feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.PSEUDOGENE, "processed"));
-
-        Assertions.assertDoesNotThrow(() -> attributesValueValidation.validatePseudoGeneValue(feature, 1));
-    }
-
-    @Test
-    public void testValidatePseudoGeneValueFailure() {
-        feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.PSEUDOGENE, "semiprocessed"));
-
-        ValidationException ex = Assertions.assertThrows(
-                ValidationException.class, () -> attributesValueValidation.validatePseudoGeneValue(feature, 1));
-
-        Assertions.assertTrue(
-                ex.getMessage().contains("pseudogene qualifier value \"%s\" is invalid".formatted("semiprocessed")));
-    }
-
-    @Test
     public void testValidateProteinValueSuccess() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.PROTEIN_ID, "protein"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.PROTEIN_ID, "protein"));
 
         Assertions.assertDoesNotThrow(() -> attributesValueValidation.validateProteinValue(feature, 1));
     }
@@ -326,7 +252,7 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateProteinValueFailure() {
         feature = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME, GFF3Anthology.CDS_FEATURE_NAME, Map.of(GFF3Attributes.PROTEIN_ID, ""));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.PROTEIN_ID, ""));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> attributesValueValidation.validateProteinValue(feature, 1));
@@ -337,16 +263,14 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateQualifierValueDependencySuccessNoGene() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.ORGANELLE, "mitochondria"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.ORGANELLE, "mitochondria"));
         GFF3Feature sig = TestUtils.createGFF3Feature(
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
                 Map.of(GFF3Attributes.GENE, ""));
         GFF3Feature prop = TestUtils.createGFF3Feature(
-                GFF3Anthology.PROPETIDE_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.PROPEPTIDE.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
         gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
@@ -357,14 +281,14 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateQualifierValueDependencyNoOrganelleSuccess() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME, GFF3Anthology.CDS_FEATURE_NAME, Map.of(GFF3Attributes.GENE, "123"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.GENE, "123"));
         GFF3Feature sig = TestUtils.createGFF3Feature(
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
                 Map.of(GFF3Attributes.ORGANELLE, ""));
         GFF3Feature prop = TestUtils.createGFF3Feature(
-                GFF3Anthology.PROPETIDE_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.PROPEPTIDE.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
         gff3Annotation.setFeatures(List.of(cds, prop));
 
@@ -375,16 +299,14 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateQualifierValueDependencySuccess() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.GENE, "12S rRNA"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.GENE, "12S rRNA"));
         GFF3Feature sig = TestUtils.createGFF3Feature(
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
                 Map.of(GFF3Attributes.ORGANELLE, "mitochondrion"));
         GFF3Feature prop = TestUtils.createGFF3Feature(
-                GFF3Anthology.PROPETIDE_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.PROPEPTIDE.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
         gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
@@ -395,16 +317,14 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateQualifierValueDependencyFailureEmptyValue() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.GENE, "12S rRNA"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.GENE, "12S rRNA"));
         GFF3Feature sig = TestUtils.createGFF3Feature(
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
                 Map.of(GFF3Attributes.ORGANELLE, ""));
         GFF3Feature prop = TestUtils.createGFF3Feature(
-                GFF3Anthology.PROPETIDE_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.PROPEPTIDE.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
         gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
@@ -421,16 +341,14 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateQualifierValueDependencyFailureInvalidValue() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                GFF3Anthology.CDS_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
-                Map.of(GFF3Attributes.GENE, "12S rRNA"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.GENE, "12S rRNA"));
         GFF3Feature sig = TestUtils.createGFF3Feature(
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
-                GFF3Anthology.SIG_PEPTIDE_FEATURE_NAME,
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
+                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
                 Map.of(GFF3Attributes.ORGANELLE, "org"));
         GFF3Feature prop = TestUtils.createGFF3Feature(
-                GFF3Anthology.PROPETIDE_FEATURE_NAME,
-                GFF3Anthology.CDS_FEATURE_NAME,
+                OntologyTerm.PROPEPTIDE.name(),
+                OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
         gff3Annotation.setFeatures(List.of(cds, sig, prop));
 

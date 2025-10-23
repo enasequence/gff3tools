@@ -115,7 +115,14 @@ public class GFF3Feature {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    public boolean isAttributeExists(String name) {
+    public boolean hasAttribute(String name) {
         return attributes.containsKey(name) && attributes.get(name) != null;
+    }
+
+    public boolean isPseudo() {
+        if (attributes == null || attributes.isEmpty()) {
+            return false;
+        }
+        return attributes.containsKey(GFF3Attributes.PSEUDO) || attributes.containsKey(GFF3Attributes.PSEUDOGENE);
     }
 }
