@@ -54,4 +54,7 @@ public class GFF3Attributes {
     public static final String TERM_AMINO_ACID = "TERM";
     public static final String GENE_SYNONYM = "gene_synonym";
     public static final String OPERON = "operon";
+    public static final String GAP_TYPE = "gap_type";
+    public static final String LINKAGE_EVIDENCE = "linkage_evidence";
+    public static final String ESTIMATED_LENGTH = "estimated_length";
 }
