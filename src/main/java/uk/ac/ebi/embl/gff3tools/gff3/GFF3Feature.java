@@ -119,10 +119,11 @@ public class GFF3Feature {
         return attributes.containsKey(name) && attributes.get(name) != null;
     }
 
-    public boolean isPseudo() {
-        if (attributes == null || attributes.isEmpty()) {
-            return false;
-        }
-        return attributes.containsKey(GFF3Attributes.PSEUDO) || attributes.containsKey(GFF3Attributes.PSEUDOGENE);
+    public void removeAttribute(String name) {
+        attributes.remove(name);
+    }
+
+    public void setAttribute(String name, Object value) {
+        attributes.put(name, value);
     }
 }
