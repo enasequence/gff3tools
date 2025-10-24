@@ -10,7 +10,6 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3;
 
-import java.util.List;
 import java.util.Set;
 
 public class GFF3Anthology {

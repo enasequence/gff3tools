@@ -41,7 +41,7 @@ class TransformAttributeToNoteFixTest {
                 .orElse(GFF3Anthology.FF_PSEUDOGENE_QUALIFIER);
         NOTE = FeatureMapping.getGFF3Attribute(GFF3Anthology.FF_NOTE_QUALIFIER).orElse(GFF3Anthology.FF_NOTE_QUALIFIER);
 
-        fixer = new TransformAttributeToNote();
+        fixer = new TransformAttributeToNoteFix();
     }
 
     @Test
@@ -162,4 +162,3 @@ class TransformAttributeToNoteFixTest {
         assertDoesNotThrow(() -> fixer.fix(withEmptyAttributes));
     }
 }
-
