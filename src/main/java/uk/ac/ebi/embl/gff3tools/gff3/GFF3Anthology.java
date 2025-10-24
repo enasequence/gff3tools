@@ -39,4 +39,9 @@ public class GFF3Anthology {
 
     public static final Set<String> INTRON_EQUIVALENTS = Set.of(
             INTRON_FEATURE_NAME, SPLICEOSOMAL_INTRON_FEATURE_NAME, AUTOCATALYTICALLY_SPLICED_INTRON_FEATURE_NAME);
+
+    public static final String FF_PRODUCT_QUALIFIER = "product";
+    public static final String FF_PSEUDO_QUALIFIER = "pseudo";
+    public static final String FF_PSEUDOGENE_QUALIFIER = "pseudogene";
+    public static final String FF_NOTE_QUALIFIER = "note";
 }
