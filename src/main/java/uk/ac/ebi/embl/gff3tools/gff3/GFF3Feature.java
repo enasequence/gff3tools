@@ -113,4 +113,16 @@ public class GFF3Feature {
     public String getAttributeByName(String name) {
         return (String) attributes.get(name);
     }
+
+    public boolean attributesContainsKey(String name) {
+        return attributes.containsKey(name);
+    }
+
+    public void removeAttribute(String name) {
+        attributes.remove(name);
+    }
+
+    public void setAttribute(String note, String valueToAppend) {
+        attributes.put(note, valueToAppend);
+    }
 }
