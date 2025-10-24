@@ -10,7 +10,6 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3;
 
-import java.util.List;
 import java.util.Set;
 
 public class GFF3Anthology {
@@ -39,4 +38,6 @@ public class GFF3Anthology {
 
     public static final Set<String> INTRON_EQUIVALENTS = Set.of(
             INTRON_FEATURE_NAME, SPLICEOSOMAL_INTRON_FEATURE_NAME, AUTOCATALYTICALLY_SPLICED_INTRON_FEATURE_NAME);
+
+    public static final String OLD_SEQUENCE_FEATURE_NAME = "old_sequence";
 }
