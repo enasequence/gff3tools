@@ -114,7 +114,7 @@ public class GFF3Feature {
         return (String) attributes.get(name);
     }
 
-    public boolean attributesContainsKey(String name) {
+    public boolean containsAttribute(String name) {
         return attributes.containsKey(name);
     }
 

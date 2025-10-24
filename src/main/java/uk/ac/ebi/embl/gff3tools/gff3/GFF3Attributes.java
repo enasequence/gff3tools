@@ -18,4 +18,7 @@ public class GFF3Attributes {
     public static String PSEUDO = "pseudo";
     public static String PSEUDOGENE = "pseudogene";
     public static String NOTE = "note";
+    public static String LOCUS_TAG = "locus_tag";
+    public static String GENE = "gene";
+    public static String GENE_SYNONYM = "gene_synonym";
 }

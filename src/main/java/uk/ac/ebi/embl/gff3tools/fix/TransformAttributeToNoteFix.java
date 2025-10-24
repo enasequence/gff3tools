@@ -20,7 +20,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Fix(
-        name = "TransformAttributeToNote",
+        name = "TransformExclusiveAttributeToNote",
         description = "Moves the value one of the mutually exclusive feature attributes to the note attribute",
         enabled = false)
 public class TransformAttributeToNoteFix {
@@ -34,7 +34,7 @@ public class TransformAttributeToNoteFix {
     }
 
     @FixMethod(
-            rule = "TransformAttributeToNote",
+            rule = "TransformExclusiveAttributeToNote",
             type = ValidationType.FEATURE,
             description = "Moves the value one of the mutually exclusive feature attributes to the note attribute",
             enabled = false)
@@ -45,7 +45,7 @@ public class TransformAttributeToNoteFix {
                 || feature.getAttributes().isEmpty()) return;
 
         for (ExclusiveAttributePair pair : pairs) {
-            if (feature.attributesContainsKey(pair.toRemove) && feature.attributesContainsKey(pair.exclusive)) {
+            if (feature.containsAttribute(pair.toRemove) && feature.containsAttribute(pair.exclusive)) {
                 String valueToAppend = feature.getAttributeByName(pair.toRemove);
                 if (!valueToAppend.isEmpty()) {
                     appendToNote(feature, valueToAppend);
