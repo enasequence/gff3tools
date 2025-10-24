@@ -14,4 +14,14 @@ public class GFF3Attributes {
 
     public static String PROTEIN_ID = "protein_id";
     public static String ATTRIBUTE_ID = "ID";
+    public static String COMPARE = "compare";
+    public static String CITATION = "citation";
+    public static String OLD_LOCUS_TAG = "old_locus_tag";
+    public static String LOCUS_TAG = "locus_tag";
+    public static String MOD_BASE = "mod_base";
+    public static String EC_NUMBER = "ec_number";
+    public static String NOTE = "note";
+    public static String LABEL = "label";
+    public static String MOBILE_ELEMENT = "mobile_element";
+    public static String MOBILE_ELEMENT_TYPE = "mobile_element_type";
 }
