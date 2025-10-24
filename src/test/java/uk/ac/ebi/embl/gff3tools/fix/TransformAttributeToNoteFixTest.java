@@ -8,7 +8,7 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.validation.fix;
+package uk.ac.ebi.embl.gff3tools.fix;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FeatureMapping;
+import uk.ac.ebi.embl.gff3tools.fix.TransformAttributeToNoteFix;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 

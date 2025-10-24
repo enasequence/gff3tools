@@ -14,4 +14,8 @@ public class GFF3Attributes {
 
     public static String PROTEIN_ID = "protein_id";
     public static String ATTRIBUTE_ID = "ID";
+    public static String PRODUCT = "product";
+    public static String PSEUDO = "pseudo";
+    public static String PSEUDOGENE = "pseudogene";
+    public static String NOTE = "note";
 }
