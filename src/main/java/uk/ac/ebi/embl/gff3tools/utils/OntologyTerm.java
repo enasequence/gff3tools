@@ -12,7 +12,8 @@ package uk.ac.ebi.embl.gff3tools.utils;
 
 public enum OntologyTerm {
     FEATURE("SO:0000110"),
-    REGION("SO:0000001");
+    REGION("SO:0000001"),
+    GAP("SO:0000730");
 
     public final String ID;
 

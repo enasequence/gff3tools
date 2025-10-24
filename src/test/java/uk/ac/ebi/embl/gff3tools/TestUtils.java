@@ -112,6 +112,24 @@ public class TestUtils {
                 new HashMap<>());
     }
 
+    public static GFF3Feature createGFF3Feature(
+            String featureName, long start, long end, Map<String, Object> attributes) {
+
+        return new GFF3Feature(
+                Optional.of(featureName),
+                Optional.empty(),
+                "1234",
+                Optional.empty(),
+                ".",
+                featureName,
+                start,
+                end,
+                ".",
+                "+",
+                "",
+                attributes);
+    }
+
     public static GFF3Feature createGFF3Feature(String featureName, Map<String, Object> attributes) {
 
         return new GFF3Feature(

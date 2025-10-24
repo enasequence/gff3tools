@@ -9,3 +9,7 @@ TEST01.1	.	gap	400	450	.	+	.	gene=matK;ID=gap;
 TEST01.1	.	gap	500	550	.	+	.	gene=matK;ID=gap_1;
 TEST01.1	.	sequence_comparison	600	650	.	+	.	gene=matk;ID=sequence_comparison;note=sequence_comparison;
 TEST01.1	.	sequence_comparison	700	750	.	+	.	gene=matK;ID=sequence_comparison_1;note=sequence_comparison;
+TEST01.1	.	assembly_gap	400	450	.	+	.	ID=assembly_gap_1;gap_type=within scaffold;estimated_length=12;linkage_evidence=paired-ends
+TEST01.1	.	assembly_gap	500	550	.	+	.	ID=assembly_gap_2;gap_type=within scaffold;estimated_length=12;linkage_evidence=paired-ends
+TEST01.1	.	misc_feature	600	650	.	+	.	gene=matk;ID=misc_feature;
+TEST01.1	.	misc_feature	700	750	.	+	.	gene=matK;ID=misc_feature_1;
