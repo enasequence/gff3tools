@@ -61,7 +61,6 @@ public class TransformAttributeToNoteFix {
             feature.setAttribute(note, valueToAppend);
             return;
         }
-
         feature.setAttribute(note, current + "," + valueToAppend);
     }
 

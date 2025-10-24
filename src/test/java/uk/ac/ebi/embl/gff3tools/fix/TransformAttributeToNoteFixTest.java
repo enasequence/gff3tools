@@ -18,9 +18,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
-import uk.ac.ebi.embl.gff3tools.fftogff3.FeatureMapping;
-import uk.ac.ebi.embl.gff3tools.fix.TransformAttributeToNoteFix;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Anthology;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 
 class TransformAttributeToNoteFixTest {
@@ -34,13 +32,10 @@ class TransformAttributeToNoteFixTest {
 
     @BeforeEach
     void setUp() {
-        PRODUCT = FeatureMapping.getGFF3Attribute(GFF3Anthology.FF_PRODUCT_QUALIFIER)
-                .orElse(GFF3Anthology.FF_PRODUCT_QUALIFIER);
-        PSEUDO = FeatureMapping.getGFF3Attribute(GFF3Anthology.FF_PSEUDO_QUALIFIER)
-                .orElse(GFF3Anthology.FF_PSEUDO_QUALIFIER);
-        PSEUDOGENE = FeatureMapping.getGFF3Attribute(GFF3Anthology.FF_PSEUDOGENE_QUALIFIER)
-                .orElse(GFF3Anthology.FF_PSEUDOGENE_QUALIFIER);
-        NOTE = FeatureMapping.getGFF3Attribute(GFF3Anthology.FF_NOTE_QUALIFIER).orElse(GFF3Anthology.FF_NOTE_QUALIFIER);
+        PRODUCT = GFF3Attributes.PRODUCT;
+        PSEUDO = GFF3Attributes.PSEUDO;
+        PSEUDOGENE = GFF3Attributes.PSEUDOGENE;
+        NOTE = GFF3Attributes.NOTE;
 
         fixer = new TransformAttributeToNoteFix();
     }
@@ -72,7 +67,7 @@ class TransformAttributeToNoteFixTest {
         fixer.fix(feature);
 
         assertFalse(feature.attributesContainsKey(PRODUCT));
-        assertEquals("existing-info;beta-lactamase", feature.getAttributeByName(NOTE));
+        assertEquals("existing-info,beta-lactamase", feature.getAttributeByName(NOTE));
     }
 
     @Test
