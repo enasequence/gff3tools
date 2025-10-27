@@ -38,6 +38,13 @@ public class FeatureMapping {
                 .map(ConversionEntry::getSOTerm);
     }
 
+    public static Stream<String> getGFF3FeatureCandidateIdsAndNames(String ffFeatureName) {
+        return Stream.concat(
+                getGFF3FeatureCandidateISOIDs(ffFeatureName),
+                getGFF3FeatureCandidateNames(ffFeatureName)
+        );
+    }
+
     public static Stream<String> getGFF3FeatureCandidateNames(String ffFeatureName) {
         return Optional.ofNullable(ConversionUtils.getFF2GFF3FeatureMap().get(ffFeatureName))
                 .orElse(Collections.emptyList())

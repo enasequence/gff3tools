@@ -14,4 +14,7 @@ public class GFF3Attributes {
 
     public static String PROTEIN_ID = "protein_id";
     public static String ATTRIBUTE_ID = "ID";
+    public static String LOCUS_TAG = "locus_tag";
+    public static String GENE = "gene";
+    public static String GENE_SYNONYM = "gene_synonym";
 }
