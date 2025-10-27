@@ -16,13 +16,13 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
-import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.validation.Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
+@Gff3Validation
 public class AttributesRelationValidation extends Validation {
 
     private static final String ERROR_MUTUALLY_EXCLUSIVE_BY_VALUE =
@@ -43,16 +43,11 @@ public class AttributesRelationValidation extends Validation {
             "Feature annotated with \"%s\" should not contain \"%s\". "
                     + "Please move the \"%s\" attribute value into \"%s\" or add a comment for a curator.";
 
-    private static final String CIRCULAR_RNA_ATTRIBUTE_ERROR =
-            "Attribute circularRNA is not allowed in feature \"%s\",  only CDS,mRNA or tRNA feature can contain circularRNA qualifier.";
-
     private static final Map<String, Set<String>> EXCLUSIVE_ATTRIBUTES =
             Map.of("clone", Set.of("sub_clone", "clone_lib"));
 
     public static final String MITOCHONDRION = "mitochondrion";
     public static final String PROVIRAL_VALUE_PATTERN = ".*endogenous retrovirus$";
-
-    private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
 
     private static final Map<String, Set<String>> MUTUALLY_EXCLUSIVE = Map.of(
             GFF3Attributes.PROVIRAL, Set.of(GFF3Attributes.VIRION),

@@ -19,9 +19,11 @@ import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
+@Gff3Validation
 public class AttributesValueValidation extends Validation {
 
     private static final String INVALID_FEATURE_PRODUCT_PATTERN =
@@ -33,8 +35,6 @@ public class AttributesValueValidation extends Validation {
     private static final String QUALIFIER_VALUE_REQUIRED_ERROR =
             "Qualifier \"%s\" must have one of values \"%s\" when qualifier \"%s\" has value \"%s\" in any feature.";
 
-    private static final String PSEUDOGENE_VALUE_VALIDATION =
-            "pseudogene qualifier value \"%s\" is invalid. Allowed values are: \"%s\"";
     private static final String PROTEIN_ID_VALUE_VALIDATION = "Protein Id cannot be null or empty";
 
     public static final String MITOCHONDRION = "mitochondrion";
@@ -51,13 +51,6 @@ public class AttributesValueValidation extends Validation {
                     "^(18S ribosomal RNA)$",
                     "^(23S ribosomal RNA)$",
                     "^(28S ribosomal RNA)$"));
-
-    Set<String> PSEUDO_GENE_VALUES = new HashSet<>(Arrays.asList(
-            GFF3Attributes.PROCESSED,
-            GFF3Attributes.UNPROCESSED,
-            GFF3Attributes.UNITARY,
-            GFF3Attributes.ALLELIC,
-            GFF3Attributes.UNKNOWN));
 
     private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
 
