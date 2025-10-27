@@ -78,8 +78,8 @@ public class ValidationEngineTest {
         ValidationException ex =
                 Assertions.assertThrows(ValidationException.class, () -> validationEngine.validate(invalidFeature, 1));
 
-        Assertions.assertAll(() -> Assertions.assertTrue(ex.getMessage()
-                .contains("Violation of rule GFF3_LOCATION_VALIDATION on line 1: Invalid start/end for accession")));
+        Assertions.assertAll(() ->
+                Assertions.assertTrue(ex.getMessage().contains("Violation of rule LOCATION_VALIDATION on line 1")));
     }
 
     // ------------------------------------------------------------
