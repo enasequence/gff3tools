@@ -89,10 +89,6 @@ public class GFF3Feature {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    public void setAttributeValueList(String note, List<String> valueToAppend) {
-        attributes.put(note, valueToAppend);
-    }
-
     public long getLength() {
         return Math.max(end - start + 1, 0);
     }
@@ -158,5 +154,9 @@ public class GFF3Feature {
             out.add(value.toString());
         }
         return out;
+    }
+
+    public void setAttributeValueList(String note, List<String> valueToAppend) {
+        attributes.put(note, valueToAppend);
     }
 }
