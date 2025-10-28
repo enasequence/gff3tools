@@ -43,7 +43,7 @@ public class GeneSynonymFix {
             type = ValidationType.FEATURE,
             description = "Harmonizes gene_synonym across features keyed by locus_tag/gene; CDS defines the master list",
             enabled = true)
-    public void fix(GFF3Annotation annotation) {
+    public void fix(GFF3Annotation annotation, int line){
         if (annotation == null) return;
 
         // candidates = all features that have locus_tag or gene
@@ -62,7 +62,7 @@ public class GeneSynonymFix {
 
         // Pass 1: establish master lists from CDS features (order-sensitive equality).
         for (GFF3Feature f : masterCandidates) {
-            String identifier = firstNonBlankValue(f.getAttributeByName(LOCUS_TAG), f.getAttributeByName(GENE));
+            String identifier = firstNonBlankValue(f.getAttributeValueList(LOCUS_TAG), f.getAttributeValueList(GENE));
             if (identifier == null || identifier.isBlank()) continue;
 
             if (unreliable.contains(identifier)) continue;
