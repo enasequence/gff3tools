@@ -54,4 +54,5 @@ public class GFF3Attributes {
     public static final String ARTIFICIAL_LOCATION = "artificial_location";
     public static final String RIBOSOMAL_SLIPPAGE = "ribosomal_slippage";
     public static final String TRANS_SPLICING = "trans_splicing";
+    public static final String GENE_SYNONYM = "gene_synonym";
 }

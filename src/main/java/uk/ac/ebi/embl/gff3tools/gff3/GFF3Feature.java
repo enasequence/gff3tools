@@ -84,6 +84,35 @@ public class GFF3Feature {
         }
     }
 
+    public String getAttributeString(String name) {
+        String value = (String) attributes.get(name);
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    public long getLength() {
+        return Math.max(end - start + 1, 0);
+    }
+
+    public String getAttributeByName(String name) {
+        String value = (String) attributes.get(name);
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    public boolean hasAttribute(String name) {
+        return attributes.containsKey(name) && attributes.get(name) != null;
+    }
+
+    public boolean isPseudo() {
+        if (attributes == null || attributes.isEmpty()) {
+            return false;
+        }
+        return attributes.containsKey(GFF3Attributes.PSEUDO) || attributes.containsKey(GFF3Attributes.PSEUDOGENE);
+    }
+
+    public void removeAttribute(String name) {
+        attributes.remove(name);
+    }
+
     private String getAttributeString(Map<String, Object> attributes) {
         StringBuilder attrBuilder = new StringBuilder();
 
@@ -106,23 +135,29 @@ public class GFF3Feature {
         return attrBuilder.toString();
     }
 
-    public long getLength() {
-        return Math.max(end - start + 1, 0);
-    }
+    public List<String> getAttributeValueList(String name) {
+        Object value = attributes.get(name);
+        if (value == null) return List.of();
 
-    public String getAttributeByName(String name) {
-        String value = (String) attributes.get(name);
-        return value == null || value.isBlank() ? null : value.trim();
-    }
-
-    public boolean hasAttribute(String name) {
-        return attributes.containsKey(name) && attributes.get(name) != null;
-    }
-
-    public boolean isPseudo() {
-        if (attributes == null || attributes.isEmpty()) {
-            return false;
+        List<String> out = new ArrayList<>();
+        if (value instanceof List<?>) {
+            for (Object item : (List<?>) value) {
+                if (item != null) out.add(item.toString().trim());
+            }
+        } else {
+            out.add(value.toString());
         }
-        return attributes.containsKey(GFF3Attributes.PSEUDO) || attributes.containsKey(GFF3Attributes.PSEUDOGENE);
+
+        return out;
+    }
+
+    public void setAttributeValueList(String note, List<String> values) {
+        if (values.size() == 1) {
+            attributes.put(note, values.get(0));
+        } else if (values.isEmpty()) {
+            attributes.remove(note);
+        } else {
+            attributes.put(note, values);
+        }
     }
 }
