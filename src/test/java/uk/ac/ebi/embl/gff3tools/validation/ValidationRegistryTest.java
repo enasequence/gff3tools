@@ -106,7 +106,7 @@ class ValidationRegistryTest {
         List<ValidatorDescriptor> all = new ArrayList<>();
         all.add(new ValidatorDescriptor(ValClass.class, new ValClass(), getMethod(ValClass.class, "validate")));
         all.add(new ValidatorDescriptor(
-                FixClass.class, new FixClass(), getMethod(FixClass.class, "uk/ac/ebi/embl/gff3tools/validation/fix")));
+                FixClass.class, new FixClass(), getMethod(FixClass.class, "fix")));
 
         // Inject cachedValidators
         setCachedValidators(all);
@@ -134,7 +134,7 @@ class ValidationRegistryTest {
         List<ValidatorDescriptor> all = new ArrayList<>();
         all.add(new ValidatorDescriptor(ValClass.class, new ValClass(), getMethod(ValClass.class, "validate")));
         all.add(new ValidatorDescriptor(
-                FixClass.class, new FixClass(), getMethod(FixClass.class, "uk/ac/ebi/embl/gff3tools/validation/fix")));
+                FixClass.class, new FixClass(), getMethod(FixClass.class, "fix")));
 
         setCachedValidators(all);
 

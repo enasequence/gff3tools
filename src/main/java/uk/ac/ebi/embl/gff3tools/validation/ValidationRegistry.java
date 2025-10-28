@@ -75,7 +75,7 @@ public class ValidationRegistry {
                 Object instance = clazz.getDeclaredConstructor().newInstance();
 
                 // Set connection to all the validations and fixes
-                ((Validation) instance).setConnection(connection);
+                // ((Validation) instance).setConnection(connection);
 
                 for (Method method : clazz.getDeclaredMethods()) {
                     if (isMethodAnnotationPresent(method)) {
@@ -85,7 +85,7 @@ public class ValidationRegistry {
                 }
             } catch (Exception e) {
                 throw new RuntimeException(
-                        String.format("Failed to initialize validator {}: {}", clazz.getName(), e.getMessage()));
+                        String.format("Failed to initialize validator %s: %s", clazz.getName(), e.getMessage()));
             }
         }
 
