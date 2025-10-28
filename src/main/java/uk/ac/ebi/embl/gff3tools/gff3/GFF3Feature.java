@@ -84,39 +84,6 @@ public class GFF3Feature {
         }
     }
 
-    public String getAttributeString(String name) {
-        String value = (String) attributes.get(name);
-        return value == null || value.isBlank() ? null : value.trim();
-    }
-
-    public void setAttributeValueList(String note, List<String> valueToAppend) {
-        attributes.put(note, valueToAppend);
-    }
-
-    public long getLength() {
-        return Math.max(end - start + 1, 0);
-    }
-
-    public String getAttributeByName(String name) {
-        String value = (String) attributes.get(name);
-        return value == null || value.isBlank() ? null : value.trim();
-    }
-
-    public boolean hasAttribute(String name) {
-        return attributes.containsKey(name) && attributes.get(name) != null;
-    }
-
-    public boolean isPseudo() {
-        if (attributes == null || attributes.isEmpty()) {
-            return false;
-        }
-        return attributes.containsKey(GFF3Attributes.PSEUDO) || attributes.containsKey(GFF3Attributes.PSEUDOGENE);
-    }
-
-    public void removeAttribute(String name) {
-        attributes.remove(name);
-    }
-
     private String getAttributeString(Map<String, Object> attributes) {
         StringBuilder attrBuilder = new StringBuilder();
 
@@ -139,6 +106,26 @@ public class GFF3Feature {
         return attrBuilder.toString();
     }
 
+    public long getLength() {
+        return Math.max(end - start + 1, 0);
+    }
+
+    public String getAttributeByName(String name) {
+        String value = (String) attributes.get(name);
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    public boolean hasAttribute(String name) {
+        return attributes.containsKey(name) && attributes.get(name) != null;
+    }
+
+    public boolean isPseudo() {
+        if (attributes == null || attributes.isEmpty()) {
+            return false;
+        }
+        return attributes.containsKey(GFF3Attributes.PSEUDO) || attributes.containsKey(GFF3Attributes.PSEUDOGENE);
+    }
+
     public List<String> getAttributeValueList(String name) {
         Object value = attributes.get(name);
         if (value == null) return List.of();
@@ -158,5 +145,9 @@ public class GFF3Feature {
             out.add(value.toString());
         }
         return out;
+    }
+
+    public void setAttributeValueList(String note, List<String> valueToAppend) {
+        attributes.put(note, valueToAppend);
     }
 }
