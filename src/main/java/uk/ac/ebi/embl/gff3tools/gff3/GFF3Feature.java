@@ -156,13 +156,13 @@ public class GFF3Feature {
         return out;
     }
 
-    public void setAttributeValueList(String note, List<String> valueToAppend) {
-        if (valueToAppend.size() == 1) {
-            attributes.put(note, valueToAppend.get(0));
-        } else if (valueToAppend.isEmpty()) {
+    public void setAttributeValueList(String note, List<String> values) {
+        if (values.size() == 1) {
+            attributes.put(note, values.get(0));
+        } else if (values.isEmpty()) {
             attributes.remove(note);
         } else {
-            attributes.put(note, valueToAppend);
+            attributes.put(note, values);
         }
     }
 }
