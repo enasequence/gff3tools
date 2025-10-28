@@ -48,7 +48,7 @@ public class GeneSynonymFix {
 
         // candidates = all features that have locus_tag or gene
         List<GFF3Feature> candidates = annotation.getAllFeatures().stream()
-                .filter(f -> f.containsAttribute(LOCUS_TAG) || f.containsAttribute(GENE))
+                .filter(f -> f.hasAttribute(LOCUS_TAG) || f.hasAttribute(GENE))
                 .toList();
         if (candidates.isEmpty()) return;
 
