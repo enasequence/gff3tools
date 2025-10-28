@@ -14,7 +14,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -112,7 +111,7 @@ public class GFF3Feature {
         return Math.max(end - start + 1, 0);
     }
 
-    public List<String> getAttributeList(String name) {
+    public List<String> getAttributeValueList(String name) {
         Object value = attributes.get(name);
         if (value == null) return List.of();
 
@@ -136,7 +135,7 @@ public class GFF3Feature {
         return out;
     }
 
-    public void setAttributeList(String note, List<String> valueToAppend) {
+    public void setAttributeValueList(String note, List<String> valueToAppend) {
         attributes.put(note, valueToAppend);
     }
 

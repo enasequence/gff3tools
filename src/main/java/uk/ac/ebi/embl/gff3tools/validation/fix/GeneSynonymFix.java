@@ -11,7 +11,6 @@
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import uk.ac.ebi.embl.gff3tools.fftogff3.FeatureMapping;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -68,7 +67,7 @@ public class GeneSynonymFix {
 
             if (unreliable.contains(identifier)) continue;
 
-            List<String> geneSynonyms = f.getAttributeByName(GENE_SYNONYM);; // may be empty, that's allowed (and will purge others later)
+            List<String> geneSynonyms = f.getAttributeValueList(GENE_SYNONYM);; // may be empty, that's allowed (and will purge others later)
             List<String> existing = masterByIdentifier.get(identifier);
 
             if (existing == null) {
@@ -85,7 +84,7 @@ public class GeneSynonymFix {
         // Pass 2: enforce master on all features (including CDS). If no CDS master exists yet for an identifier,
         // seed it from the first encountered feature (order-dependent fallback like original).
         for (GFF3Feature f : candidates) {
-            String identifier = firstNonBlankValue(f.getAttributeByName(LOCUS_TAG), f.getAttributeByName(GENE));
+            String identifier = firstNonBlankValue(f.getAttributeValueList(LOCUS_TAG), f.getAttributeValueList(GENE));
             if (identifier == null || identifier.isBlank() || unreliable.contains(identifier)) continue;
 
             List<String> master = masterByIdentifier.get(identifier);
@@ -97,7 +96,7 @@ public class GeneSynonymFix {
                 }
                 current.removeIf(s -> !master.contains(s));
 
-                f.setAttribute(GENE_SYNONYM, current);
+                f.setAttributeValueList(GENE_SYNONYM, current);
 
             } else {
                 // No CDS-defined master exists for this identifier; reserve with first seen feature's synonyms
@@ -114,7 +113,7 @@ public class GeneSynonymFix {
     }
 
     private List<String> getSynonyms(GFF3Feature f) {
-        List<String> values = f.getAttributeByName(GENE_SYNONYM);
+        List<String> values = f.getAttributeValueList(GENE_SYNONYM);
         List<String> out = new ArrayList<>();
         for (String s : values) {
             if (s == null) continue;
