@@ -89,7 +89,7 @@ public class GeneSynonymFix {
 
             List<String> master = masterByIdentifier.get(identifier);
             if (master != null) {
-                List<String> current = new ArrayList<>(getSynonyms(f));
+                List<String> current = new ArrayList<>(f.getAttributeValueList(GENE_SYNONYM));
 
                 for (String m : master) {
                     if (!current.contains(m)) current.add(m);
@@ -100,7 +100,7 @@ public class GeneSynonymFix {
 
             } else {
                 // No CDS-defined master exists for this identifier; reserve with first seen feature's synonyms
-                List<String> current = getSynonyms(f);
+                List<String> current = f.getAttributeValueList(GENE_SYNONYM);
                 masterByIdentifier.put(identifier, new ArrayList<>(current));
             }
         }
@@ -110,17 +110,6 @@ public class GeneSynonymFix {
         if (a != null && !a.isEmpty()) return a.get(0);
         if (b != null && !b.isEmpty()) return b.get(0);
         return null;
-    }
-
-    private List<String> getSynonyms(GFF3Feature f) {
-        List<String> values = f.getAttributeValueList(GENE_SYNONYM);
-        List<String> out = new ArrayList<>();
-        for (String s : values) {
-            if (s == null) continue;
-            String t = s.trim();
-            if (!t.isEmpty()) out.add(t);
-        }
-        return out;
     }
 
     /** Order-sensitive equality, element-wise. */
