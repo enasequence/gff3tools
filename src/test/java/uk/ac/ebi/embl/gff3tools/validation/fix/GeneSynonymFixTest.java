@@ -1,5 +1,20 @@
+/*
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.when;
+
+import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -7,12 +22,6 @@ import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-
-import java.util.*;
-
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.when;
 
 class GeneSynonymFixTest {
 
@@ -119,7 +128,7 @@ class GeneSynonymFixTest {
 
         GFF3Annotation ann = annotationWith(cds, mrna);
 
-        fixer.fix(ann,1 );
+        fixer.fix(ann, 1);
 
         // mRNA should be normalized to [s2, s1, s3]? NO — fixer keeps existing order and appends missing in master
         // order,
@@ -137,7 +146,7 @@ class GeneSynonymFixTest {
 
         GFF3Annotation ann = annotationWith(cds, gene);
 
-        fixer.fix(ann,1);
+        fixer.fix(ann, 1);
 
         assertEquals(list(), cds.getAttributeValueList(GENE_SYNONYM));
         assertEquals(list(), gene.getAttributeValueList(GENE_SYNONYM)); // removed to match empty master
@@ -159,4 +168,3 @@ class GeneSynonymFixTest {
         assertDoesNotThrow(() -> fixer.fix(null, 1));
     }
 }
-

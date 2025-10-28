@@ -12,7 +12,6 @@ package uk.ac.ebi.embl.gff3tools.gff3;
 
 public class GFF3Attributes {
 
-
     public static final String ORGANELLE = "organelle";
     public static final String SEGMENT = "segment";
     public static final String CHROMOSOME = "chromosome";

@@ -11,7 +11,6 @@
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
 import java.util.*;
-
 import uk.ac.ebi.embl.gff3tools.fftogff3.FeatureMapping;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -33,17 +32,17 @@ public class GeneSynonymFix {
     private static final String GENE = GFF3Attributes.GENE;
     private static final String GENE_SYNONYM = GFF3Attributes.GENE_SYNONYM;
 
-    public GeneSynonymFix(){
-        FeatureMapping.getGFF3FeatureCandidateIdsAndNames(FF_CDS)
-                .forEach(CDS_SYNONYMS::add);
+    public GeneSynonymFix() {
+        FeatureMapping.getGFF3FeatureCandidateIdsAndNames(FF_CDS).forEach(CDS_SYNONYMS::add);
     }
 
     @FixMethod(
             rule = "GFF3GeneSynonymFix",
-            type = ValidationType.FEATURE,
-            description = "Harmonizes gene_synonym across features keyed by locus_tag/gene; CDS defines the master list",
+            type = ValidationType.ANNOTATION,
+            description =
+                    "Harmonizes gene_synonym across features keyed by locus_tag/gene; CDS defines the master list",
             enabled = true)
-    public void fix(GFF3Annotation annotation, int line){
+    public void fix(GFF3Annotation annotation, int line) {
         if (annotation == null) return;
 
         // candidates = all features that have locus_tag or gene
@@ -67,7 +66,8 @@ public class GeneSynonymFix {
 
             if (unreliable.contains(identifier)) continue;
 
-            List<String> geneSynonyms = f.getAttributeValueList(GENE_SYNONYM);; // may be empty, that's allowed (and will purge others later)
+            List<String> geneSynonyms = f.getAttributeValueList(GENE_SYNONYM);
+            ; // may be empty, that's allowed (and will purge others later)
             List<String> existing = masterByIdentifier.get(identifier);
 
             if (existing == null) {
@@ -107,8 +107,8 @@ public class GeneSynonymFix {
     }
 
     private String firstNonBlankValue(List<String> a, List<String> b) {
-        if(a != null && !a.isEmpty()) return a.get(0);
-        if(b != null && !b.isEmpty()) return b.get(0);
+        if (a != null && !a.isEmpty()) return a.get(0);
+        if (b != null && !b.isEmpty()) return b.get(0);
         return null;
     }
 
@@ -133,5 +133,4 @@ public class GeneSynonymFix {
         }
         return true;
     }
-
 }

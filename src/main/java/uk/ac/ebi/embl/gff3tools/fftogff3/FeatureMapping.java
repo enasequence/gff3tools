@@ -39,10 +39,7 @@ public class FeatureMapping {
     }
 
     public static Stream<String> getGFF3FeatureCandidateIdsAndNames(String ffFeatureName) {
-        return Stream.concat(
-                getGFF3FeatureCandidateISOIDs(ffFeatureName),
-                getGFF3FeatureCandidateNames(ffFeatureName)
-        );
+        return Stream.concat(getGFF3FeatureCandidateISOIDs(ffFeatureName), getGFF3FeatureCandidateNames(ffFeatureName));
     }
 
     public static Stream<String> getGFF3FeatureCandidateNames(String ffFeatureName) {
