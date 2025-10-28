@@ -72,7 +72,7 @@ public class ValidationEngineBuilder {
                     String rule = k.replace("rule.", "");
                     RuleSeverity severity = RuleSeverity.valueOf(v);
                     severityOverrides.put(rule, severity);
-                } else if (k.startsWith("uk/ac/ebi/embl/gff3tools/fix")) {
+                } else if (k.startsWith("uk/ac/ebi/embl/gff3tools/validation/fix")) {
                     String rule = k.replace("fix.", "");
                     boolean fix = v.equalsIgnoreCase("ON");
                     fixOverrides.put(rule, fix);

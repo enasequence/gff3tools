@@ -146,7 +146,7 @@ public class GFF3Feature {
         attributes.remove(name);
     }
 
-    public void setAttribute(String note, String valueToAppend) {
+    public void setAttribute(String note, List<String> valueToAppend) {
         attributes.put(note, valueToAppend);
     }
 }
