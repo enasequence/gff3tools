@@ -144,15 +144,10 @@ public class GFF3Feature {
             for (Object item : (List<?>) value) {
                 if (item != null) out.add(item.toString().trim());
             }
-        } else if (value instanceof String) {
-            String[] parts = ((String) value).split(",");
-            for (String part : parts) {
-                String trimmed = part.trim();
-                if (!trimmed.isEmpty()) out.add(trimmed);
-            }
         } else {
             out.add(value.toString());
         }
+
         return out;
     }
 
