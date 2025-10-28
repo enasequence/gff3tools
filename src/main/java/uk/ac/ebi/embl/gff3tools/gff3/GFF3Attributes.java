@@ -54,4 +54,11 @@ public class GFF3Attributes {
     public static final String ARTIFICIAL_LOCATION = "artificial_location";
     public static final String RIBOSOMAL_SLIPPAGE = "ribosomal_slippage";
     public static final String TRANS_SPLICING = "trans_splicing";
+    public static String COMPARE = "compare";
+    public static String CITATION = "citation";
+    public static String MOD_BASE = "mod_base";
+    public static String EC_NUMBER = "ec_number";
+    public static String LABEL = "label";
+    public static String MOBILE_ELEMENT = "mobile_element";
+    public static String MOBILE_ELEMENT_TYPE = "mobile_element_type";
 }

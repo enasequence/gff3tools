@@ -26,8 +26,11 @@ public enum OntologyTerm {
     CODING_EXON("SO:0000195"),
     MRNA("SO:0000234"),
     RRNA("SO:0000252"),
-    TRNA("SO:0000253");
-
+    TRNA("SO:0000253"),
+    PSEUDOGENIC_RRNA("SO:0000777"),
+    PSEUDOGENE("SO:0000336"),
+    GENE("SO:0000704"),
+    UNITARY_PSEUDOGENE("SO:0001759");
     public final String ID;
 
     OntologyTerm(String id) {

@@ -129,4 +129,11 @@ public class GFF3Annotation implements IGFF3Feature {
                 .filter(ftr -> ftr.getName().equalsIgnoreCase(featureName))
                 .collect(Collectors.toList());
     }
+
+    public void removeFeature(GFF3Feature feature) {
+        if (!(features instanceof ArrayList)) {
+            features = new ArrayList<>(features);
+        }
+        features.remove(feature);
+    }
 }
