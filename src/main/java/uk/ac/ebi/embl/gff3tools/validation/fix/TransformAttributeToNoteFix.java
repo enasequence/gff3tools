@@ -33,7 +33,7 @@ public class TransformAttributeToNoteFix {
     }
 
     @FixMethod(
-            rule = "TransformExclusiveAttributeToNote",
+            rule = "TRANSFORM_EXCLUSIVE_ATTRIBUTE_TO_NOTE",
             type = ValidationType.FEATURE,
             description = "Moves the value one of the mutually exclusive feature attributes to the note attribute")
     public void fix(GFF3Feature feature, int line) {
