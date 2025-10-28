@@ -112,31 +112,33 @@ public class GFF3Feature {
         return Math.max(end - start + 1, 0);
     }
 
-    public List<String> getAttributeByName(String name) {
-        Object raw = attributes.get(name);
-        if (raw == null) return List.of();
+    public List<String> getAttributeList(String name) {
+        Object value = attributes.get(name);
+        if (value == null) return List.of();
 
         List<String> out = new ArrayList<>();
 
-        if (raw instanceof List<?>) {
-            for (Object item : (List<?>) raw) {
+        if (value instanceof List<?>) {
+            for (Object item : (List<?>) value) {
                 if (item != null) out.add(item.toString().trim());
             }
-        } else if (raw instanceof String) {
+        } else if (value instanceof String) {
             // Split comma-separated string values
-            String[] parts = ((String) raw).split(",");
+            String[] parts = ((String) value).split(",");
             for (String part : parts) {
                 String trimmed = part.trim();
                 if (!trimmed.isEmpty()) out.add(trimmed);
             }
         } else {
-            // Fallback — single object, just shove it in as a string
-            out.add(raw.toString());
+            out.add(value.toString());
         }
 
         return out;
     }
 
+    public void setAttributeList(String note, List<String> valueToAppend) {
+        attributes.put(note, valueToAppend);
+    }
 
     public boolean containsAttribute(String name) {
         return attributes.containsKey(name);
@@ -144,9 +146,5 @@ public class GFF3Feature {
 
     public void removeAttribute(String name) {
         attributes.remove(name);
-    }
-
-    public void setAttribute(String note, List<String> valueToAppend) {
-        attributes.put(note, valueToAppend);
     }
 }
