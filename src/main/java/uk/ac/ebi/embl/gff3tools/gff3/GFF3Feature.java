@@ -157,6 +157,10 @@ public class GFF3Feature {
     }
 
     public void setAttributeValueList(String note, List<String> valueToAppend) {
-        attributes.put(note, valueToAppend);
+        if (valueToAppend.size() == 1) {
+            attributes.put(note, valueToAppend.get(0));
+        } else if (!valueToAppend.isEmpty()) {
+            attributes.put(note, valueToAppend);
+        }
     }
 }
