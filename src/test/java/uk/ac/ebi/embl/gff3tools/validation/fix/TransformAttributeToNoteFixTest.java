@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.validation.fix;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,9 +51,9 @@ class TransformAttributeToNoteFixTest {
 
         fixer.fix(feature, 1);
 
-        assertFalse(feature.containsAttribute(PRODUCT));
-        assertTrue(feature.containsAttribute(PSEUDO));
-        assertEquals("kinase", feature.getAttributeString(NOTE));
+        assertFalse(feature.hasAttribute(PRODUCT));
+        assertTrue(feature.hasAttribute(PSEUDO));
+        assertEquals(List.of("kinase"), feature.getAttributeValueList(NOTE));
     }
 
     @Test
@@ -66,8 +67,8 @@ class TransformAttributeToNoteFixTest {
 
         fixer.fix(feature, 1);
 
-        assertFalse(feature.containsAttribute(PRODUCT));
-        assertEquals("existing-info,beta-lactamase", feature.getAttributeString(NOTE));
+        assertFalse(feature.hasAttribute(PRODUCT));
+        assertEquals(List.of("existing-info", "beta-lactamase"), feature.getAttributeValueList(NOTE));
     }
 
     @Test
@@ -78,8 +79,8 @@ class TransformAttributeToNoteFixTest {
 
         fixer.fix(feature, 1);
 
-        assertTrue(feature.containsAttribute(PRODUCT));
-        assertNull(feature.getAttributeString(NOTE));
+        assertTrue(feature.hasAttribute(PRODUCT));
+        assertFalse(feature.hasAttribute(NOTE));
     }
 
     @Test
@@ -90,9 +91,9 @@ class TransformAttributeToNoteFixTest {
 
         fixer.fix(feature, 1);
 
-        assertTrue(feature.containsAttribute(PSEUDO));
-        assertFalse(feature.containsAttribute(PRODUCT));
-        assertNull(feature.getAttributeString(NOTE));
+        assertTrue(feature.hasAttribute(PSEUDO));
+        assertFalse(feature.hasAttribute(PRODUCT));
+        assertFalse(feature.hasAttribute(NOTE));
     }
 
     @Test
@@ -105,8 +106,8 @@ class TransformAttributeToNoteFixTest {
 
         fixer.fix(feature, 1);
 
-        assertFalse(feature.containsAttribute(PRODUCT));
-        assertNull(feature.getAttributeString(NOTE));
+        assertFalse(feature.hasAttribute(PRODUCT));
+        assertFalse(feature.hasAttribute(NOTE));
     }
 
     @Test
@@ -120,8 +121,8 @@ class TransformAttributeToNoteFixTest {
 
         fixer.fix(feature, 1);
 
-        assertFalse(feature.containsAttribute(PRODUCT));
-        assertEquals("transferase", feature.getAttributeString(NOTE));
+        assertFalse(feature.hasAttribute(PRODUCT));
+        assertEquals(List.of("transferase"), feature.getAttributeValueList(NOTE));
     }
 
     @Test

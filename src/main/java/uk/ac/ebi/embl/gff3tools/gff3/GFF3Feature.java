@@ -14,7 +14,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -85,6 +84,27 @@ public class GFF3Feature {
         }
     }
 
+    public String getAttributeString(String name) {
+        String value = (String) attributes.get(name);
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    public void setAttributeValueList(String note, List<String> valueToAppend) {
+        attributes.put(note, valueToAppend);
+    }
+
+    public long getLength() {
+        return Math.max(end - start + 1, 0);
+    }
+
+    public boolean hasAttribute(String name) {
+        return attributes.containsKey(name) && attributes.get(name) != null;
+    }
+
+    public void removeAttribute(String name) {
+        attributes.remove(name);
+    }
+
     private String getAttributeString(Map<String, Object> attributes) {
         StringBuilder attrBuilder = new StringBuilder();
 
@@ -107,42 +127,24 @@ public class GFF3Feature {
         return attrBuilder.toString();
     }
 
-    public String getAttributeString(String attributeName) {
-        Object value = attributes.get(attributeName);
+    public List<String> getAttributeValueList(String name) {
+        Object value = attributes.get(name);
+        if (value == null) return List.of();
 
+        List<String> out = new ArrayList<>();
         if (value instanceof List<?>) {
-            // Safely cast and join the list into a comma-separated string
-            List<?> list = (List<?>) value;
-            String out = list.stream().map(Object::toString).collect(Collectors.joining(","));
-            return out;
+            for (Object item : (List<?>) value) {
+                if (item != null) out.add(item.toString().trim());
+            }
         } else if (value instanceof String) {
-            return (String) value;
-        } else if (value != null) {
-            return value.toString();
+            String[] parts = ((String) value).split(",");
+            for (String part : parts) {
+                String trimmed = part.trim();
+                if (!trimmed.isEmpty()) out.add(trimmed);
+            }
         } else {
-            return null;
+            out.add(value.toString());
         }
-    }
-
-    public void setAttributeString(String attributeName, String valueToAppend) {
-        if (valueToAppend.contains(",")) {
-            List<String> values =
-                    Arrays.stream(valueToAppend.split(",")).map(String::trim).collect(Collectors.toList());
-            attributes.put(attributeName, values);
-        } else {
-            attributes.put(attributeName, valueToAppend.trim());
-        }
-    }
-
-    public long getLength() {
-        return Math.max(end - start + 1, 0);
-    }
-
-    public boolean containsAttribute(String name) {
-        return attributes.containsKey(name);
-    }
-
-    public void removeAttribute(String name) {
-        attributes.remove(name);
+        return out;
     }
 }
