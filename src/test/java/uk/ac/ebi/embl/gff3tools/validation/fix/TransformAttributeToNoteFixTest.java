@@ -48,7 +48,7 @@ class TransformAttributeToNoteFixTest {
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", "gene_parent", attrs);
 
-        fixer.fix(feature);
+        fixer.fix(feature, 1);
 
         assertFalse(feature.containsAttribute(PRODUCT));
         assertTrue(feature.containsAttribute(PSEUDO));
@@ -64,7 +64,7 @@ class TransformAttributeToNoteFixTest {
 
         GFF3Feature feature = TestUtils.createGFF3Feature("CDS", "mRNA1", attrs);
 
-        fixer.fix(feature);
+        fixer.fix(feature, 1);
 
         assertFalse(feature.containsAttribute(PRODUCT));
         assertEquals("existing-info,beta-lactamase", feature.getAttributeString(NOTE));
@@ -76,7 +76,7 @@ class TransformAttributeToNoteFixTest {
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", "parent", attrs);
 
-        fixer.fix(feature);
+        fixer.fix(feature, 1);
 
         assertTrue(feature.containsAttribute(PRODUCT));
         assertNull(feature.getAttributeString(NOTE));
@@ -88,7 +88,7 @@ class TransformAttributeToNoteFixTest {
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", "parent", attrs);
 
-        fixer.fix(feature);
+        fixer.fix(feature, 1);
 
         assertTrue(feature.containsAttribute(PSEUDO));
         assertFalse(feature.containsAttribute(PRODUCT));
@@ -103,7 +103,7 @@ class TransformAttributeToNoteFixTest {
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", "parent", attrs);
 
-        fixer.fix(feature);
+        fixer.fix(feature, 1);
 
         assertFalse(feature.containsAttribute(PRODUCT));
         assertNull(feature.getAttributeString(NOTE));
@@ -118,7 +118,7 @@ class TransformAttributeToNoteFixTest {
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", "parent", attrs);
 
-        fixer.fix(feature);
+        fixer.fix(feature, 1);
 
         assertFalse(feature.containsAttribute(PRODUCT));
         assertEquals("transferase", feature.getAttributeString(NOTE));
@@ -154,7 +154,7 @@ class TransformAttributeToNoteFixTest {
                 "",
                 new HashMap<>());
 
-        assertDoesNotThrow(() -> fixer.fix(withNullAttributes));
-        assertDoesNotThrow(() -> fixer.fix(withEmptyAttributes));
+        assertDoesNotThrow(() -> fixer.fix(withNullAttributes, 1));
+        assertDoesNotThrow(() -> fixer.fix(withEmptyAttributes, 1));
     }
 }

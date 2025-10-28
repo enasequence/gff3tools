@@ -107,13 +107,14 @@ public class GFF3Feature {
         return attrBuilder.toString();
     }
 
-    public String getAttributeString(String note) {
-        Object value = attributes.get(note);
+    public String getAttributeString(String attributeName) {
+        Object value = attributes.get(attributeName);
 
         if (value instanceof List<?>) {
             // Safely cast and join the list into a comma-separated string
             List<?> list = (List<?>) value;
-            return list.stream().map(Object::toString).collect(Collectors.joining(", "));
+            String out = list.stream().map(Object::toString).collect(Collectors.joining(","));
+            return out;
         } else if (value instanceof String) {
             return (String) value;
         } else if (value != null) {
@@ -123,13 +124,13 @@ public class GFF3Feature {
         }
     }
 
-    public void setAttributeString(String note, String valueToAppend) {
+    public void setAttributeString(String attributeName, String valueToAppend) {
         if (valueToAppend.contains(",")) {
             List<String> values =
                     Arrays.stream(valueToAppend.split(",")).map(String::trim).collect(Collectors.toList());
-            attributes.put(note, values);
+            attributes.put(attributeName, values);
         } else {
-            attributes.put(note, valueToAppend.trim());
+            attributes.put(attributeName, valueToAppend.trim());
         }
     }
 

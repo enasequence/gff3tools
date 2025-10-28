@@ -38,7 +38,7 @@ public class TransformAttributeToNoteFix {
             type = ValidationType.FEATURE,
             description = "Moves the value one of the mutually exclusive feature attributes to the note attribute",
             enabled = true)
-    public void fix(GFF3Feature feature) {
+    public void fix(GFF3Feature feature, int line) {
 
         if (feature == null
                 || feature.getAttributes() == null
