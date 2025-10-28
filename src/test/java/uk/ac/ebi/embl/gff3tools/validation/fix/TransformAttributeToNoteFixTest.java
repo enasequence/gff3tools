@@ -52,7 +52,7 @@ class TransformAttributeToNoteFixTest {
 
         assertFalse(feature.containsAttribute(PRODUCT));
         assertTrue(feature.containsAttribute(PSEUDO));
-        assertEquals("kinase", feature.getAttributeByName(NOTE));
+        assertEquals("kinase", feature.getAttributeString(NOTE));
     }
 
     @Test
@@ -67,7 +67,7 @@ class TransformAttributeToNoteFixTest {
         fixer.fix(feature);
 
         assertFalse(feature.containsAttribute(PRODUCT));
-        assertEquals("existing-info,beta-lactamase", feature.getAttributeByName(NOTE));
+        assertEquals("existing-info,beta-lactamase", feature.getAttributeString(NOTE));
     }
 
     @Test
@@ -79,7 +79,7 @@ class TransformAttributeToNoteFixTest {
         fixer.fix(feature);
 
         assertTrue(feature.containsAttribute(PRODUCT));
-        assertNull(feature.getAttributeByName(NOTE));
+        assertNull(feature.getAttributeString(NOTE));
     }
 
     @Test
@@ -92,7 +92,7 @@ class TransformAttributeToNoteFixTest {
 
         assertTrue(feature.containsAttribute(PSEUDO));
         assertFalse(feature.containsAttribute(PRODUCT));
-        assertNull(feature.getAttributeByName(NOTE));
+        assertNull(feature.getAttributeString(NOTE));
     }
 
     @Test
@@ -106,7 +106,7 @@ class TransformAttributeToNoteFixTest {
         fixer.fix(feature);
 
         assertFalse(feature.containsAttribute(PRODUCT));
-        assertNull(feature.getAttributeByName(NOTE));
+        assertNull(feature.getAttributeString(NOTE));
     }
 
     @Test
@@ -121,7 +121,7 @@ class TransformAttributeToNoteFixTest {
         fixer.fix(feature);
 
         assertFalse(feature.containsAttribute(PRODUCT));
-        assertEquals("transferase", feature.getAttributeByName(NOTE));
+        assertEquals("transferase", feature.getAttributeString(NOTE));
     }
 
     @Test

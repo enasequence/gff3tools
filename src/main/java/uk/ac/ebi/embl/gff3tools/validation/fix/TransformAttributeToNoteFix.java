@@ -46,7 +46,7 @@ public class TransformAttributeToNoteFix {
 
         for (ExclusiveAttributePair pair : pairs) {
             if (feature.containsAttribute(pair.toRemove) && feature.containsAttribute(pair.exclusive)) {
-                String valueToAppend = feature.getAttributeByName(pair.toRemove);
+                String valueToAppend = feature.getAttributeString(pair.toRemove);
                 if (!valueToAppend.isEmpty()) {
                     appendToNote(feature, valueToAppend);
                 }
@@ -56,12 +56,12 @@ public class TransformAttributeToNoteFix {
     }
 
     private void appendToNote(GFF3Feature feature, String valueToAppend) {
-        String current = feature.getAttributeByName(note);
+        String current = feature.getAttributeString(note);
         if (current == null) {
-            feature.setAttribute(note, valueToAppend);
+            feature.setAttributeString(note, valueToAppend);
             return;
         }
-        feature.setAttribute(note, current + "," + valueToAppend);
+        feature.setAttributeString(note, current + "," + valueToAppend);
     }
 
     public static class ExclusiveAttributePair {

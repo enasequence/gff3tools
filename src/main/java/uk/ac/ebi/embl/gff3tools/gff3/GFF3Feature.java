@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -106,12 +107,34 @@ public class GFF3Feature {
         return attrBuilder.toString();
     }
 
-    public long getLength() {
-        return Math.max(end - start + 1, 0);
+    public String getAttributeString(String note) {
+        Object value = attributes.get(note);
+
+        if (value instanceof List<?>) {
+            // Safely cast and join the list into a comma-separated string
+            List<?> list = (List<?>) value;
+            return list.stream().map(Object::toString).collect(Collectors.joining(", "));
+        } else if (value instanceof String) {
+            return (String) value;
+        } else if (value != null) {
+            return value.toString();
+        } else {
+            return null;
+        }
     }
 
-    public String getAttributeByName(String name) {
-        return (String) attributes.get(name);
+    public void setAttributeString(String note, String valueToAppend) {
+        if (valueToAppend.contains(",")) {
+            List<String> values =
+                    Arrays.stream(valueToAppend.split(",")).map(String::trim).collect(Collectors.toList());
+            attributes.put(note, values);
+        } else {
+            attributes.put(note, valueToAppend.trim());
+        }
+    }
+
+    public long getLength() {
+        return Math.max(end - start + 1, 0);
     }
 
     public boolean containsAttribute(String name) {
@@ -120,9 +143,5 @@ public class GFF3Feature {
 
     public void removeAttribute(String name) {
         attributes.remove(name);
-    }
-
-    public void setAttribute(String note, String valueToAppend) {
-        attributes.put(note, valueToAppend);
     }
 }

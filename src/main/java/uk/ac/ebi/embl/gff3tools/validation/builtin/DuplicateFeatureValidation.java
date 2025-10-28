@@ -39,8 +39,8 @@ public class DuplicateFeatureValidation extends Validation {
 
     @ValidationMethod(rule = "GFF3_DUPLICATE_FEATURE_VALIDATION", type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
-        String proteinId = feature.getAttributeByName(GFF3Attributes.PROTEIN_ID);
-        String attributeId = feature.getAttributeByName(GFF3Attributes.ATTRIBUTE_ID);
+        String proteinId = feature.getAttributeString(GFF3Attributes.PROTEIN_ID);
+        String attributeId = feature.getAttributeString(GFF3Attributes.ATTRIBUTE_ID);
 
         if (proteinId != null && attributeId != null) {
             ProteinAttributePair proteinAttributePair = new ProteinAttributePair(proteinId, attributeId);
