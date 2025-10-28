@@ -21,8 +21,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Fix(
         name = "TransformExclusiveAttributeToNote",
-        description = "Moves the value one of the mutually exclusive feature attributes to the note attribute",
-        enabled = true)
+        description = "Moves the value one of the mutually exclusive feature attributes to the note attribute")
 public class TransformAttributeToNoteFix {
 
     List<ExclusiveAttributePair> pairs = new ArrayList<ExclusiveAttributePair>();
@@ -36,8 +35,7 @@ public class TransformAttributeToNoteFix {
     @FixMethod(
             rule = "TransformExclusiveAttributeToNote",
             type = ValidationType.FEATURE,
-            description = "Moves the value one of the mutually exclusive feature attributes to the note attribute",
-            enabled = true)
+            description = "Moves the value one of the mutually exclusive feature attributes to the note attribute")
     public void fix(GFF3Feature feature, int line) {
 
         if (feature == null
