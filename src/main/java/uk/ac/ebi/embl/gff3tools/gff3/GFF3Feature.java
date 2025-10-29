@@ -84,21 +84,6 @@ public class GFF3Feature {
         }
     }
 
-    public long getLength() {
-        return Math.max(end - start + 1, 0);
-    }
-
-    public String getAttributeByName(String name) {
-        String value = (String) attributes.get(name);
-        return value == null || value.isBlank() ? null : value.trim();
-    }
-
-    public boolean hasAttribute(String name) {
-        return attributes.containsKey(name) && attributes.get(name) != null;
-    }
-
-
-
     private String getAttributeString(Map<String, Object> attributes) {
         StringBuilder attrBuilder = new StringBuilder();
 
@@ -119,6 +104,19 @@ public class GFF3Feature {
             attrBuilder.append(";");
         });
         return attrBuilder.toString();
+    }
+
+    public long getLength() {
+        return Math.max(end - start + 1, 0);
+    }
+
+    public String getAttributeByName(String name) {
+        String value = (String) attributes.get(name);
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    public boolean hasAttribute(String name) {
+        return attributes.containsKey(name) && attributes.get(name) != null;
     }
 
     public List<String> getAttributeValueList(String name) {
@@ -146,5 +144,9 @@ public class GFF3Feature {
         } else {
             attributes.put(note, values);
         }
+    }
+
+    public void removeAttribute(String name) {
+        attributes.remove(name);
     }
 }
