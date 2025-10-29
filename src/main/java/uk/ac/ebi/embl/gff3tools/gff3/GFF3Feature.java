@@ -125,4 +125,30 @@ public class GFF3Feature {
         }
         return attributes.containsKey(GFF3Attributes.PSEUDO) || attributes.containsKey(GFF3Attributes.PSEUDOGENE);
     }
+
+    public List<String> getAttributeValueList(String name) {
+        Object value = attributes.get(name);
+        if (value == null) return List.of();
+
+        List<String> out = new ArrayList<>();
+        if (value instanceof List<?>) {
+            for (Object item : (List<?>) value) {
+                if (item != null) out.add(item.toString().trim());
+            }
+        } else {
+            out.add(value.toString());
+        }
+
+        return out;
+    }
+
+    public void setAttributeValueList(String note, List<String> values) {
+        if (values.size() == 1) {
+            attributes.put(note, values.get(0));
+        } else if (values.isEmpty()) {
+            attributes.remove(note);
+        } else {
+            attributes.put(note, values);
+        }
+    }
 }
