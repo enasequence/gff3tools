@@ -152,6 +152,7 @@ public class GFF3Feature {
     }
 
     public void setAttributeValueList(String note, List<String> values) {
+        values.removeIf(s -> s == null || s.trim().isBlank()); // remove empty bits
         if (values.size() == 1) {
             attributes.put(note, values.get(0));
         } else if (values.isEmpty()) {
