@@ -20,7 +20,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Fix(
-        name = "TRANSFORM_EXCLUSIVE_ATTRIBUTE_TO_NOTE",
+        name = "transform_exclusive_attribute_to_note",
         description = "Moves the value one of the mutually exclusive feature attributes to the note attribute")
 public class TransformAttributeToNoteFix {
 
