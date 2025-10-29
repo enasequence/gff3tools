@@ -119,34 +119,29 @@ public class GFF3Feature {
         return attributes.containsKey(name) && attributes.get(name) != null;
     }
 
-    public List<String> getAttributeValueList(String name) {
-        Object value = attributes.get(name);
+    public List<String> getAttributeValueList(String key) {
+        Object value = attributes.get(key);
         if (value == null) return List.of();
 
-        List<String> out = new ArrayList<>();
         if (value instanceof List<?>) {
-            for (Object item : (List<?>) value) {
-                if (item != null) out.add(item.toString().trim());
-            }
+            return (List<String>) value;
         } else {
+            List<String> out = new ArrayList<>();
             out.add(value.toString());
+            return out;
         }
-
-        return out;
     }
 
-    public void setAttributeValueList(String note, List<String> values) {
+    public void setAttributeValueList(String key, List<String> values) {
         values.removeIf(s -> s == null || s.trim().isBlank()); // remove empty bits
-        if (values.size() == 1) {
-            attributes.put(note, values.get(0));
-        } else if (values.isEmpty()) {
-            attributes.remove(note);
+        if (values.isEmpty()) {
+            attributes.remove(key);
         } else {
-            attributes.put(note, values);
+            attributes.put(key, values);
         }
     }
 
-    public void removeAttribute(String name) {
-        attributes.remove(name);
+    public void removeAttribute(String key) {
+        attributes.remove(key);
     }
 }
