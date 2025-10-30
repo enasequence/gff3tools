@@ -144,4 +144,11 @@ public class GFF3Feature {
     public void removeAttribute(String key) {
         attributes.remove(key);
     }
+
+    public boolean isPseudo() {
+        if (attributes == null || attributes.isEmpty()) {
+            return false;
+        }
+        return attributes.containsKey(GFF3Attributes.PSEUDO) || attributes.containsKey(GFF3Attributes.PSEUDOGENE);
+    }
 }

@@ -16,6 +16,9 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
+import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
+import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
@@ -42,6 +45,9 @@ public class AttributesRelationValidation extends Validation {
     private static final String ERROR_PSEUDO_PRODUCT_CONFLICT =
             "Feature annotated with \"%s\" should not contain \"%s\". "
                     + "Please move the \"%s\" attribute value into \"%s\" or add a comment for a curator.";
+
+    private static final String CIRCULAR_RNA_ATTRIBUTE_ERROR =
+            "Attribute circularRNA is not allowed in feature \"%s\",  only CDS,mRNA or tRNA feature can contain circularRNA qualifier.";
 
     private static final Map<String, Set<String>> EXCLUSIVE_ATTRIBUTES =
             Map.of("clone", Set.of("sub_clone", "clone_lib"));
@@ -76,6 +82,8 @@ public class AttributesRelationValidation extends Validation {
             GFF3Attributes.ORGANELLE, Map.of(GFF3Attributes.GENE, Set.of("5.8S rRNA", "18S rRNA", "28S rRNA")),
             GFF3Attributes.GERM_LINE, Map.of(GFF3Attributes.MOL_TYPE, Set.of("mRNA")),
             GFF3Attributes.MACRO_NUCLEAR, Map.of(GFF3Attributes.ORGANELLE, Set.of(MITOCHONDRION)));
+
+    private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
 
     @ValidationMethod(rule = "EXCLUSIVE_ATTRIBUTES", type = ValidationType.FEATURE)
     public void validateExclusiveAttributes(GFF3Feature feature, int line) throws ValidationException {
@@ -181,6 +189,26 @@ public class AttributesRelationValidation extends Validation {
                                         disallowedQualifier, conditionQualifier, actualValue));
                     }
                 }
+            }
+        }
+    }
+
+    @ValidationMethod(rule = "CIRCULAR_RNA_ATTRIBUTES", type = ValidationType.FEATURE)
+    public void validateCircularRNAAttribute(GFF3Feature feature, int line) throws ValidationException {
+        String featureName = feature.getName();
+        Optional<String> soOptId = ontologyClient.findTermByNameOrSynonym(featureName);
+        if (soOptId.isEmpty()) {
+            return;
+        }
+        String soId = soOptId.get();
+        boolean isCircular =
+                Boolean.TRUE.toString().equalsIgnoreCase(feature.getAttributeByName(GFF3Attributes.CIRCULAR_RNA));
+
+        if (isCircular) {
+            Set<String> allowedFeatures = Set.of(OntologyTerm.CDS.ID, OntologyTerm.TRNA.ID, OntologyTerm.MRNA.ID);
+
+            if (!allowedFeatures.contains(soId)) {
+                throw new ValidationException(line, CIRCULAR_RNA_ATTRIBUTE_ERROR.formatted(featureName));
             }
         }
     }
