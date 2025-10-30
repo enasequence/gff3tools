@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -89,5 +90,93 @@ public class FeatureSpecificValidationTest {
                 .contains(
                         "Feature \"%s\" belongs to operon \"%s\", but no other features share this operon. Expected at least one additional member."
                                 .formatted(OntologyTerm.SIGNAL_PEPTIDE.name(), "operon1")));
+    }
+
+    @Test
+    public void testValidatePeptideFeatureWithMatchingPseudo() {
+        GFF3Feature cds = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
+                Map.of(
+                        GFF3Attributes.LOCUS_TAG, "L1",
+                        GFF3Attributes.PSEUDO, ""));
+
+        GFF3Feature peptide = TestUtils.createGFF3Feature(
+                OntologyTerm.SIGNAL_PEPTIDE.name(),
+                OntologyTerm.SIGNAL_PEPTIDE.name(),
+                Map.of(
+                        GFF3Attributes.LOCUS_TAG, "L1",
+                        GFF3Attributes.PSEUDO, "true"));
+
+        gff3Annotation.setFeatures(List.of(cds, peptide));
+
+        Assertions.assertDoesNotThrow(() -> attributeSpecificValidation.validatePeptideFeature(gff3Annotation, 1));
+    }
+
+    @Test
+    public void testValidatePeptideFeatureMissingPseudoThrowsException() {
+        GFF3Feature cds = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
+                Map.of(
+                        GFF3Attributes.LOCUS_TAG, "L1",
+                        GFF3Attributes.PSEUDO, "true"));
+
+        GFF3Feature peptide = TestUtils.createGFF3Feature(
+                OntologyTerm.SIGNAL_PEPTIDE.name(),
+                OntologyTerm.SIGNAL_PEPTIDE.name(),
+                Map.of(GFF3Attributes.LOCUS_TAG, "L1"));
+
+        gff3Annotation.setFeatures(List.of(cds, peptide));
+
+        ValidationException ex = Assertions.assertThrows(
+                ValidationException.class, () -> attributeSpecificValidation.validatePeptideFeature(gff3Annotation, 2));
+
+        Assertions.assertTrue(ex.getMessage()
+                .contains("Peptide \"%s\" requires the 'pseudo' attribute"
+                        .formatted(OntologyTerm.SIGNAL_PEPTIDE.name())));
+    }
+
+    @Test
+    public void testValidatePeptideFeatureDifferentLocusTagShouldPass() {
+        GFF3Feature cds = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
+                Map.of(
+                        GFF3Attributes.LOCUS_TAG, "L1",
+                        GFF3Attributes.PSEUDO, "true"));
+
+        GFF3Feature peptide = TestUtils.createGFF3Feature(
+                OntologyTerm.SIGNAL_PEPTIDE.name(),
+                OntologyTerm.SIGNAL_PEPTIDE.name(),
+                Map.of(GFF3Attributes.LOCUS_TAG, "L2"));
+
+        gff3Annotation.setFeatures(List.of(cds, peptide));
+
+        Assertions.assertDoesNotThrow(() -> attributeSpecificValidation.validatePeptideFeature(gff3Annotation, 3));
+    }
+
+    @Test
+    public void testValidatePeptideFeatureSameGeneOverlapShouldBeValidated() {
+        GFF3Feature cds = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
+                Map.of(
+                        GFF3Attributes.GENE, "geneA",
+                        GFF3Attributes.PSEUDO, "true"));
+
+        GFF3Feature peptide = TestUtils.createGFF3Feature(
+                OntologyTerm.TRANSIT_PEPTIDE.name(),
+                OntologyTerm.TRANSIT_PEPTIDE.name(),
+                Map.of(GFF3Attributes.GENE, "geneA"));
+
+        gff3Annotation.setFeatures(List.of(cds, peptide));
+
+        ValidationException ex = Assertions.assertThrows(
+                ValidationException.class, () -> attributeSpecificValidation.validatePeptideFeature(gff3Annotation, 4));
+
+        Assertions.assertTrue(ex.getMessage()
+                .contains("Peptide \"%s\" requires the 'pseudo' attribute"
+                        .formatted(OntologyTerm.TRANSIT_PEPTIDE.name())));
     }
 }
