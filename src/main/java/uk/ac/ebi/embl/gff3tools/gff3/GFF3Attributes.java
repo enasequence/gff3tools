@@ -46,13 +46,12 @@ public class GFF3Attributes {
     public static final String GENE = "gene";
     public static final String MOL_TYPE = "mol_type";
     public static final String CIRCULAR_RNA = "Is_circular";
-    public static final String PROCESSED = "processed";
-    public static final String UNPROCESSED = "unprocessed";
-    public static final String UNITARY = "unitary";
-    public static final String ALLELIC = "allelic";
-    public static final String UNKNOWN = "unknown";
     public static final String ARTIFICIAL_LOCATION = "artificial_location";
     public static final String RIBOSOMAL_SLIPPAGE = "ribosomal_slippage";
     public static final String TRANS_SPLICING = "trans_splicing";
+    public static final String ANTI_CODON = "anticodon";
+    public static final String TRANSL_EXCEPT = "transl_except";
+    public static final String TERM_AMINO_ACID = "TERM";
     public static final String GENE_SYNONYM = "gene_synonym";
+    public static final String OPERON = "operon";
 }
