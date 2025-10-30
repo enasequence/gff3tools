@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import java.util.Optional;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
@@ -50,6 +51,20 @@ public class LengthValidation extends Validation {
         if (ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.INTRON.ID) && length < INTRON_FEATURE_MIN_LENGTH) {
             throw new ValidationException(line, INVALID_INTRON_LENGTH_MESSAGE.formatted(feature.accession()));
         }
+
+        // TODO: Need to check if this has to be checked with CDS and its child - same for all the cases. Like Intron
+        if (OntologyTerm.CDS.ID.equals(soId) || ontologyClient.isChildOf(soId, OntologyTerm.CDS.ID)) {
+            boolean hasArtificialLocation = feature.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION);
+            boolean hasRibosomalSlippage = feature.hasAttribute(GFF3Attributes.RIBOSOMAL_SLIPPAGE);
+            boolean hasTransSplicing = feature.hasAttribute(GFF3Attributes.TRANS_SPLICING);
+
+            if (hasRibosomalSlippage || hasTransSplicing || feature.isPseudo()) {
+                return;
+            }
+            if (length < INTRON_FEATURE_MIN_LENGTH && !hasArtificialLocation) {
+                throw new ValidationException(line, INVALID_CDS_INTRON_LENGTH_MESSAGE);
+            }
+        }
     }
 
     @ValidationMethod(rule = "EXON_LENGTH", type = ValidationType.FEATURE, severity = RuleSeverity.WARN)
@@ -64,6 +79,21 @@ public class LengthValidation extends Validation {
         String soId = soIdOpt.get();
         if (ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.EXON.ID) && length < EXON_FEATURE_MIN_LENGTH) {
             throw new ValidationException(line, INVALID_EXON_LENGTH_MESSAGE.formatted(feature.accession()));
+        }
+    }
+
+    @ValidationMethod(rule = "PROPEPTIDE_LENGTH", type = ValidationType.FEATURE)
+    public void validatePropeptideLength(GFF3Feature feature, int line) throws ValidationException {
+        String featureName = feature.getName();
+        Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(featureName);
+
+        if (soIdOpt.isEmpty()) {
+            return;
+        }
+
+        String soId = soIdOpt.get();
+        if (OntologyTerm.PROPEPTIDE.ID.equals(soId) && feature.getLength() % 3 != 0) {
+            throw new ValidationException(line, INVALID_PROPEPTIDE_LENGTH_MESSAGE.formatted(feature.accession()));
         }
     }
 }

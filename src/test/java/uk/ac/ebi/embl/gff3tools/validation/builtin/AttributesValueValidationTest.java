@@ -361,4 +361,24 @@ public class AttributesValueValidationTest {
                         "Qualifier \"%s\" must have one of values \"%s\" when qualifier \"%s\" has value \"%s\" in any feature."
                                 .formatted(GFF3Attributes.ORGANELLE, MITOCHONDRION, GFF3Attributes.GENE, "12S rRNA")));
     }
+
+    @Test
+    public void testValidatePseudoGeneValueSuccess() {
+        feature = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.PSEUDOGENE, "processed"));
+
+        Assertions.assertDoesNotThrow(() -> attributesValueValidation.validatePseudoGeneValue(feature, 1));
+    }
+
+    @Test
+    public void testValidatePseudoGeneValueFailure() {
+        feature = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.PSEUDOGENE, "semiprocessed"));
+
+        ValidationException ex = Assertions.assertThrows(
+                ValidationException.class, () -> attributesValueValidation.validatePseudoGeneValue(feature, 1));
+
+        Assertions.assertTrue(
+                ex.getMessage().contains("pseudogene qualifier value \"%s\" is invalid".formatted("semiprocessed")));
+    }
 }

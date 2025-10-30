@@ -39,6 +39,9 @@ public class AttributesValueValidation extends Validation {
 
     private static final String PROTEIN_ID_VALUE_VALIDATION = "Protein Id cannot be null or empty";
 
+    private static final String PSEUDOGENE_VALUE_VALIDATION =
+            "pseudogene qualifier value \"%s\" is invalid. Allowed values are: \"%s\"";
+
     public static final String MITOCHONDRION = "mitochondrion";
     public static final String PROVIRAL_VALUE_PATTERN = ".*endogenous retrovirus$";
 
@@ -53,6 +56,13 @@ public class AttributesValueValidation extends Validation {
                     "^(18S ribosomal RNA)$",
                     "^(23S ribosomal RNA)$",
                     "^(28S ribosomal RNA)$"));
+
+    public static final Set<String> PSEUDO_GENE_VALUES = new HashSet<>(Arrays.asList(
+            GFF3Attributes.PROCESSED,
+            GFF3Attributes.UNPROCESSED,
+            GFF3Attributes.UNITARY,
+            GFF3Attributes.ALLELIC,
+            GFF3Attributes.UNKNOWN));
 
     private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
 
@@ -139,6 +149,17 @@ public class AttributesValueValidation extends Validation {
                     line,
                     QUALIFIER_VALUE_REQUIRED_ERROR.formatted(
                             GFF3Attributes.ORGANELLE, MITOCHONDRION, GFF3Attributes.GENE, "12S rRNA"));
+        }
+    }
+
+    @ValidationMethod(rule = "PSEUDO_GENE_VALUE", type = ValidationType.FEATURE)
+    public void validatePseudoGeneValue(GFF3Feature feature, int line) throws ValidationException {
+        if (feature.hasAttribute(GFF3Attributes.PSEUDOGENE)
+                && !PSEUDO_GENE_VALUES.contains(feature.getAttributeByName(GFF3Attributes.PSEUDOGENE))) {
+            throw new ValidationException(
+                    line,
+                    PSEUDOGENE_VALUE_VALIDATION.formatted(
+                            feature.getAttributeByName(GFF3Attributes.PSEUDOGENE), PSEUDO_GENE_VALUES));
         }
     }
 }
