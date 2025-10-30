@@ -128,7 +128,7 @@ public class GFF3AnnotationFactory {
         String source = ".";
         String score = ".";
 
-        String featureName = getGFF3FeatureName(ffFeature);
+        String featureName = FeatureMapping.getGFF3FeatureName(ffFeature);
 
         Optional<String> id = Optional.of(getIncrementalId(featureName, geneName));
         Optional<String> parentId = getParentFeature(featureName, geneName);
@@ -351,16 +351,5 @@ public class GFF3AnnotationFactory {
             }
         }
         return Optional.empty();
-    }
-
-    private String getGFF3FeatureName(Feature ffFeature) throws ValidationException {
-
-        Optional<String> soTerm = FeatureMapping.getGFF3FeatureName(ffFeature);
-
-        if (soTerm.isEmpty()) {
-            return ffFeature.getName();
-        } else {
-            return soTerm.get();
-        }
     }
 }
