@@ -34,7 +34,8 @@ public enum OntologyTerm {
     CODING_EXON("SO:0000195"),
     MRNA("SO:0000234"),
     RRNA("SO:0000252"),
-    TRNA("SO:0000253");
+    TRNA("SO:0000253"),
+    GAP("SO:0000730");
 
     public final String ID;
 
