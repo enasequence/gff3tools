@@ -119,11 +119,30 @@ public class GFF3Feature {
         return attributes.containsKey(name) && attributes.get(name) != null;
     }
 
-    public boolean isPseudo() {
-        if (attributes == null || attributes.isEmpty()) {
-            return false;
+    public List<String> getAttributeValueList(String key) {
+        Object value = attributes.get(key);
+        if (value == null) return List.of();
+
+        if (value instanceof List<?>) {
+            return (List<String>) value;
+        } else {
+            List<String> out = new ArrayList<>();
+            out.add(value.toString());
+            return out;
         }
-        return attributes.containsKey(GFF3Attributes.PSEUDO) || attributes.containsKey(GFF3Attributes.PSEUDOGENE);
+    }
+
+    public void setAttributeValueList(String key, List<String> values) {
+        values.removeIf(s -> s == null || s.trim().isBlank()); // remove empty bits
+        if (values.isEmpty()) {
+            attributes.remove(key);
+        } else {
+            attributes.put(key, values);
+        }
+    }
+
+    public void removeAttribute(String key) {
+        attributes.remove(key);
     }
 
     public List<String> getAttributeValueList(String name) {
