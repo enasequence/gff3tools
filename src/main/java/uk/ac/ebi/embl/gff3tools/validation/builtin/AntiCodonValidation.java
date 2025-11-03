@@ -27,7 +27,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-@Gff3Validation
+@Gff3Validation(name = "ANTI_CODON")
 public class AntiCodonValidation extends Validation {
 
     private static final String INVALID_FORMAT = "Invalid %s format \"%s\"";

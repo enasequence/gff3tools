@@ -22,7 +22,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-@Gff3Validation
+@Gff3Validation(name = "ATTRIBUTES_RELATION")
 public class AttributesRelationValidation extends Validation {
 
     private static final String ERROR_MUTUALLY_EXCLUSIVE_BY_VALUE =

@@ -22,7 +22,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-@Gff3Validation
+@Gff3Validation(name = "FEATURE_ATTRIBUTE_REQUIRED")
 public class FeatureAttributeRequiredValidation extends Validation {
 
     public static final List<String> FF_FEATURE_SET_ATTRIBUTES_REQUIRED = List.of(

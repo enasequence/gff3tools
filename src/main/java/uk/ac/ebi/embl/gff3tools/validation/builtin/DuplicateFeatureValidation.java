@@ -21,7 +21,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-@Gff3Validation(name = "DUPLICATE_FEATURE_VALIDATION")
+@Gff3Validation(name = "DUPLICATE_FEATURE")
 public class DuplicateFeatureValidation extends Validation {
 
     private record ProteinAttributePair(String proteinId, String attributeId) {
@@ -37,7 +37,7 @@ public class DuplicateFeatureValidation extends Validation {
     private static final String DUPLICATE_PROTEIN_ID_MESSAGE =
             "Duplicate Protein Id \"%s\" found. First occurrence at line %d, conflicting occurrence at line %d";
 
-    @ValidationMethod(rule = "GFF3_DUPLICATE_FEATURE_VALIDATION", type = ValidationType.FEATURE)
+    @ValidationMethod(rule = "DUPLICATE_FEATURE", type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
         String proteinId = feature.getAttributeByName(GFF3Attributes.PROTEIN_ID);
         String attributeId = feature.getAttributeByName(GFF3Attributes.ATTRIBUTE_ID);

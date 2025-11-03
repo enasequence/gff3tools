@@ -26,7 +26,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-@Gff3Validation
+@Gff3Validation(name = "LOCATION")
 public class LocationValidation extends Validation {
 
     private static final String INVALID_START_END_MESSAGE = "Invalid start/end for accession \"%s\"";
@@ -36,7 +36,7 @@ public class LocationValidation extends Validation {
 
     private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
 
-    @ValidationMethod(rule = "LOCATION_VALIDATION", type = ValidationType.FEATURE)
+    @ValidationMethod(rule = "LOCATION", type = ValidationType.FEATURE)
     public void validateLocation(GFF3Feature feature, int line) throws ValidationException {
         long start = feature.getStart();
         long end = feature.getEnd();
