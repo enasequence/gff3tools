@@ -215,7 +215,25 @@ public class ValidationEngineTest {
     }
 
     // ------------------------------------------------------------
-    // 5. Handle syntactic validation exception
+    // 5. Execute fixes
+    // ------------------------------------------------------------
+    @Test
+    void testDisabledExecuteFixs_invokesFixForAnnotation() throws Exception {
+        class DummyFix {
+            @FixMethod(rule = "FIX_1", type = ValidationType.ANNOTATION, enabled = false)
+            public void fix(GFF3Annotation a, int line) {}
+        }
+
+        Method m = DummyFix.class.getDeclaredMethod("fix", GFF3Annotation.class, int.class);
+        DummyFix instance = spy(new DummyFix());
+        ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyFix.class, instance, m);
+        List<ValidatorDescriptor> descriptors = List.of(descriptor);
+
+        when(validationConfig.getFix("FIX_1", true)).thenReturn(false);
+    }
+
+    // ------------------------------------------------------------
+    // 6. Handle syntactic validation exception
     // ------------------------------------------------------------
     @Test
     void testHandleSyntacticValidation_warnAddsToParsingErrors() throws ValidationException {
