@@ -98,13 +98,11 @@ public class LocusTagAssociationFixTest {
     void maintainsSeparateMappingsPerAccession() {
         LocusTagAssociationFix fix = new LocusTagAssociationFix();
 
-        GFF3Feature a1 =
-                TestUtils.createGFF3FeatureWithAccession("chrA", "a1", Map.of(GENE, "geneX", LOCUS_TAG, "LT_A1"));
+        GFF3Feature a1 = TestUtils.createGFF3FeatureWithAccession("chrA", "a1", Map.of(GENE, "geneX", LOCUS_TAG, "LT_A1"));
         GFF3Feature a2 = TestUtils.createGFF3FeatureWithAccession("chrA", "a2", Map.of(GENE, "geneX"));
         // Accession B
         GFF3Feature b1 = TestUtils.createGFF3FeatureWithAccession("chrB", "b1", Map.of(GENE, "geneX"));
-        GFF3Feature b2 =
-                TestUtils.createGFF3FeatureWithAccession("chrB", "b2", Map.of(GENE, "geneX", LOCUS_TAG, "LT_B2"));
+        GFF3Feature b2 = TestUtils.createGFF3FeatureWithAccession("chrB", "b2", Map.of(GENE, "geneX", LOCUS_TAG, "LT_B2"));
 
         fix.fix(a1, 1);
         fix.fix(b1, 2);
