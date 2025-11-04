@@ -22,7 +22,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-@Gff3Validation
+@Gff3Validation(name = "LENGTH")
 public class LengthValidation extends Validation {
 
     private static final long INTRON_FEATURE_MIN_LENGTH = 10;

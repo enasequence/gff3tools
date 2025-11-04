@@ -23,7 +23,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-@Gff3Validation
+@Gff3Validation(name = "GENE_FEATURE")
 public class GeneFeatureValidation extends Validation {
 
     private static final String GENE_ASSOCIATION_VALIDATION =

@@ -22,7 +22,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-@Gff3Validation
+@Gff3Validation(name = "ASSEMBLY_GAP")
 public class AssemblyGapValidation extends Validation {
 
     private static final String VALIDATION_RULE = "GAP_FEATURE";
