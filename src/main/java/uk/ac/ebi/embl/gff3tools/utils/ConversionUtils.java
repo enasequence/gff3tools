@@ -33,7 +33,7 @@ public enum ConversionUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConversionUtils.class);
 
     private ConversionUtils() {
-        this.ontologyClient = new OntologyClient();
+        this.ontologyClient = OntologyClient.getInstance();
         this.loadMaps();
     }
 
