@@ -35,8 +35,9 @@ public class LocusTagAssociationFixTest {
     private static final String LOCUS_TAG = GFF3Attributes.LOCUS_TAG;
 
     @Test
-    void propagatesLocusTagToLaterFeaturesWithSameGene() {
+    void propagatesLocusTagToLaterFeaturesWithSameGene_SameAccession() {
         LocusTagAssociationFix fix = new LocusTagAssociationFix();
+
         GFF3Feature f1 = TestUtils.createGFF3Feature("f1", new HashMap<>(Map.of(GENE, "geneX", LOCUS_TAG, "LT001")));
         GFF3Feature f2 = TestUtils.createGFF3Feature("f2", new HashMap<>(Map.of(GENE, "geneX")));
 
@@ -44,31 +45,33 @@ public class LocusTagAssociationFixTest {
         fix.fix(f2, 2);
 
         assertEquals(List.of("LT001"), f2.getAttributeValueList(LOCUS_TAG));
-        assertEquals("LT001", fix.mappingSnapshot().get("geneX"));
+        assertEquals("LT001", fix.mappingSnapshot(TestUtils.defaultAccession()).get("geneX"));
     }
 
     @Test
-    void doesNotOverrideExistingLocusTag_FirstSeenWins() {
+    void overridesExistingLocusTag_ToFirstSeen_SameAccession() {
         LocusTagAssociationFix fix = new LocusTagAssociationFix();
+
         GFF3Feature a = TestUtils.createGFF3Feature("a", new HashMap<>(Map.of(GENE, "geneX", LOCUS_TAG, "LT001")));
         GFF3Feature b = TestUtils.createGFF3Feature("b", new HashMap<>(Map.of(GENE, "geneX", LOCUS_TAG, "LT999")));
 
         fix.fix(a, 1);
         fix.fix(b, 2);
 
-        assertEquals(List.of("LT001"), b.getAttributeValueList(LOCUS_TAG)); // fixed to first seen
-        assertEquals("LT001", fix.mappingSnapshot().get("geneX")); // first-seen mapping exists in fix memory
+        assertEquals(List.of("LT001"), b.getAttributeValueList(LOCUS_TAG)); // corrected
+        assertEquals("LT001", fix.mappingSnapshot(TestUtils.defaultAccession()).get("geneX"));
     }
 
     @Test
     void noChangeWhenNoGeneAttribute() {
         LocusTagAssociationFix fix = new LocusTagAssociationFix();
+
         GFF3Feature a = TestUtils.createGFF3Feature("a", new HashMap<>());
 
         fix.fix(a, 1);
 
         assertTrue(a.getAttributeValueList(LOCUS_TAG).isEmpty());
-        assertTrue(fix.mappingSnapshot().isEmpty());
+        assertTrue(fix.mappingSnapshot(TestUtils.defaultAccession()).isEmpty());
     }
 
     @Test
@@ -88,6 +91,30 @@ public class LocusTagAssociationFixTest {
         fix.fix(f2, 2);
 
         assertEquals(List.of("LT_A"), f2.getAttributeValueList(LOCUS_TAG));
-        assertEquals("LT_A", fix.mappingSnapshot().get("geneA"));
+        assertEquals("LT_A", fix.mappingSnapshot(TestUtils.defaultAccession()).get("geneA"));
+    }
+
+    @Test
+    void maintainsSeparateMappingsPerAccession() {
+        LocusTagAssociationFix fix = new LocusTagAssociationFix();
+
+        GFF3Feature a1 =
+                TestUtils.createGFF3FeatureWithAccession("chrA", "a1", Map.of(GENE, "geneX", LOCUS_TAG, "LT_A1"));
+        GFF3Feature a2 = TestUtils.createGFF3FeatureWithAccession("chrA", "a2", Map.of(GENE, "geneX"));
+        // Accession B
+        GFF3Feature b1 = TestUtils.createGFF3FeatureWithAccession("chrB", "b1", Map.of(GENE, "geneX"));
+        GFF3Feature b2 =
+                TestUtils.createGFF3FeatureWithAccession("chrB", "b2", Map.of(GENE, "geneX", LOCUS_TAG, "LT_B2"));
+
+        fix.fix(a1, 1);
+        fix.fix(b1, 2);
+        fix.fix(a2, 3);
+        fix.fix(b2, 4); // defines chrB mapping
+
+        assertEquals(List.of("LT_A1"), a2.getAttributeValueList(LOCUS_TAG));
+        assertTrue(b1.getAttributeValueList(LOCUS_TAG).isEmpty());
+
+        assertEquals("LT_A1", fix.mappingSnapshot("chrA").get("geneX"));
+        assertEquals("LT_B2", fix.mappingSnapshot("chrB").get("geneX"));
     }
 }

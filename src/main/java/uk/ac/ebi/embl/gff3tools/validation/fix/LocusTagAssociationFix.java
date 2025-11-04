@@ -25,7 +25,7 @@ public class LocusTagAssociationFix {
 
     public static final String LOCUS_TAG = GFF3Attributes.LOCUS_TAG;
     public static final String GENE = GFF3Attributes.GENE;
-    private final Map<String, String> geneToLocusTag = new HashMap<>();
+    private final Map<String, Map<String, String>> accessionTogeneToLocusTag = new HashMap<>();
 
     public LocusTagAssociationFix() {}
 
@@ -41,22 +41,32 @@ public class LocusTagAssociationFix {
         String gene = firstNonBlank(feature.getAttributeValueList(GENE));
         if (gene == null) return;
 
+        String accessionNumber = feature.accession();
         String presentLocus = firstNonBlank(feature.getAttributeValueList(LOCUS_TAG));
-        if (geneToLocusTag.containsKey(gene)) {
-            // add locus tag or correct to first-seen locus tag
-            String known = geneToLocusTag.get(gene);
-            List<String> locusValues = new ArrayList<>();
-            locusValues.add(known);
-            feature.setAttributeValueList(LOCUS_TAG, locusValues);
+        if (accessionTogeneToLocusTag.containsKey(accessionNumber)) {
+            var geneToLocusTag = accessionTogeneToLocusTag.get(accessionNumber);
+            if (geneToLocusTag.containsKey(gene)) {
+                // add locus tag or correct to first-seen locus tag
+                String known = geneToLocusTag.get(gene);
+                List<String> locusValues = new ArrayList<>();
+                locusValues.add(known);
+                feature.setAttributeValueList(LOCUS_TAG, locusValues);
+            } else if (presentLocus != null) {
+                // if unremembered locus tag present, remember it (first seen wins)
+                geneToLocusTag.putIfAbsent(gene, presentLocus);
+                accessionTogeneToLocusTag.replace(accessionNumber, geneToLocusTag);
+            }
         } else if (presentLocus != null) {
-            // if unremembered locus tag present, remember it (first seen wins)
+            var geneToLocusTag = new HashMap<String, String>();
             geneToLocusTag.putIfAbsent(gene, presentLocus);
+            accessionTogeneToLocusTag.put(accessionNumber, geneToLocusTag);
         }
     }
 
     /** Read-only snapshot for tests */
-    public Map<String, String> mappingSnapshot() {
-        return Collections.unmodifiableMap(geneToLocusTag);
+    public Map<String, String> mappingSnapshot(String accessionNumber) {
+        return Collections.unmodifiableMap(
+                accessionTogeneToLocusTag.getOrDefault(accessionNumber, Collections.emptyMap()));
     }
 
     private static String firstNonBlank(List<String> values) {
