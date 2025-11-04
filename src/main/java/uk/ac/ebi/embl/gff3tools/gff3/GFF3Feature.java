@@ -136,6 +136,8 @@ public class GFF3Feature {
         values.removeIf(s -> s == null || s.trim().isBlank()); // remove empty bits
         if (values.isEmpty()) {
             attributes.remove(key);
+        } else if (values.size() == 1) {
+            attributes.put(key, values.get(0));
         } else {
             attributes.put(key, values);
         }
@@ -143,5 +145,9 @@ public class GFF3Feature {
 
     public void removeAttribute(String key) {
         attributes.remove(key);
+    }
+
+    public void setAttribute(String name, Object value) {
+        attributes.put(name, value);
     }
 }

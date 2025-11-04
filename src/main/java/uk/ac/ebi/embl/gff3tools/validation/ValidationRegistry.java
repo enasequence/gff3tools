@@ -84,7 +84,7 @@ public class ValidationRegistry {
                 }
             } catch (Exception e) {
                 throw new RuntimeException(
-                        String.format("Failed to initialize validator {}: {}", clazz.getName(), e.getMessage()));
+                        String.format("Failed to initialize validator %s: %s", clazz.getName(), e.getMessage()));
             }
         }
 

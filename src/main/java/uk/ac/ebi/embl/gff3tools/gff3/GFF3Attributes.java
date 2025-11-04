@@ -52,6 +52,13 @@ public class GFF3Attributes {
     public static final String ANTI_CODON = "anticodon";
     public static final String TRANSL_EXCEPT = "transl_except";
     public static final String TERM_AMINO_ACID = "TERM";
+    public static String COMPARE = "compare";
+    public static String CITATION = "citation";
+    public static String MOD_BASE = "mod_base";
+    public static String EC_NUMBER = "ec_number";
+    public static String LABEL = "label";
+    public static String MOBILE_ELEMENT = "mobile_element";
+    public static String MOBILE_ELEMENT_TYPE = "mobile_element_type";
     public static final String GENE_SYNONYM = "gene_synonym";
     public static final String OPERON = "operon";
     public static final String GAP_TYPE = "gap_type";
