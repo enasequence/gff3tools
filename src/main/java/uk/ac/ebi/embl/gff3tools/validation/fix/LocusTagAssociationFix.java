@@ -45,8 +45,8 @@ public class LocusTagAssociationFix {
         String presentLocus = firstNonBlank(feature.getAttributeValueList(LOCUS_TAG));
         if (accessionTogeneToLocusTag.containsKey(accessionNumber)) {
             var geneToLocusTag = accessionTogeneToLocusTag.get(accessionNumber);
-            if (geneToLocusTag.containsKey(gene)) {
-                // add locus tag or correct to first-seen locus tag
+            if (geneToLocusTag.containsKey(gene) && (presentLocus == null || presentLocus.isEmpty())) {
+                // add locus tag to features which dont have it
                 String known = geneToLocusTag.get(gene);
                 List<String> locusValues = new ArrayList<>();
                 locusValues.add(known);

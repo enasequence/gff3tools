@@ -49,16 +49,16 @@ public class LocusTagAssociationFixTest {
     }
 
     @Test
-    void overridesExistingLocusTag_ToFirstSeen_SameAccession() {
+    void doesntOverrideExistingLocusTag_ToFirstSeen_SameAccession() {
         LocusTagAssociationFix fix = new LocusTagAssociationFix();
 
         GFF3Feature a = TestUtils.createGFF3Feature("a", new HashMap<>(Map.of(GENE, "geneX", LOCUS_TAG, "LT001")));
-        GFF3Feature b = TestUtils.createGFF3Feature("b", new HashMap<>(Map.of(GENE, "geneX", LOCUS_TAG, "LT999")));
+        GFF3Feature b = TestUtils.createGFF3Feature("b", new HashMap<>(Map.of(GENE, "geneX", LOCUS_TAG, "LT002")));
 
         fix.fix(a, 1);
         fix.fix(b, 2);
 
-        assertEquals(List.of("LT001"), b.getAttributeValueList(LOCUS_TAG)); // corrected
+        assertEquals(List.of("LT002"), b.getAttributeValueList(LOCUS_TAG)); // corrected
         assertEquals("LT001", fix.mappingSnapshot(TestUtils.defaultAccession()).get("geneX"));
     }
 
