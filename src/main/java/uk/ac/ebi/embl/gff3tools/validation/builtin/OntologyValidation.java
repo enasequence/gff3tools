@@ -18,10 +18,10 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-@Gff3Validation
+@Gff3Validation(name = "ONTOLOGY")
 public class OntologyValidation extends Validation {
 
-    public static final String VALIDATION_RULE = "GFF3_ONTOLOGY_FEATURE";
+    public static final String VALIDATION_RULE = "ONTOLOGY_FEATURE";
 
     @ValidationMethod(rule = VALIDATION_RULE, type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {

@@ -22,7 +22,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-@Gff3Validation
+@Gff3Validation(name = "FEATURE_SPECIFIC")
 public class FeatureSpecificValidation extends Validation {
 
     private static final String INVALID_OPERON_MESSAGE =
