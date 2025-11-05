@@ -62,7 +62,7 @@ public class GeneFeatureValidation extends Validation {
         if (existingLocus != null && !Objects.equals(existingLocus, locusTag)) {
             boolean isRrna = soIdOpt.map(soId -> soId.equals(OntologyTerm.RRNA.ID)
                             || soId.equals(OntologyTerm.PSEUDOGENIC_RRNA.ID)
-                            || ontologyClient.isChildOf(soId, OntologyTerm.PSEUDOGENIC_RRNA.ID))
+                            || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENIC_RRNA.ID))
                     .orElse(false);
 
             if (!isRrna) {
@@ -100,8 +100,8 @@ public class GeneFeatureValidation extends Validation {
         boolean isGene = soId.equals(OntologyTerm.GENE.ID)
                 || soId.equals(OntologyTerm.PSEUDOGENE.ID)
                 || soId.equals(OntologyTerm.UNITARY_PSEUDOGENE.ID)
-                || ontologyClient.isChildOf(soId, OntologyTerm.PSEUDOGENE.ID)
-                || ontologyClient.isChildOf(soId, OntologyTerm.UNITARY_PSEUDOGENE.ID);
+                || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENE.ID)
+                || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.UNITARY_PSEUDOGENE.ID);
 
         if (!isGene) {
             return;
@@ -212,9 +212,9 @@ public class GeneFeatureValidation extends Validation {
         return soId.equals(OntologyTerm.GENE.ID)
                 || soId.equals(OntologyTerm.CDS.ID)
                 || soId.equals(OntologyTerm.PSEUDOGENIC_CDS.ID)
-                || ontologyClient.isChildOf(soId, OntologyTerm.GENE.ID)
-                || ontologyClient.isChildOf(soId, OntologyTerm.CDS.ID)
-                || ontologyClient.isChildOf(soId, OntologyTerm.PSEUDOGENE.ID)
-                || ontologyClient.isChildOf(soId, OntologyTerm.PSEUDOGENIC_CDS.ID);
+                || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.GENE.ID)
+                || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.CDS.ID)
+                || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENE.ID)
+                || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENIC_CDS.ID);
     }
 }

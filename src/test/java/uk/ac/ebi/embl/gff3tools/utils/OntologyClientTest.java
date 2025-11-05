@@ -94,4 +94,23 @@ public class OntologyClientTest {
         // "cds" (lowercase) should also work for "CDS"
         assertTrue(ontologyClient.isFeatureSoTerm("cds"));
     }
+
+    @Test
+    public void testIsSelfOrDescendantOf_whenSameId_shouldReturnTrue() {
+
+        boolean result = ontologyClient.isSelfOrDescendantOf("SO:0000110", "SO:0000110");
+        assertTrue(result);
+    }
+
+    @Test
+    public void testIsSelfOrDescendantOf_whenChildId_shouldReturnTrue() {
+        boolean result = ontologyClient.isSelfOrDescendantOf("SO:0000666", "SO:0000188");
+        assertTrue(result);
+    }
+
+    @Test
+    public void testIsSelfOrDescendantOf_whenChildNotFound_shouldReturnFalse() {
+        boolean result = ontologyClient.isSelfOrDescendantOf("SO:0000110", "SO:0001675");
+        assertFalse(result);
+    }
 }

@@ -47,7 +47,7 @@ public class LengthValidation extends Validation {
             return;
         }
         String soId = soIdOpt.get();
-        if (ontologyClient.isChildOf(soId, OntologyTerm.INTRON.ID) && length < INTRON_FEATURE_MIN_LENGTH) {
+        if (ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.INTRON.ID) && length < INTRON_FEATURE_MIN_LENGTH) {
             throw new ValidationException(line, INVALID_INTRON_LENGTH_MESSAGE.formatted(feature.accession()));
         }
     }
@@ -62,7 +62,7 @@ public class LengthValidation extends Validation {
             return;
         }
         String soId = soIdOpt.get();
-        if (ontologyClient.isChildOf(soId, OntologyTerm.EXON.ID) && length < EXON_FEATURE_MIN_LENGTH) {
+        if (ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.EXON.ID) && length < EXON_FEATURE_MIN_LENGTH) {
             throw new ValidationException(line, INVALID_EXON_LENGTH_MESSAGE.formatted(feature.accession()));
         }
     }
