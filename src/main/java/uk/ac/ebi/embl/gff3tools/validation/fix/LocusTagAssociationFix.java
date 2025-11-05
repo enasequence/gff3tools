@@ -30,7 +30,7 @@ public class LocusTagAssociationFix {
     public LocusTagAssociationFix() {}
 
     @FixMethod(
-            rule = "LOCUS_TAG_ADD_OR_CORRECT_TO_FIRST_SEEN",
+            rule = "LOCUS_TAG_ADD_TO_FEATURES_SHARING_THE_GENE",
             type = ValidationType.FEATURE,
             description =
                     "Adds locus tag attribute to the features with the gene attribute, considering first-seen pair as the correct one")
