@@ -23,19 +23,17 @@ public class FeatureMapping {
 
     static Pattern WILDCARD_TEXT = Pattern.compile("^\\<.+\\>$");
 
-    public static Optional<String> getGFF3FeatureName(Feature ffFeature) throws ValidationException {
+    public static String getGFF3FeatureName(Feature ffFeature) throws ValidationException {
         String featureName = ffFeature.getName();
-        List<ConversionEntry> mappings = Optional.ofNullable(
-                        ConversionUtils.getFF2GFF3FeatureMap().get(featureName))
-                .orElseThrow(() -> new ValidationException(
-                        "EMBL_UNMAPPED_FEATURE",
-                        "There is no SO Term mapping for INSDC feature \"%s\"".formatted(featureName)));
+        List<ConversionEntry> mappings = ConversionUtils.getFF2GFF3FeatureMap().get(featureName);
 
         return mappings.stream()
                 .filter(entry -> entry.getFeature().equalsIgnoreCase(ffFeature.getName()))
                 .filter(entry -> hasAllQualifiers(ffFeature, entry))
                 .max(Comparator.comparingInt(entry -> entry.getQualifiers().size()))
-                .map(ConversionEntry::getSOTerm);
+                .map(ConversionEntry::getSOTerm)
+                .orElseThrow(() -> new ValidationException(
+                        "There is no SO Term mapping for INSDC feature \"%s\"".formatted(featureName)));
     }
 
     public static Stream<String> getGFF3FeatureCandidateIdsAndNames(String ffFeatureName) {

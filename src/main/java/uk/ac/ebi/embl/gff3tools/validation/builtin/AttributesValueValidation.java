@@ -23,7 +23,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-@Gff3Validation
+@Gff3Validation(name = "ATTRIBUTES_VALUE")
 public class AttributesValueValidation extends Validation {
 
     private static final String INVALID_FEATURE_PRODUCT_PATTERN =

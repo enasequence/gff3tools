@@ -18,6 +18,8 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 
 public class TestUtils {
 
+    public static final String DEFAULT_ACCESSION = "1234";
+
     public static BufferedReader getResourceReaderWithPath(String path) throws IOException {
         FileReader reader = new FileReader(path);
         return new BufferedReader(reader);
@@ -65,7 +67,7 @@ public class TestUtils {
         return new GFF3Feature(
                 featureName,
                 parentFeatureName,
-                "1234",
+                DEFAULT_ACCESSION,
                 Optional.empty(),
                 ".",
                 featureName.get(),
@@ -83,7 +85,7 @@ public class TestUtils {
         return new GFF3Feature(
                 Optional.of(featureName),
                 Optional.of(parentFeatureName),
-                "1234",
+                DEFAULT_ACCESSION,
                 Optional.empty(),
                 ".",
                 featureName,
@@ -100,7 +102,7 @@ public class TestUtils {
         return new GFF3Feature(
                 Optional.of(featureName),
                 Optional.empty(),
-                "1234",
+                DEFAULT_ACCESSION,
                 Optional.empty(),
                 ".",
                 featureName,
@@ -117,7 +119,7 @@ public class TestUtils {
         return new GFF3Feature(
                 Optional.of(featureName),
                 Optional.empty(),
-                "1234",
+                DEFAULT_ACCESSION,
                 Optional.empty(),
                 ".",
                 featureName,
@@ -135,7 +137,7 @@ public class TestUtils {
         return new GFF3Feature(
                 Optional.of(featureName),
                 Optional.empty(),
-                "1234",
+                DEFAULT_ACCESSION,
                 Optional.empty(),
                 ".",
                 featureName,
@@ -145,5 +147,45 @@ public class TestUtils {
                 "+",
                 "",
                 attributes);
+    }
+
+    public static GFF3Feature createGFF3Feature(
+            String featureName, String parentFeatureName, String seqId, Map<String, Object> attributes) {
+
+        return new GFF3Feature(
+                Optional.of(featureName),
+                Optional.of(parentFeatureName),
+                seqId,
+                Optional.empty(),
+                ".",
+                featureName,
+                1,
+                800,
+                ".",
+                "+",
+                "",
+                attributes);
+    }
+
+    public static GFF3Feature createGFF3FeatureWithAccession(
+            String seqId, String name, Map<String, Object> attributes) {
+        return new GFF3Feature(
+                Optional.of(name),
+                Optional.empty(),
+                seqId, // seqId -> controls accession()
+                Optional.empty(), // version
+                ".",
+                name,
+                1,
+                100,
+                ".",
+                "+",
+                "",
+                new HashMap<>(attributes) // mutable!
+                );
+    }
+
+    public static String defaultAccession() {
+        return DEFAULT_ACCESSION;
     }
 }

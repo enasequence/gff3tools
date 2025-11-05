@@ -28,6 +28,7 @@ import uk.ac.ebi.embl.api.entry.location.LocationFactory;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.fftogff3.FeatureMapping;
 import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3AnnotationFactory;
 import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3DirectivesFactory;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
@@ -151,7 +152,7 @@ class GFF3AnnotationFactoryTest {
         GFF3AnnotationFactory gFF3AnnotationFactory =
                 new GFF3AnnotationFactory(builder.build(), new GFF3DirectivesFactory());
 
-        Method method = GFF3AnnotationFactory.class.getDeclaredMethod("getGFF3FeatureName", Feature.class);
+        Method method = FeatureMapping.class.getDeclaredMethod("getGFF3FeatureName", Feature.class);
         method.setAccessible(true);
 
         FeatureFactory featureFactory = new FeatureFactory();
@@ -202,7 +203,10 @@ class GFF3AnnotationFactoryTest {
         createAndAddFeature(entry, "gene", qualifiers);
         createAndAddFeature(entry, "mRNA", qualifiers);
         createAndAddFeature(entry, "intron", qualifiers);
-        createAndAddFeature(entry, "repeat_region", null);
+
+        Map<String, String> repeatQualifiers = new HashMap<>();
+        repeatQualifiers.put("rpt_type", "other");
+        createAndAddFeature(entry, "repeat_region", repeatQualifiers);
 
         gFF3AnnotationFactory.from(entry);
 

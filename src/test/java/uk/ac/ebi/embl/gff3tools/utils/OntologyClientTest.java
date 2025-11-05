@@ -22,7 +22,7 @@ public class OntologyClientTest {
 
     @BeforeAll
     public static void setUp() {
-        ontologyClient = new OntologyClient();
+        ontologyClient = OntologyClient.getInstance();
     }
 
     @Test

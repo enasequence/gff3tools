@@ -41,7 +41,7 @@ class ValidationRegistryTest {
         assertSame(registry, another, "ValidationRegistry must be a singleton");
     }
 
-    @Gff3Validation(name = "length", enabled = true)
+    @Gff3Validation(name = "LENGTH", enabled = true)
     static class DummyValidation extends Validation {
         public DummyValidation() {}
 
@@ -49,7 +49,7 @@ class ValidationRegistryTest {
         public void validate() {}
     }
 
-    @Gff3Fix(name = "fix_length", enabled = true)
+    @Gff3Fix(name = "FIX_LENGTH", enabled = true)
     static class DummyFix extends Validation {
         public DummyFix() {}
 
@@ -91,13 +91,13 @@ class ValidationRegistryTest {
     @Test
     @DisplayName("Should filter validations correctly")
     void testGetValidationsFiltersOnlyValidationClasses() {
-        @Gff3Validation(name = "val1")
+        @Gff3Validation(name = "VAL1")
         class ValClass {
             @ValidationMethod(rule = "R1", type = ValidationType.FEATURE)
             public void validate() {}
         }
 
-        @Gff3Fix(name = "fix1")
+        @Gff3Fix(name = "FIX1")
         class FixClass {
             @ValidationMethod(rule = "F1", type = ValidationType.FEATURE)
             public void fix() {}
@@ -118,13 +118,13 @@ class ValidationRegistryTest {
     @Test
     @DisplayName("Should filter fix classes correctly")
     void testGetFixsFiltersOnlyFixClasses() {
-        @Gff3Validation(name = "val1")
+        @Gff3Validation(name = "VAL1")
         class ValClass {
             @ValidationMethod(rule = "R1", type = ValidationType.FEATURE)
             public void validate() {}
         }
 
-        @Gff3Fix(name = "fix1")
+        @Gff3Fix(name = "FIX1")
         class FixClass {
             @ValidationMethod(rule = "F1", type = ValidationType.FEATURE)
             public void fix() {}
@@ -145,7 +145,7 @@ class ValidationRegistryTest {
     @DisplayName("Should throw exception for duplicate validation rule names")
     void testDuplicateValidationRulesThrowsException() {
 
-        @Gff3Validation(name = "dup")
+        @Gff3Validation(name = "DUP")
         class DuplicateRuleValidator {
             @ValidationMethod(rule = "DUP_RULE", type = ValidationType.FEATURE)
             private void validate1() {}
@@ -173,7 +173,7 @@ class ValidationRegistryTest {
     @DisplayName("Should not throw when validation rules are unique")
     void testUniqueValidationRulesPass() throws Exception {
 
-        @Gff3Validation(name = "unique")
+        @Gff3Validation(name = "UNIQUE")
         class UniqueRuleValidator {
             @ValidationMethod(rule = "RULE_1", type = ValidationType.FEATURE)
             public void validate1() {}
