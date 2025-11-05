@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.utils;
 
 import java.io.InputStream;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;
@@ -23,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class OntologyClient {
+    private static final OntologyClient INSTANCE = new OntologyClient();
     private static final Logger LOGGER = LoggerFactory.getLogger(OntologyClient.class);
     static final String GENEONTOLOGY_IRI_BASE = "http://www.geneontology.org/formats/oboInOwl";
     static final String OBOLIBRARY_IRI_BASE = "http://purl.obolibrary.org/obo/";
@@ -30,9 +32,19 @@ public class OntologyClient {
     private OWLDataFactory dataFactory;
     private OWLReasoner reasoner;
 
-    public OntologyClient() {
-        this.dataFactory = OWLManager.createOWLOntologyManager().getOWLDataFactory();
-        loadOntology();
+    Map<String, Optional<String>> searchCache = new HashMap<>();
+    Map<String, Set<String>> descendantsCache = new HashMap<>();
+
+    public static OntologyClient getInstance() {
+        INSTANCE.initClient();
+        return INSTANCE;
+    }
+
+    private void initClient() {
+        if (dataFactory == null) {
+            this.dataFactory = OWLManager.createOWLOntologyManager().getOWLDataFactory();
+            loadOntology();
+        }
     }
 
     private void loadOntology() {
@@ -46,6 +58,7 @@ public class OntologyClient {
             // Initialize the reasoner after the ontology is loaded
             OWLReasonerFactory reasonerFactory = new StructuralReasonerFactory();
             this.reasoner = reasonerFactory.createReasoner(ontology);
+            precomputeDescendants();
             LOGGER.info("SO Ontology loaded successfully.");
         } catch (OWLOntologyCreationException e) {
             LOGGER.error("Error loading SO Ontology: " + e.getMessage(), e);
@@ -62,19 +75,29 @@ public class OntologyClient {
      * @return true if the child term is a child of the parent term, false otherwise.
      */
     public boolean isChildOf(String childOntologyId, String parentOntologyId) {
-        if (ontology == null || reasoner == null) {
-            LOGGER.warn("Ontology or reasoner not loaded. Cannot check for child relationship.");
+        if (ontology == null || descendantsCache == null) {
+            LOGGER.warn("Ontology or descendants cache not loaded. Cannot check for child relationship.");
             return false;
         }
 
-        OWLClass childClass =
-                dataFactory.getOWLClass(IRI.create(OBOLIBRARY_IRI_BASE + childOntologyId.replace(":", "_")));
-        OWLClass parentClass =
-                dataFactory.getOWLClass(IRI.create(OBOLIBRARY_IRI_BASE + parentOntologyId.replace(":", "_")));
+        Set<String> descendants = descendantsCache.get(parentOntologyId);
+        return descendants != null && descendants.contains(childOntologyId);
+    }
 
-        // Check if childClass is a subclass of parentClass, excluding the case where they are the same class
-        return reasoner.getSubClasses(parentClass, false).getFlattened().stream()
-                .anyMatch(subClass -> subClass.equals(childClass));
+    private void precomputeDescendants() {
+        LOGGER.info("Precomputing ontology descendants...");
+        for (OWLClass owlClass : ontology.getClassesInSignature()) {
+            String soId = extractOntologyId(owlClass.getIRI());
+            if (soId != null) {
+                Set<String> descendants = reasoner.getSubClasses(owlClass, false).getFlattened().stream()
+                        .map(OWLClass::getIRI)
+                        .map(this::extractOntologyId)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet());
+                descendantsCache.put(soId, descendants);
+            }
+        }
+        LOGGER.info("Ontology descendants precomputed.");
     }
 
     /**
@@ -87,6 +110,11 @@ public class OntologyClient {
         if (ontology == null) {
             LOGGER.warn("Ontology not loaded. Cannot search for term by name or synonym.");
             return Optional.empty();
+        }
+
+        Optional<String> cachedResult = searchCache.get(nameOrSynonym);
+        if (cachedResult != null) {
+            return cachedResult;
         }
 
         final String searchLower = nameOrSynonym.toLowerCase();
@@ -103,7 +131,9 @@ public class OntologyClient {
             if (label.isPresent()) {
                 String soId = extractOntologyId(owlClass.getIRI());
                 if (soId != null) {
-                    return Optional.of(soId);
+                    Optional<String> result = Optional.of(soId);
+                    searchCache.put(nameOrSynonym, result);
+                    return result;
                 }
             }
 
@@ -133,11 +163,14 @@ public class OntologyClient {
             if (synonym.isPresent()) {
                 String soId = extractOntologyId(owlClass.getIRI());
                 if (soId != null) {
-                    return Optional.of(soId);
+                    Optional<String> result = Optional.of(soId);
+                    searchCache.put(nameOrSynonym, result);
+                    return result;
                 }
             }
         }
 
+        searchCache.put(nameOrSynonym, Optional.empty());
         return Optional.empty();
     }
 
