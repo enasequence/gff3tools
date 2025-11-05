@@ -11,7 +11,6 @@
 package uk.ac.ebi.embl.gff3tools.utils;
 
 import java.io.InputStream;
-import java.sql.Connection;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -23,8 +22,6 @@ import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory;
 import org.semanticweb.owlapi.search.EntitySearcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.ac.ebi.embl.gff3tools.validation.ValidationConfig;
-import uk.ac.ebi.embl.gff3tools.validation.ValidationRegistry;
 
 public class OntologyClient {
     private static final OntologyClient INSTANCE = new OntologyClient();
@@ -44,7 +41,7 @@ public class OntologyClient {
     }
 
     private void initClient() {
-        if(dataFactory==null) {
+        if (dataFactory == null) {
             this.dataFactory = OWLManager.createOWLOntologyManager().getOWLDataFactory();
             loadOntology();
         }
