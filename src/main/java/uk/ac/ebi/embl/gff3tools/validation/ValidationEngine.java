@@ -71,7 +71,7 @@ public class ValidationEngine {
 
             FixMethod methodAnnotation = validator.method().getAnnotation(FixMethod.class);
 
-            boolean fixEnabled = validationConfig.getFix(methodAnnotation.rule(), true);
+            boolean fixEnabled = validationConfig.getFix(methodAnnotation.rule(), methodAnnotation.enabled());
 
             if (!fixEnabled) continue;
 
