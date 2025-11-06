@@ -40,7 +40,7 @@ public class FeatureSpecificValidation extends Validation {
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
         boolean isOperon = soIdOpt.isPresent()
                 && (OntologyTerm.OPERON.ID.equals(soIdOpt.get())
-                        || ontologyClient.isChildOf(soIdOpt.get(), OntologyTerm.OPERON.ID));
+                        || ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.OPERON.ID));
         if (isOperon) {
             return;
         }
