@@ -10,7 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.HashMap;
 import java.util.List;
@@ -39,7 +39,7 @@ public class EcNumberValueFixTest {
         Map<String, List<String>> attributes = new HashMap<>();
         attributes.put(GFF3Attributes.PROTEIN_ID, List.of("protein_id"));
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
-        ecNumberValueFix.fixFeature(feature, 1);
+        ecNumberValueFix.fixEcNumber(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(1, feature.getAttributeKeys().size());
     }
@@ -50,7 +50,7 @@ public class EcNumberValueFixTest {
         attributes.put(GFF3Attributes.EC_NUMBER, List.of("deleted"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
-        ecNumberValueFix.fixFeature(feature, 1);
+        ecNumberValueFix.fixEcNumber(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(0, feature.getAttributeKeys().size());
     }
@@ -61,7 +61,7 @@ public class EcNumberValueFixTest {
         attributes.put(GFF3Attributes.EC_NUMBER, List.of("123124"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
-        ecNumberValueFix.fixFeature(feature, 1);
+        ecNumberValueFix.fixEcNumber(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(0, feature.getAttributeKeys().size());
     }
@@ -72,7 +72,7 @@ public class EcNumberValueFixTest {
         attributes.put(GFF3Attributes.EC_NUMBER, List.of("1.2.3.4"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
-        ecNumberValueFix.fixFeature(feature, 1);
+        ecNumberValueFix.fixEcNumber(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(1, feature.getAttributeKeys().size());
     }
@@ -83,7 +83,7 @@ public class EcNumberValueFixTest {
         attributes.put(GFF3Attributes.EC_NUMBER, List.of("1.-.3.-"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
-        ecNumberValueFix.fixFeature(feature, 1);
+        ecNumberValueFix.fixEcNumber(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(1, feature.getAttributeKeys().size());
     }
@@ -94,7 +94,7 @@ public class EcNumberValueFixTest {
         attributes.put(GFF3Attributes.EC_NUMBER, List.of("0.2.3.n1"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
-        ecNumberValueFix.fixFeature(feature, 1);
+        ecNumberValueFix.fixEcNumber(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(1, feature.getAttributeKeys().size());
     }
@@ -105,7 +105,7 @@ public class EcNumberValueFixTest {
         attributes.put(GFF3Attributes.EC_NUMBER, List.of("0.2.3.x"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
-        ecNumberValueFix.fixFeature(feature, 1);
+        ecNumberValueFix.fixEcNumber(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(0, feature.getAttributeKeys().size());
     }
@@ -116,7 +116,7 @@ public class EcNumberValueFixTest {
         attributes.put(GFF3Attributes.EC_NUMBER, List.of("0.2.3.1.2."));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
-        ecNumberValueFix.fixFeature(feature, 1);
+        ecNumberValueFix.fixEcNumber(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(0, feature.getAttributeKeys().size());
     }
@@ -127,8 +127,67 @@ public class EcNumberValueFixTest {
         attributes.put(GFF3Attributes.EC_NUMBER, List.of("..0.2.3.1.."));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
-        ecNumberValueFix.fixFeature(feature, 1);
+        ecNumberValueFix.fixEcNumber(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(0, feature.getAttributeKeys().size());
+    }
+
+    @Test
+    public void testEcNumberValueFixWithUnknownProduct() {
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PRODUCT, List.of("unknown", "transfer RNA-leucine", "tRNA-Thr"));
+        attributes.put(GFF3Attributes.EC_NUMBER, List.of("..0.2.3.1.."));
+
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
+        ecNumberValueFix.fixEcFromProduct(feature, 1);
+        Assertions.assertNotNull(feature);
+        assertEquals(1, feature.getAttributeKeys().size());
+        assertFalse(feature.hasAttribute(GFF3Attributes.EC_NUMBER));
+    }
+
+    @Test
+    public void testEcNumberValueFixOnProductWithECNumber() {
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PRODUCT, List.of("DNA polymerase III, beta subunit; ec=2.7.7.7"));
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
+        ecNumberValueFix.fixEcFromProduct(feature, 1);
+        Assertions.assertNotNull(feature);
+        assertEquals(2, feature.getAttributeKeys().size());
+        assertTrue(feature.hasAttribute(GFF3Attributes.EC_NUMBER));
+    }
+
+    @Test
+    public void testEcNumberValueFixOnProductWithEcNumber() {
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PRODUCT, List.of("transfer RNA-leucine", "product [Ec:1.1.1.1]", "tRNA-Thr"));
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
+        ecNumberValueFix.fixEcFromProduct(feature, 1);
+        Assertions.assertNotNull(feature);
+        assertEquals(2, feature.getAttributeKeys().size());
+        assertTrue(feature.hasAttribute(GFF3Attributes.EC_NUMBER));
+    }
+
+    @Test
+    public void testEcNumberValueFixOnProductWithecNumber() {
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PRODUCT, List.of("product (ec:1.1.1.1)", "protein"));
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
+        ecNumberValueFix.fixEcFromProduct(feature, 1);
+        Assertions.assertNotNull(feature);
+        assertEquals(2, feature.getAttributeKeys().size());
+        assertTrue(feature.hasAttribute(GFF3Attributes.EC_NUMBER));
+    }
+
+    @Test
+    public void testEcNumberValueFixRemoveEc() {
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PRODUCT, List.of("product", "protein"));
+        attributes.put(GFF3Attributes.EC_NUMBER, List.of("invalidEc"));
+
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
+        ecNumberValueFix.fixEcFromProduct(feature, 1);
+        Assertions.assertNotNull(feature);
+        assertEquals(1, feature.getAttributeKeys().size());
+        assertFalse(feature.hasAttribute(GFF3Attributes.EC_NUMBER));
     }
 }
