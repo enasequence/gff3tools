@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import java.util.*;
+import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -23,6 +24,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
+@Slf4j
 @Gff3Validation(name = "ATTRIBUTES_VALUE")
 public class AttributesValueValidation extends Validation {
 
@@ -41,9 +43,9 @@ public class AttributesValueValidation extends Validation {
     public static final String PROVIRAL_VALUE_PATTERN = ".*endogenous retrovirus$";
 
     public static final Map<String, List<String>> FEATURE_PRODUCT_PATTERNS = Map.of(
-            OntologyTerm.TRNA.name(),
+            OntologyTerm.TRNA.ID,
             List.of("^(transfer RNA-)(?!synthetase).*$"),
-            OntologyTerm.RRNA.name(),
+            OntologyTerm.RRNA.ID,
             List.of(
                     "^(5.8S ribosomal RNA)$",
                     "^(12S ribosomal RNA)$",
@@ -56,23 +58,36 @@ public class AttributesValueValidation extends Validation {
 
     @ValidationMethod(rule = "RNA_PRODUCT_ATTRIBUTE_VALUE", type = ValidationType.FEATURE)
     public void validateAttributeValuePattern(GFF3Feature feature, int line) throws ValidationException {
-        String featureName = feature.getName();
-        Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(featureName);
-        if (soIdOpt.isEmpty()) {
+
+        List<String> productValues = feature.getAttributeValueList(GFF3Attributes.PRODUCT);
+        if (productValues == null || productValues.isEmpty()) {
             return;
         }
-        String soId = soIdOpt.get();
-        if (OntologyTerm.RRNA.ID.equals(soId) || OntologyTerm.TRNA.ID.equals(soId)) {
-            String value = feature.getAttributeByName(GFF3Attributes.PRODUCT);
-            if (value != null) {
-                List<String> patterns = FEATURE_PRODUCT_PATTERNS.get(featureName);
 
-                boolean matches = patterns != null && patterns.stream().anyMatch(value::matches);
+        for (String product : productValues) {
+            if (product == null || product.isBlank()) {
+                continue;
+            }
 
-                if (!matches) {
-                    throw new ValidationException(
-                            line,
-                            INVALID_FEATURE_PRODUCT_PATTERN.formatted(featureName, GFF3Attributes.PRODUCT, patterns));
+            for (Map.Entry<String, List<String>> entry : FEATURE_PRODUCT_PATTERNS.entrySet()) {
+                String expectedSoId = entry.getKey();
+                List<String> patterns = entry.getValue();
+
+                boolean matches = patterns.stream().anyMatch(product::matches);
+                if (matches) {
+                    Optional<String> featureSoIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
+                    boolean featureExists =
+                            featureSoIdOpt.map(expectedSoId::equals).orElse(false);
+
+                    if (!featureExists) {
+                        throw new ValidationException(
+                                line,
+                                String.format(
+                                        INVALID_FEATURE_PRODUCT_PATTERN,
+                                        feature.getName(),
+                                        GFF3Attributes.PRODUCT,
+                                        patterns));
+                    }
                 }
             }
         }

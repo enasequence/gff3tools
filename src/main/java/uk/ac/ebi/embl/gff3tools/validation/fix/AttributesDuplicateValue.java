@@ -46,18 +46,19 @@ public class AttributesDuplicateValue {
         for (String tag : oldLocusTags) {
             if (tag != null) {
                 String trimmed = tag.trim();
-                if (!trimmed.isEmpty() && (currentLocusTag == null || !trimmed.equals(currentLocusTag))) {
+                if (!trimmed.isEmpty() && (!trimmed.equals(currentLocusTag))) {
                     cleanedTags.add(trimmed);
                 }
             }
         }
 
         if (oldLocusTags.size() != cleanedTags.size()) {
-            log.info("Fix to remove duplicate or blank values from {} at line: {}", GFF3Attributes.OLD_LOCUS_TAG, line);
 
             if (cleanedTags.isEmpty()) {
+                log.info("Removing duplicate or blank values from {} at line: {}", GFF3Attributes.OLD_LOCUS_TAG, line);
                 feature.removeAttribute(GFF3Attributes.OLD_LOCUS_TAG);
             } else {
+                log.info("Set {} attribute at line: {}", GFF3Attributes.OLD_LOCUS_TAG, line);
                 feature.setAttributeValueList(GFF3Attributes.OLD_LOCUS_TAG, new ArrayList<>(cleanedTags));
             }
         }

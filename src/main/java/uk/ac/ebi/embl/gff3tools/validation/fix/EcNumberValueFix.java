@@ -35,7 +35,7 @@ public class EcNumberValueFix {
         if (ecNumber == null || ecNumber.isBlank()) return;
 
         if (ecNumber.equalsIgnoreCase("deleted") || !isValidECNumber(ecNumber.trim())) {
-            log.info("Fix to remove invalid values on {} attribute at line: {}", GFF3Attributes.EC_NUMBER, line);
+            log.info("Removing invalid values on {} attribute at line: {}", GFF3Attributes.EC_NUMBER, line);
             feature.removeAttribute(GFF3Attributes.EC_NUMBER);
         }
     }
