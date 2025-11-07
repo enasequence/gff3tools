@@ -41,21 +41,21 @@ public class RenameAttributes {
             } else {
                 newNote = "label:" + label.trim();
             }
+            feature.setAttribute(GFF3Attributes.NOTE, newNote);
             log.info(
-                    "Fix to move {} attribute value to {} attribute at line: {}",
+                    "Moving {} attribute value to {} attribute at line: {}",
                     GFF3Attributes.LABEL,
                     GFF3Attributes.NOTE,
                     line);
-            feature.setAttribute(GFF3Attributes.NOTE, newNote);
         }
         if (mobileElement != null) {
+            feature.removeAttribute(GFF3Attributes.MOBILE_ELEMENT);
+            feature.setAttribute(GFF3Attributes.MOBILE_ELEMENT_TYPE, mobileElement);
             log.info(
-                    "Fix to move {} attribute value to {} attribute at line: {}",
+                    "Moving {} attribute value to {} attribute at line: {}",
                     GFF3Attributes.MOBILE_ELEMENT,
                     GFF3Attributes.MOBILE_ELEMENT_TYPE,
                     line);
-            feature.removeAttribute(GFF3Attributes.MOBILE_ELEMENT);
-            feature.setAttribute(GFF3Attributes.MOBILE_ELEMENT_TYPE, mobileElement);
         }
     }
 }

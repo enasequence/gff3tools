@@ -31,10 +31,7 @@ public class AttributeValueFix {
     public void fixFeature(GFF3Feature feature, int line) {
         String modBaseValue = feature.getAttributeByName(GFF3Attributes.MOD_BASE);
         if (modBaseValue != null && modBaseValue.trim().equalsIgnoreCase("d")) {
-            log.info(
-                    "Fix to update value from  'd' to 'dhu' on {} attribute at line: {}",
-                    GFF3Attributes.MOD_BASE,
-                    line);
+            log.info("Updating value from  'd' to 'dhu' on {} attribute at line: {}", GFF3Attributes.MOD_BASE, line);
             feature.setAttribute(GFF3Attributes.MOD_BASE, "dhu");
         }
     }

@@ -27,13 +27,17 @@ public class RemoveAttributes {
             description = "Remove attributes citation & compare from old_sequence feature",
             type = FEATURE)
     public void fixFeature(GFF3Feature feature, int line) {
-        if (!feature.getName().equalsIgnoreCase("old_sequence")) {
-            log.info(
-                    "Fix to remove {} attribute & {} attribute at line: {}",
-                    GFF3Attributes.CITATION,
-                    GFF3Attributes.COMPARE,
-                    line);
+        if ("old_sequence".equalsIgnoreCase(feature.getName())) {
+            return;
+        }
+
+        if (feature.hasAttribute(GFF3Attributes.CITATION)) {
+            log.info("Removing {} attribute at line: {}", GFF3Attributes.CITATION, line);
             feature.removeAttribute(GFF3Attributes.CITATION);
+        }
+
+        if (feature.hasAttribute(GFF3Attributes.COMPARE)) {
+            log.info("Removing {} attribute at line: {}", GFF3Attributes.COMPARE, line);
             feature.removeAttribute(GFF3Attributes.COMPARE);
         }
     }
