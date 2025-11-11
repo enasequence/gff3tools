@@ -43,7 +43,7 @@ public class AttributesValueValidationTest {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.TRNA.name(),
                 OntologyTerm.TRNA.name(),
-                Map.of(GFF3Attributes.PRODUCT, "transfer RNA-leucine"));
+                Map.of(GFF3Attributes.PRODUCT, List.of("transfer RNA-leucine", "tRNA-Thr")));
 
         Assertions.assertDoesNotThrow(() -> attributesValueValidation.validateAttributeValuePattern(feature, 1));
     }
@@ -51,16 +51,16 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateAttributesPatternTRNAFailure() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.TRNA.name(),
-                OntologyTerm.TRNA.name(),
-                Map.of(GFF3Attributes.PRODUCT, "transfer RNA-synthetase alpha"));
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
+                Map.of(GFF3Attributes.PRODUCT, List.of("transfer RNA-leucine", "tRNA-Thr")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> attributesValueValidation.validateAttributeValuePattern(feature, 1));
 
         Assertions.assertTrue(ex.getMessage()
                 .contains("Feature \"%s\" requires \"%s\" attributes with value matching the pattern"
-                        .formatted(OntologyTerm.TRNA.name(), GFF3Attributes.PRODUCT)));
+                        .formatted(OntologyTerm.CDS.name(), GFF3Attributes.PRODUCT)));
     }
 
     @Test
@@ -68,7 +68,7 @@ public class AttributesValueValidationTest {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.RRNA.name(),
                 OntologyTerm.RRNA.name(),
-                Map.of(GFF3Attributes.PRODUCT, "12S ribosomal RNA"));
+                Map.of(GFF3Attributes.PRODUCT, List.of("12S ribosomal RNA", "16S ribosomal RNA")));
 
         Assertions.assertDoesNotThrow(() -> attributesValueValidation.validateAttributeValuePattern(feature, 1));
     }
@@ -76,16 +76,16 @@ public class AttributesValueValidationTest {
     @Test
     public void testValidateAttributesPatternRRNAFailure() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(),
-                OntologyTerm.RRNA.name(),
-                Map.of(GFF3Attributes.PRODUCT, "16S ribosomalRNA "));
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
+                Map.of(GFF3Attributes.PRODUCT, List.of("12S ribosomal RNA", "16S ribosomal RNA")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> attributesValueValidation.validateAttributeValuePattern(feature, 1));
 
         Assertions.assertTrue(ex.getMessage()
                 .contains("Feature \"%s\" requires \"%s\" attributes with value matching the pattern"
-                        .formatted(OntologyTerm.RRNA.name(), GFF3Attributes.PRODUCT)));
+                        .formatted(OntologyTerm.CDS.name(), GFF3Attributes.PRODUCT)));
     }
 
     @Test

@@ -146,4 +146,8 @@ public class GFF3Feature {
     public void removeAttribute(String key) {
         attributes.remove(key);
     }
+
+    public void setAttribute(String name, Object value) {
+        attributes.put(name, value);
+    }
 }

@@ -68,16 +68,20 @@ public class OntologyClient {
     }
 
     /**
-     * Checks if a given child ontology ID is a child of a given parent ontology ID in the loaded SO ontology.
+     * Checks if a given ontology ID is equal to (or) child of a given parent ontology ID in the loaded SO ontology.
      *
      * @param childOntologyId The child ontology ID (e.g., "SO:0000123").
      * @param parentOntologyId The parent ontology ID (e.g., "SO:0000456").
      * @return true if the child term is a child of the parent term, false otherwise.
      */
-    public boolean isChildOf(String childOntologyId, String parentOntologyId) {
+    public boolean isSelfOrDescendantOf(String childOntologyId, String parentOntologyId) {
         if (ontology == null || descendantsCache == null) {
             LOGGER.warn("Ontology or descendants cache not loaded. Cannot check for child relationship.");
             return false;
+        }
+
+        if (childOntologyId.equals(parentOntologyId)) {
+            return true;
         }
 
         Set<String> descendants = descendantsCache.get(parentOntologyId);
@@ -210,12 +214,12 @@ public class OntologyClient {
         // 1. Check if the string is a valid ontology ID format
         if (isValidOntologyId(soTerm)) {
             // 2. If it's a valid ID, check if the term is defined in the ontology as a child of feature
-            return isChildOf(soTerm, OntologyTerm.FEATURE.ID);
+            return isSelfOrDescendantOf(soTerm, OntologyTerm.FEATURE.ID);
         } else {
             // 3. If not a valid ID, attempt to find the term by name or synonym
             return findTermByNameOrSynonym(soTerm)
                     // 4. If valid, check if is a child of feature.
-                    .map((String termId) -> isChildOf(termId, OntologyTerm.FEATURE.ID))
+                    .map((String termId) -> isSelfOrDescendantOf(termId, OntologyTerm.FEATURE.ID))
                     .orElse(false);
         }
     }
