@@ -11,6 +11,8 @@
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
 import java.util.*;
+
+import jdk.jshell.spi.ExecutionControl;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FeatureMapping;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -20,106 +22,86 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Fix(
-        name = "GFF3GeneSynonymFix",
+        name = "GENE_SYNONYM",
         description =
                 "Normalizes gene_synonym values across features sharing the same locus_tag/gene; CDS sets the canonical list",
         enabled = true)
 public class GeneSynonymFix {
 
     private static final String FF_CDS = "CDS";
-    private static final HashSet<String> CDS_SYNONYMS = new HashSet<>();
-    private static final String LOCUS_TAG = GFF3Attributes.LOCUS_TAG;
-    private static final String GENE = GFF3Attributes.GENE;
     private static final String GENE_SYNONYM = GFF3Attributes.GENE_SYNONYM;
+
+    private HashSet<String> CDS_SYNONYMS = new HashSet<>();
+
+    private HashMap<String, HashSet<String>> accessionNumberToLocusTagSet = new HashMap<>();
 
     public GeneSynonymFix() {
         FeatureMapping.getGFF3FeatureCandidateIdsAndNames(FF_CDS).forEach(CDS_SYNONYMS::add);
     }
 
     @FixMethod(
-            rule = "GFF3GeneSynonymFix",
-            type = ValidationType.ANNOTATION,
+            rule = "GENE_SYNONYM_ATTRIBUTE_SHOULD_APPEAR_ONLY_ONCE",
+            type = ValidationType.FEATURE,
             description =
-                    "Harmonizes gene_synonym across features keyed by locus_tag/gene; CDS defines the master list",
+                    "Harmonizes gene_synonym across features keyed by locus_tag/gene",
             enabled = true)
     public void fix(GFF3Annotation annotation, int line) {
-        if (annotation == null) return;
 
-        // candidates = all features that have locus_tag or gene
-        List<GFF3Feature> candidates = annotation.getAllFeatures().stream()
-                .filter(f -> f.hasAttribute(LOCUS_TAG) || f.hasAttribute(GENE))
-                .toList();
-        if (candidates.isEmpty()) return;
+        List<GFF3Feature> features = annotation.getFeatures();
+        List<GFF3Feature> withGeneSynonym =
+                features.stream()
+                        .filter(f -> f.hasAttribute(GENE_SYNONYM))
+                        .toList();
+        if (withGeneSynonym.isEmpty()) {return;}
 
-        // CDS-only master candidates (authority), by feature type/name (case-insensitive)
-        List<GFF3Feature> masterCandidates = candidates.stream()
-                .filter(f -> CDS_SYNONYMS.contains(f.getName()))
-                .toList();
+        GFF3Feature progenitor = findMostSeniorGeneLikeFeature(features);
+        GFF3Feature progenitorWithGeneSynonym = findMostSeniorGeneLikeFeature(withGeneSynonym);
 
-        Map<String, List<String>> masterByIdentifier = new HashMap<>();
-        Set<String> unreliable = new HashSet<>();
-
-        // Pass 1: establish master lists from CDS features (order-sensitive equality).
-        for (GFF3Feature f : masterCandidates) {
-            String identifier = firstNonBlankValue(f.getAttributeValueList(LOCUS_TAG), f.getAttributeValueList(GENE));
-            if (identifier == null || identifier.isBlank()) continue;
-
-            if (unreliable.contains(identifier)) continue;
-
-            List<String> geneSynonyms = f.getAttributeValueList(GENE_SYNONYM);
-            ; // may be empty, that's allowed (and will purge others later)
-            List<String> existing = masterByIdentifier.get(identifier);
-
-            if (existing == null) {
-                masterByIdentifier.put(identifier, new ArrayList<>(geneSynonyms)); // preserve order
-            } else {
-                if (!listsEqualOrdered(existing, geneSynonyms)) {
-                    // conflict (including mere order difference) => mark unreliable and drop the master
-                    unreliable.add(identifier);
-                    masterByIdentifier.remove(identifier);
-                }
-            }
+        //check if the gene_synonyms attribute is present in the oldest INDSC equivalent gene feature or its child feature
+        //push the gene_synonym attribute onto the oldest
+        //clean the rest: only one feature need have the gene_synonym list
+        final String progenitorName = progenitor.getName();
+        if(!progenitorName.equals(progenitorWithGeneSynonym.getName())) {
+            features.stream()
+                    .filter(f -> progenitorName.equals(f.getName()))
+                    .findFirst()
+                    .ifPresent(f -> f.setAttribute(GENE_SYNONYM, progenitorWithGeneSynonym.getAttributeValueList(GENE_SYNONYM))));
         }
-
-        // Pass 2: enforce master on all features (including CDS). If no CDS master exists yet for an identifier,
-        // seed it from the first encountered feature (order-dependent fallback like original).
-        for (GFF3Feature f : candidates) {
-            String identifier = firstNonBlankValue(f.getAttributeValueList(LOCUS_TAG), f.getAttributeValueList(GENE));
-            if (identifier == null || identifier.isBlank() || unreliable.contains(identifier)) continue;
-
-            List<String> master = masterByIdentifier.get(identifier);
-            if (master != null) {
-                List<String> current = new ArrayList<>(f.getAttributeValueList(GENE_SYNONYM));
-
-                for (String m : master) {
-                    if (!current.contains(m)) current.add(m);
-                }
-                current.removeIf(s -> !master.contains(s));
-
-                f.setAttributeValueList(GENE_SYNONYM, current);
-
-            } else {
-                // No CDS-defined master exists for this identifier; reserve with first seen feature's synonyms
-                List<String> current = f.getAttributeValueList(GENE_SYNONYM);
-                masterByIdentifier.put(identifier, new ArrayList<>(current));
-            }
-        }
+        var cleanedFeatures = clearGeneSynonymAttributeFromEveryoneBut(progenitor.getName(), features);
+        annotation.setFeatures(cleanedFeatures);
+        //TODO: clean this so that it does the algo above per locus_tag/gene feature
     }
 
-    private String firstNonBlankValue(List<String> a, List<String> b) {
-        if (a != null && !a.isEmpty()) return a.get(0);
-        if (b != null && !b.isEmpty()) return b.get(0);
-        return null;
+    private List<GFF3Feature> clearGeneSynonymAttributeFromEveryoneBut(String progenitorName, List<GFF3Feature> features) {
+        throw new IllegalStateException("Not implemented yet");
     }
 
-    /** Order-sensitive equality, element-wise. */
-    private boolean listsEqualOrdered(List<String> a, List<String> b) {
-        if (a == b) return true;
-        if (a == null || b == null) return false;
-        if (a.size() != b.size()) return false;
-        for (int i = 0; i < a.size(); i++) {
-            if (!Objects.equals(a.get(i), b.get(i))) return false;
+    private GFF3Feature findMostSeniorGeneLikeFeature(List<GFF3Feature> featureList) {
+        List<String> names =
+                featureList.stream()
+                        .map(GFF3Feature::getName)
+                        .toList();
+
+        throw new IllegalStateException("Not implemented yet");
+    }
+
+    private boolean rememberedGeneSynonymAlreadyFor(String accessionNumber, String locusTag) {
+        if (accessionNumberToLocusTagSet.containsKey(accessionNumber)) {
+            HashSet<String> locusTagSet = accessionNumberToLocusTagSet.get(accessionNumber);
+            return locusTagSet.contains(locusTag);
         }
-        return true;
+        return false;
+    }
+
+    private void rememberGeneSynonymExistsFor(String accessionNumber, String locusTag) {
+        if (accessionNumberToLocusTagSet.containsKey(accessionNumber)) {
+            var locusTagSet = accessionNumberToLocusTagSet.get(accessionNumber);
+            locusTagSet.add(locusTag);
+            accessionNumberToLocusTagSet.put(accessionNumber, locusTagSet);
+        } else {
+            var locusTagSet = new  HashSet<String>();
+            locusTagSet.add(locusTag);
+            accessionNumberToLocusTagSet.put(accessionNumber, locusTagSet);
+        }
     }
 }
