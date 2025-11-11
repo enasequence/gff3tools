@@ -9,7 +9,8 @@ jobs:
   validate:
     name: Run Spotless + build +   Tests
     runs-on: ubuntu-latest
-
+    env:
+      GITLAB_PRIVATE_TOKEN: dummy-token
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
