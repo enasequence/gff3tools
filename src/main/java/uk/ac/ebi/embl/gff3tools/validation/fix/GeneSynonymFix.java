@@ -65,7 +65,7 @@ public class GeneSynonymFix {
             features.stream()
                     .filter(f -> progenitorName.equals(f.getName()))
                     .findFirst()
-                    .ifPresent(f -> f.setAttribute(GENE_SYNONYM, progenitorWithGeneSynonym.getAttributeValueList(GENE_SYNONYM))));
+                    .ifPresent(f -> f.setAttribute(GENE_SYNONYM, progenitorWithGeneSynonym.getAttributeValueList(GENE_SYNONYM)));
         }
         var cleanedFeatures = clearGeneSynonymAttributeFromEveryoneBut(progenitor.getName(), features);
         annotation.setFeatures(cleanedFeatures);
