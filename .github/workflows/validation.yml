@@ -7,7 +7,7 @@ on:
 
 jobs:
   validate:
-    name: Run Spotless + build +   Tests
+    name: Run Spotless + Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
