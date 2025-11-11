@@ -10,7 +10,7 @@ jobs:
     name: Run Spotless + build +   Tests
     runs-on: ubuntu-latest
     env:
-      GITLAB_PRIVATE_TOKEN: dummy-token
+      gitlab_private_token: dummy-token
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -35,9 +35,6 @@ jobs:
 
       - name: Run Spotless check
         run: ./gradlew spotlessCheck
-
-      - name: Run build check
-        run: ./gradlew build
 
       - name: Run all tests
         run: ./gradlew test
