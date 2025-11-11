@@ -21,7 +21,9 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Fix(
         name = "TRANSFORM_EXCLUSIVE_ATTRIBUTE_TO_NOTE",
-        description = "Moves the value one of the mutually exclusive feature attributes to the note attribute")
+        description = "Moves the value one of the mutually exclusive feature attributes to the note attribute",
+        enabled=false
+)
 public class TransformAttributeToNoteFix {
 
     List<ExclusiveAttributePair> pairs = new ArrayList<ExclusiveAttributePair>();
