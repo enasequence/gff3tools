@@ -61,18 +61,18 @@ public class GeneSynonymFix {
         //push the gene_synonym attribute onto the oldest
         //clean the rest: only one feature need have the gene_synonym list
         final String progenitorName = progenitor.getName();
-        if(!progenitorName.equals(progenitorWithGeneSynonym.getName())) {
+        if(!progenitorName.equals(progenitorWithGeneSynonym.getName()) || !progenitor.getId().equals(progenitorWithGeneSynonym.getId())) {
             features.stream()
                     .filter(f -> progenitorName.equals(f.getName()))
                     .findFirst()
                     .ifPresent(f -> f.setAttribute(GENE_SYNONYM, progenitorWithGeneSynonym.getAttributeValueList(GENE_SYNONYM)));
         }
-        var cleanedFeatures = clearGeneSynonymAttributeFromEveryoneBut(progenitor.getName(), features);
+        var cleanedFeatures = clearGeneSynonymAttributeFromEveryoneBut(progenitor, features);
         annotation.setFeatures(cleanedFeatures);
         //TODO: clean this so that it does the algo above per locus_tag/gene feature
     }
 
-    private List<GFF3Feature> clearGeneSynonymAttributeFromEveryoneBut(String progenitorName, List<GFF3Feature> features) {
+    private List<GFF3Feature> clearGeneSynonymAttributeFromEveryoneBut(GFF3Feature feature, List<GFF3Feature> features) {
         throw new IllegalStateException("Not implemented yet");
     }
 
