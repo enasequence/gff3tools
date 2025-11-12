@@ -48,11 +48,29 @@ public class GeneSynonymFix {
     public void fix(GFF3Annotation annotation, int line) {
 
         List<GFF3Feature> features = annotation.getFeatures();
+        List<List<GFF3Feature>> featuresGroupedByGene = separateAnnotationFeaturesByLocusTag(features);
+
+        List<GFF3Feature> cleanedFeatures = new ArrayList<>();
+        for( var geneFeatures : featuresGroupedByGene){
+            var cleanedGeneFeatures = fixGeneSynonymOnFeatures(geneFeatures);
+            cleanedGeneFeatures.addAll(cleanedGeneFeatures);
+        }
+
+        annotation.setFeatures(cleanedFeatures);
+    }
+
+    private List<List<GFF3Feature>> separateAnnotationFeaturesByLocusTag(List<GFF3Feature> features) {
+        throw new IllegalStateException("Not implemented yet");
+    }
+
+    private List<GFF3Feature> fixGeneSynonymOnFeatures(List<GFF3Feature> features) {
         List<GFF3Feature> withGeneSynonym =
                 features.stream()
                         .filter(f -> f.hasAttribute(GENE_SYNONYM))
                         .toList();
-        if (withGeneSynonym.isEmpty()) {return;}
+
+
+        if (withGeneSynonym.isEmpty()) {return features;}
 
         GFF3Feature progenitor = findMostSeniorGeneLikeFeature(features);
         GFF3Feature progenitorWithGeneSynonym = findMostSeniorGeneLikeFeature(withGeneSynonym);
@@ -68,8 +86,7 @@ public class GeneSynonymFix {
                     .ifPresent(f -> f.setAttribute(GENE_SYNONYM, progenitorWithGeneSynonym.getAttributeValueList(GENE_SYNONYM)));
         }
         var cleanedFeatures = clearGeneSynonymAttributeFromEveryoneBut(progenitor, features);
-        annotation.setFeatures(cleanedFeatures);
-        //TODO: clean this so that it does the algo above per locus_tag/gene feature
+        return cleanedFeatures;
     }
 
     private List<GFF3Feature> clearGeneSynonymAttributeFromEveryoneBut(GFF3Feature feature, List<GFF3Feature> features) {
