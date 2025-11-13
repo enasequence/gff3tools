@@ -43,7 +43,7 @@ public class GFF3AnnotationFactory {
     // List of features that do not belong to a gene.
     List<GFF3Feature> nonGeneFeatures;
     // Map to save CDS translations
-    Map<String, String> cdsTranslationMap;
+    Map<String, String>  translationMap;
 
 
     // Map of Id with count, used for incrementing when same id is found.
@@ -52,16 +52,16 @@ public class GFF3AnnotationFactory {
     GFF3DirectivesFactory directivesFactory;
     ValidationEngine validationEngine;
 
-    public GFF3AnnotationFactory(ValidationEngine validationEngine, GFF3DirectivesFactory directivesFactory) {
+    public GFF3AnnotationFactory(ValidationEngine validationEngine, GFF3DirectivesFactory directivesFactory, Map<String, String>  translationMap) {
         this.validationEngine = validationEngine;
         this.directivesFactory = directivesFactory;
+        this.translationMap = translationMap;
     }
 
     public GFF3Annotation from(Entry entry) throws ValidationException {
 
         geneMap = new LinkedHashMap<>();
         nonGeneFeatures = new ArrayList<>();
-        cdsTranslationMap = new LinkedHashMap<>();
 
         String accession = entry.getSequence().getAccession();
         LOG.info("Converting FF entry: {}", accession);
@@ -92,7 +92,6 @@ public class GFF3AnnotationFactory {
         GFF3Annotation annotation = new GFF3Annotation();
         annotation.setSequenceRegion(sequenceRegion);
         annotation.setFeatures(features);
-        annotation.setCdsTranslationMap(cdsTranslationMap);
 
         validationEngine.validate(annotation, -1);
 
@@ -146,7 +145,8 @@ public class GFF3AnnotationFactory {
 
         // Add translation to Map and remove from attribute
         if(baseAttributes.containsKey("translation")) {
-            cdsTranslationMap.put(id.get(),(String)baseAttributes.get("translation"));
+            String translationKey = String.format("%s|%s",sequenceRegion.accession(), id.get());
+            translationMap.put(translationKey,(String)baseAttributes.get("translation"));
             baseAttributes.remove("translation");
         }
 

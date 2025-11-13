@@ -328,11 +328,11 @@ public class GFF3FileReaderTest {
                     // first annotation → write header + species only once
                     GFF3Species gff3Species = reader.getSpecies();
                     GFF3File gff3File =
-                            new GFF3File(gff3Header, gff3Species, Collections.singletonList(annotation), null);
+                            new GFF3File(gff3Header, gff3Species, Collections.singletonList(annotation), null,null);
                     gff3File.writeGFF3String(writer);
                 } else {
                     // subsequent annotations → only write features
-                    GFF3File gff3File = new GFF3File(null, null, Collections.singletonList(annotation), null);
+                    GFF3File gff3File = new GFF3File(null, null, Collections.singletonList(annotation), null,null);
                     gff3File.writeGFF3String(writer);
                 }
             });
@@ -348,7 +348,7 @@ public class GFF3FileReaderTest {
 
             reader.read(annotation -> {
                 GFF3Species gff3Species = reader.getSpecies();
-                GFF3File gff3File = new GFF3File(gff3Header, gff3Species, Collections.singletonList(annotation), null);
+                GFF3File gff3File = new GFF3File(gff3Header, gff3Species, Collections.singletonList(annotation), null,null);
                 gff3File.writeGFF3String(writer);
             });
         }

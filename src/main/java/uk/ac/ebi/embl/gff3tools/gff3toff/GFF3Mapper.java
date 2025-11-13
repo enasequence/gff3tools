@@ -80,7 +80,7 @@ public class GFF3Mapper {
                 parentFeatures.put(gff3Feature.getId().get(), gff3Feature);
             }
 
-            mapGFF3Feature(gff3Feature,gff3Annotation.getCdsTranslationMap());
+            mapGFF3Feature(gff3Feature,null);
         }
 
         return entry;

@@ -109,7 +109,7 @@ public class GFF3FileReader implements AutoCloseable {
                 String translationId = null;
                 StringBuilder sequence = new StringBuilder();
 
-                while ((line = readLine()) != null) {
+                /*while ((line = readLine()) != null) {
                     Matcher matcher = TRANSLATION_ID_PATTERN.matcher(line);
                     if (matcher.matches()) {
                         // Matches translationId
@@ -141,7 +141,7 @@ public class GFF3FileReader implements AutoCloseable {
                     translationMap.put(translationId, sequence.toString());
                 }
 
-                currentAnnotation.setCdsTranslationMap(translationMap);
+                currentAnnotation.setCdsTranslationMap(translationMap);*/
 
             } else if (COMMENT.matcher(line).matches()) {
                 // Skip comment

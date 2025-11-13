@@ -36,7 +36,6 @@ import static uk.ac.ebi.embl.fasta.writer.FastaFileWriter.FastaHeaderFormat.TRAN
 public class GFF3Annotation implements IGFF3Feature {
     GFF3SequenceRegion sequenceRegion = null;
     List<GFF3Feature> features = new ArrayList<>();
-    Map<String, String> cdsTranslationMap =new LinkedHashMap<>();
 
     private void writeFeature(Writer writer, GFF3Feature feature) throws IOException {
         writer.write(feature.accession());
@@ -65,26 +64,6 @@ public class GFF3Annotation implements IGFF3Feature {
                         )
                 .map(GFF3Annotation::encodeAttribute)
                 .collect(Collectors.joining(";", "", ";")));
-    }
-
-    private void  writeTranslation(Writer writer) throws IOException {
-        if(!cdsTranslationMap.isEmpty()) {
-            writer.write("##FASTA");
-            writer.write("\n");
-            for (Map.Entry<String, String> entry : cdsTranslationMap.entrySet()) {
-                String featureId = entry.getKey();
-                String translation = entry.getValue();
-
-                // Write using FastaWriter
-                Entry fastaEntry = new EntryFactory().createEntry();
-                fastaEntry.setPrimaryAccession(featureId);
-                Sequence sequence = new SequenceFactory().createSequence();
-                sequence.setSequence(ByteBuffer.wrap(translation.getBytes()));
-                fastaEntry.setSequence(sequence);
-                FastaFileWriter fasteWriter = new FastaFileWriter(fastaEntry, writer, TRANSLATION_HEADER_FORMAT);
-                fasteWriter.write();
-            }
-        }
     }
 
     private static String encodeAttribute(Map.Entry<String, Object> entry) {
@@ -119,7 +98,6 @@ public class GFF3Annotation implements IGFF3Feature {
             for (GFF3Feature feature : features) {
                 writeFeature(writer, feature);
             }
-            writeTranslation(writer);
             writer.write('\n');
         } catch (IOException e) {
             throw new WriteException(e);
