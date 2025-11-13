@@ -31,7 +31,6 @@ public enum ConversionUtils {
     private Map<String, Set<String>> featureRelations = null;
     // Map of parent : list of possible children
 
-
     private OntologyClient ontologyClient = null;
     private static final Logger LOGGER = LoggerFactory.getLogger(ConversionUtils.class);
 

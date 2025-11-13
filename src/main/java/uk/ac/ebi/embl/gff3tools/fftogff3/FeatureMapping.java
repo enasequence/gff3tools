@@ -36,7 +36,7 @@ public class FeatureMapping {
                         "There is no SO Term mapping for INSDC feature \"%s\"".formatted(featureName)));
     }
 
-    public static Set<String> getParents(String featureName){
+    public static Set<String> getParents(String featureName) {
         return ConversionUtils.getFeatureRelationMap().get(featureName);
     }
 

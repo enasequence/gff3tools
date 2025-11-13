@@ -12,19 +12,16 @@ package uk.ac.ebi.embl.gff3tools.validation.fix;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.lang.reflect.Field;
+import java.util.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.jupiter.api.Test;
-
 import uk.ac.ebi.embl.gff3tools.TestUtils;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
-
-import java.lang.reflect.Field;
-import java.util.*;
 
 // import your actual classes / packages as needed, e.g.:
 // import your.pkg.GeneSynonymFix;
@@ -98,10 +95,10 @@ public class GeneSynonymFixTest {
         Map<String, Object> childAttrs = new HashMap<>();
         childAttrs.put(GENE_SYNONYM, new ArrayList<>(List.of("childSyn")));
         GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "gene1", childAttrs);
-        //link up the family
+        // link up the family
         cds.setParent(gene);
         gene.addChild(cds);
-        //set up the annotation
+        // set up the annotation
         GFF3Annotation annotation = new GFF3Annotation();
         annotation.addFeature(gene);
         annotation.addFeature(cds);
@@ -122,7 +119,7 @@ public class GeneSynonymFixTest {
         Map<String, Object> rootAttrs = new HashMap<>();
         GFF3Feature root = TestUtils.createGFF3Feature("root", 1, 800, rootAttrs);
         Map<String, Object> midAttrs = new HashMap<>();
-        GFF3Feature mid = TestUtils.createGFF3Feature("mid", "root",  TestUtils.DEFAULT_ACCESSION, midAttrs);
+        GFF3Feature mid = TestUtils.createGFF3Feature("mid", "root", TestUtils.DEFAULT_ACCESSION, midAttrs);
         Map<String, Object> leafAttrs = new HashMap<>();
         leafAttrs.put(GENE_SYNONYM, new ArrayList<>(List.of("leafSyn")));
         GFF3Feature leaf = TestUtils.createGFF3Feature("leaf", "mid", TestUtils.DEFAULT_ACCESSION, leafAttrs);
@@ -131,7 +128,7 @@ public class GeneSynonymFixTest {
         root.addChild(mid);
         leaf.setParent(mid);
         mid.addChild(leaf);
-        //build annotation
+        // build annotation
         GFF3Annotation annotation = new GFF3Annotation();
         annotation.addFeature(root);
         annotation.addFeature(mid);
@@ -151,17 +148,17 @@ public class GeneSynonymFixTest {
         // !GENE_FEATURES.contains(f.getSeqId()) should fail and the fix should skip.
         String geneName = "gene1";
         GeneSynonymFix fix = mockGff3GeneFeatureList(geneName);
-        //region parent feature
+        // region parent feature
         Map<String, Object> geneAttrs = new HashMap<>();
         GFF3Feature region = TestUtils.createGFF3Feature("region", geneAttrs);
-        //gene with gene synonyms feature - child of region
+        // gene with gene synonyms feature - child of region
         Map<String, Object> childAttrs = new HashMap<>();
         childAttrs.put(GENE_SYNONYM, new ArrayList<>(List.of("syn1")));
         GFF3Feature genefeature = TestUtils.createGFF3Feature(geneName, "gene1", childAttrs);
-        //link up the family
+        // link up the family
         genefeature.setParent(region);
         region.addChild(genefeature);
-        //build anotation
+        // build anotation
         GFF3Annotation annotation = new GFF3Annotation();
         annotation.addFeature(region);
         annotation.addFeature(genefeature);
@@ -196,7 +193,7 @@ public class GeneSynonymFixTest {
     void findOldestAncestorWithSameLocationClimbsToRoot() {
         GeneSynonymFix fix = mockGff3GeneFeatureList();
 
-        GFF3Feature root = TestUtils.createGFF3Feature("root", 1, 800); //climbs up to here
+        GFF3Feature root = TestUtils.createGFF3Feature("root", 1, 800); // climbs up to here
         GFF3Feature mid = TestUtils.createGFF3Feature("mid", 1, 800);
         GFF3Feature leaf = TestUtils.createGFF3Feature("leaf", 1, 800);
 
@@ -214,7 +211,7 @@ public class GeneSynonymFixTest {
         GeneSynonymFix fix = mockGff3GeneFeatureList();
 
         GFF3Feature root = TestUtils.createGFF3Feature("root", 1, 800);
-        GFF3Feature mid = TestUtils.createGFF3Feature("mid", 100, 900); //climbs up to here
+        GFF3Feature mid = TestUtils.createGFF3Feature("mid", 100, 900); // climbs up to here
         GFF3Feature leaf = TestUtils.createGFF3Feature("leaf", 100, 900);
 
         mid.setParent(root);
@@ -226,4 +223,3 @@ public class GeneSynonymFixTest {
         assertSame(mid, oldest);
     }
 }
-

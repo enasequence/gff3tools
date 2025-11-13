@@ -11,7 +11,6 @@
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
 import java.util.*;
-
 import uk.ac.ebi.embl.gff3tools.fftogff3.FeatureMapping;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -38,8 +37,7 @@ public class GeneSynonymFix {
     @FixMethod(
             rule = "PUSHING_GENE_SYNONYM_ATTRIBUTE_TO_PARENT_FEATURES_ONLY",
             type = ValidationType.ANNOTATION,
-            description =
-                    "Pushes gene_synonym attribute to only persist at a parent level",
+            description = "Pushes gene_synonym attribute to only persist at a parent level",
             enabled = true)
     public void fix(GFF3Annotation annotation, int line) {
 
@@ -47,22 +45,21 @@ public class GeneSynonymFix {
 
         Map<String, GFF3Feature> featuresById = new LinkedHashMap<>();
         for (GFF3Feature f : features) {
-            featuresById.put(getFeatureKey(f),f);
+            featuresById.put(getFeatureKey(f), f);
         }
 
         for (GFF3Feature f : featuresById.values()) {
             var currentId = f.getId().isPresent() ? f.getId().get() : "";
-            if(f.hasAttribute(GENE_SYNONYM)
+            if (f.hasAttribute(GENE_SYNONYM)
                     && !GENE_FEATURES.contains(currentId)
-                    && !GENE_FEATURES.contains(f.getName()))
-            {
+                    && !GENE_FEATURES.contains(f.getName())) {
                 var parent = findGeneAncestor(f);
-                if (parent==null) parent = findOldestAncestorWithSameLocation(f);
+                if (parent == null) parent = findOldestAncestorWithSameLocation(f);
 
-                if(!getFeatureKey(f).equals(getFeatureKey(parent))) {
-                    if(!parent.hasAttribute(GENE_SYNONYM)) {
-                            parent.setAttributeValueList(GENE_SYNONYM, f.getAttributeValueList(GENE_SYNONYM));
-                            featuresById.put(getFeatureKey(parent), parent);
+                if (!getFeatureKey(f).equals(getFeatureKey(parent))) {
+                    if (!parent.hasAttribute(GENE_SYNONYM)) {
+                        parent.setAttributeValueList(GENE_SYNONYM, f.getAttributeValueList(GENE_SYNONYM));
+                        featuresById.put(getFeatureKey(parent), parent);
                     }
 
                     f.removeAttribute(GENE_SYNONYM);
@@ -84,11 +81,10 @@ public class GeneSynonymFix {
             current = current.getParent();
 
             var currentId = current.getId().isPresent() ? current.getId().get() : "";
-            if(GENE_FEATURES.contains(current.getName())
-                    || GENE_FEATURES.contains(currentId)) break;
+            if (GENE_FEATURES.contains(current.getName()) || GENE_FEATURES.contains(currentId)) break;
         }
 
-        if(GENE_FEATURES.contains(current.getName())) return current;
+        if (GENE_FEATURES.contains(current.getName())) return current;
         return null;
     }
 
