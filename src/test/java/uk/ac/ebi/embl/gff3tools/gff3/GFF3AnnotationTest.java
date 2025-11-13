@@ -14,6 +14,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.io.Writer;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -174,5 +176,36 @@ public class GFF3AnnotationTest {
         // Test case 3: No accession (empty annotation)
         GFF3Annotation annotation3 = new GFF3Annotation();
         assertThrows(RuntimeException.class, annotation3::getAccession);
+    }
+
+    @Test
+    void testWriteTranslation() throws Exception {
+
+        String expectedOutput = "##FASTA\n" +
+                ">geneB\n" +
+                "GGTTAA\n" +
+                ">geneA\n" +
+                "ATGC\n";
+
+        GFF3Annotation obj = new GFF3Annotation();
+
+        // Inject cdsTranslationMap
+        Map<String, String> testMap = new HashMap<>();
+        testMap.put("geneA", "ATGC");
+        testMap.put("geneB", "GGTTAA");
+        obj.cdsTranslationMap = testMap;
+
+        StringWriter writer = new StringWriter();
+
+        // Access private method via reflection
+        Method method = GFF3Annotation.class.getDeclaredMethod("writeTranslation", Writer.class);
+        method.setAccessible(true);
+
+        // call method
+        method.invoke(obj, writer);
+
+        // Assert
+        String output = writer.toString();
+        assertEquals(expectedOutput, output);
     }
 }

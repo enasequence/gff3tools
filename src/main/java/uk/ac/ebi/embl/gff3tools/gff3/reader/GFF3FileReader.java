@@ -32,6 +32,9 @@ public class GFF3FileReader implements AutoCloseable {
     static Pattern SEQUENCE_REGION_DIRECTIVE = Pattern.compile(
             "^##sequence-region\\s+(?<accession>(?<accessionId>[^.]+)(?:\\.(?<accessionVersion>\\d+))?)\\s+(?<start>[0-9]+)\\s+(?<end>[0-9]+)$");
     static Pattern RESOLUTION_DIRECTIVE = Pattern.compile("^###$");
+    static Pattern FASTA_DIRECTIVE = Pattern.compile("^##FASTA$");
+    static Pattern TRANSLATION_ID_PATTERN = Pattern.compile("^>(?<translationId>.*)");
+    static Pattern SEQUENCE_PATTERN = Pattern.compile("^[A-Z*]+$");
     static Pattern COMMENT = Pattern.compile("^#.*$");
     static Pattern GFF3_FEATURE = Pattern.compile(
             "^(?<accession>(?<accessionId>[^.]+)(?:\\.(?<accessionVersion>\\d+))?)\\t(?<source>.+)\\t(?<name>.+)\\t(?<start>[0-9]+)\\t(?<end>[0-9]+)\\t(?<score>.+)\\t(?<strand>\\+|\\-|\\.|\\?)\\t(?<phase>.+)\\t(?<attributes>.+)?$");
@@ -44,6 +47,7 @@ public class GFF3FileReader implements AutoCloseable {
     ValidationEngine validationEngine;
     public GFF3Species gff3Species;
     private final Set<String> processedAccessions;
+    Map<String,String> translationMap = new LinkedHashMap<>();
 
     public GFF3FileReader(ValidationEngine validationEngine, Reader reader) {
         this.validationEngine = validationEngine;
@@ -78,9 +82,6 @@ public class GFF3FileReader implements AutoCloseable {
                     return previousAnnotation;
                 }
                 continue;
-            } else if (COMMENT.matcher(line).matches()) {
-                // Skip comment
-                continue;
             } else if ((m = GFF3_FEATURE.matcher(line)).matches()) {
 
                 GFF3Feature feature = readFeature(m);
@@ -104,7 +105,47 @@ public class GFF3FileReader implements AutoCloseable {
                 } else {
                     currentAnnotation.addFeature(feature);
                 }
+            } else if (FASTA_DIRECTIVE.matcher(line).matches()) {
+                String translationId = null;
+                StringBuilder sequence = new StringBuilder();
 
+                while ((line = readLine()) != null) {
+                    Matcher matcher = TRANSLATION_ID_PATTERN.matcher(line);
+                    if (matcher.matches()) {
+                        // Matches translationId
+                        if (translationId != null && sequence.length() > 0) {
+                            translationMap.put(translationId, sequence.toString());
+                            sequence.setLength(0); // reset
+                        }
+                        translationId = matcher.group("translationId");
+                    } else if((matcher = SEQUENCE_PATTERN.matcher(line)).matches()){
+                        // Matches sequence pattern
+                        sequence.append(line);
+                    }else{
+                        // Create new annotation when line is not translationId or sequence
+                        GFF3Annotation previousAnnotation = currentAnnotation;
+                        translationMap.put(translationId, sequence.toString());
+                        previousAnnotation.setCdsTranslationMap(translationMap);
+                        translationMap = new LinkedHashMap<>();
+                        currentAnnotation = new GFF3Annotation();
+                        if (!previousAnnotation.getFeatures().isEmpty()) {
+                            validationEngine.validate(previousAnnotation, lineCount);
+                            processedAccessions.add(previousAnnotation.getAccession());
+                            return previousAnnotation;
+                        }
+                    }
+                }
+
+                // Handle last translation
+                if (translationId != null && !sequence.isEmpty()) {
+                    translationMap.put(translationId, sequence.toString());
+                }
+
+                currentAnnotation.setCdsTranslationMap(translationMap);
+
+            } else if (COMMENT.matcher(line).matches()) {
+                // Skip comment
+                continue;
             } else {
                 validationEngine.handleSyntacticError(
                         new InvalidGFF3RecordException(lineCount, "Invalid gff3 record \"" + line + "\""));

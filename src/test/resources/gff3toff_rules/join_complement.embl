@@ -13,6 +13,7 @@ FT   gene            complement(join(1..>500,600..700,<800..822))
 FT                   /gene="matK"
 FT   CDS             join(1..>500,600..700,complement(<800..822))
 FT                   /gene="matK"
+FT                   /translation="MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLE"
 XX
 //
 

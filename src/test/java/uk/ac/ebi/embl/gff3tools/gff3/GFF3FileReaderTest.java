@@ -262,7 +262,7 @@ public class GFF3FileReaderTest {
         output = testReadWithHeaderOnEachAnnotation(input);
         assertEquals(input, output);
 
-        // GFF3 header on wach annotation
+        // GFF3 header on each annotation
         input = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
                 + "##sequence-region BN000065.1 1 315242\n\n"
                 + "##gff-version 3\n"
@@ -291,6 +291,28 @@ public class GFF3FileReaderTest {
 
         output = testReadWithHeaderOnce(input);
         assertEquals(expectedOutput, output);
+    }
+
+    @Test
+    void testReadTranslation() throws Exception {
+        String input = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
+                + "##sequence-region BN000065.1 1 315242\n"
+                + "BN000065.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n"
+                + "BN000065.1\t.\tCDS\t1\t315242\t.\t+\t.\tID=CDS_RHD;gene=RHD;\n"
+                + "##FASTA\n"
+                + ">CDS_RHD\n"
+                + "MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEMSSKYPRSVRRCLPLWALTLE\n"
+                + "AALILLFYFFTHYDASLE\n\n"
+                + "##gff-version 3\n"
+                + "##species http://example.org?name=Homo sapiens\n"
+                + "##sequence-region BN000066.1 1 315242\n"
+                + "BN000066.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n"
+                + "BN000066.1\t.\tCDS\t1\t315242\t.\t+\t.\tID=CDS_RHX;gene=RHD;\n"
+                + "##FASTA\n"
+                + ">CDS_RHX\n"
+                + "MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLE\n\n";
+        String output = testReadWithHeaderOnEachAnnotation(input);
+        assertEquals(input, output);
     }
 
     private String testReadWithHeaderOnce(String input)

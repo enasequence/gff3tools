@@ -38,10 +38,13 @@ public class GFF3AnnotationFactory {
     // Base Id ends with _ and digit (e.g. ppk_2)
     static final Pattern incrementIdpattern = Pattern.compile(".*_\\d+$");
 
-    /// Keeps track of all the features belonging to a gene.
+    // Keeps track of all the features belonging to a gene.
     Map<String, List<GFF3Feature>> geneMap;
-    /// List of features that do not belong to a gene.
+    // List of features that do not belong to a gene.
     List<GFF3Feature> nonGeneFeatures;
+    // Map to save CDS translations
+    Map<String, String> cdsTranslationMap;
+
 
     // Map of Id with count, used for incrementing when same id is found.
     Map<String, Integer> idMap = new HashMap<>();
@@ -58,6 +61,7 @@ public class GFF3AnnotationFactory {
 
         geneMap = new LinkedHashMap<>();
         nonGeneFeatures = new ArrayList<>();
+        cdsTranslationMap = new LinkedHashMap<>();
 
         String accession = entry.getSequence().getAccession();
         LOG.info("Converting FF entry: {}", accession);
@@ -88,6 +92,7 @@ public class GFF3AnnotationFactory {
         GFF3Annotation annotation = new GFF3Annotation();
         annotation.setSequenceRegion(sequenceRegion);
         annotation.setFeatures(features);
+        annotation.setCdsTranslationMap(cdsTranslationMap);
 
         validationEngine.validate(annotation, -1);
 
@@ -139,6 +144,12 @@ public class GFF3AnnotationFactory {
         id.ifPresent(v -> baseAttributes.put("ID", v));
         parentId.ifPresent(v -> baseAttributes.put("Parent", v));
 
+        // Add translation to Map and remove from attribute
+        if(baseAttributes.containsKey("translation")) {
+            cdsTranslationMap.put(id.get(),(String)baseAttributes.get("translation"));
+            baseAttributes.remove("translation");
+        }
+
         CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
         for (Location location : compoundLocation.getLocations()) {
             Map<String, Object> attributes = new LinkedHashMap<>(baseAttributes);
@@ -177,7 +188,6 @@ public class GFF3AnnotationFactory {
                 .forEach(q -> {
                     String key = qualifierMap.getOrDefault(q.getName(), q.getName());
                     String value = q.isValue() ? q.getValue() : "true";
-
                     Gff3Utils.addAttribute(attributes, key, value);
                 });
         return attributes;

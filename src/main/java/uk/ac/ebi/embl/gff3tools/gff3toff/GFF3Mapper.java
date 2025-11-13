@@ -80,16 +80,17 @@ public class GFF3Mapper {
                 parentFeatures.put(gff3Feature.getId().get(), gff3Feature);
             }
 
-            mapGFF3Feature(gff3Feature);
+            mapGFF3Feature(gff3Feature,gff3Annotation.getCdsTranslationMap());
         }
 
         return entry;
     }
 
-    private void mapGFF3Feature(GFF3Feature gff3Feature) throws ValidationException {
+    private void mapGFF3Feature(GFF3Feature gff3Feature, Map<String,String> translationMap) throws ValidationException {
 
         Map<String, Object> attributes = gff3Feature.getAttributes();
         String featureHashId = (String) attributes.getOrDefault("ID", gff3Feature.hashCodeString());
+        String translationSeq = translationMap.getOrDefault(featureHashId, "");
 
         Location location = mapGFF3Location(gff3Feature);
         Feature ffFeature = joinableFeatureMap.get(featureHashId);
@@ -154,6 +155,9 @@ public class GFF3Mapper {
                 }
 
                 joinableFeatureMap.put(featureHashId, ffFeature);
+                if(!translationSeq.isEmpty()) {
+                    ffFeature.addQualifier("translation", translationSeq);
+                }
                 entry.addFeature(ffFeature);
             } else {
                 throw new ValidationException(
