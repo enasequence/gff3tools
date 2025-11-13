@@ -75,6 +75,7 @@ public class ValidationRegistry {
                 Object instance = clazz.getDeclaredConstructor().newInstance();
 
                 // Set connection to all the validations and fixes
+                // ((Validation) instance).setConnection(connection);
 
                 for (Method method : clazz.getDeclaredMethods()) {
                     if (isMethodAnnotationPresent(method)) {
