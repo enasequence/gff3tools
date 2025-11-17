@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeAll;
@@ -185,7 +186,7 @@ class GFF3AnnotationFactoryTest {
             throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, ValidationException {
         GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
         ValidationEngineBuilder builder = new ValidationEngineBuilder();
-        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(builder.build(), directivesFactory,null);
+        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(builder.build(), directivesFactory, Path.of("translation.fasta"));
 
         EntryFactory entryFactory = new EntryFactory();
         Entry entry = entryFactory.createEntry();
@@ -216,7 +217,7 @@ class GFF3AnnotationFactoryTest {
         executeAndValidateGetParentFeature(gFF3AnnotationFactory, "intron", "matK", "mRNA_matK");
 
         // New GFF3AnnotationFactory object but adding features to entry
-        gFF3AnnotationFactory = new GFF3AnnotationFactory(builder.build(), directivesFactory,null);
+        gFF3AnnotationFactory = new GFF3AnnotationFactory(builder.build(), directivesFactory,Path.of("translation.fasta"));
         createAndAddFeature(entry, "gene", qualifiers);
         createAndAddFeature(entry, "mRNA", qualifiers);
         createAndAddFeature(entry, "intron", qualifiers);

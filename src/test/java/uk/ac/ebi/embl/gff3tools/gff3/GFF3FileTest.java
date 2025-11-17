@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Test;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Method;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,18 +18,21 @@ public class GFF3FileTest {
     @Test
     void testWriteTranslation() throws Exception {
 
-        String expectedOutput = "##FASTA\n" +
+        String input = "##FASTA\n" +
                 ">geneB\n" +
                 "GGTTAA\n" +
                 ">geneA\n" +
                 "ATGC\n";
+        String expectedOutput = "##FASTA\n" + input;
+
 
         // Inject cdsTranslationMap
         Map<String, String> testMap = new HashMap<>();
         testMap.put("geneA", "ATGC");
         testMap.put("geneB", "GGTTAA");
 
-        GFF3File obj = new GFF3File(null,null,null,testMap,null);
+        Files.writeString(Path.of("translation.fasta"),input, Charset.defaultCharset());
+        GFF3File obj = new GFF3File(null,null,null, Path.of("translation.fasta"),null);
 
 
         // obj.cdsTranslationMap = testMap;

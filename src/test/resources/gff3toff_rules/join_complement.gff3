@@ -7,5 +7,5 @@ TEST01.1	.	CDS	1	500	.	+	.	ID=CDS_matK;gene=matK;partial=end;
 TEST01.1	.	CDS	600	700	.	+	.	ID=CDS_matK;gene=matK;
 TEST01.1	.	CDS	800	822	.	-	.	ID=CDS_matK;gene=matK;partial=start;
 ##FASTA
->CDS_matK
+>TEST01.1|CDS_matK
 MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLE

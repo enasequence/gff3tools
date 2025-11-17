@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.fftogff3;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -27,15 +28,19 @@ public class FFToGff3Converter implements Converter {
     // MasterFile will be used when converting reduced flatfile tto GFF3
     Path masterFilePath = null;
     ValidationEngine validationEngine;
+    Path fastaFilePath;
 
-    public FFToGff3Converter(ValidationEngine validationEngine) {
+
+    public FFToGff3Converter(ValidationEngine validationEngine, Path fastaPath) {
         this.validationEngine = validationEngine;
+        this.fastaFilePath = fastaPath;
     }
 
     // Constructor to be used only by the processing pipeline which converts reduced flatfile
-    public FFToGff3Converter(ValidationEngine validationEngine, Path masterFilePath) {
+    public FFToGff3Converter(ValidationEngine validationEngine, Path masterFilePath, Path fastaPath) {
         this.validationEngine = validationEngine;
         this.masterFilePath = masterFilePath;
+        this.fastaFilePath = fastaPath;
     }
 
     public void convert(BufferedReader reader, BufferedWriter writer)
@@ -44,7 +49,7 @@ public class FFToGff3Converter implements Converter {
         EmblEntryReader entryReader =
                 new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
-        GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine);
+        GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine,fastaFilePath);
         GFF3File file = fftogff3.from(entryReader, getMasterEntry(masterFilePath));
         file.writeGFF3String(writer);
     }

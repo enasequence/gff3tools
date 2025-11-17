@@ -16,31 +16,48 @@ import static org.junit.jupiter.api.Assertions.fail;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.gff3tools.fftogff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
+import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.builtin.*;
 
 class FFToGFF3ConverterTest {
+
+    static  Path fastaPath = Path.of("translation.fasta");
+    @BeforeAll
+    public static void setUp() throws Exception {
+        Files.deleteIfExists(fastaPath);
+    }
 
     @Test
     void testWriteGFF3() throws Exception {
 
         Map<String, Path> testFiles = TestUtils.getTestFiles("fftogff3_rules", ".embl");
 
+
         for (String filePrefix : testFiles.keySet()) {
+
+           /* if(!filePrefix.startsWith("source_with_taxon_and_organism")) {
+                continue;
+            }*/
             ValidationEngineBuilder builder = new ValidationEngineBuilder();
 
             try (BufferedReader testFileReader = TestUtils.getResourceReaderWithPath(
-                    testFiles.get(filePrefix).toString())) {
+                    testFiles.get(filePrefix).toString());
+                BufferedWriter writer = Files.newBufferedWriter(fastaPath)
+            ) {
 
                 // We need new ValidationEngine each time as we cache data in our tests.
-                GFF3FileFactory rule = new GFF3FileFactory(builder.build());
+                GFF3FileFactory rule = new GFF3FileFactory(builder.build(),fastaPath);
 
                 ReaderOptions readerOptions = new ReaderOptions();
                 readerOptions.setIgnoreSequence(true);
@@ -58,6 +75,7 @@ class FFToGFF3ConverterTest {
 
                 assertEquals(expected.trim(), gff3Writer.toString().trim(), "Error on test case: " + filePrefix);
                 gff3Writer.close();
+                Files.deleteIfExists(fastaPath);
             } catch (Exception e) {
                 fail("Error on test case: " + filePrefix + " - " + e.getMessage());
             }
@@ -86,7 +104,7 @@ class FFToGFF3ConverterTest {
     private void testConvert(Path inputFile, Path expectedFile, Path masterFile) {
         ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
         ValidationEngine engine = engineBuilder.build();
-        FFToGff3Converter converter = new FFToGff3Converter(engine, masterFile);
+        FFToGff3Converter converter = new FFToGff3Converter(engine, masterFile,fastaPath);
         try (BufferedReader testFileReader = Files.newBufferedReader(inputFile);
                 BufferedReader expectedFileReader = Files.newBufferedReader(expectedFile);
                 StringWriter stringWriter = new StringWriter();
