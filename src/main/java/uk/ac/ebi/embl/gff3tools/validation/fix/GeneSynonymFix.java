@@ -28,9 +28,23 @@ public class GeneSynonymFix {
     private static final String FF_GENE = "gene";
     private static final String GENE_SYNONYM = GFF3Attributes.GENE_SYNONYM;
     private HashSet<String> GENE_FEATURES = new HashSet<>();
+    private static final String FF_CDS = "CDS";
+    private static final String FF_misc_RNA = "misc_RNA";
+    private static final String FF_rRNA = "rRNA";
+    private static final String FF_ncRNA = "ncRNA";
+    private static final String FF_tmRNA = "tmRNA";
+    private static final String FF_tRNA = "tRNA";
+    private HashSet<String> GENELIKE_FEATURES = new HashSet<>();
 
     public GeneSynonymFix() {
         FeatureMapping.getGFF3FeatureCandidateIdsAndNames(FF_GENE).forEach(GENE_FEATURES::add);
+
+        FeatureMapping.getGFF3FeatureCandidateIdsAndNames(FF_CDS).forEach(GENELIKE_FEATURES::add);
+        FeatureMapping.getGFF3FeatureCandidateIdsAndNames(FF_misc_RNA).forEach(GENELIKE_FEATURES::add);
+        FeatureMapping.getGFF3FeatureCandidateIdsAndNames(FF_rRNA).forEach(GENELIKE_FEATURES::add);
+        FeatureMapping.getGFF3FeatureCandidateIdsAndNames(FF_ncRNA).forEach(GENELIKE_FEATURES::add);
+        FeatureMapping.getGFF3FeatureCandidateIdsAndNames(FF_tmRNA).forEach(GENELIKE_FEATURES::add);
+        FeatureMapping.getGFF3FeatureCandidateIdsAndNames(FF_tRNA).forEach(GENELIKE_FEATURES::add);
     }
 
     @FixMethod(
@@ -53,6 +67,16 @@ public class GeneSynonymFix {
                     && !GENE_FEATURES.contains(currentId)
                     && !GENE_FEATURES.contains(f.getName())) {
                 var parent = findGeneAncestor(f);
+
+                if (parent == null) {
+                    if (!GENELIKE_FEATURES.contains(currentId) && !GENELIKE_FEATURES.contains(f.getName())) {
+                        parent = findLikeGeneAncestor(f);
+                    } else {
+                        // no gene parent feature but is an RNA or CDS type feature -> leave it alone
+                        continue;
+                    }
+                }
+
                 if (parent == null) parent = findOldestAncestorWithSameLocation(f);
 
                 if (!getFeatureKey(f).equals(getFeatureKey(parent))) {
@@ -84,6 +108,19 @@ public class GeneSynonymFix {
         }
 
         if (GENE_FEATURES.contains(current.getName())) return current;
+        return null;
+    }
+
+    public GFF3Feature findLikeGeneAncestor(GFF3Feature feature) {
+        GFF3Feature current = feature;
+        while (current.getParent() != null) {
+            current = current.getParent();
+
+            var currentId = current.getId().isPresent() ? current.getId().get() : "";
+            if (GENELIKE_FEATURES.contains(current.getName()) || GENELIKE_FEATURES.contains(currentId)) break;
+        }
+
+        if (GENELIKE_FEATURES.contains(current.getName())) return current;
         return null;
     }
 
