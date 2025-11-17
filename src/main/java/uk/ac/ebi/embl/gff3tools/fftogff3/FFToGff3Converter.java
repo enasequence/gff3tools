@@ -13,7 +13,6 @@ package uk.ac.ebi.embl.gff3tools.fftogff3;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -29,7 +28,6 @@ public class FFToGff3Converter implements Converter {
     Path masterFilePath = null;
     ValidationEngine validationEngine;
     Path fastaFilePath;
-
 
     public FFToGff3Converter(ValidationEngine validationEngine, Path fastaPath) {
         this.validationEngine = validationEngine;
@@ -49,7 +47,7 @@ public class FFToGff3Converter implements Converter {
         EmblEntryReader entryReader =
                 new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
-        GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine,fastaFilePath);
+        GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine, fastaFilePath);
         GFF3File file = fftogff3.from(entryReader, getMasterEntry(masterFilePath));
         file.writeGFF3String(writer);
     }

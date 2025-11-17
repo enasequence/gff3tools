@@ -10,16 +10,10 @@
  */
 package uk.ac.ebi.embl.gff3tools.fftogff3;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.Writer;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
@@ -33,6 +27,7 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 public class GFF3FileFactory {
     ValidationEngine engine;
     Path fastaFilePath = null;
+
     public GFF3FileFactory(ValidationEngine engine, Path fastaFilePath) {
         this.engine = engine;
         this.fastaFilePath = fastaFilePath;
@@ -42,9 +37,8 @@ public class GFF3FileFactory {
         GFF3Header header = new GFF3Header("3.1.26");
         GFF3Species species = null;
         List<GFF3Annotation> annotations = new ArrayList<>();
-        Map<String, String> translationMap = new LinkedHashMap<>();
         GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
-        GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(engine, directivesFactory,fastaFilePath);
+        GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(engine, directivesFactory, fastaFilePath);
         try {
             while (entryReader.read() != null && entryReader.isEntry()) {
                 Entry entry = entryReader.getEntry();

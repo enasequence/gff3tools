@@ -13,22 +13,14 @@ package uk.ac.ebi.embl.gff3tools.gff3;
 import java.io.IOException;
 import java.io.Writer;
 import java.net.URLEncoder;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.api.entry.EntryFactory;
-import uk.ac.ebi.embl.api.entry.sequence.Sequence;
-import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
-import uk.ac.ebi.embl.fasta.writer.FastaFileWriter;
 import uk.ac.ebi.embl.gff3tools.exception.WriteException;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
-
-import static uk.ac.ebi.embl.fasta.writer.FastaFileWriter.FastaHeaderFormat.TRANSLATION_HEADER_FORMAT;
 
 @NoArgsConstructor
 @Getter
@@ -37,7 +29,6 @@ public class GFF3Annotation implements IGFF3Feature {
     GFF3SequenceRegion sequenceRegion = null;
     List<GFF3Feature> features = new ArrayList<>();
     List<String> featureIds = new ArrayList<>();
-
 
     private void writeFeature(Writer writer, GFF3Feature feature) throws IOException {
         writer.write(feature.accession());

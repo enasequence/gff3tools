@@ -10,6 +10,8 @@
  */
 package uk.ac.ebi.embl.gff3tools.fftogff3;
 
+import static uk.ac.ebi.embl.fasta.writer.FastaFileWriter.FastaHeaderFormat.TRANSLATION_HEADER_FORMAT;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.Writer;
@@ -20,9 +22,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import org.apache.commons.codec.binary.StringUtils;
-import org.eclipse.rdf4j.common.text.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -41,8 +40,6 @@ import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 
-import static uk.ac.ebi.embl.fasta.writer.FastaFileWriter.FastaHeaderFormat.TRANSLATION_HEADER_FORMAT;
-
 public class GFF3AnnotationFactory {
 
     Logger LOG = LoggerFactory.getLogger(GFF3AnnotationFactory.class);
@@ -57,10 +54,9 @@ public class GFF3AnnotationFactory {
     // List of features that do not belong to a gene.
     List<GFF3Feature> nonGeneFeatures;
     // Map to save CDS translations
-    Map<String, String>  translationMap;
+    Map<String, String> translationMap;
 
     Path fastaPath = null;
-
 
     // Map of Id with count, used for incrementing when same id is found.
     Map<String, Integer> idMap = new HashMap<>();
@@ -68,7 +64,8 @@ public class GFF3AnnotationFactory {
     GFF3DirectivesFactory directivesFactory;
     ValidationEngine validationEngine;
 
-    public GFF3AnnotationFactory(ValidationEngine validationEngine, GFF3DirectivesFactory directivesFactory, Path fastaPath) {
+    public GFF3AnnotationFactory(
+            ValidationEngine validationEngine, GFF3DirectivesFactory directivesFactory, Path fastaPath) {
         this.validationEngine = validationEngine;
         this.directivesFactory = directivesFactory;
         this.fastaPath = fastaPath;
@@ -84,7 +81,6 @@ public class GFF3AnnotationFactory {
         GFF3SequenceRegion sequenceRegion = directivesFactory.createSequenceRegion(entry);
         try (BufferedWriter fastaWriter = Files.newBufferedWriter(fastaPath)) {
 
-
             for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
 
                 if (feature.getName().equalsIgnoreCase("source")) {
@@ -92,31 +88,30 @@ public class GFF3AnnotationFactory {
                 }
                 buildGeneFeatureMap(sequenceRegion, feature, fastaWriter);
             }
-        }catch (IOException e){
+
+            // For circular topologies; We have not found a circular feature so we must
+            // include a region
+            // encompasing all source.
+            if (isCircularTopology(entry) && lacksCircularAttribute()) {
+                nonGeneFeatures.add(createLandmarkFeature(sequenceRegion, entry));
+            }
+            sortFeaturesAndAssignId();
+
+            List<GFF3Feature> features =
+                    geneMap.values().stream().flatMap(List::stream).collect(Collectors.toList());
+            features.addAll(nonGeneFeatures);
+
+            // Create annotation and set values
+            GFF3Annotation annotation = new GFF3Annotation();
+            annotation.setSequenceRegion(sequenceRegion);
+            annotation.setFeatures(features);
+
+            validationEngine.validate(annotation, -1);
+
+            return annotation;
+        } catch (IOException e) {
             throw new ValidationException(e.getMessage());
         }
-
-        // For circular topologies; We have not found a circular feature so we must
-        // include a region
-        // encompasing all source.
-        if (isCircularTopology(entry) && lacksCircularAttribute()) {
-            nonGeneFeatures.add(createLandmarkFeature(sequenceRegion, entry));
-        }
-        sortFeaturesAndAssignId();
-
-        List<GFF3Feature> features =
-                geneMap.values().stream().flatMap(List::stream).collect(Collectors.toList());
-        features.addAll(nonGeneFeatures);
-
-        // Create annotation and set values
-        GFF3Annotation annotation = new GFF3Annotation();
-        annotation.setSequenceRegion(sequenceRegion);
-        annotation.setFeatures(features);
-
-        validationEngine.validate(annotation, -1);
-
-        return annotation;
-
     }
 
     private boolean lacksCircularAttribute() {
@@ -165,12 +160,12 @@ public class GFF3AnnotationFactory {
         parentId.ifPresent(v -> baseAttributes.put("Parent", v));
 
         // Add translation to Map and remove from attribute
-        if(baseAttributes.containsKey("translation")) {
-            //TODO: unify the key creation to one place
-            String translationKey = String.format("%s|%s",sequenceRegion.accession(), id.get());
-            //translationMap.put(translationKey,(String)baseAttributes.get("translation"));
+        if (baseAttributes.containsKey("translation")) {
+            // TODO: unify the key creation to one place
+            String translationKey = String.format("%s|%s", sequenceRegion.accession(), id.get());
+            // translationMap.put(translationKey,(String)baseAttributes.get("translation"));
 
-            writeTranslation(fastaWriter,translationKey,(String)baseAttributes.get("translation"));
+            writeTranslation(fastaWriter, translationKey, (String) baseAttributes.get("translation"));
             baseAttributes.remove("translation");
         }
 
@@ -217,12 +212,13 @@ public class GFF3AnnotationFactory {
         return attributes;
     }
 
-    private void buildGeneFeatureMap(GFF3SequenceRegion sequenceRegion, Feature ffFeature, Writer fastaWriter) throws ValidationException {
+    private void buildGeneFeatureMap(GFF3SequenceRegion sequenceRegion, Feature ffFeature, Writer fastaWriter)
+            throws ValidationException {
 
         List<Qualifier> genes = ffFeature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
 
         if (genes.isEmpty()) {
-            nonGeneFeatures.addAll(transformFeature(sequenceRegion, ffFeature, Optional.empty(),fastaWriter));
+            nonGeneFeatures.addAll(transformFeature(sequenceRegion, ffFeature, Optional.empty(), fastaWriter));
         } else {
 
             for (Qualifier gene : genes) {
@@ -230,7 +226,7 @@ public class GFF3AnnotationFactory {
 
                 List<GFF3Feature> gfFeatures = geneMap.getOrDefault(geneName, new ArrayList<>());
 
-                gfFeatures.addAll(transformFeature(sequenceRegion, ffFeature, Optional.of(geneName),fastaWriter));
+                gfFeatures.addAll(transformFeature(sequenceRegion, ffFeature, Optional.of(geneName), fastaWriter));
                 geneMap.put(geneName, gfFeatures);
             }
         }
@@ -387,7 +383,7 @@ public class GFF3AnnotationFactory {
         return Optional.empty();
     }
 
-    private void  writeTranslation(Writer writer, String featureId, String translation) {
+    private void writeTranslation(Writer writer, String featureId, String translation) {
 
         if (writer != null && !translation.isEmpty()) {
             try {

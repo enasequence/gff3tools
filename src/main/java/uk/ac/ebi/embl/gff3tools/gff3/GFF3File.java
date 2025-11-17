@@ -10,6 +10,8 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3;
 
+import static uk.ac.ebi.embl.fasta.writer.FastaFileWriter.FastaHeaderFormat.TRANSLATION_HEADER_FORMAT;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Writer;
@@ -18,7 +20,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.EntryFactory;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
@@ -29,9 +30,6 @@ import uk.ac.ebi.embl.gff3tools.exception.WriteException;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3TranslationReader;
 import uk.ac.ebi.embl.gff3tools.gff3toff.OffsetRange;
-
-import static uk.ac.ebi.embl.fasta.writer.FastaFileWriter.FastaHeaderFormat.TRANSLATION_HEADER_FORMAT;
-
 
 public class GFF3File implements IGFF3Feature {
 
@@ -49,8 +47,7 @@ public class GFF3File implements IGFF3Feature {
             List<GFF3Annotation> annotations,
             GFF3TranslationReader translationReader,
             Map<String, OffsetRange> annotationTranslationOffset,
-            List<ValidationException> parsingErrors
-    ) {
+            List<ValidationException> parsingErrors) {
         this.header = header;
         this.species = species;
         this.annotations = annotations;
@@ -64,8 +61,7 @@ public class GFF3File implements IGFF3Feature {
             GFF3Species species,
             List<GFF3Annotation> annotations,
             Path fastaFilePath,
-            List<ValidationException> parsingErrors
-    ) {
+            List<ValidationException> parsingErrors) {
         this.header = header;
         this.species = species;
         this.annotations = annotations;
@@ -76,7 +72,7 @@ public class GFF3File implements IGFF3Feature {
     @Override
     public void writeGFF3String(Writer writer) throws WriteException {
 
-        //try {
+        // try {
         if (header != null) {
             this.header.writeGFF3String(writer);
         }
@@ -88,7 +84,6 @@ public class GFF3File implements IGFF3Feature {
             annotation.writeGFF3String(writer);
         }
         writeTranslation(writer);
-
     }
 
     public void writeTranslation(Writer writer) throws WriteException {
@@ -97,25 +92,29 @@ public class GFF3File implements IGFF3Feature {
                 writer.write("##FASTA");
                 writer.write('\n');
 
-
                 try (BufferedReader reader = Files.newBufferedReader(fastaFilePath)) {
-                    char[] buffer = new char[8192];  // optimal internal buffer
+                    char[] buffer = new char[8192]; // optimal internal buffer
                     int read;
                     while ((read = reader.read(buffer)) != -1) {
                         writer.write(buffer, 0, read);
                     }
                 }
                 writer.flush();
-            } else if (translationReader !=null && annotationTranslationOffset!=null && !annotationTranslationOffset.isEmpty() ){
+            } else if (translationReader != null
+                    && annotationTranslationOffset != null
+                    && !annotationTranslationOffset.isEmpty()) {
                 writer.write("##FASTA");
                 writer.write('\n');
 
                 for (String id : annotationTranslationOffset.keySet()) {
-                    writeFasta(writer, id,translationReader.readTranslation(translationReader.readTranslationOffset().get(id)));
+                    writeFasta(
+                            writer,
+                            id,
+                            translationReader.readTranslation(
+                                    translationReader.readTranslationOffset().get(id)));
                 }
                 writer.write('\n');
             }
-
 
         } catch (IOException e) {
             throw new WriteException(e);
@@ -131,7 +130,12 @@ public class GFF3File implements IGFF3Feature {
                     writer.write('\n');
 
                     for (String id : translationReader.readTranslationOffset().keySet()) {
-                        writeFasta(writer, id,translationReader.readTranslation(translationReader.readTranslationOffset().get(id)));
+                        writeFasta(
+                                writer,
+                                id,
+                                translationReader.readTranslation(translationReader
+                                        .readTranslationOffset()
+                                        .get(id)));
                     }
                 }
             }

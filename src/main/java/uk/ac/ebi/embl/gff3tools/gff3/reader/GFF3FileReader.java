@@ -18,7 +18,6 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
@@ -49,9 +48,8 @@ public class GFF3FileReader implements AutoCloseable {
     ValidationEngine validationEngine;
     public GFF3Species gff3Species;
     private final Set<String> processedAccessions;
-    Map<String,OffsetRange> translationMap;
+    Map<String, OffsetRange> translationMap;
     GFF3TranslationReader translationReader;
-
 
     public GFF3FileReader(ValidationEngine validationEngine, Reader reader, Path gff3Path) {
         this.validationEngine = validationEngine;
@@ -59,11 +57,10 @@ public class GFF3FileReader implements AutoCloseable {
         lineCount = 0;
         currentAnnotation = new GFF3Annotation();
         processedAccessions = new HashSet<>();
-        translationReader = new GFF3TranslationReader(validationEngine,gff3Path);
-        if(translationMap == null) {
+        translationReader = new GFF3TranslationReader(validationEngine, gff3Path);
+        if (translationMap == null) {
             translationMap = translationReader.readTranslationOffset();
         }
-
     }
 
     public Map<String, OffsetRange> getTranslationMap() {
@@ -78,7 +75,7 @@ public class GFF3FileReader implements AutoCloseable {
                 // Ignore blank lines
                 continue;
             }
-            if(line.startsWith("##FASTA")){
+            if (line.startsWith("##FASTA")) {
                 break;
             }
             Matcher m = SPECIES_DIRECTIVE.matcher(line);
@@ -126,7 +123,7 @@ public class GFF3FileReader implements AutoCloseable {
                 continue;
             } else if (TRANSLATION_ID_PATTERN.matcher(line).matches()) {
                 return null;
-            }else {
+            } else {
                 validationEngine.handleSyntacticError(
                         new InvalidGFF3RecordException(lineCount, "Invalid gff3 record \"" + line + "\""));
             }
@@ -298,7 +295,7 @@ public class GFF3FileReader implements AutoCloseable {
         return translationReader;
     }
 
-    public Map<String,OffsetRange> getAnnotationTranslationOffset(GFF3Annotation annotation) {
+    public Map<String, OffsetRange> getAnnotationTranslationOffset(GFF3Annotation annotation) {
         return translationReader.readTranslationOffset().entrySet().stream()
                 .filter(e -> e.getKey().startsWith(annotation.getAccession()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));

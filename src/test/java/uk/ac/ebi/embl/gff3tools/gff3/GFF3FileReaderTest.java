@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
@@ -59,7 +58,7 @@ public class GFF3FileReaderTest {
 
             try (FileReader filerReader = new FileReader(file);
                     BufferedReader reader = new BufferedReader(filerReader);
-                    GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader,file.toPath())) {
+                    GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader, file.toPath())) {
                 gff3Reader.readHeader();
                 while (true) {
                     if (gff3Reader.readAnnotation() == null) break;
@@ -104,7 +103,7 @@ public class GFF3FileReaderTest {
 
         try (FileReader filerReader = new FileReader(testFile);
                 BufferedReader reader = new BufferedReader(filerReader);
-                GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader,testFile.toPath())) {
+                GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader, testFile.toPath())) {
             gff3Reader.readHeader(); // Read header first
             while (true) {
                 if (gff3Reader.readAnnotation() == null) {
@@ -125,7 +124,7 @@ public class GFF3FileReaderTest {
 
         try (FileReader filerReader = new FileReader(testFile);
                 BufferedReader reader = new BufferedReader(filerReader);
-                GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader,testFile.toPath())) {
+                GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader, testFile.toPath())) {
             gff3Reader.readHeader();
             gff3Reader.readAnnotation();
         } catch (UndefinedSeqIdException e) {
@@ -147,7 +146,7 @@ public class GFF3FileReaderTest {
 
         try (FileReader filerReader = new FileReader(testFile);
                 BufferedReader reader = new BufferedReader(filerReader);
-                GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader,testFile.toPath())) {
+                GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader, testFile.toPath())) {
             gff3Reader.readHeader();
             GFF3Annotation annotation = gff3Reader.readAnnotation();
             Assertions.assertNotNull(annotation);
@@ -171,7 +170,7 @@ public class GFF3FileReaderTest {
 
         try (FileReader filerReader = new FileReader(testFile);
                 BufferedReader reader = new BufferedReader(filerReader);
-                GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader,testFile.toPath())) {
+                GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader, testFile.toPath())) {
             gff3Reader.readHeader();
             GFF3Annotation annotation = null;
             while (true) {
@@ -199,24 +198,23 @@ public class GFF3FileReaderTest {
                 + "seq1\tsource\tgene\t100\t200\t.\t+\t.\tID=feat2\n";
 
         ValidationEngine validationEngine = getValidationEngine();
-        Files.writeString(Path.of("input.gff3"),gff3Content, Charset.defaultCharset());
+        Files.writeString(Path.of("input.gff3"), gff3Content, Charset.defaultCharset());
 
-        try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, new StringReader(gff3Content),Path.of("input.gff3"))) {
+        try (GFF3FileReader gff3Reader =
+                new GFF3FileReader(validationEngine, new StringReader(gff3Content), Path.of("input.gff3"))) {
             gff3Reader.readHeader();
 
             GFF3Annotation annotation1 = gff3Reader.readAnnotation();
             Assertions.assertNotNull(annotation1);
             assertEquals(1, annotation1.getFeatures().size());
             assertEquals("seq1", annotation1.getFeatures().get(0).accession());
-            assertEquals(
-                    "feat1", annotation1.getFeatures().get(0).getId().get());
+            assertEquals("feat1", annotation1.getFeatures().get(0).getId().get());
 
             GFF3Annotation annotation2 = gff3Reader.readAnnotation();
             Assertions.assertNotNull(annotation2);
             assertEquals(1, annotation2.getFeatures().size());
             assertEquals("seq1", annotation2.getFeatures().get(0).accession());
-            assertEquals(
-                    "feat2", annotation2.getFeatures().get(0).getId().get());
+            assertEquals("feat2", annotation2.getFeatures().get(0).getId().get());
 
             GFF3Annotation annotation3 = gff3Reader.readAnnotation();
             Assertions.assertNull(annotation3);
@@ -234,8 +232,9 @@ public class GFF3FileReaderTest {
                 + "seq2\tsource\tgene\t1\t100\t.\t+\t.\tID=featb2\n";
 
         ValidationEngine validationEngine = getValidationEngine();
-        Files.writeString(Path.of("input.gff3"),gff3Content, Charset.defaultCharset());
-        try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, new StringReader(gff3Content),Path.of("input.gff3"))) {
+        Files.writeString(Path.of("input.gff3"), gff3Content, Charset.defaultCharset());
+        try (GFF3FileReader gff3Reader =
+                new GFF3FileReader(validationEngine, new StringReader(gff3Content), Path.of("input.gff3"))) {
             gff3Reader.readHeader();
             gff3Reader.readAnnotation(); // Read first annotation
             gff3Reader.readAnnotation(); // This should trigger an exception
@@ -335,7 +334,6 @@ public class GFF3FileReaderTest {
                 + "MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEMSSKYPRSVRRCLPLWALTLE\n"
                 + "AALILLFYFFTHYDASLE\n\n";
 
-
         String output = testReadWithHeaderAndFastaOnEachAnnotation(input);
         assertEquals(expected, output);
     }
@@ -359,7 +357,6 @@ public class GFF3FileReaderTest {
                 + "MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEMSSKYPRSVRRCLPLWALTLE\n"
                 + "AALILLFYFFTHYDASLE\n";
 
-
         String output = testReadWithHeaderAndFastaInEnd(input);
         assertEquals(input, output);
     }
@@ -367,8 +364,9 @@ public class GFF3FileReaderTest {
     private String testReadWithHeaderOnce(String input)
             throws IOException, ValidationException, ReadException, WriteException {
         StringWriter writer = new StringWriter();
-        Files.writeString(Path.of("input.gff3"),input, Charset.defaultCharset());
-        try (GFF3FileReader reader = new GFF3FileReader(getValidationEngine(), new StringReader(input),Path.of("input.gff3"))) {
+        Files.writeString(Path.of("input.gff3"), input, Charset.defaultCharset());
+        try (GFF3FileReader reader =
+                new GFF3FileReader(getValidationEngine(), new StringReader(input), Path.of("input.gff3"))) {
             GFF3Header gff3Header = reader.readHeader();
 
             AtomicBoolean first = new AtomicBoolean(true);
@@ -378,14 +376,25 @@ public class GFF3FileReaderTest {
                     // first annotation → write header + species only once
                     GFF3Species gff3Species = reader.getSpecies();
                     /*GFF3File gff3File =
-                            new GFF3File(gff3Header, gff3Species, Collections.singletonList(annotation), reader.getTranslationReader(),null);*/
-                    GFF3File gff3File =
-                            new GFF3File(gff3Header, gff3Species, Collections.singletonList(annotation), reader.getTranslationReader(), null,null);
+                    new GFF3File(gff3Header, gff3Species, Collections.singletonList(annotation), reader.getTranslationReader(),null);*/
+                    GFF3File gff3File = new GFF3File(
+                            gff3Header,
+                            gff3Species,
+                            Collections.singletonList(annotation),
+                            reader.getTranslationReader(),
+                            null,
+                            null);
                     gff3File.writeGFF3String(writer);
-                    gff3File.writeTranslation(writer,reader.getTranslationReader());
+                    gff3File.writeTranslation(writer, reader.getTranslationReader());
                 } else {
                     // subsequent annotations → only write features
-                    GFF3File gff3File = new GFF3File(null, null, Collections.singletonList(annotation), reader.getTranslationReader(), null,null);
+                    GFF3File gff3File = new GFF3File(
+                            null,
+                            null,
+                            Collections.singletonList(annotation),
+                            reader.getTranslationReader(),
+                            null,
+                            null);
                     gff3File.writeGFF3String(writer);
                 }
             });
@@ -398,41 +407,47 @@ public class GFF3FileReaderTest {
         StringWriter writer = new StringWriter();
         Files.deleteIfExists(Path.of("input.gff3"));
         Files.deleteIfExists(Path.of("translation.fasta"));
-        Files.writeString(Path.of("input.gff3"),input, Charset.defaultCharset());
-        try (GFF3FileReader reader = new GFF3FileReader(getValidationEngine(), new StringReader(input),Path.of("input.gff3"))) {
+        Files.writeString(Path.of("input.gff3"), input, Charset.defaultCharset());
+        try (GFF3FileReader reader =
+                new GFF3FileReader(getValidationEngine(), new StringReader(input), Path.of("input.gff3"))) {
             GFF3Header gff3Header = reader.readHeader();
-            AtomicReference<GFF3File> gff3File = new  AtomicReference<>();
+            AtomicReference<GFF3File> gff3File = new AtomicReference<>();
             GFF3TranslationReader translationReader = reader.getTranslationReader();
             reader.read(annotation -> {
                 GFF3Species gff3Species = reader.getSpecies();
-                Map<String, OffsetRange> annotationTranslationOffset = reader.getAnnotationTranslationOffset(annotation);
-                 gff3File.set(new GFF3File(gff3Header, gff3Species, Collections.singletonList(annotation),translationReader,annotationTranslationOffset, null));
+                Map<String, OffsetRange> annotationTranslationOffset =
+                        reader.getAnnotationTranslationOffset(annotation);
+                gff3File.set(new GFF3File(
+                        gff3Header,
+                        gff3Species,
+                        Collections.singletonList(annotation),
+                        translationReader,
+                        annotationTranslationOffset,
+                        null));
                 gff3File.get().writeGFF3String(writer);
             });
-
-
         }
         return writer.toString();
     }
-
 
     private String testReadWithHeaderAndFastaInEnd(String input)
             throws IOException, ValidationException, ReadException, WriteException {
         StringWriter writer = new StringWriter();
         Files.deleteIfExists(Path.of("input.gff3"));
         Files.deleteIfExists(Path.of("translation.fasta"));
-        Files.writeString(Path.of("input.gff3"),input, Charset.defaultCharset());
-        try (GFF3FileReader reader = new GFF3FileReader(getValidationEngine(), new StringReader(input),Path.of("input.gff3"))) {
+        Files.writeString(Path.of("input.gff3"), input, Charset.defaultCharset());
+        try (GFF3FileReader reader =
+                new GFF3FileReader(getValidationEngine(), new StringReader(input), Path.of("input.gff3"))) {
             GFF3Header gff3Header = reader.readHeader();
-            AtomicReference<GFF3File> gff3File = new  AtomicReference<>();
+            AtomicReference<GFF3File> gff3File = new AtomicReference<>();
             reader.read(annotation -> {
                 GFF3Species gff3Species = reader.getSpecies();
-                gff3File.set(new GFF3File(gff3Header, gff3Species, Collections.singletonList(annotation),null,null, null));
+                gff3File.set(
+                        new GFF3File(gff3Header, gff3Species, Collections.singletonList(annotation), null, null, null));
                 gff3File.get().writeGFF3String(writer);
             });
 
             gff3File.get().writeTranslation(writer, reader.getTranslationReader());
-
         }
         return writer.toString();
     }
@@ -442,26 +457,33 @@ public class GFF3FileReaderTest {
         StringWriter writer = new StringWriter();
         Files.deleteIfExists(Path.of("input.gff3"));
         Files.deleteIfExists(Path.of("translation.fasta"));
-        Files.writeString(Path.of("input.gff3"),input, Charset.defaultCharset());
-        try (GFF3FileReader reader = new GFF3FileReader(getValidationEngine(), new StringReader(input),Path.of("input.gff3"))) {
+        Files.writeString(Path.of("input.gff3"), input, Charset.defaultCharset());
+        try (GFF3FileReader reader =
+                new GFF3FileReader(getValidationEngine(), new StringReader(input), Path.of("input.gff3"))) {
             GFF3Header gff3Header = reader.readHeader();
-            AtomicReference<GFF3File> gff3File = new  AtomicReference<>();
+            AtomicReference<GFF3File> gff3File = new AtomicReference<>();
             reader.read(annotation -> {
                 GFF3Species gff3Species = reader.getSpecies();
-                gff3File.set(new GFF3File(gff3Header, gff3Species, Collections.singletonList(annotation), reader.getTranslationReader(), null,null));
+                gff3File.set(new GFF3File(
+                        gff3Header,
+                        gff3Species,
+                        Collections.singletonList(annotation),
+                        reader.getTranslationReader(),
+                        null,
+                        null));
                 gff3File.get().writeGFF3String(writer);
             });
 
             gff3File.get().writeTranslation(writer, reader.getTranslationReader());
-
         }
         return writer.toString();
     }
 
     private void test(String attributeLine) throws Exception {
         ValidationEngine validationEngine = getValidationEngine();
-        Files.writeString(Path.of("input.gff3"),attributeLine, Charset.defaultCharset());
-        try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, new StringReader(attributeLine),Path.of("input.gff3"))) {
+        Files.writeString(Path.of("input.gff3"), attributeLine, Charset.defaultCharset());
+        try (GFF3FileReader gff3Reader =
+                new GFF3FileReader(validationEngine, new StringReader(attributeLine), Path.of("input.gff3"))) {
             Map<String, Object> attrMap = gff3Reader.attributesFromString(attributeLine);
 
             assertEquals(attributeLine, getAttributeString(attrMap));

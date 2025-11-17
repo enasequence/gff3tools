@@ -48,7 +48,8 @@ class GFF3AnnotationFactoryTest {
     public void buildFeatureTreeFullMapTest() {
         ValidationEngineBuilder builder = new ValidationEngineBuilder();
         GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
-        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(builder.build(), directivesFactory,null);
+        GFF3AnnotationFactory gFF3AnnotationFactory =
+                new GFF3AnnotationFactory(builder.build(), directivesFactory, null);
         featureRelationMap.forEach((childName, parentSet) -> {
             List<GFF3Feature> featureList = new ArrayList<>();
             parentSet.forEach(parentName -> {
@@ -80,7 +81,7 @@ class GFF3AnnotationFactoryTest {
     public void orderRootAndChildrenTest() {
         ValidationEngineBuilder builder = new ValidationEngineBuilder();
         GFF3AnnotationFactory gFF3AnnotationFactory =
-                new GFF3AnnotationFactory(builder.build(), new GFF3DirectivesFactory(),null);
+                new GFF3AnnotationFactory(builder.build(), new GFF3DirectivesFactory(), null);
         List<GFF3Feature> featureList = new ArrayList<>();
         List<GFF3Feature> parentList = new ArrayList<>();
         List<GFF3Feature> childList = new ArrayList<>();
@@ -125,7 +126,7 @@ class GFF3AnnotationFactoryTest {
     public void testGetIncrementalId() {
         ValidationEngineBuilder builder = new ValidationEngineBuilder();
         GFF3AnnotationFactory gFF3AnnotationFactory =
-                new GFF3AnnotationFactory(builder.build(), new GFF3DirectivesFactory(),null);
+                new GFF3AnnotationFactory(builder.build(), new GFF3DirectivesFactory(), null);
         List<String> genes = Arrays.asList("tnpA", "tnpB", "tnpA", "tnpA", "tnpC", "tnpB", "ppk_2", "ppk_2", "ppk_2");
         List<String> ids = Arrays.asList(
                 "CDS_tnpA",
@@ -151,7 +152,7 @@ class GFF3AnnotationFactoryTest {
             throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         ValidationEngineBuilder builder = new ValidationEngineBuilder();
         GFF3AnnotationFactory gFF3AnnotationFactory =
-                new GFF3AnnotationFactory(builder.build(), new GFF3DirectivesFactory(),null);
+                new GFF3AnnotationFactory(builder.build(), new GFF3DirectivesFactory(), null);
 
         Method method = FeatureMapping.class.getDeclaredMethod("getGFF3FeatureName", Feature.class);
         method.setAccessible(true);
@@ -186,7 +187,8 @@ class GFF3AnnotationFactoryTest {
             throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, ValidationException {
         GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
         ValidationEngineBuilder builder = new ValidationEngineBuilder();
-        GFF3AnnotationFactory gFF3AnnotationFactory = new GFF3AnnotationFactory(builder.build(), directivesFactory, Path.of("translation.fasta"));
+        GFF3AnnotationFactory gFF3AnnotationFactory =
+                new GFF3AnnotationFactory(builder.build(), directivesFactory, Path.of("translation.fasta"));
 
         EntryFactory entryFactory = new EntryFactory();
         Entry entry = entryFactory.createEntry();
@@ -217,7 +219,8 @@ class GFF3AnnotationFactoryTest {
         executeAndValidateGetParentFeature(gFF3AnnotationFactory, "intron", "matK", "mRNA_matK");
 
         // New GFF3AnnotationFactory object but adding features to entry
-        gFF3AnnotationFactory = new GFF3AnnotationFactory(builder.build(), directivesFactory,Path.of("translation.fasta"));
+        gFF3AnnotationFactory =
+                new GFF3AnnotationFactory(builder.build(), directivesFactory, Path.of("translation.fasta"));
         createAndAddFeature(entry, "gene", qualifiers);
         createAndAddFeature(entry, "mRNA", qualifiers);
         createAndAddFeature(entry, "intron", qualifiers);

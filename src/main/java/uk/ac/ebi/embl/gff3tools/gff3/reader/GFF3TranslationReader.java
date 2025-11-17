@@ -1,9 +1,14 @@
+/*
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package uk.ac.ebi.embl.gff3tools.gff3.reader;
-
-import uk.ac.ebi.embl.gff3tools.exception.InvalidGFF3RecordException;
-import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
-import uk.ac.ebi.embl.gff3tools.gff3toff.OffsetRange;
-import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -13,6 +18,10 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import uk.ac.ebi.embl.gff3tools.exception.InvalidGFF3RecordException;
+import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.gff3toff.OffsetRange;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 
 public class GFF3TranslationReader {
 
@@ -58,7 +67,7 @@ public class GFF3TranslationReader {
 
                         } else if (!line.isBlank()) {
                             Matcher matcher = SEQUENCE_PATTERN.matcher(line);
-                            if(!matcher.matches()){
+                            if (!matcher.matches()) {
                                 validationEngine.handleSyntacticError(
                                         new InvalidGFF3RecordException(-1, "Invalid gff3 record \"" + line + "\""));
                             }
@@ -71,14 +80,12 @@ public class GFF3TranslationReader {
                 }
                 pointer--;
             }
-        }catch (IOException | ValidationException e){
+        } catch (IOException | ValidationException e) {
             throw new RuntimeException(e);
         }
 
         return fastaMap;
     }
-
-
 
     /**
      * Reads the FASTA from the end of GFF3 file
@@ -111,9 +118,9 @@ public class GFF3TranslationReader {
                         if (line.startsWith(">")) {
                             // Encountered ID line, store ID and offset
                             seqStart = pointer + line.length() + 1;
-                            line = line.replace(">","");
+                            line = line.replace(">", "");
                             offsetMap.put(line, new OffsetRange(seqStart, seqEnd));
-                            //System.out.println(readTranslation(seqStart, seqEnd));
+                            // System.out.println(readTranslation(seqStart, seqEnd));
                             seqEnd = pointer;
                         }
                     }
@@ -122,7 +129,7 @@ public class GFF3TranslationReader {
                 }
                 pointer--;
             }
-        }catch (IOException e){
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
@@ -144,16 +151,16 @@ public class GFF3TranslationReader {
                 raf.seek(start);
                 int b = raf.readByte();
                 if (b != '\n') {
-                    sequence.append((char)b);
+                    sequence.append((char) b);
                 }
                 start++;
             }
             Matcher matcher = SEQUENCE_PATTERN.matcher(sequence.toString());
-            if(!matcher.matches()){
+            if (!matcher.matches()) {
                 validationEngine.handleSyntacticError(
                         new InvalidGFF3RecordException(-1, "Invalid sequence record \"" + sequence.toString() + "\""));
             }
-        }catch (IOException | ValidationException e){
+        } catch (IOException | ValidationException e) {
             throw new RuntimeException(e);
         }
 

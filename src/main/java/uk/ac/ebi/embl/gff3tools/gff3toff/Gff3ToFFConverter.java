@@ -13,13 +13,10 @@ package uk.ac.ebi.embl.gff3tools.gff3toff;
 import java.io.*;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
-
 import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 import uk.ac.ebi.embl.gff3tools.*;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
-import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3TranslationReader;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 
@@ -36,7 +33,7 @@ public class Gff3ToFFConverter implements Converter {
     public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException {
 
-        try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine,reader,gff3Path)) {
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader, gff3Path)) {
 
             gff3Reader.readHeader();
             gff3Reader.read(annotation -> writeEntry(new GFF3Mapper(gff3Reader), annotation, writer));

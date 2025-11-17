@@ -68,7 +68,6 @@ public class FileConversionCommand implements Runnable {
         Map<String, RuleSeverity> ruleOverrides =
                 Optional.ofNullable(rules).map((r) -> r.rules()).orElse(new HashMap<>());
 
-
         try (BufferedReader inputReader = getPipe(
                         Files::newBufferedReader,
                         () -> new BufferedReader(new InputStreamReader(System.in)),
@@ -83,25 +82,24 @@ public class FileConversionCommand implements Runnable {
                             ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
                             return new BufferedWriter(new OutputStreamWriter(System.out));
                         },
-                        outputFilePath);
-                ) {
+                        outputFilePath); ) {
             fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
             toFileType = validateFileType(toFileType, outputFilePath, "-t");
             ValidationEngine engine = initValidationEngine(ruleOverrides);
             Path fastaPath = getFastaFilePath(outputFilePath);
-            Converter converter = getConverter(engine, fromFileType, toFileType, inputFilePath, masterFilePath,fastaPath);
+            Converter converter =
+                    getConverter(engine, fromFileType, toFileType, inputFilePath, masterFilePath, fastaPath);
             converter.convert(inputReader, outputWriter);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
     }
 
-    private Path getFastaFilePath(Path outputFilePath){
-        if(outputFilePath.getParent()!=null){
-           return outputFilePath.getParent().resolve("translation.fasta");
+    private Path getFastaFilePath(Path outputFilePath) {
+        if (outputFilePath.getParent() != null) {
+            return outputFilePath.getParent().resolve("translation.fasta");
         }
         return Path.of("translation.fasta");
-
     }
 
     private ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides)
