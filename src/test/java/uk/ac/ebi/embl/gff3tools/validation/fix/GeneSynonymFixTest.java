@@ -23,13 +23,6 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 
-// import your actual classes / packages as needed, e.g.:
-// import your.pkg.GeneSynonymFix;
-// import your.pkg.GFF3Annotation;
-// import your.pkg.GFF3Feature;
-// import your.pkg.GFF3Attributes;
-// import your.pkg.TestUtils;
-
 public class GeneSynonymFixTest {
 
     // Use the same key as the fix class uses

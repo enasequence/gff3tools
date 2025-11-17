@@ -21,8 +21,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Fix(
         name = "GENE_SYNONYM",
-        description =
-                "Normalizes gene_synonym values across features sharing the same locus_tag/gene; CDS sets the canonical list",
+        description = "Pushes gene_synonym attribute to only persist at a parent level",
         enabled = true)
 public class GeneSynonymFix {
 
