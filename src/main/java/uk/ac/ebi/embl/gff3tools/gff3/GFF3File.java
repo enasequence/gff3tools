@@ -121,6 +121,7 @@ public class GFF3File implements IGFF3Feature {
         }
     }
 
+    // To write all translation in the end of the GFF3 file
     public void writeTranslation(Writer writer, GFF3TranslationReader translationReader) throws WriteException {
 
         try {
@@ -130,12 +131,9 @@ public class GFF3File implements IGFF3Feature {
                     writer.write('\n');
 
                     for (String id : translationReader.readTranslationOffset().keySet()) {
-                        writeFasta(
-                                writer,
-                                id,
-                                translationReader.readTranslation(translationReader
-                                        .readTranslationOffset()
-                                        .get(id)));
+                        String translation = translationReader.readTranslation(
+                                translationReader.readTranslationOffset().get(id));
+                        writeFasta(writer, id, translation);
                     }
                 }
             }
