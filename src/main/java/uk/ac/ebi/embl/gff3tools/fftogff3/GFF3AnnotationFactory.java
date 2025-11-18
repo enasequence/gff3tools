@@ -103,7 +103,7 @@ public class GFF3AnnotationFactory {
 
             return annotation;
         } catch (IOException e) {
-            throw new ValidationException(e.getMessage());
+            throw new RuntimeException(e.getMessage());
         }
     }
 

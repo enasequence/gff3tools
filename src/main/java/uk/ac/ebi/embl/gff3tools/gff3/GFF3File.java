@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.api.entry.EntryFactory;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -29,6 +30,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3TranslationReader;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
 import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 
+@Slf4j
 public class GFF3File implements IGFF3Feature {
 
     GFF3Header header;
@@ -103,6 +105,7 @@ public class GFF3File implements IGFF3Feature {
                 writer.write(buffer, 0, n);
             }
         }
+        log.info("Write translation sequences from: " + fastaFilePath);
     }
 
     private void writeFastaFromOffsets(Writer writer) throws IOException {
@@ -116,6 +119,7 @@ public class GFF3File implements IGFF3Feature {
             String translation = translationReader.readTranslation(range);
             TranslationWriter.writeTranslation(writer, id, translation);
         }
+        log.info("Written {} sequences from: ", translationOffsets.entrySet().size());
         writer.write("\n");
     }
 
