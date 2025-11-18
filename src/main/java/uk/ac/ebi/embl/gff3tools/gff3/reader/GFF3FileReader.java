@@ -23,7 +23,6 @@ import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
-import uk.ac.ebi.embl.gff3tools.gff3toff.OffsetRange;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 

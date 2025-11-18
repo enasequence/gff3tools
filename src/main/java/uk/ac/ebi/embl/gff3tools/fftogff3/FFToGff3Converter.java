@@ -27,18 +27,20 @@ public class FFToGff3Converter implements Converter {
     // MasterFile will be used when converting reduced flatfile tto GFF3
     Path masterFilePath = null;
     ValidationEngine validationEngine;
-    Path fastaFilePath;
+
+    // Path to write translation sequences.
+    Path fastaPath;
 
     public FFToGff3Converter(ValidationEngine validationEngine, Path fastaPath) {
         this.validationEngine = validationEngine;
-        this.fastaFilePath = fastaPath;
+        this.fastaPath = fastaPath;
     }
 
     // Constructor to be used only by the processing pipeline which converts reduced flatfile
     public FFToGff3Converter(ValidationEngine validationEngine, Path masterFilePath, Path fastaPath) {
         this.validationEngine = validationEngine;
         this.masterFilePath = masterFilePath;
-        this.fastaFilePath = fastaPath;
+        this.fastaPath = fastaPath;
     }
 
     public void convert(BufferedReader reader, BufferedWriter writer)
@@ -47,7 +49,7 @@ public class FFToGff3Converter implements Converter {
         EmblEntryReader entryReader =
                 new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
-        GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine, fastaFilePath);
+        GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine, fastaPath);
         GFF3File file = fftogff3.from(entryReader, getMasterEntry(masterFilePath));
         file.writeGFF3String(writer);
     }

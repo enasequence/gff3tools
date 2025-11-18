@@ -82,13 +82,11 @@ public class FileConversionCommand implements Runnable {
                             ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
                             return new BufferedWriter(new OutputStreamWriter(System.out));
                         },
-                        outputFilePath); ) {
+                        outputFilePath)) {
             fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
             toFileType = validateFileType(toFileType, outputFilePath, "-t");
             ValidationEngine engine = initValidationEngine(ruleOverrides);
-            Path fastaPath = getFastaFilePath(outputFilePath);
-            Converter converter =
-                    getConverter(engine, fromFileType, toFileType, inputFilePath, masterFilePath, fastaPath);
+            Converter converter = getConverter(engine, fromFileType, toFileType);
             converter.convert(inputReader, outputWriter);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
@@ -120,18 +118,14 @@ public class FileConversionCommand implements Runnable {
     }
 
     private Converter getConverter(
-            ValidationEngine engine,
-            ConversionFileFormat inputFileType,
-            ConversionFileFormat outputFileType,
-            Path inputFilePath,
-            Path masterFilePath,
-            Path fastaPath)
+            ValidationEngine engine, ConversionFileFormat inputFileType, ConversionFileFormat outputFileType)
             throws FormatSupportException {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
             // Need input file to random access the translation sequence.
             return new Gff3ToFFConverter(engine, inputFilePath);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
-
+            // FASTA path to write translation sequences
+            Path fastaPath = getFastaFilePath(outputFilePath);
             return masterFilePath == null
                     ? new FFToGff3Converter(engine, masterFilePath, fastaPath)
                     : new FFToGff3Converter(engine, fastaPath);

@@ -51,6 +51,12 @@ public class GFF3FileFactory {
             throw new ReadException(e);
         }
 
-        return new GFF3File(header, species, annotations, fastaFilePath, engine.getParsingErrors());
+        return new GFF3File.Builder()
+                .header(header)
+                .species(species)
+                .annotations(annotations)
+                .fastaFilePath(fastaFilePath)
+                .parsingErrors(engine.getParsingErrors())
+                .build();
     }
 }

@@ -43,9 +43,6 @@ class FFToGFF3ConverterTest {
 
         for (String filePrefix : testFiles.keySet()) {
 
-            /* if(!filePrefix.startsWith("source_with_taxon_and_organism")) {
-                continue;
-            }*/
             ValidationEngineBuilder builder = new ValidationEngineBuilder();
 
             try (BufferedReader testFileReader = TestUtils.getResourceReaderWithPath(
@@ -79,7 +76,7 @@ class FFToGFF3ConverterTest {
     }
 
     @Test
-    void testWriteGFF3UsingReducedFlatfile() {
+    void testWriteGFF3UsingReducedFlatfile() throws IOException {
 
         Path scaffoldPath = TestUtils.getResourceFile("./fftogff3_rules/reduced/scaffold-reduced.embl")
                 .toPath();
@@ -95,6 +92,7 @@ class FFToGFF3ConverterTest {
 
         testConvert(scaffoldPath, expectedScaffoldPath, masterPath);
         testConvert(contigPath, expectedContigPath, masterPath);
+        Files.deleteIfExists(fastaPath);
     }
 
     private void testConvert(Path inputFile, Path expectedFile, Path masterFile) {

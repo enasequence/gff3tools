@@ -13,16 +13,22 @@ package uk.ac.ebi.embl.gff3tools.gff3.reader;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import uk.ac.ebi.embl.gff3tools.exception.InvalidGFF3RecordException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
-import uk.ac.ebi.embl.gff3tools.gff3toff.OffsetRange;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 
+/**
+ * Utility class for efficiently reading protein translation sequences stored in
+ * the FASTA section at the end of a GFF3 file.
+ *
+ * This reader works directly on the underlying file using RandomAccessFile
+ * to avoid loading the entire GFF3 or FASTA content into memory. It scans
+ * backwards from the end of the file to locate ##FASTA directive
+ */
 public class GFF3TranslationReader {
 
     static Pattern SEQUENCE_PATTERN = Pattern.compile("^[ACDEFGHIKLMNPQRSTVWY*]+$");
@@ -35,61 +41,12 @@ public class GFF3TranslationReader {
     }
 
     /**
-     * Reads the FASTA from the end of GFF3 file
-     * @param gff3Path
-     * @return
-     */
-    public Map<String, String> readTranslation(Path gff3Path) {
-        Map<String, String> fastaMap = new LinkedHashMap<>();
-        try (RandomAccessFile raf = new RandomAccessFile(gff3Path.toFile(), "r")) {
-
-            // End of the file
-            long pointer = raf.length() - 1;
-            StringBuilder currentLine = new StringBuilder();
-            StringBuilder sequence = new StringBuilder();
-
-            while (pointer >= 0) {
-                raf.seek(pointer);
-                int b = raf.readByte();
-
-                if (b == '\n' || b == '\r') {
-                    if (!currentLine.isEmpty()) {
-                        String line = currentLine.reverse().toString();
-                        currentLine.setLength(0);
-
-                        // Stop once we reach the marker
-                        if (line.startsWith("##FASTA")) break;
-
-                        if (line.startsWith(">")) {
-                            // Encountered ID line, store ID and sequence
-                            fastaMap.put(line, sequence.toString());
-                            sequence.setLength(0);
-
-                        } else if (!line.isBlank()) {
-                            Matcher matcher = SEQUENCE_PATTERN.matcher(line);
-                            if (!matcher.matches()) {
-                                validationEngine.handleSyntacticError(
-                                        new InvalidGFF3RecordException(-1, "Invalid gff3 record \"" + line + "\""));
-                            }
-                            // Accumulate sequence
-                            sequence.insert(0, line.trim());
-                        }
-                    }
-                } else {
-                    currentLine.append((char) b);
-                }
-                pointer--;
-            }
-        } catch (IOException | ValidationException e) {
-            throw new RuntimeException(e);
-        }
-
-        return fastaMap;
-    }
-
-    /**
-     * Reads the FASTA from the end of GFF3 file
-     * @return
+     * Scans the GFF3 file backwards to locate the FASTA section and extract
+     * byte offsets for each translation sequence.
+     *
+     * The method reads from the end of the file until the ##FASTA
+     * directive is encountered. For each FASTA header line (>accession|id),
+     * the method records the byte offset where the sequence starts and ends.
      */
     public Map<String, OffsetRange> readTranslationOffset() {
         Map<String, OffsetRange> offsetMap = new TreeMap<>();
@@ -120,7 +77,6 @@ public class GFF3TranslationReader {
                             seqStart = pointer + line.length() + 1;
                             line = line.replace(">", "");
                             offsetMap.put(line, new OffsetRange(seqStart, seqEnd));
-                            // System.out.println(readTranslation(seqStart, seqEnd));
                             seqEnd = pointer;
                         }
                     }
@@ -137,8 +93,9 @@ public class GFF3TranslationReader {
     }
 
     /**
-     * Reads the FASTA from the end of GFF3 file
-     * @return
+     * Reads a sequence from the GFF3 FASTA section based on the provided byte offset range
+     * All newline characters are removed to produce a continuous sequence string.
+     * The resulting string is validated using the SEQUENCE_PATTERN
      */
     public String readTranslation(OffsetRange offset) {
 

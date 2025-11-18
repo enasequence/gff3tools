@@ -36,14 +36,16 @@ public class GFF3FileTest {
         testMap.put("geneB", "GGTTAA");
 
         Files.writeString(Path.of("translation.fasta"), input, Charset.defaultCharset());
-        GFF3File obj = new GFF3File(null, null, null, Path.of("translation.fasta"), null);
+        GFF3File obj = new GFF3File.Builder()
+                .fastaFilePath(Path.of("translation.fasta"))
+                .build();
 
         // obj.cdsTranslationMap = testMap;
 
         StringWriter writer = new StringWriter();
 
         // Access private method via reflection
-        Method method = GFF3File.class.getDeclaredMethod("writeTranslation", Writer.class);
+        Method method = GFF3File.class.getDeclaredMethod("writeFastaFromExistingFile", Writer.class);
         method.setAccessible(true);
 
         // call method
@@ -52,5 +54,6 @@ public class GFF3FileTest {
         // Assert
         String output = writer.toString();
         assertEquals(expectedOutput, output);
+        Files.deleteIfExists(Path.of("translation.fasta"));
     }
 }

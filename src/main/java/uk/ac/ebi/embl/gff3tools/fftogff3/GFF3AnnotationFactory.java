@@ -10,12 +10,9 @@
  */
 package uk.ac.ebi.embl.gff3tools.fftogff3;
 
-import static uk.ac.ebi.embl.fasta.writer.FastaFileWriter.FastaHeaderFormat.TRANSLATION_HEADER_FORMAT;
-
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.Writer;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -25,17 +22,15 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.api.entry.EntryFactory;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.location.CompoundLocation;
 import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
-import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
-import uk.ac.ebi.embl.fasta.writer.FastaFileWriter;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
+import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
@@ -49,12 +44,10 @@ public class GFF3AnnotationFactory {
     // Base Id ends with _ and digit (e.g. ppk_2)
     static final Pattern incrementIdpattern = Pattern.compile(".*_\\d+$");
 
-    // Keeps track of all the features belonging to a gene.
+    /// Keeps track of all the features belonging to a gene.
     Map<String, List<GFF3Feature>> geneMap;
-    // List of features that do not belong to a gene.
+    /// List of features that do not belong to a gene.
     List<GFF3Feature> nonGeneFeatures;
-    // Map to save CDS translations
-    Map<String, String> translationMap;
 
     Path fastaPath = null;
 
@@ -63,6 +56,7 @@ public class GFF3AnnotationFactory {
 
     GFF3DirectivesFactory directivesFactory;
     ValidationEngine validationEngine;
+    TranslationWriter translation = new TranslationWriter();
 
     public GFF3AnnotationFactory(
             ValidationEngine validationEngine, GFF3DirectivesFactory directivesFactory, Path fastaPath) {
@@ -159,15 +153,8 @@ public class GFF3AnnotationFactory {
         id.ifPresent(v -> baseAttributes.put("ID", v));
         parentId.ifPresent(v -> baseAttributes.put("Parent", v));
 
-        // Add translation to Map and remove from attribute
-        if (baseAttributes.containsKey("translation")) {
-            // TODO: unify the key creation to one place
-            String translationKey = String.format("%s|%s", sequenceRegion.accession(), id.get());
-            // translationMap.put(translationKey,(String)baseAttributes.get("translation"));
-
-            writeTranslation(fastaWriter, translationKey, (String) baseAttributes.get("translation"));
-            baseAttributes.remove("translation");
-        }
+        // Write translation to fasta and remove from attribute map.
+        handleTranslation(fastaWriter, baseAttributes, id, sequenceRegion);
 
         CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
         for (Location location : compoundLocation.getLocations()) {
@@ -196,6 +183,18 @@ public class GFF3AnnotationFactory {
         }
 
         return gff3Features;
+    }
+
+    private void handleTranslation(
+            Writer fastaWriter,
+            Map<String, Object> baseAttributes,
+            Optional<String> featureId,
+            GFF3SequenceRegion sequenceRegion) {
+        if (baseAttributes.containsKey("translation") && featureId.isPresent()) {
+            String translationKey = TranslationWriter.getTranslationKey(sequenceRegion.accession(), featureId.get());
+            TranslationWriter.writeTranslation(fastaWriter, translationKey, (String) baseAttributes.get("translation"));
+            baseAttributes.remove("translation");
+        }
     }
 
     public Map<String, Object> getAttributeMap(Feature ffFeature) {
@@ -381,24 +380,5 @@ public class GFF3AnnotationFactory {
             }
         }
         return Optional.empty();
-    }
-
-    private void writeTranslation(Writer writer, String featureId, String translation) {
-
-        if (writer != null && !translation.isEmpty()) {
-            try {
-                // Write using FastaWriter
-                Entry fastaEntry = new EntryFactory().createEntry();
-                fastaEntry.setPrimaryAccession(featureId);
-                Sequence sequence = new SequenceFactory().createSequence();
-                sequence.setSequence(ByteBuffer.wrap(translation.getBytes()));
-                fastaEntry.setSequence(sequence);
-                FastaFileWriter fastWriter = new FastaFileWriter(fastaEntry, writer, TRANSLATION_HEADER_FORMAT);
-                fastWriter.write();
-                writer.flush();
-            } catch (IOException e) {
-                new RuntimeException(e);
-            }
-        }
     }
 }

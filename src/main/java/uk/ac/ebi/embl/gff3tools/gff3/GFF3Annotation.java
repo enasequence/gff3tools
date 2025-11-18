@@ -28,7 +28,6 @@ import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 public class GFF3Annotation implements IGFF3Feature {
     GFF3SequenceRegion sequenceRegion = null;
     List<GFF3Feature> features = new ArrayList<>();
-    List<String> featureIds = new ArrayList<>();
 
     private void writeFeature(Writer writer, GFF3Feature feature) throws IOException {
         writer.write(feature.accession());

@@ -28,6 +28,8 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
+import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -160,13 +162,8 @@ public class GFF3Mapper {
 
                 joinableFeatureMap.put(featureHashId, ffFeature);
 
-                // TODO: unify the key creation to one place
-                String translationKey = String.format("%s|%s", gff3Feature.accession(), featureHashId);
-                if (translationMap.get(translationKey) != null) {
-                    ffFeature.addQualifier(
-                            "translation",
-                            gff3FileReader.getTranslationReader().readTranslation(translationMap.get(translationKey)));
-                }
+                // Transform GFF3 translation to /translation qualifier
+                mapTranslation(gff3Feature, ffFeature, featureHashId, translationMap);
 
                 entry.addFeature(ffFeature);
             } else {
@@ -180,6 +177,16 @@ public class GFF3Mapper {
             if (gene != null) {
                 ffFeature.addQualifier("gene", gene);
             }
+        }
+    }
+
+    private void mapTranslation(
+            GFF3Feature gff3Feature, Feature ffFeature, String featureId, Map<String, OffsetRange> translationMap) {
+        String translationKey = TranslationWriter.getTranslationKey(gff3Feature.accession(), featureId);
+        if (translationMap.get(translationKey) != null) {
+            ffFeature.addQualifier(
+                    "translation",
+                    gff3FileReader.getTranslationReader().readTranslation(translationMap.get(translationKey)));
         }
     }
 
