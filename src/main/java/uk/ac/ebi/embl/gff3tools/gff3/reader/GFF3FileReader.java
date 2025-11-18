@@ -57,6 +57,8 @@ public class GFF3FileReader implements AutoCloseable {
         currentAnnotation = new GFF3Annotation();
         processedAccessions = new HashSet<>();
         translationReader = new GFF3TranslationReader(validationEngine, gff3Path);
+
+        // Offset range should be read only once
         if (translationMap == null) {
             translationMap = translationReader.readTranslationOffset();
         }

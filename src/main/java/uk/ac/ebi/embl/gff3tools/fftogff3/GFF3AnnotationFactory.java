@@ -56,7 +56,6 @@ public class GFF3AnnotationFactory {
 
     GFF3DirectivesFactory directivesFactory;
     ValidationEngine validationEngine;
-    TranslationWriter translation = new TranslationWriter();
 
     public GFF3AnnotationFactory(
             ValidationEngine validationEngine, GFF3DirectivesFactory directivesFactory, Path fastaPath) {
