@@ -184,6 +184,9 @@ public class GFF3AnnotationFactory {
         return gff3Features;
     }
 
+    /**
+     * Write translation to fasta and remove from attribute map.
+     */
     private void handleTranslation(
             Writer fastaWriter,
             Map<String, Object> baseAttributes,

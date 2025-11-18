@@ -296,7 +296,7 @@ public class GFF3FileReader implements AutoCloseable {
         return translationReader;
     }
 
-    public Map<String, OffsetRange> getAnnotationTranslationOffset(GFF3Annotation annotation) {
+    public Map<String, OffsetRange> getTranslationOffsetForAnnotation(GFF3Annotation annotation) {
         return translationReader.readTranslationOffset().entrySet().stream()
                 .filter(e -> e.getKey().startsWith(annotation.getAccession()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));

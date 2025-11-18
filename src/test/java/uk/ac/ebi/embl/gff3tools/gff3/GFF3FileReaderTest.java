@@ -408,7 +408,7 @@ public class GFF3FileReaderTest {
             reader.read(annotation -> {
                 GFF3Species gff3Species = reader.getSpecies();
                 Map<String, OffsetRange> annotationTranslationOffset =
-                        reader.getAnnotationTranslationOffset(annotation);
+                        reader.getTranslationOffsetForAnnotation(annotation);
                 gff3File.set(new GFF3File.Builder()
                         .header(gff3Header)
                         .species(gff3Species)

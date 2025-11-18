@@ -180,6 +180,9 @@ public class GFF3Mapper {
         }
     }
 
+    /**
+     * Transform GFF3 translation to /translation qualifier
+     */
     private void mapTranslation(
             GFF3Feature gff3Feature, Feature ffFeature, String featureId, Map<String, OffsetRange> translationMap) {
         String translationKey = TranslationWriter.getTranslationKey(gff3Feature.accession(), featureId);
