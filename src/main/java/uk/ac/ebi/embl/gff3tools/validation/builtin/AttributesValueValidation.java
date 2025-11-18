@@ -151,15 +151,4 @@ public class AttributesValueValidation extends Validation {
                             GFF3Attributes.ORGANELLE, MITOCHONDRION, GFF3Attributes.GENE, "12S rRNA"));
         }
     }
-
-    @ValidationMethod(rule = "PSEUDO_GENE_VALUE", type = ValidationType.FEATURE)
-    public void validatePseudoGeneValue(GFF3Feature feature, int line) throws ValidationException {
-        if (feature.hasAttribute(GFF3Attributes.PSEUDOGENE)
-                && !PSEUDO_GENE_VALUES.contains(feature.getAttributeByName(GFF3Attributes.PSEUDOGENE))) {
-            throw new ValidationException(
-                    line,
-                    PSEUDOGENE_VALUE_VALIDATION.formatted(
-                            feature.getAttributeByName(GFF3Attributes.PSEUDOGENE), PSEUDO_GENE_VALUES));
-        }
-    }
 }

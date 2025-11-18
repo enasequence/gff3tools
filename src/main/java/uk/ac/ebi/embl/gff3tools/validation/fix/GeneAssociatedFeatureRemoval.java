@@ -44,6 +44,7 @@ public class GeneAssociatedFeatureRemoval {
 
             String soId = soIdOpt.get();
             if (OntologyTerm.CDS.ID.equals(soId)
+                    || OntologyTerm.CDS_REGION.ID.equals(soId)
                     || OntologyTerm.RRNA.ID.equals(soId)
                     || OntologyTerm.TRNA.ID.equals(soId)) {
                 geneAssociatedFeatures.add(feature);
@@ -53,8 +54,8 @@ public class GeneAssociatedFeatureRemoval {
             boolean isGene = soId.equals(OntologyTerm.GENE.ID)
                     || soId.equals(OntologyTerm.PSEUDOGENE.ID)
                     || soId.equals(OntologyTerm.UNITARY_PSEUDOGENE.ID)
-                    || ontologyClient.isChildOf(soId, OntologyTerm.PSEUDOGENE.ID)
-                    || ontologyClient.isChildOf(soId, OntologyTerm.UNITARY_PSEUDOGENE.ID);
+                    || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENE.ID)
+                    || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.UNITARY_PSEUDOGENE.ID);
 
             if (isGene) {
                 String locationKey = feature.getStart() + ":" + feature.getEnd();

@@ -205,9 +205,10 @@ public class AttributesRelationValidation extends Validation {
                 Boolean.TRUE.toString().equalsIgnoreCase(feature.getAttributeByName(GFF3Attributes.CIRCULAR_RNA));
 
         if (isCircular) {
-            Set<String> allowedFeatures = Set.of(OntologyTerm.CDS.ID, OntologyTerm.TRNA.ID, OntologyTerm.MRNA.ID);
-
-            if (!allowedFeatures.contains(soId)) {
+            if (!ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.CDS.ID)
+                    && !ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.TRNA.ID)
+                    && !ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.MRNA.ID)
+                    && !OntologyTerm.REGION.ID.equals(soId)) {
                 throw new ValidationException(line, CIRCULAR_RNA_ATTRIBUTE_ERROR.formatted(featureName));
             }
         }

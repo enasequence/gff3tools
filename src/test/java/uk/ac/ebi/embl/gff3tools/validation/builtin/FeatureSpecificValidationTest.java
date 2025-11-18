@@ -116,8 +116,8 @@ public class FeatureSpecificValidationTest {
     @Test
     public void testValidatePeptideFeatureMissingPseudoThrowsException() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(),
-                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS_REGION.name(),
+                OntologyTerm.CDS_REGION.name(),
                 Map.of(
                         GFF3Attributes.LOCUS_TAG, "L1",
                         GFF3Attributes.PSEUDO, "true"));

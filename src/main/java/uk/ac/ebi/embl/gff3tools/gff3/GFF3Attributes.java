@@ -69,4 +69,5 @@ public class GFF3Attributes {
     public static final String UNITARY = "unitary";
     public static final String ALLELIC = "allelic";
     public static final String UNKNOWN = "unknown";
+    public static final String EXCEPTION = "exception";
 }

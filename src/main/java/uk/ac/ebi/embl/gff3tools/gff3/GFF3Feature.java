@@ -150,11 +150,4 @@ public class GFF3Feature {
     public void setAttribute(String name, Object value) {
         attributes.put(name, value);
     }
-
-    public boolean isPseudo() {
-        if (attributes == null || attributes.isEmpty()) {
-            return false;
-        }
-        return attributes.containsKey(GFF3Attributes.PSEUDO) || attributes.containsKey(GFF3Attributes.PSEUDOGENE);
-    }
 }

@@ -35,7 +35,9 @@ public enum OntologyTerm {
     MRNA("SO:0000234"),
     RRNA("SO:0000252"),
     TRNA("SO:0000253"),
-    GAP("SO:0000730");
+    GAP("SO:0000730"),
+    POLYPEPTIDE_REGION("SO:0000839"),
+    PSEUDOGENIC_REGION("SO:0000462");
 
     public final String ID;
 

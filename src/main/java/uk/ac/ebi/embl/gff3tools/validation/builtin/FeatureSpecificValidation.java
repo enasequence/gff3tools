@@ -42,9 +42,8 @@ public class FeatureSpecificValidation extends Validation {
         }
 
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
-        boolean isOperon = soIdOpt.isPresent()
-                && (OntologyTerm.OPERON.ID.equals(soIdOpt.get())
-                        || ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.OPERON.ID));
+        boolean isOperon =
+                soIdOpt.isPresent() && (ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.OPERON.ID));
         if (isOperon) {
             return;
         }
@@ -63,9 +62,9 @@ public class FeatureSpecificValidation extends Validation {
                 continue;
             }
             String soId = soIdOpt.get();
-            if (OntologyTerm.CDS.ID.equals(soId) || OntologyTerm.PSEUDOGENIC_CDS.ID.equals(soId)) {
+            if (OntologyTerm.CDS.ID.equals(soId) || OntologyTerm.CDS_REGION.ID.equals(soId)) {
                 cdsFeatures.add(feature);
-            } else if (OntologyTerm.SIGNAL_PEPTIDE.ID.equals(soId) || OntologyTerm.TRANSIT_PEPTIDE.ID.equals(soId)) {
+            } else if (ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.POLYPEPTIDE_REGION.ID)) {
                 peptideFeatures.add(feature);
             }
         }
