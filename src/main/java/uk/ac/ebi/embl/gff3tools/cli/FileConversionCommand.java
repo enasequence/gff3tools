@@ -93,13 +93,6 @@ public class FileConversionCommand implements Runnable {
         }
     }
 
-    private Path getFastaFilePath(Path outputFilePath) {
-        if (outputFilePath.getParent() != null) {
-            return outputFilePath.getParent().resolve("translation.fasta");
-        }
-        return Path.of("translation.fasta");
-    }
-
     private ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides)
             throws UnregisteredValidationRuleException {
         ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
@@ -133,6 +126,13 @@ public class FileConversionCommand implements Runnable {
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }
+    }
+
+    private Path getFastaFilePath(Path outputFilePath) {
+        if (outputFilePath.getParent() != null) {
+            return outputFilePath.getParent().resolve("translation.fasta");
+        }
+        return Path.of("translation.fasta");
     }
 
     private ConversionFileFormat validateFileType(ConversionFileFormat fileFormat, Path filePath, String cliOption)
