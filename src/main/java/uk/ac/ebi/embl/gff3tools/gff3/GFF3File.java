@@ -21,8 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import uk.ac.ebi.embl.api.entry.EntryFactory;
-import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.exception.WriteException;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
@@ -97,7 +95,7 @@ public class GFF3File implements IGFF3Feature {
         } else if (gff3FileReader.getTranslationOffsetMap() != null
                 && !gff3FileReader.getTranslationOffsetMap().isEmpty()) {
             // Write translation by GFF3 file offset map
-            writeFastaFromOffsets(writer,gff3FileReader.getTranslationOffsetMap());
+            writeFastaFromOffsets(writer, gff3FileReader.getTranslationOffsetMap());
         }
     }
 
@@ -121,7 +119,8 @@ public class GFF3File implements IGFF3Feature {
         log.info("Write translation sequences from: " + fastaFilePath);
     }
 
-    private void writeFastaFromOffsets(Writer writer, Map<String, OffsetRange> translationOffsetMap) throws IOException {
+    private void writeFastaFromOffsets(Writer writer, Map<String, OffsetRange> translationOffsetMap)
+            throws IOException {
 
         if (translationOffsetMap.isEmpty()) {
             return;
