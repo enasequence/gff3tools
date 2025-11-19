@@ -20,14 +20,14 @@ public class FASTAFileReaderTest {
         ).toURI();
         File file = Paths.get(uri).toFile();
 
-        FASTAFileReader reader = new FASTAFileReader();
-        List<FASTAFile> records = reader.readFile(file);
+        FastaReader reader = new FastaReader();
+        List<FastaEntry> records = reader.readFile(file);
 
         // We expect two records (your two headers), not counting the "NONSENSE" lines.
         assertEquals(2, records.size(), "Should parse two FASTA records");
 
         // ---- Record 1 ----
-        FASTAFile r1 = records.get(0);
+        FastaEntry r1 = records.get(0);
         assertEquals("AF123456.1", r1.getId(),
                 "Accession should be the first token between '>' and '|' (trimmed)");
         FastaHeader h1 = r1.getHeader();
@@ -40,7 +40,7 @@ public class FASTAFileReaderTest {
         assertTrue(h1.getChromosomeName().isEmpty());
 
         // ---- Record 2 ----
-        FASTAFile r2 = records.get(1);
+        FastaEntry r2 = records.get(1);
         assertEquals("AF123455.2", r2.getId(),
                 "Second accession should be parsed the same way");
         FastaHeader h2 = r2.getHeader();

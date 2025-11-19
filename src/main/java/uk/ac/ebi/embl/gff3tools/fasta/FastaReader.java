@@ -5,16 +5,16 @@ import java.util.List;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import uk.ac.ebi.embl.gff3tools.exception.FastaReadException;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.regex.Pattern;
 
-public class FASTAFileReader {
+public class FastaReader {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -23,14 +23,14 @@ public class FASTAFileReader {
     private static final Pattern CURLY_SINGLE = Pattern.compile("[\u2018\u2019]");
     private static final Pattern NBSP = Pattern.compile("\u00A0");
 
-    public List<FASTAFile> readFile(File file) {
-        List<FASTAFile> out = new ArrayList<>();
+    public List<FastaEntry> readFile(File file) {
+        List<FastaEntry> out = new ArrayList<>();
 
         try (BufferedReader br = Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8)) {
             String line;
             long lineNo = -1;
 
-            FASTAFile current = null;
+            FastaEntry current = null;
             int currentHeaderLine = -1; // for clarity
             int currentSeqStartLine = -1;
 
@@ -58,7 +58,7 @@ public class FASTAFileReader {
                         header.setChromosomeLocation(Optional.empty());
                         header.setChromosomeName(Optional.empty());
 
-                        current = new FASTAFile();
+                        current = new FastaEntry();
                         current.setId(id);
                         current.setHeader(header);
                         currentHeaderLine = (int) lineNo;
@@ -74,7 +74,7 @@ public class FASTAFileReader {
                     String id = extractAccession(idPart);
                     FastaHeader header = parseHeaderJson(jsonPart);
 
-                    current = new FASTAFile();
+                    current = new FastaEntry();
                     current.setId(id);
                     current.setHeader(header);
                     currentHeaderLine = (int) lineNo;
@@ -102,14 +102,13 @@ public class FASTAFileReader {
         return out;
     }
 
-    private static String extractAccession(String betweenGtAndPipe) {
-        // Trim, then grab the FIRST token — “first accession number” as requested.
+    private static String extractAccession(String betweenGtAndPipe, int linenumber) {
         String trimmed = betweenGtAndPipe.trim();
         int space = trimmed.indexOf(' ');
         return (space > 0) ? trimmed.substring(0, space) : trimmed;
     }
 
-    private static FastaHeader parseHeaderJson(String rawJson) {
+    private static FastaHeader parseHeaderJson(String rawJson, int linenumber) {
         String normalized = normalizeJson(rawJson);
 
         String description = null;
@@ -141,7 +140,7 @@ public class FASTAFileReader {
             chrName       = norm.get("chromosomename");
 
         } catch (Exception ignore) {
-            // If the JSON is totally mangled, we leave fields null; better than exploding.
+            throw new FastaReadException("Failed to read FASTA file header")
         }
 
         FastaHeader header = new FastaHeader();
@@ -165,7 +164,7 @@ public class FASTAFileReader {
         return null;
     }
 
-    private static Topology parseTopology(String s) {
+    private static Topology parseTopology(String s) { //TODO move to Topology
         if (s == null) return null;
         String t = s.trim().toUpperCase(Locale.ROOT);
         switch (t) {

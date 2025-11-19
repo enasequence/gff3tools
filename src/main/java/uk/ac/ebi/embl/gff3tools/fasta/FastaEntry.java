@@ -5,8 +5,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class FASTAFile {
+public class FastaEntry {
     String Id; //accessionNumber
     FastaHeader header;
-    SequenceAccessor sequenceAccessor;
 }
