@@ -16,22 +16,13 @@ import java.util.Map;
 
 public class Gff3Utils {
 
-    public static void addAttribute(Map<String, Object> attributes, String key, String value) {
+    public static void addAttribute(Map<String, List<String>> attributes, String key, String value) {
 
-        Object attributeValue = attributes.get(key);
-        if (attributeValue == null) {
-            attributes.put(key, value);
-        } else if (attributeValue instanceof String) {
-            List<String> list = new ArrayList<>();
-            list.add((String) attributeValue);
-            list.add(value);
-            attributes.put(key, list);
-        } else if (attributeValue instanceof List) {
-            ((List<String>) attributeValue).add(value);
-        }
+        List<String> attributeValue = attributes.getOrDefault(key, new ArrayList<>());
+        attributeValue.add(value);
     }
 
-    public static void addAttributes(Map<String, Object> attributes, String key, List<String> value) {
+    public static void addAttributes(Map<String, List<String>> attributes, String key, List<String> value) {
         for (String v : value) {
             addAttribute(attributes, key, v);
         }

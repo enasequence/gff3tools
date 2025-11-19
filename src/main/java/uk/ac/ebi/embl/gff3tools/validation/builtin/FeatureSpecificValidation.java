@@ -36,7 +36,9 @@ public class FeatureSpecificValidation extends Validation {
 
     @ValidationMethod(rule = "OPERON_FEATURE", type = ValidationType.FEATURE)
     public void validateOperonFeatures(GFF3Feature feature, int line) throws ValidationException {
-        String operonValue = feature.getAttributeByName(GFF3Attributes.OPERON);
+        String operonValue = feature.getAttributeByName(GFF3Attributes.OPERON)
+                .map(List::getFirst)
+                .get();
         if (operonValue == null || operonValue.isBlank()) {
             return;
         }

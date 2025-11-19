@@ -63,21 +63,21 @@ public class LocationValidationTest {
     @Test
     public void testLocationValidationSuccessCircularEndLessThanStart() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS_REGION.name(), 4800L, 200L, Map.of(GFF3Attributes.CIRCULAR_RNA, "true"));
+                OntologyTerm.CDS_REGION.name(), 4800L, 200L, Map.of(GFF3Attributes.CIRCULAR_RNA, List.of("true")));
         Assertions.assertDoesNotThrow(() -> locationValidation.validateLocation(feature, 1));
     }
 
     @Test
     public void testLocationValidationSuccessCircularStartEndNormal() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS_REGION.name(), 10L, 100L, Map.of(GFF3Attributes.CIRCULAR_RNA, "true"));
+                OntologyTerm.CDS_REGION.name(), 10L, 100L, Map.of(GFF3Attributes.CIRCULAR_RNA, List.of("true")));
         Assertions.assertDoesNotThrow(() -> locationValidation.validateLocation(feature, 1));
     }
 
     @Test
     public void testLocationValidationFailureCircularInvalidStart() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS_REGION.name(), 0L, 100L, Map.of(GFF3Attributes.CIRCULAR_RNA, "true"));
+                OntologyTerm.CDS_REGION.name(), 0L, 100L, Map.of(GFF3Attributes.CIRCULAR_RNA, List.of("true")));
         ValidationException exception =
                 assertThrows(ValidationException.class, () -> locationValidation.validateLocation(feature, 1));
         assertTrue(exception.getMessage().contains("Invalid start/end for accession"));

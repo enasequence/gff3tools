@@ -45,7 +45,8 @@ public class TransformAttributeToNoteFix {
 
         for (ExclusiveAttributePair pair : pairs) {
             if (feature.hasAttribute(pair.toRemove) && feature.hasAttribute(pair.exclusive)) {
-                List<String> valueToAppend = feature.getAttributeValueList(pair.toRemove);
+                List<String> valueToAppend =
+                        feature.getAttributeByName(pair.toRemove).orElse(new ArrayList<>());
                 if (!valueToAppend.isEmpty()) {
                     appendToNote(feature, valueToAppend);
                 }
@@ -55,7 +56,7 @@ public class TransformAttributeToNoteFix {
     }
 
     private void appendToNote(GFF3Feature feature, List<String> valueToAppend) {
-        List<String> current = feature.getAttributeValueList(note);
+        List<String> current = feature.getAttributeByName(note).orElse(new ArrayList<>());
         if (current.isEmpty()) {
             feature.setAttributeValueList(note, valueToAppend);
             return;

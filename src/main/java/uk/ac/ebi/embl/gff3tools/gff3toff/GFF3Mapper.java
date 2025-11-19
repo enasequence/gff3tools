@@ -95,8 +95,9 @@ public class GFF3Mapper {
     private void mapGFF3Feature(GFF3Feature gff3Feature, Map<String, OffsetRange> translationMap)
             throws ValidationException {
 
-        Map<String, Object> attributes = gff3Feature.getAttributes();
-        String featureHashId = (String) attributes.getOrDefault("ID", gff3Feature.hashCodeString());
+        String existingID =
+                gff3Feature.getAttributeByName("ID").map(List::getFirst).get();
+        String featureHashId = existingID == null ? gff3Feature.hashCodeString() : existingID;
 
         Location location = mapGFF3Location(gff3Feature);
         Feature ffFeature = joinableFeatureMap.get(featureHashId);
@@ -127,7 +128,8 @@ public class GFF3Mapper {
                         .findTermByNameOrSynonym(gff3FeatureName)
                         .orElse(null);
             }
-            if (attributes.get("Is_circular") != null && OntologyTerm.REGION.ID.equalsIgnoreCase(gff3Id)) {
+            if (gff3Feature.getAttributeByName("Is_circular").isPresent()
+                    && OntologyTerm.REGION.ID.equalsIgnoreCase(gff3Id)) {
                 // Do not convert "region" features. These are added when doing EMBL->GFF3 mapping to
                 // represent circular topologies. The topology in the EMBL mapping will be provided
                 // by the fasta headers.
@@ -145,7 +147,7 @@ public class GFF3Mapper {
                 locations.addLocation(location);
                 ffFeature.setLocations(locations);
 
-                ffFeature.addQualifiers(mapGFF3Attributes(attributes));
+                ffFeature.addQualifiers(mapGFF3Attributes(gff3Feature.getAttributes()));
 
                 // Add qualifiers from feature mapping when it's not present in the flat file qualifier
                 for (Map.Entry<String, String> entry :
@@ -204,7 +206,7 @@ public class GFF3Mapper {
 
     private String getGeneForFeature(GFF3Feature gff3Feature) {
         if (gff3Feature.getAttributes().containsKey("gene")) {
-            return (String) gff3Feature.getAttributes().get("gene");
+            return gff3Feature.getAttributeByName("gene").map(List::getFirst).get();
         } else if (gff3Feature.getParentId().isPresent()) {
             GFF3Feature parent = parentFeatures.get(gff3Feature.getParentId().get());
             return getGeneForFeature(parent);
@@ -217,9 +219,7 @@ public class GFF3Mapper {
 
         long start = gff3Feature.getStart();
         long end = gff3Feature.getEnd();
-        Object partialsRaw = gff3Feature.getAttributes().getOrDefault("partial", new ArrayList<>());
-        List<String> partials =
-                partialsRaw instanceof String ? List.of((String) partialsRaw) : (List<String>) partialsRaw;
+        List<String> partials = gff3Feature.getAttributes().getOrDefault("partial", new ArrayList<>());
 
         boolean isComplement = gff3Feature.getStrand().equals("-");
         Location location = this.locationFactory.createLocalRange(start, end, isComplement);
@@ -234,7 +234,7 @@ public class GFF3Mapper {
         return location;
     }
 
-    private Collection<Qualifier> mapGFF3Attributes(Map<String, Object> attributes) {
+    private Collection<Qualifier> mapGFF3Attributes(Map<String, List<String>> attributes) {
         Collection<Qualifier> qualifierList = new ArrayList();
 
         for (Object o : attributes.entrySet()) {

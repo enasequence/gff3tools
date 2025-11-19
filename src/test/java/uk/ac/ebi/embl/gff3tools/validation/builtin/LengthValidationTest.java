@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -112,7 +113,8 @@ public class LengthValidationTest {
 
     @Test
     public void testIntronValidationForCDSSuccessWithPseudo() {
-        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), 1L, 5L, Map.of(GFF3Attributes.PSEUDO, "pseudo"));
+        feature = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(), 1L, 5L, Map.of(GFF3Attributes.PSEUDO, List.of("pseudo")));
         Assertions.assertDoesNotThrow(() -> lengthValidation.validateIntronLength(feature, 1));
     }
 

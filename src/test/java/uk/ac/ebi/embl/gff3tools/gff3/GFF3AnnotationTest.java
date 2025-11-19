@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -27,27 +28,28 @@ public class GFF3AnnotationTest {
     @Test
     public void testWriteAttributes() throws IOException, WriteException {
 
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put("ID", "ID_TEST");
-        attributes.put("qualifier", "test_1");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put("ID", List.of("ID_TEST"));
+        attributes.put("qualifier", List.of("test_1"));
         String expectedAttribute = "ID=ID_TEST;qualifier=test_1;";
         test(attributes, expectedAttribute);
 
         attributes = new HashMap<>();
-        attributes.put("ID", "ID_TEST");
-        attributes.put("qualifier", "test_2;value");
+        attributes.put("ID", List.of("ID_TEST"));
+        attributes.put("qualifier", List.of("test_2;value"));
         expectedAttribute = "ID=ID_TEST;qualifier=test_2%3Bvalue;";
         test(attributes, expectedAttribute);
 
         attributes = new HashMap<>();
-        attributes.put("ID", "ID_TEST");
+        attributes.put("ID", List.of("ID_TEST"));
         attributes.put("qualifier1", Arrays.asList("test_1", "test_2", "test_3"));
         attributes.put("qualifier2", Arrays.asList("1", "2", "3"));
         expectedAttribute = "ID=ID_TEST;qualifier1=test_1,test_2,test_3;qualifier2=1,2,3;";
         test(attributes, expectedAttribute);
     }
 
-    private void test(Map<String, Object> attributes, String expectedAttribute) throws IOException, WriteException {
+    private void test(Map<String, List<String>> attributes, String expectedAttribute)
+            throws IOException, WriteException {
         try (StringWriter gff3Writer = new StringWriter()) {
             GFF3Annotation annotation = new GFF3Annotation();
             GFF3Feature gff3Feature = TestUtils.createGFF3Feature("ID", "Parent", attributes);
@@ -64,7 +66,7 @@ public class GFF3AnnotationTest {
         GFF3Annotation annotation1 = new GFF3Annotation();
         annotation1.addFeature(TestUtils.createGFF3Feature("ID1", "Parent1", new HashMap<>() {
             {
-                put("ID", "feature1");
+                put("ID", List.of("feature1"));
             }
         }));
 
@@ -72,7 +74,7 @@ public class GFF3AnnotationTest {
         annotation2.setSequenceRegion(new GFF3SequenceRegion("ACC00002", Optional.empty(), 1, 200));
         annotation2.addFeature(TestUtils.createGFF3Feature("ID2", "Parent2", new HashMap<>() {
             {
-                put("ID", "feature2");
+                put("ID", List.of("feature2"));
             }
         }));
 
@@ -89,7 +91,7 @@ public class GFF3AnnotationTest {
         annotation3.setSequenceRegion(new GFF3SequenceRegion("ACC00003", Optional.empty(), 1, 300));
         annotation3.addFeature(TestUtils.createGFF3Feature("ID3", "Parent3", new HashMap<>() {
             {
-                put("ID", "feature3");
+                put("ID", List.of("feature3"));
             }
         }));
 
@@ -97,7 +99,7 @@ public class GFF3AnnotationTest {
         annotation4.setSequenceRegion(new GFF3SequenceRegion("ACC00004", Optional.empty(), 1, 400));
         annotation4.addFeature(TestUtils.createGFF3Feature("ID4", "Parent4", new HashMap<>() {
             {
-                put("ID", "feature4");
+                put("ID", List.of("feature4"));
             }
         }));
 
@@ -114,7 +116,7 @@ public class GFF3AnnotationTest {
         annotation5.setSequenceRegion(new GFF3SequenceRegion("ACC00005", Optional.empty(), 1, 500));
         annotation5.addFeature(TestUtils.createGFF3Feature("ID5", "Parent5", new HashMap<>() {
             {
-                put("ID", "feature5");
+                put("ID", List.of("feature5"));
             }
         }));
 
@@ -134,7 +136,7 @@ public class GFF3AnnotationTest {
         annotation8.setSequenceRegion(new GFF3SequenceRegion("ACC00008", Optional.empty(), 1, 800));
         annotation8.addFeature(TestUtils.createGFF3Feature("ID8", "Parent8", new HashMap<>() {
             {
-                put("ID", "feature8");
+                put("ID", List.of("feature8"));
             }
         }));
 

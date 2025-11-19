@@ -11,7 +11,6 @@
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
 import java.util.*;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
@@ -24,43 +23,50 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
                 "Adds locus tag attribute to the features with the gene attribute, considering first-seen pair as the correct one")
 public class LocusTagAssociationFix {
 
+    public static final String LOCUS_TAG = GFF3Attributes.LOCUS_TAG;
+    public static final String GENE = GFF3Attributes.GENE;
+    private final Map<String, Map<String, String>> accessionTogeneToLocusTag = new HashMap<>();
+
+    public LocusTagAssociationFix() {}
+
     @FixMethod(
             rule = "LOCUS_TAG_ADD_TO_FEATURES_SHARING_THE_GENE",
-            type = ValidationType.ANNOTATION,
+            type = ValidationType.FEATURE,
             description =
                     "Adds locus tag attribute to the features with the gene attribute, considering first-seen pair as the correct one")
-    public void fix(GFF3Annotation gff3Annotation, int line) {
-        Map<String, String> geneToLocusTag = new HashMap<>();
-        for (GFF3Feature feature : gff3Annotation.getFeatures()) {
-            if (feature == null) return;
+    public void fix(GFF3Feature feature, int line) {
+        if (feature == null) return;
 
-            // Grab the first non-blank gene value (commonly one; if multiple exist, use the first).
-            String gene = firstNonBlank(feature.getAttributeValueList(GFF3Attributes.GENE));
-            if (gene == null) return;
+        // Grab the first non-blank gene value (commonly one; if multiple exist, use the first).
+        String gene = feature.getAttributeByName(GENE).map(List::getFirst).get();
+        if (gene == null) return;
 
-            String presentLocus = firstNonBlank(feature.getAttributeValueList(GFF3Attributes.LOCUS_TAG));
-
+        String accessionNumber = feature.accession();
+        String presentLocus =
+                feature.getAttributeByName(LOCUS_TAG).map(List::getFirst).get();
+        if (accessionTogeneToLocusTag.containsKey(accessionNumber)) {
+            var geneToLocusTag = accessionTogeneToLocusTag.get(accessionNumber);
             if (geneToLocusTag.containsKey(gene) && (presentLocus == null || presentLocus.isEmpty())) {
                 // add locus tag to features which dont have it
                 String known = geneToLocusTag.get(gene);
                 List<String> locusValues = new ArrayList<>();
                 locusValues.add(known);
-                feature.setAttributeValueList(GFF3Attributes.LOCUS_TAG, locusValues);
+                feature.setAttributeValueList(LOCUS_TAG, locusValues);
             } else if (presentLocus != null) {
                 // if unremembered locus tag present, remember it (first seen wins)
                 geneToLocusTag.putIfAbsent(gene, presentLocus);
+                accessionTogeneToLocusTag.replace(accessionNumber, geneToLocusTag);
             }
+        } else if (presentLocus != null) {
+            var geneToLocusTag = new HashMap<String, String>();
+            geneToLocusTag.putIfAbsent(gene, presentLocus);
+            accessionTogeneToLocusTag.put(accessionNumber, geneToLocusTag);
         }
     }
 
-    private static String firstNonBlank(List<String> values) {
-        if (values == null) return null;
-        for (String v : values) {
-            if (v != null) {
-                String t = v.trim();
-                if (!t.isBlank()) return t;
-            }
-        }
-        return null;
+    /** Read-only snapshot for tests */
+    public Map<String, String> mappingSnapshot(String accessionNumber) {
+        return Collections.unmodifiableMap(
+                accessionTogeneToLocusTag.getOrDefault(accessionNumber, Collections.emptyMap()));
     }
 }

@@ -136,7 +136,7 @@ public class GFF3AnnotationFactory {
                 ".",
                 "+",
                 ".",
-                Map.of("ID", sequenceRegion.accession(), "Is_circular", "true"));
+                Map.of("ID", List.of(sequenceRegion.accession()), "Is_circular", List.of("true")));
     }
 
     private List<GFF3Feature> transformFeature(
@@ -152,18 +152,18 @@ public class GFF3AnnotationFactory {
         Optional<String> id = Optional.of(getIncrementalId(featureName, geneName));
         Optional<String> parentId = getParentFeature(featureName, geneName);
 
-        Map<String, Object> baseAttributes = getAttributeMap(ffFeature);
+        Map<String, List<String>> baseAttributes = getAttributeMap(ffFeature);
 
-        geneName.ifPresent(v -> baseAttributes.put("gene", v));
-        id.ifPresent(v -> baseAttributes.put("ID", v));
-        parentId.ifPresent(v -> baseAttributes.put("Parent", v));
+        geneName.ifPresent(v -> baseAttributes.put("gene", List.of(v)));
+        id.ifPresent(v -> baseAttributes.put("ID", List.of(v)));
+        parentId.ifPresent(v -> baseAttributes.put("Parent", List.of(v)));
 
         // Write translation to fasta and remove from attribute map.
         handleTranslation(fastaWriter, baseAttributes, id, sequenceRegion);
 
         CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
         for (Location location : compoundLocation.getLocations()) {
-            Map<String, Object> attributes = new LinkedHashMap<>(baseAttributes);
+            Map<String, List<String>> attributes = new LinkedHashMap<>(baseAttributes);
 
             List<String> partiality = getPartiality(location);
             if (!partiality.isEmpty()) {
@@ -205,9 +205,9 @@ public class GFF3AnnotationFactory {
         }
     }
 
-    public Map<String, Object> getAttributeMap(Feature ffFeature) {
+    public Map<String, List<String>> getAttributeMap(Feature ffFeature) {
         Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
-        Map<String, Object> attributes = new LinkedHashMap<>();
+        Map<String, List<String>> attributes = new LinkedHashMap<>();
 
         ffFeature.getQualifiers().stream()
                 .filter(q -> !"gene".equals(q.getName()))
@@ -278,7 +278,8 @@ public class GFF3AnnotationFactory {
 
     public void orderRootAndChildren(List<GFF3Feature> gffFeatures, GFF3Feature root) {
 
-        String locusTag = (String) root.getAttributes().get("locus_tag");
+        String locusTag =
+                root.getAttributeByName("locus_tag").map(List::getFirst).get();
         gffFeatures.add(root);
 
         // Recursively process children
@@ -289,7 +290,7 @@ public class GFF3AnnotationFactory {
                 // Leaf node processing
                 if (locusTag != null && child.getAttributes().get("locus_tag") == null) {
                     // Add parent's locus_tag only when it is not present in children
-                    child.getAttributes().put("locus_tag", locusTag);
+                    child.getAttributes().put("locus_tag", List.of(locusTag));
                 }
                 child.getAttributes().remove("gene");
                 gffFeatures.add(child);

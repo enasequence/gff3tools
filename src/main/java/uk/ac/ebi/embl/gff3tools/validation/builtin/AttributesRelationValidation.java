@@ -89,12 +89,14 @@ public class AttributesRelationValidation extends Validation {
     public void validateExclusiveAttributes(GFF3Feature feature, int line) throws ValidationException {
         for (Map.Entry<String, Set<String>> entry : EXCLUSIVE_ATTRIBUTES.entrySet()) {
             String key = entry.getKey();
-            String keyValue = feature.getAttributeByName(key);
+            String keyValue =
+                    feature.getAttributeByName(key).map(List::getFirst).get();
 
             if (keyValue == null) continue;
 
             for (String other : entry.getValue()) {
-                String otherValue = feature.getAttributeByName(other);
+                String otherValue =
+                        feature.getAttributeByName(other).map(List::getFirst).get();
 
                 if (keyValue.equals(otherValue)) {
                     throw new ValidationException(line, EXCLUSIVE_ATTRIBUTES_SAME_VALUE.formatted(key, other));
@@ -181,7 +183,9 @@ public class AttributesRelationValidation extends Validation {
                     String conditionQualifier = condition.getKey();
                     Set<String> disallowedValues = condition.getValue();
 
-                    String actualValue = feature.getAttributeByName(conditionQualifier);
+                    String actualValue = feature.getAttributeByName(conditionQualifier)
+                            .map(List::getFirst)
+                            .get();
                     if (actualValue != null && disallowedValues.contains(actualValue)) {
                         throw new ValidationException(
                                 line,

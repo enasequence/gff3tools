@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,9 +34,9 @@ public class RenameAttributesTest {
 
     @Test
     public void testFixFeatureRenameLabelAttributeWithoutLabel() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.CITATION, "PubMed:12345");
-        attributes.put(GFF3Attributes.COMPARE, "comp1");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.CITATION, List.of("PubMed:12345"));
+        attributes.put(GFF3Attributes.COMPARE, List.of("comp1"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
 
@@ -47,9 +48,9 @@ public class RenameAttributesTest {
 
     @Test
     public void testFixFeatureRenameLabelAttributeWithLabel() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.CITATION, "PubMed:12345");
-        attributes.put(GFF3Attributes.LABEL, "labTest");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.CITATION, List.of("PubMed:12345"));
+        attributes.put(GFF3Attributes.LABEL, List.of("labTest"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
 
@@ -62,10 +63,10 @@ public class RenameAttributesTest {
 
     @Test
     public void testFixFeatureRenameLabelAttributeWithLabelAndNote() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.CITATION, "PubMed:12345");
-        attributes.put(GFF3Attributes.LABEL, "labTest");
-        attributes.put(GFF3Attributes.NOTE, "notes");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.CITATION, List.of("PubMed:12345"));
+        attributes.put(GFF3Attributes.LABEL, List.of("labTest"));
+        attributes.put(GFF3Attributes.NOTE, List.of("notes"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
 
@@ -78,9 +79,9 @@ public class RenameAttributesTest {
 
     @Test
     public void testFixFeatureRenameLabelAttributeWithNote() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.CITATION, "PubMed:12345");
-        attributes.put(GFF3Attributes.NOTE, "notes");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.CITATION, List.of("PubMed:12345"));
+        attributes.put(GFF3Attributes.NOTE, List.of("notes"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
 
@@ -93,8 +94,8 @@ public class RenameAttributesTest {
 
     @Test
     public void testFixFeatureRenameLabelAttributeOnMobileElement() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.MOBILE_ELEMENT, "mobile_element:12345");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.MOBILE_ELEMENT, List.of("mobile_element:12345"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
 
@@ -109,8 +110,8 @@ public class RenameAttributesTest {
 
     @Test
     public void testFixFeatureRenameLabelAttributeOnMobileElementType() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.MOBILE_ELEMENT_TYPE, "mobile_element_type");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.MOBILE_ELEMENT_TYPE, List.of("mobile_element_type"));
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
 
         renameAttributes.fixFeature(feature, 1);

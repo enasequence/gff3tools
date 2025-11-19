@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,10 +33,10 @@ public class RemoveAttributesTest {
 
     @Test
     public void testRemovesCitationAndCompareWhenNotOldSequence() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.CITATION, "PubMed:12345");
-        attributes.put(GFF3Attributes.COMPARE, "comp1");
-        attributes.put(GFF3Attributes.NOTE, "example");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.CITATION, List.of("PubMed:12345"));
+        attributes.put(GFF3Attributes.COMPARE, List.of("comp1"));
+        attributes.put(GFF3Attributes.NOTE, List.of("example"));
 
         feature = TestUtils.createGFF3Feature("gene", "gene", attributes);
 
@@ -49,9 +50,9 @@ public class RemoveAttributesTest {
 
     @Test
     public void testKeepsAttributesForOldSequenceFeature() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.CITATION, "PubMed:12345");
-        attributes.put(GFF3Attributes.COMPARE, "comp1");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.CITATION, List.of("PubMed:12345"));
+        attributes.put(GFF3Attributes.COMPARE, List.of("comp1"));
 
         feature = TestUtils.createGFF3Feature("old_sequence", "old_sequence", attributes);
 
@@ -64,9 +65,9 @@ public class RemoveAttributesTest {
 
     @Test
     public void testOldSequenceCaseInsensitive() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.CITATION, "PubMed:9999");
-        attributes.put(GFF3Attributes.COMPARE, "cmp");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.CITATION, List.of("PubMed:9999"));
+        attributes.put(GFF3Attributes.COMPARE, List.of("cmp"));
 
         feature = TestUtils.createGFF3Feature("Old_Sequence", "Old_Sequence", attributes);
 
@@ -78,8 +79,8 @@ public class RemoveAttributesTest {
 
     @Test
     public void testFeatureWithoutCitationOrCompare() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.NOTE, "no citation or compare");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.NOTE, List.of("no citation or compare"));
 
         feature = TestUtils.createGFF3Feature("gene", "gene", attributes);
 
@@ -90,7 +91,7 @@ public class RemoveAttributesTest {
 
     @Test
     public void testFeatureWithEmptyAttributes() {
-        Map<String, Object> attributes = new HashMap<>();
+        Map<String, List<String>> attributes = new HashMap<>();
         feature = TestUtils.createGFF3Feature("gene", "gene", attributes);
 
         removeAttributes.fixFeature(feature, 1);

@@ -34,7 +34,7 @@ public class GFF3Feature {
     final String score;
     final String strand;
     final String phase;
-    final Map<String, Object> attributes;
+    final Map<String, List<String>> attributes;
 
     // Mutable members
     List<GFF3Feature> children = new ArrayList<>();
@@ -55,7 +55,8 @@ public class GFF3Feature {
     }
 
     public String hashCodeString() {
-        Map<String, Object> hashAttributes = new HashMap<>(attributes);
+        // TODO Do we need to do this?
+        Map<String, List<String>> hashAttributes = new HashMap<>(attributes);
         // Removing partial from the attribute as it can change for the first and last
         // location in a compound Join
         hashAttributes.remove("partial");
@@ -84,24 +85,18 @@ public class GFF3Feature {
         }
     }
 
-    private String getAttributeString(Map<String, Object> attributes) {
+    private String getAttributeString(Map<String, List<String>> attributes) {
         StringBuilder attrBuilder = new StringBuilder();
 
         attributes.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
             String key = entry.getKey();
-            Object value = entry.getValue();
+            List<String> list = entry.getValue();
 
-            attrBuilder.append(key).append("=");
-
-            if (value instanceof List) {
-                List<?> list = new ArrayList<>((List<?>) value);
-                list.sort(Comparator.comparing(Object::toString));
+            for (String value : list) {
+                attrBuilder.append(key).append("=").append(value).append(";");
                 attrBuilder.append(list);
-            } else {
-                attrBuilder.append(value.toString());
+                attrBuilder.append(";");
             }
-
-            attrBuilder.append(";");
         });
         return attrBuilder.toString();
     }
@@ -110,34 +105,18 @@ public class GFF3Feature {
         return Math.max(end - start + 1, 0);
     }
 
-    public String getAttributeByName(String name) {
-        String value = (String) attributes.get(name);
-        return value == null || value.isBlank() ? null : value.trim();
+    public Optional<List<String>> getAttributeByName(String name) {
+        return Optional.of(attributes.get(name));
     }
 
     public boolean hasAttribute(String name) {
         return attributes.containsKey(name) && attributes.get(name) != null;
     }
 
-    public List<String> getAttributeValueList(String key) {
-        Object value = attributes.get(key);
-        if (value == null) return List.of();
-
-        if (value instanceof List<?>) {
-            return (List<String>) value;
-        } else {
-            List<String> out = new ArrayList<>();
-            out.add(value.toString());
-            return out;
-        }
-    }
-
     public void setAttributeValueList(String key, List<String> values) {
         values.removeIf(s -> s == null || s.trim().isBlank()); // remove empty bits
         if (values.isEmpty()) {
             attributes.remove(key);
-        } else if (values.size() == 1) {
-            attributes.put(key, values.get(0));
         } else {
             attributes.put(key, values);
         }
@@ -147,8 +126,10 @@ public class GFF3Feature {
         attributes.remove(key);
     }
 
-    public void setAttribute(String name, Object value) {
-        attributes.put(name, value);
+    public void setAttribute(String name, String value) {
+        if (value != null && !value.trim().isBlank()) {
+            attributes.getOrDefault(name, new ArrayList<String>()).add(value.trim());
+        }
     }
 
     public boolean isFivePrimePartial() {

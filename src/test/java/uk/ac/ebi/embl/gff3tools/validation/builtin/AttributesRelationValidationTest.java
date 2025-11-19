@@ -43,7 +43,7 @@ public class AttributesRelationValidationTest {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.CLONE, "clone", GFF3Attributes.SUB_CLONE, "subClone"));
+                Map.of(GFF3Attributes.CLONE, List.of("clone"), GFF3Attributes.SUB_CLONE, List.of("subClone")));
         Assertions.assertDoesNotThrow(
                 () -> attributesRelationValidation.validateMutuallyRequiredAttributes(feature, 1));
     }
@@ -51,7 +51,9 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateMutuallyRequiredAttributesFailure() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.SUB_CLONE, "subclone"));
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
+                Map.of(GFF3Attributes.SUB_CLONE, List.of("subclone")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class,
@@ -65,7 +67,7 @@ public class AttributesRelationValidationTest {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.PSEUDO, "pseudo", GFF3Attributes.VARIETY, "variety"));
+                Map.of(GFF3Attributes.PSEUDO, List.of("pseudo"), GFF3Attributes.VARIETY, List.of("variety")));
         Assertions.assertDoesNotThrow(
                 () -> attributesRelationValidation.validateMutuallyExclusiveAttributes(feature, 1));
     }
@@ -75,7 +77,7 @@ public class AttributesRelationValidationTest {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.PSEUDO, "pseudo", GFF3Attributes.PRODUCT, "product"));
+                Map.of(GFF3Attributes.PSEUDO, List.of("pseudo"), GFF3Attributes.PRODUCT, List.of("product")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class,
@@ -91,7 +93,11 @@ public class AttributesRelationValidationTest {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.REARRANGED, "rearranged", GFF3Attributes.GERM_LINE, "germLine"));
+                Map.of(
+                        GFF3Attributes.REARRANGED,
+                        List.of("rearranged"),
+                        GFF3Attributes.GERM_LINE,
+                        List.of("germLine")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class,
@@ -105,7 +111,9 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateMutuallyExclusiveAttributes() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.PROTEIN_ID, "proteinID"));
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
+                Map.of(GFF3Attributes.PROTEIN_ID, List.of("proteinID")));
 
         Assertions.assertDoesNotThrow(
                 () -> attributesRelationValidation.validateMutuallyExclusiveAttributes(feature, 1));
@@ -116,7 +124,11 @@ public class AttributesRelationValidationTest {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.ORGANELLE, "organelle", GFF3Attributes.MACRO_NUCLEAR, "macronuclear"));
+                Map.of(
+                        GFF3Attributes.ORGANELLE,
+                        List.of("organelle"),
+                        GFF3Attributes.MACRO_NUCLEAR,
+                        List.of("macronuclear")));
 
         Assertions.assertDoesNotThrow(
                 () -> attributesRelationValidation.validateMutuallyExclusiveAttributesByValue(feature, 1));
@@ -127,7 +139,11 @@ public class AttributesRelationValidationTest {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.GENE, "18S rRNA", GFF3Attributes.MACRO_NUCLEAR, "macronuclear"));
+                Map.of(
+                        GFF3Attributes.GENE,
+                        List.of("18S rRNA"),
+                        GFF3Attributes.MACRO_NUCLEAR,
+                        List.of("macronuclear")));
 
         Assertions.assertDoesNotThrow(
                 () -> attributesRelationValidation.validateMutuallyExclusiveAttributesByValue(feature, 1));
@@ -138,7 +154,11 @@ public class AttributesRelationValidationTest {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.ORGANELLE, MITOCHONDRION, GFF3Attributes.MACRO_NUCLEAR, "macronuclear"));
+                Map.of(
+                        GFF3Attributes.ORGANELLE,
+                        List.of(MITOCHONDRION),
+                        GFF3Attributes.MACRO_NUCLEAR,
+                        List.of("macronuclear")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class,
@@ -155,7 +175,7 @@ public class AttributesRelationValidationTest {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.GENE, rRna, GFF3Attributes.ORGANELLE, "organelle"));
+                Map.of(GFF3Attributes.GENE, List.of(rRna), GFF3Attributes.ORGANELLE, List.of("organelle")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class,
@@ -169,21 +189,23 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateRequiredAttributesInAnnotationSuccess() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.PROTEIN_ID, "proteinID"));
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
+                Map.of(GFF3Attributes.PROTEIN_ID, List.of("proteinID")));
         GFF3Feature sig = TestUtils.createGFF3Feature(
                 OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
                 OntologyTerm.CDS.name(),
                 Map.of(
                         GFF3Attributes.SATELLITE,
-                        "satellite",
+                        List.of("satellite"),
                         GFF3Attributes.MAP,
-                        "map",
+                        List.of("map"),
                         GFF3Attributes.PCR_PRIMERS,
-                        "pcr"));
+                        List.of("pcr")));
         GFF3Feature prop = TestUtils.createGFF3Feature(
                 OntologyTerm.PROPEPTIDE.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
+                Map.of(GFF3Attributes.CHROMOSOME, List.of("chromosome")));
         gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
         Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateRequiredAttributes(gff3Annotation, 1));
@@ -192,15 +214,17 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateRequiredAttributesInAnnotationFailure() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.PROTEIN_ID, "proteinID"));
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
+                Map.of(GFF3Attributes.PROTEIN_ID, List.of("proteinID")));
         GFF3Feature sig = TestUtils.createGFF3Feature(
                 OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.SATELLITE, "satellite", GFF3Attributes.MAP, "map"));
+                Map.of(GFF3Attributes.SATELLITE, List.of("satellite"), GFF3Attributes.MAP, List.of("map")));
         GFF3Feature prop = TestUtils.createGFF3Feature(
                 OntologyTerm.PROPEPTIDE.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
+                Map.of(GFF3Attributes.CHROMOSOME, List.of("chromosome")));
         gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
         ValidationException ex = Assertions.assertThrows(
@@ -217,7 +241,7 @@ public class AttributesRelationValidationTest {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.CLONE, "clone", GFF3Attributes.SUB_CLONE, "subClone"));
+                Map.of(GFF3Attributes.CLONE, List.of("clone"), GFF3Attributes.SUB_CLONE, List.of("subClone")));
         Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateExclusiveAttributes(feature, 1));
     }
 
@@ -228,11 +252,11 @@ public class AttributesRelationValidationTest {
                 OntologyTerm.CDS.name(),
                 Map.of(
                         GFF3Attributes.CLONE,
-                        "clone",
+                        List.of("clone"),
                         GFF3Attributes.SUB_CLONE,
-                        "subClone",
+                        List.of("subClone"),
                         GFF3Attributes.CLONE_LIB,
-                        "clonelib"));
+                        List.of("clonelib")));
         Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateExclusiveAttributes(feature, 1));
     }
 
@@ -241,7 +265,7 @@ public class AttributesRelationValidationTest {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.CLONE, "clone", GFF3Attributes.SUB_CLONE, "clone"));
+                Map.of(GFF3Attributes.CLONE, List.of("clone"), GFF3Attributes.SUB_CLONE, List.of("clone")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> attributesRelationValidation.validateExclusiveAttributes(feature, 1));
@@ -258,11 +282,11 @@ public class AttributesRelationValidationTest {
                 OntologyTerm.CDS.name(),
                 Map.of(
                         GFF3Attributes.CLONE,
-                        "clone",
+                        List.of("clone"),
                         GFF3Attributes.SUB_CLONE,
-                        "subclone",
+                        List.of("subclone"),
                         GFF3Attributes.CLONE_LIB,
-                        "clone"));
+                        List.of("clone")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> attributesRelationValidation.validateExclusiveAttributes(feature, 1));
@@ -277,7 +301,13 @@ public class AttributesRelationValidationTest {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.CLONE, "", GFF3Attributes.SUB_CLONE, "subclone", GFF3Attributes.CLONE_LIB, ""));
+                Map.of(
+                        GFF3Attributes.CLONE,
+                        List.of(),
+                        GFF3Attributes.SUB_CLONE,
+                        List.of("subclone"),
+                        GFF3Attributes.CLONE_LIB,
+                        List.of()));
 
         Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateExclusiveAttributes(feature, 1));
     }
