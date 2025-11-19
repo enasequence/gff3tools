@@ -26,6 +26,7 @@ import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.exception.WriteException;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
+import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3TranslationReader;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
 import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
@@ -38,43 +39,52 @@ public class GFF3File implements IGFF3Feature {
     List<GFF3Annotation> annotations;
     Path fastaFilePath;
     List<ValidationException> parsingErrors;
-    GFF3TranslationReader translationReader;
-    Map<String, OffsetRange> translationOffsets;
-
-    private static final EntryFactory ENTRY_FACTORY = new EntryFactory();
-    private static final SequenceFactory SEQ_FACTORY = new SequenceFactory();
+    GFF3FileReader gff3FileReader;
+    boolean writeAnnotationFasta = false;
 
     public GFF3File(
             GFF3Header header,
             GFF3Species species,
             List<GFF3Annotation> annotations,
-            GFF3TranslationReader translationReader,
-            Map<String, OffsetRange> translationOffsets,
+            GFF3FileReader gff3FileReader,
             Path fastaFilePath,
+            boolean writeAnnotationFasta,
             List<ValidationException> parsingErrors) {
 
         this.header = header;
         this.species = species;
         this.annotations = annotations;
-        this.translationReader = translationReader;
-        this.translationOffsets = translationOffsets;
         this.fastaFilePath = fastaFilePath;
         this.parsingErrors = parsingErrors;
+        this.gff3FileReader = gff3FileReader;
+        this.writeAnnotationFasta = writeAnnotationFasta;
     }
 
     @Override
     public void writeGFF3String(Writer writer) throws WriteException {
 
         try {
-            if (header != null) header.writeGFF3String(writer);
-            if (species != null) species.writeGFF3String(writer);
+            if (header != null) {
+                header.writeGFF3String(writer);
+            }
+
+            if (species != null) {
+                species.writeGFF3String(writer);
+            }
 
             for (GFF3Annotation ann : annotations) {
                 ann.writeGFF3String(writer);
+
+                if (writeAnnotationFasta) {
+                    Map<String, OffsetRange> annOffserMap = gff3FileReader.getTranslationOffsetForAnnotation(ann);
+                    // Write translation by annnotation offset map
+                    writeFastaFromOffsets(writer, annOffserMap);
+                }
             }
 
-            writeTranslationSection(writer);
-
+            if (!writeAnnotationFasta) {
+                writeTranslationSection(writer);
+            }
         } catch (IOException e) {
             throw new WriteException(e);
         }
@@ -84,9 +94,10 @@ public class GFF3File implements IGFF3Feature {
         if (fastaFilePath != null) {
             // Write translation from FASTA file to GFF3 file
             writeFastaFromExistingFile(writer);
-        } else if (translationReader != null && translationOffsets != null && !translationOffsets.isEmpty()) {
-            // Write translation bu offset
-            writeFastaFromOffsets(writer);
+        } else if (gff3FileReader.getTranslationOffsetMap() != null
+                && !gff3FileReader.getTranslationOffsetMap().isEmpty()) {
+            // Write translation by GFF3 file offset map
+            writeFastaFromOffsets(writer,gff3FileReader.getTranslationOffsetMap());
         }
     }
 
@@ -94,7 +105,9 @@ public class GFF3File implements IGFF3Feature {
 
         BasicFileAttributes attrs = Files.readAttributes(fastaFilePath, BasicFileAttributes.class);
 
-        if (!attrs.isRegularFile() || attrs.size() == 0) return;
+        if (!attrs.isRegularFile() || attrs.size() == 0) {
+            return;
+        }
 
         writer.write("##FASTA\n");
 
@@ -108,18 +121,22 @@ public class GFF3File implements IGFF3Feature {
         log.info("Write translation sequences from: " + fastaFilePath);
     }
 
-    private void writeFastaFromOffsets(Writer writer) throws IOException {
+    private void writeFastaFromOffsets(Writer writer, Map<String, OffsetRange> translationOffsetMap) throws IOException {
+
+        if (translationOffsetMap.isEmpty()) {
+            return;
+        }
 
         writer.write("##FASTA\n");
 
-        for (Map.Entry<String, OffsetRange> entry : translationOffsets.entrySet()) {
+        for (Map.Entry<String, OffsetRange> entry : translationOffsetMap.entrySet()) {
             String id = entry.getKey();
             OffsetRange range = entry.getValue();
 
-            String translation = translationReader.readTranslation(range);
+            String translation = gff3FileReader.getTranslation(range);
             TranslationWriter.writeTranslation(writer, id, translation);
         }
-        log.info("Written {} sequences from: ", translationOffsets.entrySet().size());
+        log.info("Written {} sequences from: ", translationOffsetMap.entrySet().size());
         writer.write("\n");
     }
 
@@ -131,6 +148,8 @@ public class GFF3File implements IGFF3Feature {
         private Map<String, OffsetRange> translationOffsets = new HashMap<>();
         private Path fastaFilePath;
         private List<ValidationException> parsingErrors = new ArrayList<>();
+        private GFF3FileReader gff3FileReader;
+        private boolean writeAnnotationFasta;
 
         public Builder header(GFF3Header header) {
             this.header = header;
@@ -147,16 +166,6 @@ public class GFF3File implements IGFF3Feature {
             return this;
         }
 
-        public Builder translationReader(GFF3TranslationReader reader) {
-            this.translationReader = reader;
-            return this;
-        }
-
-        public Builder translationOffsets(Map<String, OffsetRange> offsets) {
-            this.translationOffsets = offsets;
-            return this;
-        }
-
         public Builder fastaFilePath(Path path) {
             this.fastaFilePath = path;
             return this;
@@ -167,14 +176,24 @@ public class GFF3File implements IGFF3Feature {
             return this;
         }
 
+        public Builder gff3Reader(GFF3FileReader gff3Reader) {
+            this.gff3FileReader = gff3Reader;
+            return this;
+        }
+
+        public Builder writeAnnotationFasta(boolean writeAnnotationFasta) {
+            this.writeAnnotationFasta = writeAnnotationFasta;
+            return this;
+        }
+
         public GFF3File build() {
             return new GFF3File(
                     this.header,
                     this.species,
                     this.annotations,
-                    this.translationReader,
-                    this.translationOffsets,
+                    this.gff3FileReader,
                     this.fastaFilePath,
+                    this.writeAnnotationFasta,
                     this.parsingErrors);
         }
     }

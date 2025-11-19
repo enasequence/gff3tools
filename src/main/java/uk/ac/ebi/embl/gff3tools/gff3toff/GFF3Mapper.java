@@ -86,7 +86,7 @@ public class GFF3Mapper {
                 parentFeatures.put(gff3Feature.getId().get(), gff3Feature);
             }
 
-            mapGFF3Feature(gff3Feature, gff3FileReader.getTranslationMap());
+            mapGFF3Feature(gff3Feature, gff3FileReader.getTranslationOffsetMap());
         }
 
         return entry;
@@ -187,9 +187,7 @@ public class GFF3Mapper {
             GFF3Feature gff3Feature, Feature ffFeature, String featureId, Map<String, OffsetRange> translationMap) {
         String translationKey = TranslationWriter.getTranslationKey(gff3Feature.accession(), featureId);
         if (translationMap.get(translationKey) != null) {
-            ffFeature.addQualifier(
-                    "translation",
-                    gff3FileReader.getTranslationReader().readTranslation(translationMap.get(translationKey)));
+            ffFeature.addQualifier("translation", gff3FileReader.getTranslation(translationMap.get(translationKey)));
         }
     }
 

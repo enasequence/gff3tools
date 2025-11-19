@@ -47,8 +47,9 @@ public class GFF3FileReader implements AutoCloseable {
     ValidationEngine validationEngine;
     public GFF3Species gff3Species;
     private final Set<String> processedAccessions;
-    Map<String, OffsetRange> translationMap;
-    GFF3TranslationReader translationReader;
+
+    private final Map<String, OffsetRange> translationMap;
+    private final GFF3TranslationReader translationReader;
 
     public GFF3FileReader(ValidationEngine validationEngine, Reader reader, Path gff3Path) {
         this.validationEngine = validationEngine;
@@ -59,13 +60,7 @@ public class GFF3FileReader implements AutoCloseable {
         translationReader = new GFF3TranslationReader(validationEngine, gff3Path);
 
         // Offset range should be read only once
-        if (translationMap == null) {
-            translationMap = translationReader.readTranslationOffset();
-        }
-    }
-
-    public Map<String, OffsetRange> getTranslationMap() {
-        return translationMap;
+        translationMap = translationReader.readTranslationOffset();
     }
 
     public GFF3Annotation readAnnotation() throws IOException, ValidationException {
@@ -292,14 +287,18 @@ public class GFF3FileReader implements AutoCloseable {
         return null;
     }
 
-    public GFF3TranslationReader getTranslationReader() {
-        return translationReader;
-    }
-
     public Map<String, OffsetRange> getTranslationOffsetForAnnotation(GFF3Annotation annotation) {
-        return translationReader.readTranslationOffset().entrySet().stream()
+        return translationMap.entrySet().stream()
                 .filter(e -> e.getKey().startsWith(annotation.getAccession()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    public Map<String, OffsetRange> getTranslationOffsetMap() {
+        return translationMap;
+    }
+
+    public String getTranslation(OffsetRange offsetRange) {
+        return translationReader.readTranslation(offsetRange);
     }
 
     public GFF3Species getSpecies() {
