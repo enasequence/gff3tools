@@ -46,7 +46,7 @@ public class GFF3Annotation implements IGFF3Feature {
         writer.write('\t');
         writer.write(feature.getAttributes().entrySet().stream()
                 .sorted(
-                        Comparator.comparingInt((Map.Entry<String, Object> e) -> {
+                        Comparator.comparingInt((Map.Entry<String, List<String>> e) -> {
                                     String key = e.getKey();
                                     if (key.equals("ID")) return -2; // Highest priority
                                     if (key.equals("Parent")) return -1; // Next
@@ -58,7 +58,7 @@ public class GFF3Annotation implements IGFF3Feature {
                 .collect(Collectors.joining(";", "", ";")));
     }
 
-    private static String encodeAttribute(Map.Entry<String, Object> entry) {
+    private static String encodeAttribute(Map.Entry<String, List<String>> entry) {
         String encodedKey = urlEncode(entry.getKey());
         Object value = entry.getValue();
 

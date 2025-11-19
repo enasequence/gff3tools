@@ -448,14 +448,14 @@ public class GFF3FileReaderTest {
         Files.writeString(Path.of("input.gff3"), attributeLine, Charset.defaultCharset());
         try (GFF3FileReader gff3Reader =
                 new GFF3FileReader(validationEngine, new StringReader(attributeLine), Path.of("input.gff3"))) {
-            Map<String, Object> attrMap = gff3Reader.attributesFromString(attributeLine);
+            Map<String, List<String>> attrMap = gff3Reader.attributesFromString(attributeLine);
 
             assertEquals(attributeLine, getAttributeString(attrMap));
             Files.deleteIfExists(Path.of("input.gff3"));
         }
     }
 
-    private String getAttributeString(Map<String, Object> attributes) throws WriteException, IOException {
+    private String getAttributeString(Map<String, List<String>> attributes) throws WriteException, IOException {
         try (StringWriter gff3Writer = new StringWriter()) {
             GFF3Annotation annotation = new GFF3Annotation();
             GFF3Feature gff3Feature = TestUtils.createGFF3Feature("ID", "Parent", attributes);

@@ -44,8 +44,11 @@ public class LocationValidation extends Validation {
         if (start <= 0 || end <= 0) {
             throw new ValidationException(line, INVALID_START_END_MESSAGE.formatted(feature.accession()));
         }
-        boolean isCircular =
-                Boolean.TRUE.toString().equalsIgnoreCase(feature.getAttributeByName(GFF3Attributes.CIRCULAR_RNA));
+        boolean isCircular = Boolean.TRUE
+                .toString()
+                .equalsIgnoreCase(feature.getAttributeByName(GFF3Attributes.CIRCULAR_RNA)
+                        .map(List::getFirst)
+                        .get());
         if (!isCircular && end < start) {
             throw new ValidationException(line, INVALID_START_END_MESSAGE.formatted(feature.accession()));
         }

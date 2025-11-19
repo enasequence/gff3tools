@@ -36,19 +36,35 @@ public class DuplicateFeatureValidationTest {
                 TestUtils.createGFF3Feature(
                         Feature.CDS_FEATURE_NAME,
                         "CDS",
-                        Map.of(GFF3Attributes.PROTEIN_ID, "CAL1227461", GFF3Attributes.ATTRIBUTE_ID, "CDS")),
+                        Map.of(
+                                GFF3Attributes.PROTEIN_ID,
+                                List.of("CAL1227461"),
+                                GFF3Attributes.ATTRIBUTE_ID,
+                                List.of("CDS"))),
                 TestUtils.createGFF3Feature(
                         Feature.CDS_FEATURE_NAME,
                         "CDS",
-                        Map.of(GFF3Attributes.PROTEIN_ID, "CAL1227462", GFF3Attributes.ATTRIBUTE_ID, "RNA")),
+                        Map.of(
+                                GFF3Attributes.PROTEIN_ID,
+                                List.of("CAL1227462"),
+                                GFF3Attributes.ATTRIBUTE_ID,
+                                List.of("RNA"))),
                 TestUtils.createGFF3Feature(
                         Feature.CDS_FEATURE_NAME,
                         "CDS",
-                        Map.of(GFF3Attributes.PROTEIN_ID, "CAL1227463", GFF3Attributes.ATTRIBUTE_ID, "CDS")),
+                        Map.of(
+                                GFF3Attributes.PROTEIN_ID,
+                                List.of("CAL1227463"),
+                                GFF3Attributes.ATTRIBUTE_ID,
+                                List.of("CDS"))),
                 TestUtils.createGFF3Feature(
                         Feature.CDS_FEATURE_NAME,
                         "CDS",
-                        Map.of(GFF3Attributes.PROTEIN_ID, "CAL1227464", GFF3Attributes.ATTRIBUTE_ID, "CDS")));
+                        Map.of(
+                                GFF3Attributes.PROTEIN_ID,
+                                List.of("CAL1227464"),
+                                GFF3Attributes.ATTRIBUTE_ID,
+                                List.of("CDS"))));
         int i = 0;
         Assertions.assertAll(features.stream().map((f) -> () -> duplicateFeatureValidation.validateFeature(f, i + 1)));
     }
@@ -59,19 +75,35 @@ public class DuplicateFeatureValidationTest {
                 TestUtils.createGFF3Feature(
                         Feature.CDS_FEATURE_NAME,
                         "CDS",
-                        Map.of(GFF3Attributes.PROTEIN_ID, "CAL1227461", GFF3Attributes.ATTRIBUTE_ID, "CDS")),
+                        Map.of(
+                                GFF3Attributes.PROTEIN_ID,
+                                List.of("CAL1227461"),
+                                GFF3Attributes.ATTRIBUTE_ID,
+                                List.of("CDS"))),
                 TestUtils.createGFF3Feature(
                         Feature.CDS_FEATURE_NAME,
                         "CDS",
-                        Map.of(GFF3Attributes.PROTEIN_ID, "CAL1227462", GFF3Attributes.ATTRIBUTE_ID, "RNA")),
+                        Map.of(
+                                GFF3Attributes.PROTEIN_ID,
+                                List.of("CAL1227462"),
+                                GFF3Attributes.ATTRIBUTE_ID,
+                                List.of("RNA"))),
                 TestUtils.createGFF3Feature(
                         Feature.CDS_FEATURE_NAME,
                         "CDS",
-                        Map.of(GFF3Attributes.PROTEIN_ID, "CAL1227463", GFF3Attributes.ATTRIBUTE_ID, "CDS")),
+                        Map.of(
+                                GFF3Attributes.PROTEIN_ID,
+                                List.of("CAL1227463"),
+                                GFF3Attributes.ATTRIBUTE_ID,
+                                List.of("CDS"))),
                 TestUtils.createGFF3Feature(
                         Feature.CDS_FEATURE_NAME,
                         "CDS",
-                        Map.of(GFF3Attributes.PROTEIN_ID, "CAL1227463", GFF3Attributes.ATTRIBUTE_ID, "CDS")));
+                        Map.of(
+                                GFF3Attributes.PROTEIN_ID,
+                                List.of("CAL1227463"),
+                                GFF3Attributes.ATTRIBUTE_ID,
+                                List.of("CDS"))));
 
         int i = 0;
         Assertions.assertAll(features.stream().map((f) -> () -> duplicateFeatureValidation.validateFeature(f, i + 1)));
@@ -82,19 +114,19 @@ public class DuplicateFeatureValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 Feature.CDS_FEATURE_NAME,
                 "CDS",
-                Map.of(GFF3Attributes.PROTEIN_ID, "CAL1227461", GFF3Attributes.ATTRIBUTE_ID, "CDS"));
+                Map.of(GFF3Attributes.PROTEIN_ID, List.of("CAL1227461"), GFF3Attributes.ATTRIBUTE_ID, List.of("CDS")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 Feature.CDS_FEATURE_NAME,
                 "CDS",
-                Map.of(GFF3Attributes.PROTEIN_ID, "CAL1227462", GFF3Attributes.ATTRIBUTE_ID, "RNA"));
+                Map.of(GFF3Attributes.PROTEIN_ID, List.of("CAL1227462"), GFF3Attributes.ATTRIBUTE_ID, List.of("RNA")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 Feature.CDS_FEATURE_NAME,
                 "CDS",
-                Map.of(GFF3Attributes.PROTEIN_ID, "CAL1227463", GFF3Attributes.ATTRIBUTE_ID, "CDS"));
+                Map.of(GFF3Attributes.PROTEIN_ID, List.of("CAL1227463"), GFF3Attributes.ATTRIBUTE_ID, List.of("CDS")));
         GFF3Feature f4 = TestUtils.createGFF3Feature(
                 Feature.CDS_FEATURE_NAME,
                 "CDS",
-                Map.of(GFF3Attributes.PROTEIN_ID, "CAL1227463", GFF3Attributes.ATTRIBUTE_ID, "RNA"));
+                Map.of(GFF3Attributes.PROTEIN_ID, List.of("CAL1227463"), GFF3Attributes.ATTRIBUTE_ID, List.of("RNA")));
 
         duplicateFeatureValidation.validateFeature(f1, 1);
         duplicateFeatureValidation.validateFeature(f2, 2);
@@ -114,19 +146,19 @@ public class DuplicateFeatureValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 Feature.CDS_FEATURE_NAME,
                 "CDS",
-                Map.of(GFF3Attributes.PROTEIN_ID, "CAL1227461", GFF3Attributes.ATTRIBUTE_ID, "CDS"));
+                Map.of(GFF3Attributes.PROTEIN_ID, List.of("CAL1227461"), GFF3Attributes.ATTRIBUTE_ID, List.of("CDS")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 Feature.CDS_FEATURE_NAME,
                 "CDS",
-                Map.of(GFF3Attributes.PROTEIN_ID, "CAL1227462", GFF3Attributes.ATTRIBUTE_ID, "RNA"));
+                Map.of(GFF3Attributes.PROTEIN_ID, List.of("CAL1227462"), GFF3Attributes.ATTRIBUTE_ID, List.of("RNA")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 Feature.CDS_FEATURE_NAME,
                 "CDS",
-                Map.of(GFF3Attributes.PROTEIN_ID, "CAL1227463", GFF3Attributes.ATTRIBUTE_ID, "CDS"));
+                Map.of(GFF3Attributes.PROTEIN_ID, List.of("CAL1227463"), GFF3Attributes.ATTRIBUTE_ID, List.of("CDS")));
         GFF3Feature f4 = TestUtils.createGFF3Feature(
                 Feature.CDS_FEATURE_NAME,
                 "CDS",
-                Map.of(GFF3Attributes.PROTEIN_ID, "CAL1227463", GFF3Attributes.ATTRIBUTE_ID, "RNA"));
+                Map.of(GFF3Attributes.PROTEIN_ID, List.of("CAL1227463"), GFF3Attributes.ATTRIBUTE_ID, List.of("RNA")));
 
         duplicateFeatureValidation.validateFeature(f1, 1);
         duplicateFeatureValidation.validateFeature(f2, 2);

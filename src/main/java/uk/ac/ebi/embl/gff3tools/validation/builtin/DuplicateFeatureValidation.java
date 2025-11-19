@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -39,8 +40,12 @@ public class DuplicateFeatureValidation extends Validation {
 
     @ValidationMethod(rule = "DUPLICATE_FEATURE", type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
-        String proteinId = feature.getAttributeByName(GFF3Attributes.PROTEIN_ID);
-        String attributeId = feature.getAttributeByName(GFF3Attributes.ATTRIBUTE_ID);
+        String proteinId = feature.getAttributeByName(GFF3Attributes.PROTEIN_ID)
+                .map(List::getFirst)
+                .get();
+        String attributeId = feature.getAttributeByName(GFF3Attributes.ATTRIBUTE_ID)
+                .map(List::getFirst)
+                .get();
 
         if (proteinId != null && attributeId != null) {
             ProteinAttributePair proteinAttributePair = new ProteinAttributePair(proteinId, attributeId);
