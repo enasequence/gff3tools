@@ -92,7 +92,8 @@ public class GFF3File implements IGFF3Feature {
         if (fastaFilePath != null) {
             // Write translation from FASTA file to GFF3 file
             writeFastaFromExistingFile(writer);
-        } else if (gff3FileReader.getTranslationOffsetMap() != null
+        } else if (gff3FileReader != null
+                && gff3FileReader.getTranslationOffsetMap() != null
                 && !gff3FileReader.getTranslationOffsetMap().isEmpty()) {
             // Write translation by GFF3 file offset map
             writeFastaFromOffsets(writer, gff3FileReader.getTranslationOffsetMap());
