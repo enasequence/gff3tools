@@ -217,10 +217,11 @@ public class GFF3FileReader implements AutoCloseable {
         String phase = m.group("phase");
         String attributes = m.group("attributes");
 
-        Map<String, Object> attributesMap = attributesFromString(attributes);
+        Map<String, List<String>> attributesMap = attributesFromString(attributes);
 
-        Optional<String> id = Optional.ofNullable((String) attributesMap.get("ID"));
-        Optional<String> parentId = Optional.ofNullable((String) attributesMap.get("Parent"));
+        Optional<String> id = Optional.ofNullable(attributesMap.get("ID")).map(List::getFirst);
+        Optional<String> parentId =
+                Optional.ofNullable(attributesMap.get("Parent")).map(List::getFirst);
 
         GFF3Feature feature = new GFF3Feature(
                 id,
@@ -250,8 +251,8 @@ public class GFF3FileReader implements AutoCloseable {
         }
     }
 
-    public Map<String, Object> attributesFromString(String line) {
-        Map<String, Object> attributes = new LinkedHashMap<>();
+    public Map<String, List<String>> attributesFromString(String line) {
+        Map<String, List<String>> attributes = new LinkedHashMap<>();
         String[] parts = line.split(";");
         for (String part : parts) {
             if (part.contains("=")) {

@@ -44,8 +44,8 @@ public class AttributesDuplicateValueTest {
 
     @Test
     public void testAttributeDuplicateValueNoOldLocusTag() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.LOCUS_TAG, "123123");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.LOCUS_TAG, List.of("123123"));
 
         feature = TestUtils.createGFF3Feature("propeptide", "propeptide", attributes);
         feature = attributesDuplicateValueFix.fixFeature(feature, 1);
@@ -60,8 +60,8 @@ public class AttributesDuplicateValueTest {
         List<String> oldLocusTag = new ArrayList<>();
         oldLocusTag.add("123122");
         oldLocusTag.add("123121");
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.LOCUS_TAG, "123123");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.LOCUS_TAG, List.of("123123"));
         attributes.put(GFF3Attributes.OLD_LOCUS_TAG, oldLocusTag);
 
         feature = TestUtils.createGFF3Feature("propeptide", "propeptide", attributes);
@@ -70,7 +70,8 @@ public class AttributesDuplicateValueTest {
         Assertions.assertNotNull(feature.getAttributes());
         assertEquals("123123", feature.getAttributeByName(GFF3Attributes.LOCUS_TAG));
         assertEquals(
-                2, feature.getAttributeValueList(GFF3Attributes.OLD_LOCUS_TAG).size());
+                2,
+                feature.getAttributeByName(GFF3Attributes.OLD_LOCUS_TAG).get().size());
     }
 
     @Test
@@ -79,8 +80,8 @@ public class AttributesDuplicateValueTest {
         oldLocusTag.add("123123");
         oldLocusTag.add("123123");
 
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.LOCUS_TAG, "123123");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.LOCUS_TAG, List.of("123123"));
         attributes.put(GFF3Attributes.OLD_LOCUS_TAG, oldLocusTag);
 
         feature = TestUtils.createGFF3Feature("propeptide", "propeptide", attributes);
@@ -88,7 +89,7 @@ public class AttributesDuplicateValueTest {
         Assertions.assertNotNull(feature);
         Assertions.assertNotNull(feature.getAttributes());
         assertEquals("123123", feature.getAttributeByName(GFF3Attributes.LOCUS_TAG));
-        assertTrue(feature.getAttributeValueList(GFF3Attributes.OLD_LOCUS_TAG).isEmpty());
+        assertTrue(feature.getAttributeByName(GFF3Attributes.OLD_LOCUS_TAG).isEmpty());
     }
 
     @Test
@@ -98,8 +99,8 @@ public class AttributesDuplicateValueTest {
         oldLocusTag.add("123122");
         oldLocusTag.add("123121");
 
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.LOCUS_TAG, "LOCUS123");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.LOCUS_TAG, List.of("LOCUS123"));
         attributes.put(GFF3Attributes.OLD_LOCUS_TAG, oldLocusTag);
 
         feature = TestUtils.createGFF3Feature("propeptide", "propeptide", attributes);
@@ -107,7 +108,8 @@ public class AttributesDuplicateValueTest {
         Assertions.assertNotNull(feature);
         Assertions.assertNotNull(feature.getAttributes());
         assertEquals(
-                2, feature.getAttributeValueList(GFF3Attributes.OLD_LOCUS_TAG).size());
+                2,
+                feature.getAttributeByName(GFF3Attributes.OLD_LOCUS_TAG).get().size());
     }
 
     @Test
@@ -117,8 +119,8 @@ public class AttributesDuplicateValueTest {
         oldLocusTag.add("LOCUS888");
         oldLocusTag.add("LOCUS888");
 
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.LOCUS_TAG, "LOCUS999");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.LOCUS_TAG, List.of("LOCUS999"));
         attributes.put(GFF3Attributes.OLD_LOCUS_TAG, oldLocusTag);
 
         feature = TestUtils.createGFF3Feature("propeptide", "propeptide", attributes);
@@ -127,7 +129,8 @@ public class AttributesDuplicateValueTest {
         Assertions.assertNotNull(feature);
         Assertions.assertNotNull(feature.getAttributes());
         assertEquals(
-                1, feature.getAttributeValueList(GFF3Attributes.OLD_LOCUS_TAG).size());
+                1,
+                feature.getAttributeByName(GFF3Attributes.OLD_LOCUS_TAG).get().size());
     }
 
     @Test
@@ -140,15 +143,16 @@ public class AttributesDuplicateValueTest {
         oldLocusTag.add("OLD1");
         oldLocusTag.add("OLD2");
 
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.LOCUS_TAG, "LOC123");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.LOCUS_TAG, List.of("LOC123"));
         attributes.put(GFF3Attributes.OLD_LOCUS_TAG, oldLocusTag);
 
         feature = TestUtils.createGFF3Feature("propeptide", "propeptide", attributes);
         feature = attributesDuplicateValueFix.fixFeature(feature, 1);
 
         Assertions.assertNotNull(feature);
-        List<String> updatedOldLocusTag = feature.getAttributeValueList(GFF3Attributes.OLD_LOCUS_TAG);
+        List<String> updatedOldLocusTag =
+                feature.getAttributeByName(GFF3Attributes.OLD_LOCUS_TAG).get();
         assertEquals(2, updatedOldLocusTag.size());
         Assertions.assertTrue(updatedOldLocusTag.contains("OLD1") && updatedOldLocusTag.contains("OLD2"));
     }
@@ -158,15 +162,16 @@ public class AttributesDuplicateValueTest {
         List<String> oldLocusTag = new ArrayList<>();
         oldLocusTag.add("LOC124");
 
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.LOCUS_TAG, "LOC123");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.LOCUS_TAG, List.of("LOC123"));
         attributes.put(GFF3Attributes.OLD_LOCUS_TAG, oldLocusTag);
 
         feature = TestUtils.createGFF3Feature("propeptide", "propeptide", attributes);
         feature = attributesDuplicateValueFix.fixFeature(feature, 1);
 
         Assertions.assertNotNull(feature);
-        List<String> updatedOldLocusTag = feature.getAttributeValueList(GFF3Attributes.OLD_LOCUS_TAG);
+        List<String> updatedOldLocusTag =
+                feature.getAttributeByName(GFF3Attributes.OLD_LOCUS_TAG).get();
         assertEquals(1, updatedOldLocusTag.size());
         Assertions.assertTrue(updatedOldLocusTag.contains("LOC124"));
     }

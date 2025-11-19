@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.validation.fix;
 
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 
+import java.util.List;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -31,7 +32,9 @@ public class EcNumberValueFix {
             description = "Remove the EC_number attribute if not matches the pattern",
             type = FEATURE)
     public void fixFeature(GFF3Feature feature, int line) {
-        String ecNumber = feature.getAttributeByName(GFF3Attributes.EC_NUMBER);
+        String ecNumber = feature.getAttributeByName(GFF3Attributes.EC_NUMBER)
+                .map(List::getFirst)
+                .get();
         if (ecNumber == null || ecNumber.isBlank()) return;
 
         if (ecNumber.equalsIgnoreCase("deleted") || !isValidECNumber(ecNumber.trim())) {

@@ -15,6 +15,7 @@ import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.MOD_BASE;
 import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.PROTEIN_ID;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,8 +38,8 @@ public class AttributeValueFixTest {
 
     @Test
     public void testFixFeatureWithNoModBase() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PROTEIN_ID, "protein_id");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PROTEIN_ID, List.of("protein_id"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         attributeValueFix.fixFeature(feature, 1);
@@ -49,9 +50,9 @@ public class AttributeValueFixTest {
 
     @Test
     public void testFixFeatureWithModBase() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PROTEIN_ID, "protein_id");
-        attributes.put(GFF3Attributes.MOD_BASE, "ac4c");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PROTEIN_ID, List.of("protein_id"));
+        attributes.put(GFF3Attributes.MOD_BASE, List.of("ac4c"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         attributeValueFix.fixFeature(feature, 1);
@@ -63,9 +64,9 @@ public class AttributeValueFixTest {
 
     @Test
     public void testFixFeatureWithModBaseDihydrouridine() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PROTEIN_ID, "protein_id");
-        attributes.put(GFF3Attributes.MOD_BASE, "d");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PROTEIN_ID, List.of("protein_id"));
+        attributes.put(GFF3Attributes.MOD_BASE, List.of("d"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         attributeValueFix.fixFeature(feature, 1);

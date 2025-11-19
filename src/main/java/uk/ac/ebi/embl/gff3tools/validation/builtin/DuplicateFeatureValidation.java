@@ -11,9 +11,10 @@
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.*;
@@ -24,31 +25,40 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 @Gff3Validation(name = "DUPLICATE_FEATURE")
 public class DuplicateFeatureValidation extends Validation {
 
+    private record ProteinAttributePair(String proteinId, String attributeId) {
+
+        public ProteinAttributePair {
+            Objects.requireNonNull(proteinId, "Protein ID must not be null");
+            Objects.requireNonNull(attributeId, "Attribute ID must not be null");
+        }
+    }
+
+    private final Map<String, Integer> proteinIdMap = new HashMap<>();
+    private final Map<ProteinAttributePair, Integer> proteinAttributeMap = new HashMap<>();
     private static final String DUPLICATE_PROTEIN_ID_MESSAGE =
-            "Duplicate Protein Id \"%s\" found in the \"%s\" at location \"%s\"";
+            "Duplicate Protein Id \"%s\" found. First occurrence at line %d, conflicting occurrence at line %d";
 
-    @ValidationMethod(rule = "DUPLICATE_FEATURE", type = ValidationType.ANNOTATION)
-    public void validateDuplicateProtein(GFF3Annotation annotation, int line) throws ValidationException {
+    @ValidationMethod(rule = "DUPLICATE_FEATURE", type = ValidationType.FEATURE)
+    public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
+        String proteinId = feature.getAttributeByName(GFF3Attributes.PROTEIN_ID)
+                .map(List::getFirst)
+                .get();
+        String attributeId = feature.getAttributeByName(GFF3Attributes.ATTRIBUTE_ID)
+                .map(List::getFirst)
+                .get();
 
-        Map<String, String> proteinToAttribute = new HashMap<>();
-
-        for (GFF3Feature feature : annotation.getFeatures()) {
-
-            String proteinId = feature.getAttributeByName(GFF3Attributes.PROTEIN_ID);
-            String attributeId = feature.getAttributeByName(GFF3Attributes.ATTRIBUTE_ID);
-
-            if (proteinId == null || attributeId == null) continue;
-
-            String existingAttribute = proteinToAttribute.get(proteinId);
-
-            if (existingAttribute == null) {
-                proteinToAttribute.put(proteinId, attributeId);
-            } else if (!existingAttribute.equals(attributeId)) {
-                throw new ValidationException(
-                        line,
-                        DUPLICATE_PROTEIN_ID_MESSAGE.formatted(
-                                proteinId, feature.getName(), feature.getStart() + " " + feature.getEnd()));
+        if (proteinId != null && attributeId != null) {
+            ProteinAttributePair proteinAttributePair = new ProteinAttributePair(proteinId, attributeId);
+            if (proteinIdMap.containsKey(proteinId)) {
+                if (!proteinAttributeMap.containsKey(proteinAttributePair)) {
+                    int prevLine = proteinIdMap.get(proteinId);
+                    throw new ValidationException(
+                            line, DUPLICATE_PROTEIN_ID_MESSAGE.formatted(proteinId, prevLine, line));
+                }
+            } else {
+                proteinIdMap.put(proteinId, line);
             }
+            proteinAttributeMap.put(proteinAttributePair, line);
         }
     }
 }
