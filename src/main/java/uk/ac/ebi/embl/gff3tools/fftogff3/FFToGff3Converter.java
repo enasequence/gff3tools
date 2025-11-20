@@ -28,30 +28,31 @@ public class FFToGff3Converter implements Converter {
     Path masterFilePath = null;
     ValidationEngine validationEngine;
 
-    // Path to write translation sequences.
-    Path fastaPath;
-
-    public FFToGff3Converter(ValidationEngine validationEngine, Path fastaPath) {
+    public FFToGff3Converter(ValidationEngine validationEngine) {
         this.validationEngine = validationEngine;
-        this.fastaPath = fastaPath;
     }
 
     // Constructor to be used only by the processing pipeline which converts reduced flatfile
-    public FFToGff3Converter(ValidationEngine validationEngine, Path masterFilePath, Path fastaPath) {
+    public FFToGff3Converter(ValidationEngine validationEngine, Path masterFilePath) {
         this.validationEngine = validationEngine;
         this.masterFilePath = masterFilePath;
-        this.fastaPath = fastaPath;
     }
 
     public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException {
 
-        EmblEntryReader entryReader =
-                new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
+        Path fastaPath = getFastaPath();
+        try {
+              EmblEntryReader entryReader =
+                    new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
-        GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine, fastaPath);
-        GFF3File file = fftogff3.from(entryReader, getMasterEntry(masterFilePath));
-        file.writeGFF3String(writer);
+            GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine, fastaPath);
+            GFF3File file = fftogff3.from(entryReader, getMasterEntry(masterFilePath));
+            file.writeGFF3String(writer);
+        }finally {
+            deleteFastaFile(fastaPath);
+        }
+
     }
 
     private ReaderOptions getReaderOptions() {
@@ -76,4 +77,29 @@ public class FFToGff3Converter implements Converter {
             throw new ReadException("Error opening master file: " + masterFilePath, e);
         }
     }
+
+    /**
+     * Create  FASTA in the  system temp directory.
+     */
+    private Path getFastaPath() {
+        try {
+            return Files.createTempFile("gff3-translation", ".fasta");
+        }catch (Exception e) {
+           throw new RuntimeException("Unable to create temp fasta file.", e);
+        }
+    }
+
+    /**
+     * Delete FASTA file in the  system temp directory.
+     */
+    private void deleteFastaFile(Path fastaPath) {
+        try {
+            Files.deleteIfExists(fastaPath);
+        }catch (Exception e) {
+            throw new RuntimeException("Unable to create temp fasta file.", e);
+        }
+    }
+
+
+
 }

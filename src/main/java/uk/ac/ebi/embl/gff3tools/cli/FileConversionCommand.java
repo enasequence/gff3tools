@@ -118,21 +118,13 @@ public class FileConversionCommand implements Runnable {
             return new Gff3ToFFConverter(engine, inputFilePath);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
             // FASTA path to write translation sequences
-            Path fastaPath = getFastaFilePath(outputFilePath);
             return masterFilePath == null
-                    ? new FFToGff3Converter(engine, masterFilePath, fastaPath)
-                    : new FFToGff3Converter(engine, fastaPath);
+                    ? new FFToGff3Converter(engine, masterFilePath)
+                    : new FFToGff3Converter(engine);
 
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }
-    }
-
-    private Path getFastaFilePath(Path outputFilePath) {
-        if (outputFilePath.getParent() != null) {
-            return outputFilePath.getParent().resolve("translation.fasta");
-        }
-        return Path.of("translation.fasta");
     }
 
     private ConversionFileFormat validateFileType(ConversionFileFormat fileFormat, Path filePath, String cliOption)

@@ -55,7 +55,7 @@ public class GFF3TranslationReaderTest {
         tempFile = Files.createTempFile("test_gff3", ".gff3");
         Files.write(tempFile, content.getBytes());
 
-        reader = new GFF3TranslationReader(mockEngine, tempFile); // adjust class name if different
+        reader = new GFF3TranslationReader(mockEngine, tempFile);
     }
 
     @AfterEach

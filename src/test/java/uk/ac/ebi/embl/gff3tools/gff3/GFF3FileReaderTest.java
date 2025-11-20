@@ -397,7 +397,6 @@ public class GFF3FileReaderTest {
             throws IOException, ValidationException, ReadException, WriteException {
         StringWriter writer = new StringWriter();
         Files.deleteIfExists(Path.of("input.gff3"));
-        Files.deleteIfExists(Path.of("translation.fasta"));
         Files.writeString(Path.of("input.gff3"), input, Charset.defaultCharset());
         try (GFF3FileReader reader =
                 new GFF3FileReader(getValidationEngine(), new StringReader(input), Path.of("input.gff3"))) {
@@ -405,8 +404,6 @@ public class GFF3FileReaderTest {
             AtomicReference<GFF3File> gff3File = new AtomicReference<>();
             reader.read(annotation -> {
                 GFF3Species gff3Species = reader.getSpecies();
-                Map<String, OffsetRange> annotationTranslationOffset =
-                        reader.getTranslationOffsetForAnnotation(annotation);
                 gff3File.set(new GFF3File.Builder()
                         .header(gff3Header)
                         .species(gff3Species)
@@ -425,7 +422,6 @@ public class GFF3FileReaderTest {
             throws IOException, ValidationException, ReadException, WriteException {
         StringWriter writer = new StringWriter();
         Files.deleteIfExists(Path.of("input.gff3"));
-        Files.deleteIfExists(Path.of("translation.fasta"));
         Files.writeString(Path.of("input.gff3"), input, Charset.defaultCharset());
         try (GFF3FileReader reader =
                 new GFF3FileReader(getValidationEngine(), new StringReader(input), Path.of("input.gff3"))) {
@@ -443,35 +439,9 @@ public class GFF3FileReaderTest {
                     .species(gff3Species.get())
                     .annotations(annotations)
                     .gff3Reader(reader)
-                    // .translationOffsets(reader.getTranslationReader().readTranslationOffset())
                     .build();
+
             gff3File1.writeGFF3String(writer);
-
-            Files.deleteIfExists(Path.of("input.gff3"));
-        }
-        return writer.toString();
-    }
-
-    private String testReadWithHeaderAndFastaOnEnd(String input)
-            throws IOException, ValidationException, ReadException, WriteException {
-        StringWriter writer = new StringWriter();
-        Files.deleteIfExists(Path.of("input.gff3"));
-        Files.deleteIfExists(Path.of("translation.fasta"));
-        Files.writeString(Path.of("input.gff3"), input, Charset.defaultCharset());
-        try (GFF3FileReader reader =
-                new GFF3FileReader(getValidationEngine(), new StringReader(input), Path.of("input.gff3"))) {
-            GFF3Header gff3Header = reader.readHeader();
-            AtomicReference<GFF3File> gff3File = new AtomicReference<>();
-            reader.read(annotation -> {
-                GFF3Species gff3Species = reader.getSpecies();
-                gff3File.set(new GFF3File.Builder()
-                        .header(gff3Header)
-                        .species(gff3Species)
-                        .annotations(Collections.singletonList(annotation))
-                        .gff3Reader(reader)
-                        .build());
-                gff3File.get().writeGFF3String(writer);
-            });
 
             Files.deleteIfExists(Path.of("input.gff3"));
         }

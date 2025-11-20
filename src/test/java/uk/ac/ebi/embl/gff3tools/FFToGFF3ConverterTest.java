@@ -46,8 +46,7 @@ class FFToGFF3ConverterTest {
             ValidationEngineBuilder builder = new ValidationEngineBuilder();
 
             try (BufferedReader testFileReader = TestUtils.getResourceReaderWithPath(
-                            testFiles.get(filePrefix).toString());
-                    BufferedWriter writer = Files.newBufferedWriter(fastaPath)) {
+                            testFiles.get(filePrefix).toString())) {
 
                 // We need new ValidationEngine each time as we cache data in our tests.
                 GFF3FileFactory rule = new GFF3FileFactory(builder.build(), fastaPath);
@@ -98,7 +97,7 @@ class FFToGFF3ConverterTest {
     private void testConvert(Path inputFile, Path expectedFile, Path masterFile) {
         ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
         ValidationEngine engine = engineBuilder.build();
-        FFToGff3Converter converter = new FFToGff3Converter(engine, masterFile, fastaPath);
+        FFToGff3Converter converter = new FFToGff3Converter(engine, masterFile);
         try (BufferedReader testFileReader = Files.newBufferedReader(inputFile);
                 BufferedReader expectedFileReader = Files.newBufferedReader(expectedFile);
                 StringWriter stringWriter = new StringWriter();
