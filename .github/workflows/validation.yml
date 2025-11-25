@@ -32,7 +32,7 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Run refresh dependencies
-        run: ./gradlew --refresh-dependencies
+        run: ./gradlew --refresh-dependencies -Pgitlab_private_token=dummy-token
 
       - name: Run Spotless check
         run: ./gradlew spotlessCheck -Pgitlab_private_token=dummy-token
