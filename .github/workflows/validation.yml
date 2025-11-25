@@ -25,12 +25,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ~/.gradlew --refresh-dependencies
             ~/.gradle/caches
             ~/.gradle/wrapper
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
+
+      - name: Run refresh dependencies
+        run: ./gradlew --refresh-dependencies
 
       - name: Run Spotless check
         run: ./gradlew spotlessCheck -Pgitlab_private_token=dummy-token
