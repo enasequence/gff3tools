@@ -36,7 +36,7 @@ public class GFF3File implements IGFF3Feature {
     List<GFF3Annotation> annotations;
     GFF3FileReader gff3Reader;
     Path fastaFilePath;
-    boolean writeAnnotationFasta = false;
+    boolean writeAnnotationFasta;
     List<ValidationException> parsingErrors;
 
     public GFF3File(
