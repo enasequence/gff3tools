@@ -51,7 +51,7 @@ public class GFF3FileFactory {
             throw new ReadException(e);
         }
 
-        return new GFF3File.Builder()
+        return GFF3File.builder()
                 .header(header)
                 .species(species)
                 .annotations(annotations)

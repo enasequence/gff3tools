@@ -36,9 +36,8 @@ public class GFF3FileTest {
         testMap.put("geneB", "GGTTAA");
 
         Files.writeString(Path.of("translation.fasta"), input, Charset.defaultCharset());
-        GFF3File obj = new GFF3File.Builder()
-                .fastaFilePath(Path.of("translation.fasta"))
-                .build();
+        GFF3File obj =
+                GFF3File.builder().fastaFilePath(Path.of("translation.fasta")).build();
 
         // obj.cdsTranslationMap = testMap;
 

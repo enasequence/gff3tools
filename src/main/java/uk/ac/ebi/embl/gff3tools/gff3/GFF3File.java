@@ -16,29 +16,28 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.exception.WriteException;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3TranslationReader;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
 import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 
 @Slf4j
+@Builder
 public class GFF3File implements IGFF3Feature {
 
     GFF3Header header;
     GFF3Species species;
     List<GFF3Annotation> annotations;
+    GFF3FileReader gff3Reader;
     Path fastaFilePath;
-    List<ValidationException> parsingErrors;
-    GFF3FileReader gff3FileReader;
     boolean writeAnnotationFasta = false;
+    List<ValidationException> parsingErrors;
 
     public GFF3File(
             GFF3Header header,
@@ -54,7 +53,7 @@ public class GFF3File implements IGFF3Feature {
         this.annotations = annotations;
         this.fastaFilePath = fastaFilePath;
         this.parsingErrors = parsingErrors;
-        this.gff3FileReader = gff3FileReader;
+        this.gff3Reader = gff3FileReader;
         this.writeAnnotationFasta = writeAnnotationFasta;
     }
 
@@ -74,7 +73,7 @@ public class GFF3File implements IGFF3Feature {
                 ann.writeGFF3String(writer);
 
                 if (writeAnnotationFasta) {
-                    Map<String, OffsetRange> annOffserMap = gff3FileReader.getTranslationOffsetForAnnotation(ann);
+                    Map<String, OffsetRange> annOffserMap = gff3Reader.getTranslationOffsetForAnnotation(ann);
                     // Write translation by annnotation offset map
                     writeFastaFromOffsets(writer, annOffserMap);
                 }
@@ -92,11 +91,11 @@ public class GFF3File implements IGFF3Feature {
         if (fastaFilePath != null) {
             // Write translation from FASTA file to GFF3 file
             writeFastaFromExistingFile(writer);
-        } else if (gff3FileReader != null
-                && gff3FileReader.getTranslationOffsetMap() != null
-                && !gff3FileReader.getTranslationOffsetMap().isEmpty()) {
+        } else if (gff3Reader != null
+                && gff3Reader.getTranslationOffsetMap() != null
+                && !gff3Reader.getTranslationOffsetMap().isEmpty()) {
             // Write translation by GFF3 file offset map
-            writeFastaFromOffsets(writer, gff3FileReader.getTranslationOffsetMap());
+            writeFastaFromOffsets(writer, gff3Reader.getTranslationOffsetMap());
         }
     }
 
@@ -133,68 +132,10 @@ public class GFF3File implements IGFF3Feature {
             String id = entry.getKey();
             OffsetRange range = entry.getValue();
 
-            String translation = gff3FileReader.getTranslation(range);
+            String translation = gff3Reader.getTranslation(range);
             TranslationWriter.writeTranslation(writer, id, translation);
         }
         log.info("Written {} sequences from: ", translationOffsetMap.entrySet().size());
         writer.write("\n");
-    }
-
-    public static class Builder {
-        private GFF3Header header;
-        private GFF3Species species;
-        private List<GFF3Annotation> annotations = new ArrayList<>();
-        private GFF3TranslationReader translationReader;
-        private Map<String, OffsetRange> translationOffsets = new HashMap<>();
-        private Path fastaFilePath;
-        private List<ValidationException> parsingErrors = new ArrayList<>();
-        private GFF3FileReader gff3FileReader;
-        private boolean writeAnnotationFasta;
-
-        public Builder header(GFF3Header header) {
-            this.header = header;
-            return this;
-        }
-
-        public Builder species(GFF3Species species) {
-            this.species = species;
-            return this;
-        }
-
-        public Builder annotations(List<GFF3Annotation> annotations) {
-            this.annotations = annotations;
-            return this;
-        }
-
-        public Builder fastaFilePath(Path path) {
-            this.fastaFilePath = path;
-            return this;
-        }
-
-        public Builder parsingErrors(List<ValidationException> errors) {
-            this.parsingErrors = errors;
-            return this;
-        }
-
-        public Builder gff3Reader(GFF3FileReader gff3Reader) {
-            this.gff3FileReader = gff3Reader;
-            return this;
-        }
-
-        public Builder writeAnnotationFasta(boolean writeAnnotationFasta) {
-            this.writeAnnotationFasta = writeAnnotationFasta;
-            return this;
-        }
-
-        public GFF3File build() {
-            return new GFF3File(
-                    this.header,
-                    this.species,
-                    this.annotations,
-                    this.gff3FileReader,
-                    this.fastaFilePath,
-                    this.writeAnnotationFasta,
-                    this.parsingErrors);
-        }
     }
 }
