@@ -333,8 +333,6 @@ public class GFF3FileReaderTest {
                 + "AALILLFYFFTHYDASLE\n\n";
 
         String output = testReadWithHeaderAndFastaOnEachAnnotation(input);
-        System.out.println("expected:\n" + expected);
-        System.out.println("Output:\n" + output);
         assertEquals(expected, output);
     }
 
@@ -356,8 +354,6 @@ public class GFF3FileReaderTest {
                 + "AALILLFYFFTHYDASLE\n\n";
 
         String output = testReadWithHeaderAndFastaInEnd(input);
-        System.out.println("Input:\n" + input);
-        System.out.println("Output:\n" + output);
         assertEquals(input, output);
     }
 
