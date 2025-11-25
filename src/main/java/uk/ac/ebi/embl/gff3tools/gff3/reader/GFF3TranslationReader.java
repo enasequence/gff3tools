@@ -31,7 +31,7 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
  */
 public class GFF3TranslationReader {
 
-    static Pattern SEQUENCE_PATTERN = Pattern.compile("^[ACDEFGHIKLMNPQRSTVWY*]+$");
+    static Pattern SEQUENCE_PATTERN = Pattern.compile("^[ACDEFGHIKLMNPQRSTVWXY*]+$");
     ValidationEngine validationEngine;
     Path gff3Path;
 

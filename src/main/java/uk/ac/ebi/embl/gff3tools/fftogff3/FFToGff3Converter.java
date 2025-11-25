@@ -43,16 +43,15 @@ public class FFToGff3Converter implements Converter {
 
         Path fastaPath = getFastaPath();
         try {
-              EmblEntryReader entryReader =
+            EmblEntryReader entryReader =
                     new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
             GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine, fastaPath);
             GFF3File file = fftogff3.from(entryReader, getMasterEntry(masterFilePath));
             file.writeGFF3String(writer);
-        }finally {
+        } finally {
             deleteFastaFile(fastaPath);
         }
-
     }
 
     private ReaderOptions getReaderOptions() {
@@ -84,8 +83,8 @@ public class FFToGff3Converter implements Converter {
     private Path getFastaPath() {
         try {
             return Files.createTempFile("gff3-translation", ".fasta");
-        }catch (Exception e) {
-           throw new RuntimeException("Unable to create temp fasta file.", e);
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to create temp fasta file.", e);
         }
     }
 
@@ -95,11 +94,8 @@ public class FFToGff3Converter implements Converter {
     private void deleteFastaFile(Path fastaPath) {
         try {
             Files.deleteIfExists(fastaPath);
-        }catch (Exception e) {
+        } catch (Exception e) {
             throw new RuntimeException("Unable to create temp fasta file.", e);
         }
     }
-
-
-
 }

@@ -46,7 +46,7 @@ class FFToGFF3ConverterTest {
             ValidationEngineBuilder builder = new ValidationEngineBuilder();
 
             try (BufferedReader testFileReader = TestUtils.getResourceReaderWithPath(
-                            testFiles.get(filePrefix).toString())) {
+                    testFiles.get(filePrefix).toString())) {
 
                 // We need new ValidationEngine each time as we cache data in our tests.
                 GFF3FileFactory rule = new GFF3FileFactory(builder.build(), fastaPath);

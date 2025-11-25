@@ -13,8 +13,10 @@ package uk.ac.ebi.embl.gff3tools.fftogff3;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -72,7 +74,11 @@ public class GFF3AnnotationFactory {
         String accession = entry.getSequence().getAccession();
         LOG.info("Converting FF entry: {}", accession);
         GFF3SequenceRegion sequenceRegion = directivesFactory.createSequenceRegion(entry);
-        try (BufferedWriter fastaWriter = Files.newBufferedWriter(fastaPath)) {
+        try (BufferedWriter fastaWriter = Files.newBufferedWriter(
+                fastaPath,
+                StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE, // create file if not exists
+                StandardOpenOption.APPEND)) {
 
             for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
 
