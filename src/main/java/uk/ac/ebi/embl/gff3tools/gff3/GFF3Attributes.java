@@ -64,4 +64,10 @@ public class GFF3Attributes {
     public static final String GAP_TYPE = "gap_type";
     public static final String LINKAGE_EVIDENCE = "linkage_evidence";
     public static final String ESTIMATED_LENGTH = "estimated_length";
+    public static final String PROCESSED = "processed";
+    public static final String UNPROCESSED = "unprocessed";
+    public static final String UNITARY = "unitary";
+    public static final String ALLELIC = "allelic";
+    public static final String UNKNOWN = "unknown";
+    public static final String EXCEPTION = "exception";
 }

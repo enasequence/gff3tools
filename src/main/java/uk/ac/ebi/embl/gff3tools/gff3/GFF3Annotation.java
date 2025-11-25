@@ -130,4 +130,8 @@ public class GFF3Annotation implements IGFF3Feature {
     public List<GFF3Feature> getAllFeatures() {
         return Collections.unmodifiableList(this.features);
     }
+
+    public void removeFeature(GFF3Feature feature) {
+        features.remove(feature);
+    }
 }
