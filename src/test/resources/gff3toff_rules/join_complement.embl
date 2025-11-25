@@ -11,6 +11,7 @@ FH
 FT   source          1..822
 FT   CDS             join(1..>500,600..700,complement(<800..822))
 FT                   /gene="matK"
+FT                   /translation="MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLE"
 XX
 //
 

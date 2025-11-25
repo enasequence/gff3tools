@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.gff3toff;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.util.List;
 import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 import uk.ac.ebi.embl.gff3tools.*;
@@ -22,18 +23,20 @@ import uk.ac.ebi.embl.gff3tools.validation.*;
 public class Gff3ToFFConverter implements Converter {
 
     ValidationEngine validationEngine;
+    Path gff3Path;
 
-    public Gff3ToFFConverter(ValidationEngine validationEngine) {
+    public Gff3ToFFConverter(ValidationEngine validationEngine, Path gff3Path) {
         this.validationEngine = validationEngine;
+        this.gff3Path = gff3Path;
     }
 
     public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException {
 
-        try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader)) {
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader, gff3Path)) {
 
             gff3Reader.readHeader();
-            gff3Reader.read(annotation -> writeEntry(new GFF3Mapper(), annotation, writer));
+            gff3Reader.read(annotation -> writeEntry(new GFF3Mapper(gff3Reader), annotation, writer));
 
             // TODO: Decide how to expose parsingErrors to the user of this converter.// TODO: Decide how to expose
             // parsingErrors to the user of this converter.
