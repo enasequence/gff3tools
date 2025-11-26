@@ -6,7 +6,7 @@ public final class LineEntry {
     long byteStart;       // absolute byte offset of first base in the line
     long byteEndExclusive;// absolute byte offset just after the last base
 
-    LineEntry(long bStart, long bEnd, long byStart, long byEndEx) {
+    public LineEntry(long bStart, long bEnd, long byStart, long byEndEx) {
         this.baseStart = bStart;
         this.baseEnd = bEnd;
         this.byteStart = byStart;

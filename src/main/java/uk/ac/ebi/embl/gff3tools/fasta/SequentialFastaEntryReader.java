@@ -1,7 +1,9 @@
 package uk.ac.ebi.embl.gff3tools.fasta;
 
 import uk.ac.ebi.embl.gff3tools.exception.FastaReadException;
+import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.LineEntry;
 import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceAlphabet;
+import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceIndex;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -61,14 +63,18 @@ public class SequentialFastaEntryReader implements AutoCloseable {
             if (headerLine == null) return false;
             ParsedHeader ph = headerParser.parse(headerLine);
             //find the start & end bytes of the sequence of the current fasta entry
-            ScanResult sr = findSequenceLimits();
+            SequenceIndex idx = buildSequenceIndex();
 
             FastaEntry e = new FastaEntry();
             e.setId(ph.getId());
             e.setHeader(ph.getHeader());
-            e.setFastaStart(headerPos.getAsLong());
-            e.setSequenceStart(sr.firstBase);
-            e.setSequenceEnd(sr.lastBase);
+            e.setFastaStart(headerPos.); //todo THIS GARBAGE
+            e.setSequenceStart(idx.firstBaseByte);
+            e.setSequenceEnd(idx.lastBaseByte);
+            this.current = e;
+
+            // keep 'idx' around as a field if you want fast range queries for current entry
+            this.currentIndex = idx;
 
             this.current = e;
             return true;
@@ -201,4 +207,85 @@ public class SequentialFastaEntryReader implements AutoCloseable {
         channel.position(nextHdr);
         return new ScanResult(first, last, nextHdr);
     }
+
+    private SequenceIndex buildSequenceIndex() throws IOException {
+        long pos = channel.position();
+        long firstBaseByte = -1, lastBaseByte = -1, nextHdr = fileSize;
+
+        long currentLineFirstByte = -1;      // byte of first base in current line
+        long currentLineLastByte  = -1;      // byte of last base in current line
+        long basesSoFar = 0;                 // total bases committed to 'lines'
+        long basesInCurrentLine = 0;
+
+        java.util.ArrayList<LineEntry> lines = new java.util.ArrayList<>();
+
+        ByteBuffer buf = ByteBuffer.allocateDirect(BUF_SIZE);
+
+        outer:
+        while (pos < fileSize) {
+            buf.clear();
+            int toRead = (int) Math.min(buf.capacity(), fileSize - pos);
+            buf.limit(toRead);
+            int n = channel.read(buf, pos);
+            if (n <= 0) break;
+            buf.flip();
+            while (buf.hasRemaining()) {
+                byte b = buf.get();
+                long abs = pos + buf.position() - 1;
+
+                if (b == GT) { // next header begins
+                    nextHdr = abs;
+                    // finalize the current line if it has bases
+                    if (basesInCurrentLine > 0) {
+                        long baseStart = basesSoFar + 1;
+                        long baseEnd   = basesSoFar + basesInCurrentLine;
+                        lines.add(new LineEntry(baseStart, baseEnd,
+                                currentLineFirstByte, currentLineLastByte + 1)); // end exclusive
+                        basesSoFar += basesInCurrentLine;
+                    }
+                    break outer;
+                }
+
+                if (b == '\n') {
+                    if (basesInCurrentLine > 0) {
+                        long baseStart = basesSoFar + 1;
+                        long baseEnd   = basesSoFar + basesInCurrentLine;
+                        lines.add(new LineEntry(baseStart, baseEnd,
+                                currentLineFirstByte, currentLineLastByte + 1));
+                        basesSoFar += basesInCurrentLine;
+                        basesInCurrentLine = 0;
+                        currentLineFirstByte = -1;
+                        currentLineLastByte = -1;
+                    }
+                    continue; // newline consumed
+                }
+
+                if (alphabet.isAllowed(b)) {
+                    if (currentLineFirstByte < 0) currentLineFirstByte = abs;
+                    currentLineLastByte = abs;
+                    basesInCurrentLine++;
+
+                    if (firstBaseByte < 0) firstBaseByte = abs;
+                    lastBaseByte = abs;
+                    continue;
+                }
+
+                // Non-allowed, non-newline byte: ignore (you said the lines only contain bases + '\n')
+            }
+            pos += n;
+        }
+
+        // EOF: finalize any unterminated line with bases
+        if (basesInCurrentLine > 0) {
+            long baseStart = basesSoFar + 1;
+            long baseEnd   = basesSoFar + basesInCurrentLine;
+            lines.add(new LineEntry(baseStart, baseEnd,
+                    currentLineFirstByte, currentLineLastByte + 1));
+            basesSoFar += basesInCurrentLine;
+        }
+
+        channel.position(nextHdr);
+        return new SequenceIndex(firstBaseByte, lastBaseByte, lines);
+    }
+
 }
