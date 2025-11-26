@@ -12,11 +12,14 @@ package uk.ac.ebi.embl.gff3tools.gff3.reader;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.InvalidGFF3RecordException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
@@ -29,9 +32,9 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
  * to avoid loading the entire GFF3 or FASTA content into memory. It scans
  * backwards from the end of the file to locate ##FASTA directive
  */
+@Slf4j
 public class GFF3TranslationReader {
 
-    static Pattern SEQUENCE_PATTERN = Pattern.compile("^[ACDEFGHIKLMNPQRSTVWXY*]+$");
     ValidationEngine validationEngine;
     Path gff3Path;
 
@@ -50,41 +53,84 @@ public class GFF3TranslationReader {
      */
     public Map<String, OffsetRange> readTranslationOffset() {
         Map<String, OffsetRange> offsetMap = new TreeMap<>();
-        try (RandomAccessFile raf = new RandomAccessFile(gff3Path.toFile(), "r")) {
 
-            // End of the file
-            long pointer = raf.length() - 1;
-            StringBuilder currentLine = new StringBuilder();
+        try (FileChannel channel = FileChannel.open(gff3Path, StandardOpenOption.READ)) {
 
-            long seqStart = 0;
-            long seqEnd = pointer;
+            long fileSize = channel.size();
+            long position = fileSize;
+            long seqEnd = fileSize - 1;
 
-            while (pointer >= 0) {
-                seqStart = pointer;
-                raf.seek(pointer);
-                int b = raf.readByte();
+            // 1 MB Buffer size
+            final int bufferSize = 1024 * 1024;
 
-                if (b == '\n' || b == '\r') {
-                    if (!currentLine.isEmpty()) {
-                        String line = currentLine.reverse().toString();
-                        currentLine.setLength(0);
+            ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
 
-                        // Stop once we reach the marker
-                        if (line.startsWith("##FASTA")) break;
+            StringBuilder lineBuffer = new StringBuilder();
+            boolean stop = false;
 
-                        if (line.startsWith(">")) {
-                            // Encountered ID line, store ID and offset
-                            seqStart = pointer + line.length() + 1;
-                            line = line.replace(">", "");
-                            offsetMap.put(line, new OffsetRange(seqStart, seqEnd));
-                            seqEnd = pointer;
+            while (position > 0 && !stop) {
+                // Move read window backwards
+                long bytesToRead = Math.min(position, bufferSize);
+                position -= bytesToRead;
+
+                buffer.clear();
+                channel.position(position);
+                channel.read(buffer);
+                buffer.flip();
+
+                // Scan block backwards
+                for (int i = (int) bytesToRead - 1; i >= 0; i--) {
+                    byte b = buffer.get(i);
+
+                    if (b == '\n' || b == '\r') {
+
+                        // Empty lines are ignored
+                        if (lineBuffer.length() > 0) {
+                            String line = lineBuffer.reverse().toString();
+                            lineBuffer.setLength(0);
+
+                            // Exit when line is not a sequence
+                            if (!isValidSequence(line) && !line.startsWith(">")) {
+                                if (offsetMap.isEmpty()) {
+                                    log.info("Translation sequence not found");
+                                    stop = true;
+                                    break;
+                                } else {
+                                    throw new RuntimeException("Invalid GFF3 translation sequence: " + line);
+                                }
+                            }
+
+                            // Hit FASTA section
+                            if (line.startsWith("##FASTA")) {
+                                stop = true;
+                                break;
+                            }
+
+                            // Header line → store offset range
+                            if (line.startsWith(">")) {
+                                String id = line.substring(1); // remove '>'
+                                long seqStart = line.length() + i + 1;
+                                offsetMap.put(id, new OffsetRange(seqStart, seqEnd));
+                                seqEnd = position + i; // next sequence ends here
+                            }
                         }
+
+                    } else {
+                        // Buffer the character
+                        lineBuffer.append((char) b);
                     }
-                } else {
-                    currentLine.append((char) b);
                 }
-                pointer--;
             }
+
+            // Handle last line if needed
+            if (!lineBuffer.isEmpty() && !stop) {
+                String line = lineBuffer.reverse().toString();
+                if (line.startsWith(">")) {
+                    String id = line.substring(1);
+                    offsetMap.put(id, new OffsetRange(position, seqEnd));
+                }
+            }
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -99,7 +145,8 @@ public class GFF3TranslationReader {
      */
     public String readTranslation(OffsetRange offset) {
 
-        StringBuilder sequence = new StringBuilder();
+        StringBuilder sequenceBuilder = new StringBuilder();
+        String sequence;
         long start = offset.start;
         long end = offset.end;
         try (RandomAccessFile raf = new RandomAccessFile(gff3Path.toFile(), "r")) {
@@ -108,19 +155,31 @@ public class GFF3TranslationReader {
                 raf.seek(start);
                 int b = raf.readByte();
                 if (b != '\n') {
-                    sequence.append((char) b);
+                    sequenceBuilder.append((char) b);
                 }
                 start++;
             }
-            Matcher matcher = SEQUENCE_PATTERN.matcher(sequence.toString());
-            if (!matcher.matches()) {
+            sequence = sequenceBuilder.toString().toUpperCase();
+            if (!isValidSequence(sequence)) {
                 validationEngine.handleSyntacticError(
-                        new InvalidGFF3RecordException(-1, "Invalid sequence record \"" + sequence.toString() + "\""));
+                        new InvalidGFF3RecordException(-1, "Invalid sequenceBuilder record \"" + sequence + "\""));
             }
         } catch (IOException | ValidationException e) {
             throw new RuntimeException(e);
         }
 
-        return sequence.toString();
+        return sequence;
+    }
+
+    public static boolean isValidSequence(String seq) {
+        seq = seq.toUpperCase();
+        for (int i = 0; i < seq.length(); i++) {
+            char c = seq.charAt(i);
+            // Accept uppercase letters A–Z and *
+            if (!((c >= 'A' && c <= 'Z') || c == '*')) {
+                return false;
+            }
+        }
+        return true;
     }
 }

@@ -15,6 +15,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -175,5 +176,45 @@ public class GFF3TranslationReaderTest {
 
         String seq = reader.readTranslation(r);
         Assertions.assertEquals("", seq);
+    }
+
+    @Test
+    void testNoSequenceGff3() throws IOException, ValidationException {
+        // Inject an invalid character into the file
+        Files.writeString(tempFile, "id\tsource\t", StandardOpenOption.TRUNCATE_EXISTING);
+
+        Path noSequence = Files.createTempFile("noSequence", ".gff3");
+        Files.write(
+                noSequence,
+                "id\tsource\tattribute\nid\tsource\tattribute".getBytes(StandardCharsets.UTF_8),
+                StandardOpenOption.TRUNCATE_EXISTING);
+
+        GFF3TranslationReader emptyReader = new GFF3TranslationReader(null, noSequence);
+
+        Map<String, OffsetRange> map = emptyReader.readTranslationOffset();
+        Assertions.assertTrue(map.isEmpty());
+
+        Files.delete(noSequence);
+    }
+
+    @Test
+    void testInvalidTranslationSequenceGff3() throws IOException, ValidationException {
+        // Inject an invalid character into the file
+        Files.writeString(tempFile, "id\tsource\t", StandardOpenOption.TRUNCATE_EXISTING);
+
+        Path noSequence = Files.createTempFile("noSequence", ".gff3");
+        Files.write(
+                noSequence,
+                "id\tsource\tattribute\nid\tsource\n>test_1\nATGCATGCATAT".getBytes(StandardCharsets.UTF_8),
+                StandardOpenOption.TRUNCATE_EXISTING);
+
+        GFF3TranslationReader emptyReader = new GFF3TranslationReader(null, noSequence);
+
+        RuntimeException ex =
+                Assertions.assertThrows(RuntimeException.class, () -> emptyReader.readTranslationOffset());
+
+        Assertions.assertTrue(ex.getMessage().contains("Invalid GFF3 translation sequence:"));
+
+        Files.delete(noSequence);
     }
 }
