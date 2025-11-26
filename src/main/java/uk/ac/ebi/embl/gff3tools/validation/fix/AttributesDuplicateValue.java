@@ -35,8 +35,8 @@ public class AttributesDuplicateValue {
         }
 
         List<String> oldLocusTags =
-                feature.getAttributeByName(GFF3Attributes.OLD_LOCUS_TAG).get();
-        if (oldLocusTags == null || oldLocusTags.isEmpty()) {
+                feature.getAttributeListByName(GFF3Attributes.OLD_LOCUS_TAG).orElse(new ArrayList<>());
+        if (oldLocusTags.isEmpty()) {
             return feature;
         }
 

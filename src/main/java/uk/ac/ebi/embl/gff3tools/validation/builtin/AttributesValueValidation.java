@@ -70,8 +70,8 @@ public class AttributesValueValidation extends Validation {
     public void validateAttributeValuePattern(GFF3Feature feature, int line) throws ValidationException {
 
         List<String> productValues =
-                feature.getAttributeByName(GFF3Attributes.PRODUCT).get();
-        if (productValues == null || productValues.isEmpty()) {
+                feature.getAttributeListByName(GFF3Attributes.PRODUCT).orElse(new ArrayList<>());
+        if (productValues.isEmpty()) {
             return;
         }
 
@@ -107,25 +107,13 @@ public class AttributesValueValidation extends Validation {
     @ValidationMethod(rule = "PROVIRAL_ATTRIBUTE_VALUE", type = ValidationType.FEATURE)
     public void validateProviralAttribute(GFF3Feature feature, int line) throws ValidationException {
         if (feature.hasAttribute(GFF3Attributes.NOTE) && feature.hasAttribute(GFF3Attributes.PROVIRAL)) {
-            String proviralValue = feature.getAttributeByName(GFF3Attributes.PROVIRAL)
-                    .map(List::getFirst)
-                    .get();
-            if (proviralValue != null && !proviralValue.matches(PROVIRAL_VALUE_PATTERN)) {
+            Optional<String> opv = feature.getAttributeByName(GFF3Attributes.PROVIRAL)
+                    .filter((pv) -> pv.matches(PROVIRAL_VALUE_PATTERN));
+            if (opv.isPresent()) {
                 throw new ValidationException(
                         line,
                         INVALID_ATTRIBUTE_VALUE_PATTERN.formatted(GFF3Attributes.PROVIRAL, PROVIRAL_VALUE_PATTERN));
             }
-        }
-    }
-
-    @ValidationMethod(rule = "PROTEIN_VALUE", type = ValidationType.FEATURE)
-    public void validateProteinValue(GFF3Feature feature, int line) throws ValidationException {
-        if (feature.hasAttribute(GFF3Attributes.PROTEIN_ID)
-                && feature.getAttributeByName(GFF3Attributes.PROTEIN_ID)
-                                .map(List::getFirst)
-                                .get()
-                        == null) {
-            throw new ValidationException(line, PROTEIN_ID_VALUE_VALIDATION);
         }
     }
 
@@ -135,16 +123,13 @@ public class AttributesValueValidation extends Validation {
         boolean hasMitochondrion = false;
 
         for (GFF3Feature feature : annotation.getFeatures()) {
-            String geneValue = feature.getAttributeByName(GFF3Attributes.GENE)
-                    .map(List::getFirst)
-                    .get();
+            String geneValue = feature.getAttributeByName(GFF3Attributes.GENE).orElse(null);
             if ("12S rRNA".equalsIgnoreCase(geneValue)) {
                 has12SrRNA = true;
             }
 
-            String organelleValue = feature.getAttributeByName(GFF3Attributes.ORGANELLE)
-                    .map(List::getFirst)
-                    .get();
+            String organelleValue =
+                    feature.getAttributeByName(GFF3Attributes.ORGANELLE).orElse(null);
             if (MITOCHONDRION.equalsIgnoreCase(organelleValue)) {
                 hasMitochondrion = true;
             }

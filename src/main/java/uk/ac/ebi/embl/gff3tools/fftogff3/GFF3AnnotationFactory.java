@@ -195,12 +195,13 @@ public class GFF3AnnotationFactory {
      */
     private void handleTranslation(
             Writer fastaWriter,
-            Map<String, Object> baseAttributes,
+            Map<String, List<String>> baseAttributes,
             Optional<String> featureId,
             GFF3SequenceRegion sequenceRegion) {
         if (baseAttributes.containsKey("translation") && featureId.isPresent()) {
             String translationKey = TranslationWriter.getTranslationKey(sequenceRegion.accession(), featureId.get());
-            TranslationWriter.writeTranslation(fastaWriter, translationKey, (String) baseAttributes.get("translation"));
+            List<String> translation = baseAttributes.get("translation");
+            TranslationWriter.writeTranslation(fastaWriter, translationKey, translation.get(0));
             baseAttributes.remove("translation");
         }
     }
@@ -278,8 +279,7 @@ public class GFF3AnnotationFactory {
 
     public void orderRootAndChildren(List<GFF3Feature> gffFeatures, GFF3Feature root) {
 
-        String locusTag =
-                root.getAttributeByName("locus_tag").map(List::getFirst).get();
+        String locusTag = root.getAttributeByName("locus_tag").orElse(null);
         gffFeatures.add(root);
 
         // Recursively process children
