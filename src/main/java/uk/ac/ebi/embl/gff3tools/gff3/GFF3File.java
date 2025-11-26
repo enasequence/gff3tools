@@ -37,7 +37,7 @@ public class GFF3File implements IGFF3Feature {
     GFF3FileReader gff3Reader;
     Path fastaFilePath;
     boolean writeAnnotationFasta;
-    List<ValidationException> parsingErrors;
+    List<ValidationException> parsingWarnings;
 
     public GFF3File(
             GFF3Header header,
@@ -46,13 +46,13 @@ public class GFF3File implements IGFF3Feature {
             GFF3FileReader gff3FileReader,
             Path fastaFilePath,
             boolean writeAnnotationFasta,
-            List<ValidationException> parsingErrors) {
+            List<ValidationException> parsingWarnings) {
 
         this.header = header;
         this.species = species;
         this.annotations = annotations;
         this.fastaFilePath = fastaFilePath;
-        this.parsingErrors = parsingErrors;
+        this.parsingWarnings = parsingWarnings;
         this.gff3Reader = gff3FileReader;
         this.writeAnnotationFasta = writeAnnotationFasta;
     }

@@ -32,7 +32,6 @@ public class ValidationCommand extends AbstractCommand {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
 
         ValidationEngine validationEngine;
-        List<ValidationException> warnings;
 
         try {
             validationEngine = initValidationEngine(ruleOverrides);
@@ -44,17 +43,17 @@ public class ValidationCommand extends AbstractCommand {
                         Files::newBufferedReader,
                         () -> new BufferedReader(new InputStreamReader(System.in)),
                         inputFilePath);
-                GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, inputReader)) {
+                GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, inputReader, inputFilePath)) {
             ;
 
             gff3Reader.readHeader();
             gff3Reader.read(annotation -> {});
 
-            warnings = validationEngine.getParsingErrors();
-
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
+
+        List<ValidationException> warnings = validationEngine.getParsingWarnings();
 
         if (warnings != null && warnings.size() > 0) {
             for (ValidationException e : warnings) {
