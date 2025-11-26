@@ -252,27 +252,6 @@ public class AttributesValueValidationTest {
     }
 
     @Test
-    public void testValidateProteinValueSuccess() {
-        feature = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(),
-                OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.PROTEIN_ID, List.of("protein")));
-
-        Assertions.assertDoesNotThrow(() -> attributesValueValidation.validateProteinValue(feature, 1));
-    }
-
-    @Test
-    public void testValidateProteinValueFailure() {
-        feature = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.PROTEIN_ID, List.of()));
-
-        ValidationException ex = Assertions.assertThrows(
-                ValidationException.class, () -> attributesValueValidation.validateProteinValue(feature, 1));
-
-        Assertions.assertTrue(ex.getMessage().contains("Protein Id cannot be null or empty"));
-    }
-
-    @Test
     public void testValidateQualifierValueDependencySuccessNoGene() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),

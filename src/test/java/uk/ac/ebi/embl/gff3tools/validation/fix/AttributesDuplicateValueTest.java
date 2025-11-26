@@ -71,7 +71,9 @@ public class AttributesDuplicateValueTest {
         assertEquals("123123", feature.getAttributeByName(GFF3Attributes.LOCUS_TAG));
         assertEquals(
                 2,
-                feature.getAttributeByName(GFF3Attributes.OLD_LOCUS_TAG).get().size());
+                feature.getAttributeListByName(GFF3Attributes.OLD_LOCUS_TAG)
+                        .get()
+                        .size());
     }
 
     @Test
@@ -109,7 +111,9 @@ public class AttributesDuplicateValueTest {
         Assertions.assertNotNull(feature.getAttributes());
         assertEquals(
                 2,
-                feature.getAttributeByName(GFF3Attributes.OLD_LOCUS_TAG).get().size());
+                feature.getAttributeListByName(GFF3Attributes.OLD_LOCUS_TAG)
+                        .get()
+                        .size());
     }
 
     @Test
@@ -130,7 +134,9 @@ public class AttributesDuplicateValueTest {
         Assertions.assertNotNull(feature.getAttributes());
         assertEquals(
                 1,
-                feature.getAttributeByName(GFF3Attributes.OLD_LOCUS_TAG).get().size());
+                feature.getAttributeListByName(GFF3Attributes.OLD_LOCUS_TAG)
+                        .get()
+                        .size());
     }
 
     @Test
@@ -152,7 +158,7 @@ public class AttributesDuplicateValueTest {
 
         Assertions.assertNotNull(feature);
         List<String> updatedOldLocusTag =
-                feature.getAttributeByName(GFF3Attributes.OLD_LOCUS_TAG).get();
+                feature.getAttributeListByName(GFF3Attributes.OLD_LOCUS_TAG).get();
         assertEquals(2, updatedOldLocusTag.size());
         Assertions.assertTrue(updatedOldLocusTag.contains("OLD1") && updatedOldLocusTag.contains("OLD2"));
     }
@@ -171,7 +177,7 @@ public class AttributesDuplicateValueTest {
 
         Assertions.assertNotNull(feature);
         List<String> updatedOldLocusTag =
-                feature.getAttributeByName(GFF3Attributes.OLD_LOCUS_TAG).get();
+                feature.getAttributeListByName(GFF3Attributes.OLD_LOCUS_TAG).get();
         assertEquals(1, updatedOldLocusTag.size());
         Assertions.assertTrue(updatedOldLocusTag.contains("LOC124"));
     }
