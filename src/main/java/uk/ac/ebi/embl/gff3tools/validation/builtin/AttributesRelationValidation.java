@@ -89,14 +89,12 @@ public class AttributesRelationValidation extends Validation {
     public void validateExclusiveAttributes(GFF3Feature feature, int line) throws ValidationException {
         for (Map.Entry<String, Set<String>> entry : EXCLUSIVE_ATTRIBUTES.entrySet()) {
             String key = entry.getKey();
-            String keyValue =
-                    feature.getAttributeByName(key).map(List::getFirst).get();
+            String keyValue = feature.getAttributeByName(key).orElse(null);
 
             if (keyValue == null) continue;
 
             for (String other : entry.getValue()) {
-                String otherValue =
-                        feature.getAttributeByName(other).map(List::getFirst).get();
+                String otherValue = feature.getAttributeByName(other).orElse(null);
 
                 if (keyValue.equals(otherValue)) {
                     throw new ValidationException(line, EXCLUSIVE_ATTRIBUTES_SAME_VALUE.formatted(key, other));
@@ -183,9 +181,8 @@ public class AttributesRelationValidation extends Validation {
                     String conditionQualifier = condition.getKey();
                     Set<String> disallowedValues = condition.getValue();
 
-                    String actualValue = feature.getAttributeByName(conditionQualifier)
-                            .map(List::getFirst)
-                            .get();
+                    String actualValue =
+                            feature.getAttributeByName(conditionQualifier).orElse(null);
                     if (actualValue != null && disallowedValues.contains(actualValue)) {
                         throw new ValidationException(
                                 line,
@@ -205,8 +202,10 @@ public class AttributesRelationValidation extends Validation {
             return;
         }
         String soId = soOptId.get();
-        boolean isCircular =
-                Boolean.TRUE.toString().equalsIgnoreCase(feature.getAttributeByName(GFF3Attributes.CIRCULAR_RNA));
+        boolean isCircular = Boolean.TRUE
+                .toString()
+                .equalsIgnoreCase(
+                        feature.getAttributeByName(GFF3Attributes.CIRCULAR_RNA).orElse("false"));
 
         if (isCircular) {
             if (!ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.CDS.ID)

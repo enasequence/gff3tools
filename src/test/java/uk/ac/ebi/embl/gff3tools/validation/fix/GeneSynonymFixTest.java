@@ -53,10 +53,10 @@ public class GeneSynonymFixTest {
     void movesGeneSynonymFromChildToGeneAncestor() {
         GeneSynonymFix fix = mockGff3GeneFeatureList(List.of("gene1"), List.of("cds1"));
         // parent gene feature
-        Map<String, Object> geneAttrs = new HashMap<>();
+        Map<String, List<String>> geneAttrs = new HashMap<>();
         GFF3Feature gene = TestUtils.createGFF3Feature("gene1", geneAttrs);
         // child feature with gene_synonym
-        Map<String, Object> childAttrs = new HashMap<>();
+        Map<String, List<String>> childAttrs = new HashMap<>();
         childAttrs.put(GENE_SYNONYM, new ArrayList<>(List.of("syn1", "syn2")));
         GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "gene1", childAttrs);
         // link up the family
@@ -77,7 +77,9 @@ public class GeneSynonymFixTest {
         assertSame(cds, result.get(1));
         // gene_synonym moved to parent gene and removed from child
         assertTrue(gene.hasAttribute(GENE_SYNONYM));
-        assertEquals(List.of("syn1", "syn2"), gene.getAttributeValueList(GENE_SYNONYM));
+        assertEquals(
+                List.of("syn1", "syn2"),
+                gene.getAttributeListByName(GENE_SYNONYM).orElse(new ArrayList<>()));
         assertFalse(cds.hasAttribute(GENE_SYNONYM));
     }
 
@@ -85,10 +87,10 @@ public class GeneSynonymFixTest {
     void movesGeneSynonymFromChildToGenelikeAncestor() {
         GeneSynonymFix fix = mockGff3GeneFeatureList(List.of("gene1"), List.of("ncRNA_gene"));
         // parent gene feature
-        Map<String, Object> geneLikeAttrs = new HashMap<>();
+        Map<String, List<String>> geneLikeAttrs = new HashMap<>();
         GFF3Feature genelike = TestUtils.createGFF3Feature("ncRNA_gene", geneLikeAttrs);
         // child feature with gene_synonym
-        Map<String, Object> childAttrs = new HashMap<>();
+        Map<String, List<String>> childAttrs = new HashMap<>();
         childAttrs.put(GENE_SYNONYM, new ArrayList<>(List.of("syn1", "syn2")));
         GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "gene1", childAttrs);
         // link up the family
@@ -109,7 +111,9 @@ public class GeneSynonymFixTest {
         assertSame(cds, result.get(1));
         // gene_synonym moved to parent gene and removed from child
         assertTrue(genelike.hasAttribute(GENE_SYNONYM));
-        assertEquals(List.of("syn1", "syn2"), genelike.getAttributeValueList(GENE_SYNONYM));
+        assertEquals(
+                List.of("syn1", "syn2"),
+                genelike.getAttributeListByName(GENE_SYNONYM).orElse(new ArrayList<>()));
         assertFalse(cds.hasAttribute(GENE_SYNONYM));
     }
 
@@ -117,11 +121,11 @@ public class GeneSynonymFixTest {
     void doesNotOverwriteExistingParentGeneSynonym() {
         GeneSynonymFix fix = mockGff3GeneFeatureList(List.of("gene1"), List.of());
         // parent gene already has canonical gene_synonym
-        Map<String, Object> geneAttrs = new HashMap<>();
+        Map<String, List<String>> geneAttrs = new HashMap<>();
         geneAttrs.put(GENE_SYNONYM, new ArrayList<>(List.of("parentSyn")));
         GFF3Feature gene = TestUtils.createGFF3Feature("gene1", geneAttrs);
         // child feature with a different synonym list
-        Map<String, Object> childAttrs = new HashMap<>();
+        Map<String, List<String>> childAttrs = new HashMap<>();
         childAttrs.put(GENE_SYNONYM, new ArrayList<>(List.of("childSyn")));
         GFF3Feature cds = TestUtils.createGFF3Feature("something", "gene1", childAttrs);
         // link up the family
@@ -136,7 +140,8 @@ public class GeneSynonymFixTest {
 
         // Parent keeps its original synonyms and child loses its synonyms
         assertTrue(gene.hasAttribute(GENE_SYNONYM));
-        assertEquals(List.of("parentSyn"), gene.getAttributeValueList(GENE_SYNONYM));
+        assertEquals(
+                List.of("parentSyn"), gene.getAttributeListByName(GENE_SYNONYM).orElse(new ArrayList<>()));
         assertFalse(cds.hasAttribute(GENE_SYNONYM));
     }
 
@@ -145,11 +150,11 @@ public class GeneSynonymFixTest {
         // Empty gene feature set → findGeneAncestor will always return null
         GeneSynonymFix fix = mockGff3GeneFeatureList(List.of("gene1"), List.of());
         // All three share same location (start/end) so fallback should climb to the root
-        Map<String, Object> rootAttrs = new HashMap<>();
+        Map<String, List<String>> rootAttrs = new HashMap<>();
         GFF3Feature root = TestUtils.createGFF3Feature("root", 1, 800, rootAttrs);
-        Map<String, Object> midAttrs = new HashMap<>();
+        Map<String, List<String>> midAttrs = new HashMap<>();
         GFF3Feature mid = TestUtils.createGFF3Feature("mid", "root", TestUtils.DEFAULT_ACCESSION, midAttrs);
-        Map<String, Object> leafAttrs = new HashMap<>();
+        Map<String, List<String>> leafAttrs = new HashMap<>();
         leafAttrs.put(GENE_SYNONYM, new ArrayList<>(List.of("leafSyn")));
         GFF3Feature leaf = TestUtils.createGFF3Feature("leaf", "mid", TestUtils.DEFAULT_ACCESSION, leafAttrs);
         // Set up the family
@@ -167,7 +172,8 @@ public class GeneSynonymFixTest {
 
         // should have pushed gene_synonym to the top-most ancestor with same location (root)
         assertTrue(root.hasAttribute(GENE_SYNONYM));
-        assertEquals(List.of("leafSyn"), root.getAttributeValueList(GENE_SYNONYM));
+        assertEquals(
+                List.of("leafSyn"), root.getAttributeListByName(GENE_SYNONYM).orElse(new ArrayList<>()));
         assertFalse(leaf.hasAttribute(GENE_SYNONYM));
     }
 
@@ -178,10 +184,10 @@ public class GeneSynonymFixTest {
         String geneName = "gene1";
         GeneSynonymFix fix = mockGff3GeneFeatureList(List.of(geneName), List.of());
         // region parent feature
-        Map<String, Object> geneAttrs = new HashMap<>();
+        Map<String, List<String>> geneAttrs = new HashMap<>();
         GFF3Feature region = TestUtils.createGFF3Feature("region", geneAttrs);
         // gene with gene synonyms feature - child of region
-        Map<String, Object> childAttrs = new HashMap<>();
+        Map<String, List<String>> childAttrs = new HashMap<>();
         childAttrs.put(GENE_SYNONYM, new ArrayList<>(List.of("syn1")));
         GFF3Feature genefeature = TestUtils.createGFF3Feature(geneName, "gene1", childAttrs);
         // link up the family
@@ -197,7 +203,9 @@ public class GeneSynonymFixTest {
         // Because seqId is treated as a "gene feature", no movement should occur
         assertFalse(region.hasAttribute(GENE_SYNONYM));
         assertTrue(genefeature.hasAttribute(GENE_SYNONYM));
-        assertEquals(List.of("syn1"), genefeature.getAttributeValueList(GENE_SYNONYM));
+        assertEquals(
+                List.of("syn1"),
+                genefeature.getAttributeListByName(GENE_SYNONYM).orElse(new ArrayList<>()));
     }
 
     @Test
@@ -207,10 +215,10 @@ public class GeneSynonymFixTest {
         String rnaFeature = "ncRNA";
         GeneSynonymFix fix = mockGff3GeneFeatureList(List.of("gene1"), List.of(rnaFeature));
         // region parent feature
-        Map<String, Object> geneAttrs = new HashMap<>();
+        Map<String, List<String>> geneAttrs = new HashMap<>();
         GFF3Feature region = TestUtils.createGFF3Feature("region", geneAttrs);
         // gene with gene synonyms feature - child of region
-        Map<String, Object> childAttrs = new HashMap<>();
+        Map<String, List<String>> childAttrs = new HashMap<>();
         childAttrs.put(GENE_SYNONYM, new ArrayList<>(List.of("syn1")));
         GFF3Feature genefeature = TestUtils.createGFF3Feature(rnaFeature, "", childAttrs);
         // link up the family
@@ -226,20 +234,22 @@ public class GeneSynonymFixTest {
         // Because seqId is treated as a "gene feature", no movement should occur
         assertFalse(region.hasAttribute(GENE_SYNONYM));
         assertTrue(genefeature.hasAttribute(GENE_SYNONYM));
-        assertEquals(List.of("syn1"), genefeature.getAttributeValueList(GENE_SYNONYM));
+        assertEquals(
+                List.of("syn1"),
+                genefeature.getAttributeListByName(GENE_SYNONYM).orElse(new ArrayList<>()));
     }
 
     @Test
     void findGeneAncestorReturnsGeneWhenNameInGeneFeatures() {
         GeneSynonymFix fix = mockGff3GeneFeatureList(List.of("gene1"), List.of("ncRNA"));
 
-        Map<String, Object> geneAttrs = new HashMap<>();
+        Map<String, List<String>> geneAttrs = new HashMap<>();
         GFF3Feature gene = TestUtils.createGFF3Feature("gene1", geneAttrs);
 
-        Map<String, Object> mrnaAttrs = new HashMap<>();
+        Map<String, List<String>> mrnaAttrs = new HashMap<>();
         GFF3Feature mrna = TestUtils.createGFF3Feature("ncRNA", "gene1", geneAttrs);
 
-        Map<String, Object> childAttrs = new HashMap<>();
+        Map<String, List<String>> childAttrs = new HashMap<>();
         GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "ncRNA", childAttrs);
 
         mrna.setParent(gene);
@@ -256,13 +266,13 @@ public class GeneSynonymFixTest {
     void findGeneAncestorReturnsGeneLikeWhenNameInGeneLikeFeatures() {
         GeneSynonymFix fix = mockGff3GeneFeatureList(List.of("gene1"), List.of("ncRNA"));
 
-        Map<String, Object> somethingelse = new HashMap<>();
+        Map<String, List<String>> somethingelse = new HashMap<>();
         GFF3Feature parnt = TestUtils.createGFF3Feature("somethingelse", somethingelse);
 
-        Map<String, Object> mrnaAttrs = new HashMap<>();
+        Map<String, List<String>> mrnaAttrs = new HashMap<>();
         GFF3Feature mrna = TestUtils.createGFF3Feature("ncRNA", "somethingelse", mrnaAttrs);
 
-        Map<String, Object> childAttrs = new HashMap<>();
+        Map<String, List<String>> childAttrs = new HashMap<>();
         GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "ncRNA", childAttrs);
 
         mrna.setParent(parnt);

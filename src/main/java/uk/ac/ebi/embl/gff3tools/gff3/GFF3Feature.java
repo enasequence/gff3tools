@@ -105,8 +105,12 @@ public class GFF3Feature {
         return Math.max(end - start + 1, 0);
     }
 
-    public Optional<List<String>> getAttributeByName(String name) {
-        return Optional.of(attributes.get(name));
+    public Optional<List<String>> getAttributeListByName(String name) {
+        return Optional.ofNullable(attributes.get(name));
+    }
+
+    public Optional<String> getAttributeByName(String name) {
+        return getAttributeListByName(name).filter((l) -> !l.isEmpty()).map((l) -> l.get(0));
     }
 
     public boolean hasAttribute(String name) {

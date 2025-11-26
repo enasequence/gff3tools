@@ -38,12 +38,11 @@ public class LocusTagAssociationFix {
         if (feature == null) return;
 
         // Grab the first non-blank gene value (commonly one; if multiple exist, use the first).
-        String gene = feature.getAttributeByName(GENE).map(List::getFirst).get();
+        String gene = feature.getAttributeByName(GENE).orElse(null);
         if (gene == null) return;
 
         String accessionNumber = feature.accession();
-        String presentLocus =
-                feature.getAttributeByName(LOCUS_TAG).map(List::getFirst).get();
+        String presentLocus = feature.getAttributeByName(LOCUS_TAG).orElse(null);
         if (accessionTogeneToLocusTag.containsKey(accessionNumber)) {
             var geneToLocusTag = accessionTogeneToLocusTag.get(accessionNumber);
             if (geneToLocusTag.containsKey(gene) && (presentLocus == null || presentLocus.isEmpty())) {

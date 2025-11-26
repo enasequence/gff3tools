@@ -315,11 +315,15 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateFeatureCircularRNASuccess() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.CIRCULAR_RNA, "true"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.CIRCULAR_RNA, List.of("true")));
         GFF3Feature trna = TestUtils.createGFF3Feature(
-                OntologyTerm.TRNA.name(), OntologyTerm.TRNA.name(), Map.of(GFF3Attributes.CIRCULAR_RNA, "true"));
+                OntologyTerm.TRNA.name(),
+                OntologyTerm.TRNA.name(),
+                Map.of(GFF3Attributes.CIRCULAR_RNA, List.of("true")));
         GFF3Feature mrna = TestUtils.createGFF3Feature(
-                OntologyTerm.MRNA.name(), OntologyTerm.MRNA.name(), Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
+                OntologyTerm.MRNA.name(),
+                OntologyTerm.MRNA.name(),
+                Map.of(GFF3Attributes.CHROMOSOME, List.of("chromosome")));
 
         Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateCircularRNAAttribute(cds, 1));
         Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateCircularRNAAttribute(trna, 2));
@@ -329,11 +333,11 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateFeatureCircularRNAFailure() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.CIRCULAR_RNA, "true"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.CIRCULAR_RNA, List.of("true")));
         GFF3Feature trna = TestUtils.createGFF3Feature(
                 OntologyTerm.PROPEPTIDE.name(),
                 OntologyTerm.PROPEPTIDE.name(),
-                Map.of(GFF3Attributes.CIRCULAR_RNA, "true"));
+                Map.of(GFF3Attributes.CIRCULAR_RNA, List.of("true")));
 
         Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateCircularRNAAttribute(cds, 1));
         ValidationException ex = Assertions.assertThrows(
@@ -346,7 +350,9 @@ public class AttributesRelationValidationTest {
     @Test
     public void testValidateFeatureCircularRNAFalseFailure() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.CIRCULAR_RNA, "false"));
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
+                Map.of(GFF3Attributes.CIRCULAR_RNA, List.of("false")));
 
         Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateCircularRNAAttribute(cds, 1));
     }

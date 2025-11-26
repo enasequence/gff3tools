@@ -95,8 +95,7 @@ public class GFF3Mapper {
     private void mapGFF3Feature(GFF3Feature gff3Feature, Map<String, OffsetRange> translationMap)
             throws ValidationException {
 
-        String existingID =
-                gff3Feature.getAttributeByName("ID").map(List::getFirst).get();
+        String existingID = gff3Feature.getAttributeByName("ID").orElse(null);
         String featureHashId = existingID == null ? gff3Feature.hashCodeString() : existingID;
 
         Location location = mapGFF3Location(gff3Feature);
@@ -205,8 +204,8 @@ public class GFF3Mapper {
     }
 
     private String getGeneForFeature(GFF3Feature gff3Feature) {
-        if (gff3Feature.getAttributes().containsKey("gene")) {
-            return gff3Feature.getAttributeByName("gene").map(List::getFirst).get();
+        if (gff3Feature.hasAttribute("gene")) {
+            return gff3Feature.getAttributeByName("gene").get();
         } else if (gff3Feature.getParentId().isPresent()) {
             GFF3Feature parent = parentFeatures.get(gff3Feature.getParentId().get());
             return getGeneForFeature(parent);

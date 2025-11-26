@@ -155,14 +155,20 @@ public class LengthValidationTest {
     @Test
     public void testPropetideValidationSuccessForException() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.PROPEPTIDE.name(), 1L, 13L, Map.of(GFF3Attributes.EXCEPTION, "ribosomal slippage"));
+                OntologyTerm.PROPEPTIDE.name(),
+                1L,
+                13L,
+                Map.of(GFF3Attributes.EXCEPTION, List.of("ribosomal slippage")));
         Assertions.assertDoesNotThrow(() -> lengthValidation.validatePropeptideLength(feature, 1));
     }
 
     @Test
     public void testPropetideValidationSuccessForTranslExcept() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.PROPEPTIDE.name(), 1L, 31L, Map.of(GFF3Attributes.TRANSL_EXCEPT, "ribosomal slippage"));
+                OntologyTerm.PROPEPTIDE.name(),
+                1L,
+                31L,
+                Map.of(GFF3Attributes.TRANSL_EXCEPT, List.of("ribosomal slippage")));
         Assertions.assertDoesNotThrow(() -> lengthValidation.validatePropeptideLength(feature, 1));
     }
 

@@ -12,7 +12,6 @@ package uk.ac.ebi.embl.gff3tools.validation.fix;
 
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
@@ -31,17 +30,12 @@ public class RenameAttributes {
             type = FEATURE)
     public void fixFeature(GFF3Feature feature, int line) {
 
-        String label = feature.getAttributeByName(GFF3Attributes.LABEL)
-                .map(List::getFirst)
-                .get();
-        String mobileElement = feature.getAttributeByName(GFF3Attributes.MOBILE_ELEMENT)
-                .map(List::getFirst)
-                .get();
+        String label = feature.getAttributeByName(GFF3Attributes.LABEL).orElse(null);
+        String mobileElement =
+                feature.getAttributeByName(GFF3Attributes.MOBILE_ELEMENT).orElse(null);
         if (label != null) {
             feature.removeAttribute(GFF3Attributes.LABEL);
-            String noteValue = feature.getAttributeByName(GFF3Attributes.NOTE)
-                    .map(List::getFirst)
-                    .get();
+            String noteValue = feature.getAttributeByName(GFF3Attributes.NOTE).orElse(null);
             String newNote;
             if (noteValue != null) {
                 newNote = noteValue.trim() + ";label:" + label;

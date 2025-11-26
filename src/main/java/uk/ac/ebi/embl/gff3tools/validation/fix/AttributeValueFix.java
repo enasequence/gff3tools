@@ -12,7 +12,6 @@ package uk.ac.ebi.embl.gff3tools.validation.fix;
 
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
@@ -30,9 +29,8 @@ public class AttributeValueFix {
             description = "Change the attribute value of mod_base. Refer: Modified base abbreviations",
             type = FEATURE)
     public void fixFeature(GFF3Feature feature, int line) {
-        String modBaseValue = feature.getAttributeByName(GFF3Attributes.MOD_BASE)
-                .map(List::getFirst)
-                .get();
+        String modBaseValue =
+                feature.getAttributeByName(GFF3Attributes.MOD_BASE).orElse(null);
         if (modBaseValue != null && modBaseValue.trim().equalsIgnoreCase("d")) {
             log.info("Updating value from  'd' to 'dhu' on {} attribute at line: {}", GFF3Attributes.MOD_BASE, line);
             feature.setAttribute(GFF3Attributes.MOD_BASE, "dhu");
