@@ -32,6 +32,8 @@ public class ValidationCommand extends AbstractCommand {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
 
         ValidationEngine validationEngine;
+        List<ValidationException> warnings;
+
         try {
             validationEngine = initValidationEngine(ruleOverrides);
         } catch (Exception e) {
@@ -48,12 +50,19 @@ public class ValidationCommand extends AbstractCommand {
             gff3Reader.readHeader();
             gff3Reader.read(annotation -> {});
 
-            List<ValidationException> _parsingErrors = validationEngine.getParsingErrors();
+            warnings = validationEngine.getParsingErrors();
 
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
 
-        log.info("The file has passed all validations!");
+        if (warnings != null && warnings.size() > 0) {
+            for (ValidationException e : warnings) {
+                log.warn("WARNING: %s".formatted(e.getMessage()));
+            }
+            log.info("The file passed validations with %d warnings".formatted(warnings.size()));
+        } else {
+            log.info("The file has passed all validations!");
+        }
     }
 }
