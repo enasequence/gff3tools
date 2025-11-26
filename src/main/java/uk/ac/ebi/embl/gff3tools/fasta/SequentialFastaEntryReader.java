@@ -62,19 +62,16 @@ public class SequentialFastaEntryReader implements AutoCloseable {
             String headerLine = readAsciiLine();
             if (headerLine == null) return false;
             ParsedHeader ph = headerParser.parse(headerLine);
-            //find the start & end bytes of the sequence of the current fasta entry
+            //find information about the current positions and line structure of the sequence
             SequenceIndex idx = buildSequenceIndex();
 
             FastaEntry e = new FastaEntry();
             e.setId(ph.getId());
             e.setHeader(ph.getHeader());
-            e.setFastaStart(headerPos.); //todo THIS GARBAGE
+            e.setFastaStart(headerPos.getAsLong());
             e.setSequenceStart(idx.firstBaseByte);
             e.setSequenceEnd(idx.lastBaseByte);
-            this.current = e;
-
-            // keep 'idx' around as a field if you want fast range queries for current entry
-            this.currentIndex = idx;
+            e.setSequenceIndex(idx);
 
             this.current = e;
             return true;
@@ -86,11 +83,15 @@ public class SequentialFastaEntryReader implements AutoCloseable {
 
     // ---- private helpers (the only code allowed to touch channel position) ----
 
-    private OptionalLong goToNextFastaEntry() throws IOException { //TODO modify so that the > has to be the first character in line
+    /** finds the first next '>' after the current fasta entry and puts the channel reader position there.
+     * If there is no later fasta entry, returns empty and leaves the channel reader position where it was.
+     * **/
+    private OptionalLong goToNextFastaEntry() throws IOException {
         long currentPosition = channel.position(), originalPosition = currentPosition;
         if (currentPosition >= fileSize) return OptionalLong.empty();
 
-        ByteBuffer buf = ByteBuffer.allocateDirect(BUF_SIZE); //read the next chunk of the file
+        //read the file content from current position (which should be somewhere in the current fasta entry or at the beginning of file) chunk by chunk
+        ByteBuffer buf = ByteBuffer.allocateDirect(BUF_SIZE);
         while (currentPosition < fileSize) {
             buf.clear();
             int minToRead = (int) Math.min(buf.capacity(), fileSize - currentPosition);
@@ -104,14 +105,16 @@ public class SequentialFastaEntryReader implements AutoCloseable {
                 if (buf.get() == GT) {
                     long potentialFastaStart = currentPosition + buf.position() - 1;
                     if(peekIsEndOfLine(potentialFastaStart - 1)) {
-                        channel.position(potentialFastaStart); //put the channel position on the new greater than
+                        // found new fasta entry start
+                        channel.position(potentialFastaStart);
                         return OptionalLong.of(potentialFastaStart);
                     }
                 }
             }
             currentPosition += numberOfBytesRead;
         }
-        channel.position(originalPosition); //if we didn't find new fasta entry start, go back to original position
+        //found no fasta starting after the current channel reader position
+        channel.position(originalPosition);
         return OptionalLong.empty();
     }
 
@@ -131,7 +134,10 @@ public class SequentialFastaEntryReader implements AutoCloseable {
         return n == 1 && one.get(0) == GT;
     }
 
-    private String readAsciiLine() throws IOException {
+    /* returns entire next line from the current reader position or the maximum buffer size if the line is too large to safely process (unlikely).
+    * Places current channel reader position at the first next unread character. (end of line or )
+    * */ //TODO return boolean to see whether the line was read completely
+    private String readAsciiLine() throws IOException { //todo unfuck
         if (channel.position() >= fileSize) return null;
 
         StringBuilder sb = new StringBuilder(256);
@@ -154,7 +160,7 @@ public class SequentialFastaEntryReader implements AutoCloseable {
                 if (buf.get(buf.position() + i) == LF) { lfIndex = i; break; }
             }
 
-            if (lfIndex >= 0) { //if there is an "\n", read it and position the channel at the end of index
+            if (lfIndex >= 0) { //if there is an "\n", read it and position the channel at the end of line
                 byte[] chunk = new byte[lfIndex];
                 buf.get(chunk);
                 sb.append(new String(chunk, StandardCharsets.US_ASCII));
@@ -170,6 +176,7 @@ public class SequentialFastaEntryReader implements AutoCloseable {
                 currentPosition += numberOfBytesRead;
             }
         }
+
         channel.position(fileSize);
         return sb.toString();
     }

@@ -1,8 +1,8 @@
 package uk.ac.ebi.embl.gff3tools.fasta.sequenceutils;
 
 public final class SequenceIndex {
-    final long firstBaseByte;      // absolute byte offset of the first base (inclusive), -1 if none
-    final long lastBaseByte;       // absolute byte offset of the last base (inclusive), -1 if none
+    public final long firstBaseByte;      // absolute byte offset of the first base (inclusive), -1 if none
+    public final long lastBaseByte;       // absolute byte offset of the last base (inclusive), -1 if none
     final java.util.List<LineEntry> lines; // sorted by baseStart
 
     public SequenceIndex(long firstBaseByte, long lastBaseByte, java.util.List<LineEntry> lines) {
