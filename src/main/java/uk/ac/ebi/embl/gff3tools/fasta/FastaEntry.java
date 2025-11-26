@@ -6,6 +6,10 @@ import lombok.Setter;
 @Getter
 @Setter
 public class FastaEntry {
-    String Id; //accessionNumber
+    String id; // submissionNumber or accessionNumber
     FastaHeader header;
+
+    long fastaStart;     // position of '>' in the file
+    long sequenceStart;  // first allowed base after header (absolute byte offset)
+    long sequenceEnd;    // last allowed base before next header (absolute byte offset)
 }
