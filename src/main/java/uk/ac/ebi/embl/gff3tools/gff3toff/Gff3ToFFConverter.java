@@ -12,6 +12,8 @@ package uk.ac.ebi.embl.gff3tools.gff3toff;
 
 import java.io.*;
 import java.nio.file.Path;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 import uk.ac.ebi.embl.gff3tools.*;
 import uk.ac.ebi.embl.gff3tools.exception.*;
@@ -19,10 +21,16 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 
+@Slf4j
 public class Gff3ToFFConverter implements Converter {
 
     ValidationEngine validationEngine;
     Path gff3Path;
+    int warningCount = 0;
+
+    private void addToWarningCount(int c) {
+        warningCount += c;
+    }
 
     public Gff3ToFFConverter(ValidationEngine validationEngine, Path gff3Path) {
         this.validationEngine = validationEngine;
@@ -33,9 +41,22 @@ public class Gff3ToFFConverter implements Converter {
             throws ReadException, WriteException, ValidationException {
 
         try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader, gff3Path)) {
-
             gff3Reader.readHeader();
-            gff3Reader.read(annotation -> writeEntry(new GFF3Mapper(gff3Reader), annotation, writer));
+            gff3Reader.read(annotation -> {
+                writeEntry(new GFF3Mapper(gff3Reader), annotation, writer);
+                List<ValidationException> warnings = validationEngine.getParsingWarnings();
+                for (ValidationException e : warnings) {
+                    log.warn("WARNING: %s".formatted(e.getMessage()));
+                }
+                addToWarningCount(warnings.size());
+                warnings.clear();
+            });
+
+            if (warningCount > 0) {
+                log.info("The file was converted with %d warnings".formatted(warningCount));
+            } else {
+                log.info("Completed conversion");
+            }
 
         } catch (IOException e) {
             throw new RuntimeException(e);

@@ -18,7 +18,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -27,7 +26,6 @@ import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.Converter;
 import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.exception.FormatSupportException;
-import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
@@ -68,16 +66,6 @@ public class FileConversionCommand extends AbstractCommand {
             ValidationEngine engine = initValidationEngine(ruleOverrides);
             Converter converter = getConverter(engine, fromFileType, toFileType);
             converter.convert(inputReader, outputWriter);
-            List<ValidationException> warnings = engine.getParsingWarnings();
-
-            if (warnings != null && warnings.size() > 0) {
-                for (ValidationException e : warnings) {
-                    log.warn("WARNING: %s".formatted(e.getMessage()));
-                }
-                log.info("The file was converted with %d warnings".formatted(warnings.size()));
-            } else {
-                log.info("Completed conversion");
-            }
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }

@@ -27,6 +27,12 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 @Slf4j
 public class ValidationCommand extends AbstractCommand {
 
+    private int warningCount = 0;
+
+    private void addToWarnCount(int c) {
+        this.warningCount += c;
+    }
+
     @Override
     public void run() {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
@@ -47,19 +53,23 @@ public class ValidationCommand extends AbstractCommand {
             ;
 
             gff3Reader.readHeader();
-            gff3Reader.read(annotation -> {});
+            gff3Reader.read(annotation -> {
+                List<ValidationException> warnings = validationEngine.getParsingWarnings();
+                if (warnings != null && warnings.size() > 0) {
+                    for (ValidationException e : warnings) {
+                        log.warn("WARNING: %s".formatted(e.getMessage()));
+                    }
+                    addToWarnCount(warnings.size());
+                    warnings.clear();
+                }
+            });
 
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
 
-        List<ValidationException> warnings = validationEngine.getParsingWarnings();
-
-        if (warnings != null && warnings.size() > 0) {
-            for (ValidationException e : warnings) {
-                log.warn("WARNING: %s".formatted(e.getMessage()));
-            }
-            log.info("The file passed validations with %d warnings".formatted(warnings.size()));
+        if (warningCount > 0) {
+            log.info("The file passed validations with %d warnings".formatted(warningCount));
         } else {
             log.info("The file has passed all validations!");
         }
