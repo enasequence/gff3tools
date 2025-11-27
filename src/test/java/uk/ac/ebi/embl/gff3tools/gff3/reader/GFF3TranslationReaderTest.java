@@ -15,6 +15,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -46,10 +47,10 @@ public class GFF3TranslationReaderTest {
                 "chr1\t.\tgene\t1\t1000\t.\t+\t.\tID=gene1",
                 "##FASTA",
                 ">BN000065.1|CDS_RHX",
-                "ATGCATGC",
+                "ATGCATGC\nATG",
                 "ATAT",
                 ">BN000066.1|CDS_RHD",
-                "TTTTGGGG",
+                "TTTTGGGG\nA\nT",
                 "");
 
         tempFile = Files.createTempFile("test_gff3", ".gff3");
@@ -73,6 +74,9 @@ public class GFF3TranslationReaderTest {
         List<String> keys = new ArrayList<>(map.keySet());
         Assertions.assertEquals("BN000065.1|CDS_RHX", keys.get(0));
         Assertions.assertEquals("BN000066.1|CDS_RHD", keys.get(1));
+
+        Assertions.assertEquals("ATGCATGCATGATAT", reader.readTranslation(map.get("BN000065.1|CDS_RHX")));
+        Assertions.assertEquals("TTTTGGGGAT", reader.readTranslation(map.get("BN000066.1|CDS_RHD")));
     }
 
     @Test
@@ -143,13 +147,13 @@ public class GFF3TranslationReaderTest {
     void testNewlinesAreRemoved() throws IOException {
         String file = Files.readString(tempFile);
         int start = file.indexOf("ATGC");
-        int end = start + "ATGCATGC\nATAT".length() - 1;
+        int end = start + "ATGCATGC\nATG\nATAT".length() - 1;
 
         OffsetRange r = new OffsetRange(start, end);
         String seq = reader.readTranslation(r);
 
         Assertions.assertFalse(seq.contains("\n"));
-        Assertions.assertEquals("ATGCATGCATAT", seq);
+        Assertions.assertEquals("ATGCATGCATGATAT", seq);
     }
 
     @Test
@@ -175,5 +179,45 @@ public class GFF3TranslationReaderTest {
 
         String seq = reader.readTranslation(r);
         Assertions.assertEquals("", seq);
+    }
+
+    @Test
+    void testNoSequenceGff3() throws IOException, ValidationException {
+        // Inject an invalid character into the file
+        Files.writeString(tempFile, "id\tsource\t", StandardOpenOption.TRUNCATE_EXISTING);
+
+        Path noSequence = Files.createTempFile("noSequence", ".gff3");
+        Files.write(
+                noSequence,
+                "id\tsource\tattribute\nid\tsource\tattribute".getBytes(StandardCharsets.UTF_8),
+                StandardOpenOption.TRUNCATE_EXISTING);
+
+        GFF3TranslationReader emptyReader = new GFF3TranslationReader(null, noSequence);
+
+        Map<String, OffsetRange> map = emptyReader.readTranslationOffset();
+        Assertions.assertTrue(map.isEmpty());
+
+        Files.delete(noSequence);
+    }
+
+    @Test
+    void testInvalidTranslationSequenceGff3() throws IOException, ValidationException {
+        // Inject an invalid character into the file
+        Files.writeString(tempFile, "id\tsource\t", StandardOpenOption.TRUNCATE_EXISTING);
+
+        Path noSequence = Files.createTempFile("noSequence", ".gff3");
+        Files.write(
+                noSequence,
+                "id\tsource\tattribute\nid\tsource\n>test_1\nATGCATGCATAT".getBytes(StandardCharsets.UTF_8),
+                StandardOpenOption.TRUNCATE_EXISTING);
+
+        GFF3TranslationReader emptyReader = new GFF3TranslationReader(null, noSequence);
+
+        RuntimeException ex =
+                Assertions.assertThrows(RuntimeException.class, () -> emptyReader.readTranslationOffset());
+
+        Assertions.assertTrue(ex.getMessage().contains("Invalid GFF3 translation sequence:"));
+
+        Files.delete(noSequence);
     }
 }
