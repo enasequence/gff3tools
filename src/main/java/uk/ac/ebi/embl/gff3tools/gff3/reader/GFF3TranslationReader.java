@@ -58,6 +58,7 @@ public class GFF3TranslationReader {
             long fileSize = channel.size();
             long position = fileSize;
             long seqEnd = fileSize - 1;
+            long cursorPos;
 
             // 1 MB Buffer size
             final int bufferSize = 1024 * 1024;
@@ -79,7 +80,10 @@ public class GFF3TranslationReader {
 
                 // Scan block backwards
                 for (int i = (int) bytesToRead - 1; i >= 0; i--) {
+
                     byte b = buffer.get(i);
+                    // absolute byte position in file
+                    cursorPos = position + i;
 
                     if (b == '\n' || b == '\r') {
 
@@ -108,10 +112,11 @@ public class GFF3TranslationReader {
 
                             // Header line → store offset range
                             if (line.startsWith(">")) {
-                                String id = line.substring(1); // remove '>'
-                                long seqStart = line.length() + i + 1;
+                                // remove '>'
+                                String id = line.substring(1);
+                                long seqStart = cursorPos + line.length() + 1;
                                 offsetMap.put(id, new OffsetRange(seqStart, seqEnd));
-                                seqEnd = position + i; // next sequence ends here
+                                seqEnd = cursorPos; // next sequence ends here
                             }
                         }
 

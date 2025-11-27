@@ -33,7 +33,7 @@ class GFF3ToFFConverterTest {
         for (String filePrefix : testFiles.keySet()) {
             Path testFileDir = testFiles.get(filePrefix).getParent();
             String inFile = testFiles.get(filePrefix).toString();
-            String outFile = testFileDir.resolve(filePrefix + ".embl").toString();
+            String outFile = testFileDir.resolve(filePrefix + "-out.embl").toString();
             String[] args = {"conversion", inFile, outFile};
             try {
                 StringWriter err = new StringWriter();

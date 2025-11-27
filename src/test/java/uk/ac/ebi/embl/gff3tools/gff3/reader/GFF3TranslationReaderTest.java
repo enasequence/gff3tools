@@ -47,10 +47,10 @@ public class GFF3TranslationReaderTest {
                 "chr1\t.\tgene\t1\t1000\t.\t+\t.\tID=gene1",
                 "##FASTA",
                 ">BN000065.1|CDS_RHX",
-                "ATGCATGC",
+                "ATGCATGC\nATG",
                 "ATAT",
                 ">BN000066.1|CDS_RHD",
-                "TTTTGGGG",
+                "TTTTGGGG\nA\nT",
                 "");
 
         tempFile = Files.createTempFile("test_gff3", ".gff3");
@@ -74,6 +74,9 @@ public class GFF3TranslationReaderTest {
         List<String> keys = new ArrayList<>(map.keySet());
         Assertions.assertEquals("BN000065.1|CDS_RHX", keys.get(0));
         Assertions.assertEquals("BN000066.1|CDS_RHD", keys.get(1));
+
+        Assertions.assertEquals("ATGCATGCATGATAT", reader.readTranslation(map.get("BN000065.1|CDS_RHX")));
+        Assertions.assertEquals("TTTTGGGGAT", reader.readTranslation(map.get("BN000066.1|CDS_RHD")));
     }
 
     @Test
@@ -144,13 +147,13 @@ public class GFF3TranslationReaderTest {
     void testNewlinesAreRemoved() throws IOException {
         String file = Files.readString(tempFile);
         int start = file.indexOf("ATGC");
-        int end = start + "ATGCATGC\nATAT".length() - 1;
+        int end = start + "ATGCATGC\nATG\nATAT".length() - 1;
 
         OffsetRange r = new OffsetRange(start, end);
         String seq = reader.readTranslation(r);
 
         Assertions.assertFalse(seq.contains("\n"));
-        Assertions.assertEquals("ATGCATGCATAT", seq);
+        Assertions.assertEquals("ATGCATGCATGATAT", seq);
     }
 
     @Test
