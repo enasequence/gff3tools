@@ -101,6 +101,7 @@ public class GFF3TranslationReader {
                                     stop = true;
                                     break;
                                 } else {
+                                    // Error when unwanted lines appear in the middle of a translation block
                                     throw new RuntimeException("Invalid GFF3 translation sequence: " + line);
                                 }
                             }
