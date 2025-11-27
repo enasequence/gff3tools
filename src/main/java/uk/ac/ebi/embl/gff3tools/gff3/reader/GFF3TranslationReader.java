@@ -18,7 +18,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.InvalidGFF3RecordException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -89,6 +88,12 @@ public class GFF3TranslationReader {
                             String line = lineBuffer.reverse().toString();
                             lineBuffer.setLength(0);
 
+                            // Hit FASTA section
+                            if (line.startsWith("##FASTA")) {
+                                stop = true;
+                                break;
+                            }
+
                             // Exit when line is not a sequence
                             if (!isValidSequence(line) && !line.startsWith(">")) {
                                 if (offsetMap.isEmpty()) {
@@ -98,12 +103,6 @@ public class GFF3TranslationReader {
                                 } else {
                                     throw new RuntimeException("Invalid GFF3 translation sequence: " + line);
                                 }
-                            }
-
-                            // Hit FASTA section
-                            if (line.startsWith("##FASTA")) {
-                                stop = true;
-                                break;
                             }
 
                             // Header line → store offset range
