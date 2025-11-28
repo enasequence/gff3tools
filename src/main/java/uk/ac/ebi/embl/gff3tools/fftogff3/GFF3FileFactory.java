@@ -56,7 +56,7 @@ public class GFF3FileFactory {
                 .species(species)
                 .annotations(annotations)
                 .fastaFilePath(fastaFilePath)
-                .parsingErrors(engine.getParsingErrors())
+                .parsingWarnings(engine.getParsingWarnings())
                 .build();
     }
 }
