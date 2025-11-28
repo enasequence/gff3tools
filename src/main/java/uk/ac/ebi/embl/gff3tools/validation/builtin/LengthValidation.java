@@ -10,8 +10,14 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
@@ -38,6 +44,7 @@ public class LengthValidation extends Validation {
             "Intron usually expected to be at least 10 nt long. Please check accuracy and Use one of the following options for annotation: \n /artificial_location=\"heterogeneous population sequenced\" \n OR \n /artificial_location=\"low-quality sequence region\". \n Alternatively, use where appropriate: \n /pseudo, /pseudogene, /trans_splicing, /ribosomal_slippage";
 
     private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
+    private final Map<String, Map<String, List<GFF3Feature>>> annotationCds = new HashMap<>();
 
     @ValidationMethod(rule = "INTRON_LENGTH", type = ValidationType.FEATURE)
     public void validateIntronLength(GFF3Feature feature, int line) throws ValidationException {
@@ -54,16 +61,59 @@ public class LengthValidation extends Validation {
 
         boolean isCds =
                 OntologyTerm.CDS.ID.equals(soId) || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.CDS.ID);
-        if (isCds) {
-            if (isPseudo(feature)
-                    || feature.hasAttribute(GFF3Attributes.RIBOSOMAL_SLIPPAGE)
-                    || feature.hasAttribute(GFF3Attributes.TRANS_SPLICING)) {
-                return;
-            }
-            if (length < INTRON_FEATURE_MIN_LENGTH && !feature.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION)) {
-                throw new ValidationException(line, INVALID_CDS_INTRON_LENGTH_MESSAGE);
+
+        if (!isCds) return;
+
+        if (isPseudo(feature)
+                || feature.hasAttribute(GFF3Attributes.RIBOSOMAL_SLIPPAGE)
+                || feature.hasAttribute(GFF3Attributes.TRANS_SPLICING)) {
+            return;
+        }
+
+        String accession = feature.accession();
+        String attributeId = feature.getAttributeByName(GFF3Attributes.ATTRIBUTE_ID);
+
+        annotationCds
+                .computeIfAbsent(accession, k -> new HashMap<>())
+                .computeIfAbsent(attributeId, k -> new ArrayList<>())
+                .add(feature);
+    }
+
+    @ValidationMethod(rule = "CDS_INTRON_LENGTH", type = ValidationType.ANNOTATION)
+    public void validateIntronLengthWithinCDS(GFF3Annotation gff3Annotation, int line) throws ValidationException {
+
+        Map<String, List<GFF3Feature>> cdsFeaturesMap = annotationCds.remove(gff3Annotation.getAccession());
+
+        if (cdsFeaturesMap == null) return;
+
+        for (Map.Entry<String, List<GFF3Feature>> entry : cdsFeaturesMap.entrySet()) {
+            validateCdsIntronLength(entry.getValue(), line);
+        }
+
+        cdsFeaturesMap.clear();
+    }
+
+    private void validateCdsIntronLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
+
+        if (cdsList.size() <= 1) {
+            return;
+        }
+        cdsList.sort(Comparator.comparingLong(GFF3Feature::getStart));
+
+        for (int i = 1; i < cdsList.size(); i++) {
+            GFF3Feature prev = cdsList.get(i - 1);
+            GFF3Feature curr = cdsList.get(i);
+            long intron = curr.getStart() - prev.getEnd();
+            if (intron >= 0 && intron < 10) {
+                boolean artificial = prev.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION)
+                        || curr.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION);
+
+                if (!artificial && !isPseudo(curr)) {
+                    throw new ValidationException(line, INVALID_CDS_INTRON_LENGTH_MESSAGE);
+                }
             }
         }
+        cdsList.clear();
     }
 
     @ValidationMethod(rule = "EXON_LENGTH", type = ValidationType.FEATURE, severity = RuleSeverity.WARN)
