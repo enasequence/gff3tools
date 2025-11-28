@@ -1,0 +1,106 @@
+ID   CAZ123; SV 1; linear; genomic DNA; WGS; INV; 15486859 BP.
+XX
+AC   CAZ123;
+XX
+XX
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..15486859
+FT                   /organism="Fasciola hepatica"
+FT                   /mol_type="genomic DNA"
+FT                   /note="contig: scaffold_11"
+FT                   /db_xref="taxon:6192"
+FT                   /submitter_seqid="scaffold_11"
+FT   gene            complement(4172760..4174883)
+FT                   /locus_tag="FHB240107_LOCUS4240"
+FT                   /note="ID:g4259"
+FT                   /note="source:AUGUSTUS"
+FT   mRNA            complement(join(4172760..4172828,4173013..4173023,
+FT                   4173079..4173084,4173352..4173402,4173720..4173751,
+FT                   4173839..4173921,4174387..4174487,4174573..4174599,
+FT                   4174856..4174883))
+FT                   /locus_tag="FHB240107_LOCUS4240"
+FT                   /note="ID:g4259.t1"
+FT                   /note="source:AUGUSTUS"
+FT   CDS             complement(join(4172760..4172828,4173013..4173023,
+FT                   4173079..4173084,4173352..4173402,4173720..4173751,
+FT                   4173839..4173921,4174387..4174487,4174573..4174599,
+FT                   4174856..4174883))
+FT                   /codon_start=1
+FT                   /transl_table=1
+FT                   /locus_tag="FHB240107_LOCUS4240"
+FT                   /note="ID:g4259.t1.CDS1"
+FT                   /note="ID:g4259.t1.CDS2"
+FT                   /note="ID:g4259.t1.CDS3"
+FT                   /note="ID:g4259.t1.CDS4"
+FT                   /note="ID:g4259.t1.CDS5"
+FT                   /note="ID:g4259.t1.CDS6"
+FT                   /note="ID:g4259.t1.CDS7"
+FT                   /note="ID:g4259.t1.CDS8"
+FT                   /note="ID:g4259.t1.CDS9"
+FT                   /note="source:AUGUSTUS"
+FT                   /protein_id="CAM0511885.1"
+FT   intron          complement(4174600..4174855)
+FT                   /locus_tag="FHB240107_LOCUS4240"
+FT                   /note="ID:g4259.t1.intron8"
+FT                   /note="source:AUGUSTUS"
+FT   exon            complement(4174856..4174883)
+FT                   /locus_tag="FHB240107_LOCUS4240"
+FT                   /note="ID:g4259.t1.exon9"
+FT                   /note="source:AUGUSTUS"
+FT   mRNA            complement(7172949..7175426)
+FT                   /locus_tag="FHB240107_LOCUS4241"
+FT                   /note="ID:g4260.t1"
+FT                   /note="source:AUGUSTUS"
+FT   CDS             complement(7172949..7175426)
+FT                   /codon_start=1
+FT                   /transl_table=1
+FT                   /locus_tag="FHB240107_LOCUS4241"
+FT                   /note="ID:g4260.t1.CDS1"
+FT                   /note="source:AUGUSTUS"
+FT                   /protein_id="CAM0511887.1"
+FT   exon            complement(7172949..7175426)
+FT                   /locus_tag="FHB240107_LOCUS4241"
+FT                   /note="ID:g4260.t1.exon1"
+FT                   /note="source:AUGUSTUS"
+FT   mRNA            7176660..7179137
+FT                   /locus_tag="FHB240107_LOCUS4242"
+FT                   /note="ID:g4261.t1"
+FT                   /note="source:AUGUSTUS"
+FT   CDS             7176660..7179137
+FT                   /codon_start=1
+FT                   /transl_table=1
+FT                   /locus_tag="FHB240107_LOCUS4242"
+FT                   /note="ID:g4261.t1.CDS1"
+FT                   /note="source:AUGUSTUS"
+FT                   /protein_id="CAM0511889.1"
+FT   CDS             7179282..7181759
+FT                   /codon_start=1
+FT                   /transl_table=1
+FT                   /locus_tag="FHB240107_LOCUS4243"
+FT                   /note="ID:g4262.t1.CDS1"
+FT                   /note="source:AUGUSTUS"
+FT                   /protein_id="CAM0511891.1"
+FT   CDS             complement(join(11513581..11513645,11513801..11513962,
+FT                   11515068..11515229,11515702..11515863,11517287..11517448,
+FT                   11519189..11519350,11520457..11520618,11521090..11521251,
+FT                   11525525..11525686,11527110..11527271,11527427..11527520))
+FT                   /codon_start=1
+FT                   /transl_table=1
+FT                   /locus_tag="FHB240107_LOCUS4244"
+FT                   /note="ID:g4263.t1.CDS1"
+FT                   /note="ID:g4263.t1.CDS10"
+FT                   /note="ID:g4263.t1.CDS11"
+FT                   /note="ID:g4263.t1.CDS2"
+FT                   /note="ID:g4263.t1.CDS3"
+FT                   /note="ID:g4263.t1.CDS4"
+FT                   /note="ID:g4263.t1.CDS5"
+FT                   /note="ID:g4263.t1.CDS6"
+FT                   /note="ID:g4263.t1.CDS7"
+FT                   /note="ID:g4263.t1.CDS8"
+FT                   /note="ID:g4263.t1.CDS9"
+FT                   /note="source:AUGUSTUS"
+FT                   /protein_id="CAM0511892.1"
+XX
+//
