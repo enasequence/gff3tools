@@ -41,6 +41,10 @@ public class ValidationEngine {
         executeValidations(target, line);
     }
 
+    public <T> void onExit() {
+        executeExits();
+    }
+
     public <T> void executeValidations(T target, int line) throws ValidationException {
         List<ValidatorDescriptor> validators = validationRegistry.getValidations();
 
@@ -60,6 +64,18 @@ public class ValidationEngine {
                 }
             } catch (Exception e) {
                 handleRuleException(e, ruleSeverity, methodAnnotation.rule());
+            }
+        }
+    }
+
+    public void executeExits() {
+        List<ValidatorDescriptor> validators = validationRegistry.getExits();
+
+        for (ValidatorDescriptor validator : validators) {
+            try {
+                validator.method().invoke(validator.instance());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         }
     }
