@@ -253,4 +253,27 @@ public class ValidationEngineTest {
 
         assertThrows(ValidationException.class, () -> engine.handleSyntacticError(vex));
     }
+
+    @Test
+    void testExecuteValidations_invokesExitMethod() throws Exception {
+        // Mock method with @ValidationMethod
+        class DummyValidator {
+            @ExitMethod()
+            public void onExit() {}
+        }
+
+        Method m = DummyValidator.class.getDeclaredMethod("onExit");
+        DummyValidator instance = spy(new DummyValidator());
+
+        ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyValidator.class, instance, m);
+        List<ValidatorDescriptor> descriptors = List.of(descriptor);
+
+        try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
+
+            mocked.when(validationRegistry::getExits).thenReturn(descriptors);
+
+            engine.executeExits();
+            verify(instance, times(1)).onExit();
+        }
+    }
 }
