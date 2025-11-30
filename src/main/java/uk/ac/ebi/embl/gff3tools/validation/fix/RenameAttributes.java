@@ -30,11 +30,12 @@ public class RenameAttributes {
             type = FEATURE)
     public void fixFeature(GFF3Feature feature, int line) {
 
-        String label = feature.getAttributeByName(GFF3Attributes.LABEL);
-        String mobileElement = feature.getAttributeByName(GFF3Attributes.MOBILE_ELEMENT);
+        String label = feature.getAttributeByName(GFF3Attributes.LABEL).orElse(null);
+        String mobileElement =
+                feature.getAttributeByName(GFF3Attributes.MOBILE_ELEMENT).orElse(null);
         if (label != null) {
             feature.removeAttribute(GFF3Attributes.LABEL);
-            String noteValue = feature.getAttributeByName(GFF3Attributes.NOTE);
+            String noteValue = feature.getAttributeByName(GFF3Attributes.NOTE).orElse(null);
             String newNote;
             if (noteValue != null) {
                 newNote = noteValue.trim() + ";label:" + label;

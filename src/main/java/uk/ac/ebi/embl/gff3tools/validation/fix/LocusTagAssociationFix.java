@@ -38,11 +38,11 @@ public class LocusTagAssociationFix {
         if (feature == null) return;
 
         // Grab the first non-blank gene value (commonly one; if multiple exist, use the first).
-        String gene = firstNonBlank(feature.getAttributeValueList(GENE));
+        String gene = feature.getAttributeByName(GENE).orElse(null);
         if (gene == null) return;
 
         String accessionNumber = feature.accession();
-        String presentLocus = firstNonBlank(feature.getAttributeValueList(LOCUS_TAG));
+        String presentLocus = feature.getAttributeByName(LOCUS_TAG).orElse(null);
         if (accessionTogeneToLocusTag.containsKey(accessionNumber)) {
             var geneToLocusTag = accessionTogeneToLocusTag.get(accessionNumber);
             if (geneToLocusTag.containsKey(gene) && (presentLocus == null || presentLocus.isEmpty())) {
@@ -67,16 +67,5 @@ public class LocusTagAssociationFix {
     public Map<String, String> mappingSnapshot(String accessionNumber) {
         return Collections.unmodifiableMap(
                 accessionTogeneToLocusTag.getOrDefault(accessionNumber, Collections.emptyMap()));
-    }
-
-    private static String firstNonBlank(List<String> values) {
-        if (values == null) return null;
-        for (String v : values) {
-            if (v != null) {
-                String t = v.trim();
-                if (!t.isBlank()) return t;
-            }
-        }
-        return null;
     }
 }

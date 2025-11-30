@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +37,7 @@ public class AntiCodonValidationTest {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.RRNA.name(),
                 OntologyTerm.RRNA.name(),
-                Map.of(GFF3Attributes.PRODUCT, "16S ribosomalRNA "));
+                Map.of(GFF3Attributes.PRODUCT, List.of("16S ribosomalRNA ")));
 
         Assertions.assertDoesNotThrow(() -> antiCodonValidation.validateAntiCodon(feature, 1));
     }
@@ -44,7 +45,10 @@ public class AntiCodonValidationTest {
     @Test
     public void testValidateAntiCodonAttributeWithValidLength() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(), 200, 989, Map.of(GFF3Attributes.ANTI_CODON, "(pos:250..252,aa:His)"));
+                OntologyTerm.RRNA.name(),
+                200,
+                989,
+                Map.of(GFF3Attributes.ANTI_CODON, List.of("(pos:250..252,aa:His)")));
 
         Assertions.assertDoesNotThrow(() -> antiCodonValidation.validateAntiCodon(feature, 1));
     }
@@ -52,7 +56,10 @@ public class AntiCodonValidationTest {
     @Test
     public void testValidateTranslExceptCodonAttributeWithValidLength() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(), 200, 989, Map.of(GFF3Attributes.TRANSL_EXCEPT, "(pos:250..252,aa:His)"));
+                OntologyTerm.RRNA.name(),
+                200,
+                989,
+                Map.of(GFF3Attributes.TRANSL_EXCEPT, List.of("(pos:250..252,aa:His)")));
 
         Assertions.assertDoesNotThrow(() -> antiCodonValidation.validateAntiCodon(feature, 1));
     }
@@ -60,7 +67,10 @@ public class AntiCodonValidationTest {
     @Test
     public void testValidateAntiCodonAttributeWithInvalidRange() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(), 200, 989, Map.of(GFF3Attributes.ANTI_CODON, "(pos:2520..2580,aa:His)"));
+                OntologyTerm.RRNA.name(),
+                200,
+                989,
+                Map.of(GFF3Attributes.ANTI_CODON, List.of("(pos:2520..2580,aa:His)")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> antiCodonValidation.validateAntiCodon(feature, 1));
@@ -73,7 +83,10 @@ public class AntiCodonValidationTest {
     @Test
     public void testValidateTranslExceptCodonAttributeWithInvalidRange() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(), 200, 989, Map.of(GFF3Attributes.TRANSL_EXCEPT, "(pos:2520..2580,aa:His)"));
+                OntologyTerm.RRNA.name(),
+                200,
+                989,
+                Map.of(GFF3Attributes.TRANSL_EXCEPT, List.of("(pos:2520..2580,aa:His)")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> antiCodonValidation.validateTranslExcept(feature, 1));
@@ -86,7 +99,10 @@ public class AntiCodonValidationTest {
     @Test
     public void testValidateAntiCodonAttributeWithInvalidLengthSpan() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(), 200, 989, Map.of(GFF3Attributes.ANTI_CODON, "(pos:252..258,aa:His)"));
+                OntologyTerm.RRNA.name(),
+                200,
+                989,
+                Map.of(GFF3Attributes.ANTI_CODON, List.of("(pos:252..258,aa:His)")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> antiCodonValidation.validateAntiCodon(feature, 1));
@@ -98,7 +114,10 @@ public class AntiCodonValidationTest {
     @Test
     public void testValidateTranslExceptCodonAttributeWithInvalidLengthSpan() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(), 200, 989, Map.of(GFF3Attributes.TRANSL_EXCEPT, "(pos:252..258,aa:His)"));
+                OntologyTerm.RRNA.name(),
+                200,
+                989,
+                Map.of(GFF3Attributes.TRANSL_EXCEPT, List.of("(pos:252..258,aa:His)")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> antiCodonValidation.validateTranslExcept(feature, 1));
@@ -110,7 +129,10 @@ public class AntiCodonValidationTest {
     @Test
     public void testValidateTranslExceptTermCodonAttributeWithInvalidLengthSpan() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(), 200, 989, Map.of(GFF3Attributes.TRANSL_EXCEPT, "(pos:252..258,aa:TERM)"));
+                OntologyTerm.RRNA.name(),
+                200,
+                989,
+                Map.of(GFF3Attributes.TRANSL_EXCEPT, List.of("(pos:252..258,aa:TERM)")));
 
         Assertions.assertDoesNotThrow(() -> antiCodonValidation.validateTranslExcept(feature, 1));
     }
@@ -118,7 +140,10 @@ public class AntiCodonValidationTest {
     @Test
     public void testValidateAntiCodonAttributeWithInvalidLocation() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(), 200, 989, Map.of(GFF3Attributes.ANTI_CODON, "(pos:258..221,aa:His)"));
+                OntologyTerm.RRNA.name(),
+                200,
+                989,
+                Map.of(GFF3Attributes.ANTI_CODON, List.of("(pos:258..221,aa:His)")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> antiCodonValidation.validateAntiCodon(feature, 1));
@@ -131,7 +156,10 @@ public class AntiCodonValidationTest {
     @Test
     public void testValidateTranslExceptCodonAttributeWithInvalidLocation() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(), 200, 989, Map.of(GFF3Attributes.TRANSL_EXCEPT, "(pos:258..221,aa:His)"));
+                OntologyTerm.RRNA.name(),
+                200,
+                989,
+                Map.of(GFF3Attributes.TRANSL_EXCEPT, List.of("(pos:258..221,aa:His)")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> antiCodonValidation.validateTranslExcept(feature, 1));
@@ -144,7 +172,7 @@ public class AntiCodonValidationTest {
     @Test
     public void testValidateAntiCodonAttributeWithInvalidLocationStart() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(), 0, 989, Map.of(GFF3Attributes.ANTI_CODON, "(pos:0..221,aa:His)"));
+                OntologyTerm.RRNA.name(), 0, 989, Map.of(GFF3Attributes.ANTI_CODON, List.of("(pos:0..221,aa:His)")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> antiCodonValidation.validateAntiCodon(feature, 1));
@@ -157,7 +185,7 @@ public class AntiCodonValidationTest {
     @Test
     public void testValidateTranslExceptCodonAttributeWithInvalidLocationStart() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(), 0, 989, Map.of(GFF3Attributes.TRANSL_EXCEPT, "(pos:0..221,aa:His)"));
+                OntologyTerm.RRNA.name(), 0, 989, Map.of(GFF3Attributes.TRANSL_EXCEPT, List.of("(pos:0..221,aa:His)")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> antiCodonValidation.validateTranslExcept(feature, 1));
@@ -170,7 +198,7 @@ public class AntiCodonValidationTest {
     @Test
     public void testValidateAntiCodonAttributeInvalidAminoAcid() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(), 100, 989, Map.of(GFF3Attributes.ANTI_CODON, "(pos:200..202,aa:Hi)"));
+                OntologyTerm.RRNA.name(), 100, 989, Map.of(GFF3Attributes.ANTI_CODON, List.of("(pos:200..202,aa:Hi)")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> antiCodonValidation.validateAntiCodon(feature, 1));
@@ -182,7 +210,10 @@ public class AntiCodonValidationTest {
     @Test
     public void testValidateTranslExceptCodonAttributeInvalidAminoAcid() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(), 100, 989, Map.of(GFF3Attributes.TRANSL_EXCEPT, "(pos:200..202,aa:Hi)"));
+                OntologyTerm.RRNA.name(),
+                100,
+                989,
+                Map.of(GFF3Attributes.TRANSL_EXCEPT, List.of("(pos:200..202,aa:Hi)")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> antiCodonValidation.validateTranslExcept(feature, 1));
@@ -197,7 +228,7 @@ public class AntiCodonValidationTest {
                 OntologyTerm.RRNA.name(),
                 200,
                 989,
-                Map.of(GFF3Attributes.ANTI_CODON, "(pos:complement(252..258),aa:His)"));
+                Map.of(GFF3Attributes.ANTI_CODON, List.of("(pos:complement(252..258),aa:His)")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> antiCodonValidation.validateAntiCodon(feature, 1));
@@ -212,7 +243,7 @@ public class AntiCodonValidationTest {
                 OntologyTerm.RRNA.name(),
                 200,
                 989,
-                Map.of(GFF3Attributes.TRANSL_EXCEPT, "(pos:complement(252..258),aa:His)"));
+                Map.of(GFF3Attributes.TRANSL_EXCEPT, List.of("(pos:complement(252..258),aa:His)")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> antiCodonValidation.validateTranslExcept(feature, 1));
@@ -227,7 +258,7 @@ public class AntiCodonValidationTest {
                 OntologyTerm.RRNA.name(),
                 200,
                 989,
-                Map.of(GFF3Attributes.ANTI_CODON, "(pos:join(252..258,267..270),aa:His)"));
+                Map.of(GFF3Attributes.ANTI_CODON, List.of("(pos:join(252..258,267..270),aa:His)")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> antiCodonValidation.validateAntiCodon(feature, 1));
@@ -242,7 +273,7 @@ public class AntiCodonValidationTest {
                 OntologyTerm.RRNA.name(),
                 200,
                 989,
-                Map.of(GFF3Attributes.TRANSL_EXCEPT, "(pos:join(252..258,267..270),aa:His)"));
+                Map.of(GFF3Attributes.TRANSL_EXCEPT, List.of("(pos:join(252..258,267..270),aa:His)")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> antiCodonValidation.validateTranslExcept(feature, 1));
@@ -254,7 +285,10 @@ public class AntiCodonValidationTest {
     @Test
     public void testValidateAntiCodonAttributeInvalidAminoAcidAbbreviation() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(), 200, 989, Map.of(GFF3Attributes.ANTI_CODON, "(pos:250..252,aa:HIS)"));
+                OntologyTerm.RRNA.name(),
+                200,
+                989,
+                Map.of(GFF3Attributes.ANTI_CODON, List.of("(pos:250..252,aa:HIS)")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> antiCodonValidation.validateAminoAcidMismatch(feature, 1));
@@ -267,7 +301,10 @@ public class AntiCodonValidationTest {
     @Test
     public void testValidateTranslExceptCodonAttributeInvalidAminoAcidAbbreviation() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(), 200, 989, Map.of(GFF3Attributes.TRANSL_EXCEPT, "(pos:250..252,aa:HIS)"));
+                OntologyTerm.RRNA.name(),
+                200,
+                989,
+                Map.of(GFF3Attributes.TRANSL_EXCEPT, List.of("(pos:250..252,aa:HIS)")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> antiCodonValidation.validateAminoAcidMismatch(feature, 1));

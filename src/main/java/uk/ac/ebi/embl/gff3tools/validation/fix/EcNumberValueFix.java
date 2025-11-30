@@ -31,7 +31,7 @@ public class EcNumberValueFix {
             description = "Remove the EC_number attribute if not matches the pattern",
             type = FEATURE)
     public void fixFeature(GFF3Feature feature, int line) {
-        String ecNumber = feature.getAttributeByName(GFF3Attributes.EC_NUMBER);
+        String ecNumber = feature.getAttributeByName(GFF3Attributes.EC_NUMBER).orElse(null);
         if (ecNumber == null || ecNumber.isBlank()) return;
 
         if (ecNumber.equalsIgnoreCase("deleted") || !isValidECNumber(ecNumber.trim())) {

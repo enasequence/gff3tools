@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,17 +48,18 @@ public class LengthValidationTest {
                 5L,
                 Map.of(
                         GFF3Attributes.RIBOSOMAL_SLIPPAGE,
-                        "ribsomal_slippage",
+                        List.of("ribsomal_slippage"),
                         GFF3Attributes.TRANS_SPLICING,
-                        "trans_splicing",
+                        List.of("trans_splicing"),
                         GFF3Attributes.ARTIFICIAL_LOCATION,
-                        "artificial_location"));
+                        List.of("artificial_location")));
         Assertions.assertDoesNotThrow(() -> lengthValidation.validateIntronLength(feature, 1));
     }
 
     @Test
     public void testIntronValidationForCDSSuccessWithPseudo() {
-        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), 1L, 5L, Map.of(GFF3Attributes.PSEUDO, "pseudo"));
+        feature = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(), 1L, 5L, Map.of(GFF3Attributes.PSEUDO, List.of("pseudo")));
         Assertions.assertDoesNotThrow(() -> lengthValidation.validateIntronLength(feature, 1));
     }
 
@@ -100,14 +102,20 @@ public class LengthValidationTest {
     @Test
     public void testPropetideValidationSuccessForException() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.PROPEPTIDE.name(), 1L, 13L, Map.of(GFF3Attributes.EXCEPTION, "ribosomal slippage"));
+                OntologyTerm.PROPEPTIDE.name(),
+                1L,
+                13L,
+                Map.of(GFF3Attributes.EXCEPTION, List.of("ribosomal slippage")));
         Assertions.assertDoesNotThrow(() -> lengthValidation.validatePropeptideLength(feature, 1));
     }
 
     @Test
     public void testPropetideValidationSuccessForTranslExcept() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.PROPEPTIDE.name(), 1L, 31L, Map.of(GFF3Attributes.TRANSL_EXCEPT, "ribosomal slippage"));
+                OntologyTerm.PROPEPTIDE.name(),
+                1L,
+                31L,
+                Map.of(GFF3Attributes.TRANSL_EXCEPT, List.of("ribosomal slippage")));
         Assertions.assertDoesNotThrow(() -> lengthValidation.validatePropeptideLength(feature, 1));
     }
 

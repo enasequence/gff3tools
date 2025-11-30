@@ -76,11 +76,11 @@ public class TestUtils {
                 ".",
                 "+",
                 "",
-                new HashMap<>(Map.of("ID", id, "Parent", parent, "gene", "geneX")));
+                new HashMap<>(Map.of("ID", List.of(id), "Parent", List.of(parent), "gene", List.of("geneX"))));
     }
 
     public static GFF3Feature createGFF3Feature(
-            String featureName, String parentFeatureName, Map<String, Object> attributes) {
+            String featureName, String parentFeatureName, Map<String, List<String>> attributes) {
 
         return new GFF3Feature(
                 Optional.of(featureName),
@@ -114,7 +114,7 @@ public class TestUtils {
                 new HashMap<>());
     }
 
-    public static GFF3Feature createGFF3Feature(String featureName, Map<String, Object> attributes) {
+    public static GFF3Feature createGFF3Feature(String featureName, Map<String, List<String>> attributes) {
 
         return new GFF3Feature(
                 Optional.of(featureName),
@@ -132,7 +132,7 @@ public class TestUtils {
     }
 
     public static GFF3Feature createGFF3Feature(
-            String featureName, long start, long end, Map<String, Object> attributes) {
+            String featureName, long start, long end, Map<String, List<String>> attributes) {
 
         return new GFF3Feature(
                 Optional.of(featureName),
@@ -150,7 +150,7 @@ public class TestUtils {
     }
 
     public static GFF3Feature createGFF3Feature(
-            String featureName, String parentFeatureName, String seqId, Map<String, Object> attributes) {
+            String featureName, String parentFeatureName, String seqId, Map<String, List<String>> attributes) {
 
         return new GFF3Feature(
                 Optional.of(featureName),
@@ -168,7 +168,7 @@ public class TestUtils {
     }
 
     public static GFF3Feature createGFF3FeatureWithAccession(
-            String seqId, String name, Map<String, Object> attributes) {
+            String seqId, String name, Map<String, List<String>> attributes) {
         return new GFF3Feature(
                 Optional.of(name),
                 Optional.empty(),

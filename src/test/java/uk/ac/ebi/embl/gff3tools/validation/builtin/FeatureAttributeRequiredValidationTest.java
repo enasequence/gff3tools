@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
@@ -43,9 +44,9 @@ public class FeatureAttributeRequiredValidationTest {
         String featureName = getRandomEntryFromSet(validation.featuresToValidate);
         GFF3Feature feature = TestUtils.createGFF3Feature(featureName, ".", new HashMap<>() {
             {
-                put("ID", "O1");
-                put("Parent", "mom");
-                put("attributeKey", "attributeValue");
+                put("ID", List.of("O1"));
+                put("Parent", List.of("mom"));
+                put("attributeKey", List.of("attributeValue"));
             }
         });
 
@@ -57,8 +58,8 @@ public class FeatureAttributeRequiredValidationTest {
         String featureName = getRandomEntryFromSet(validation.featuresToValidate);
         GFF3Feature feature = TestUtils.createGFF3Feature(featureName, ".", new HashMap<>() {
             {
-                put("ID", "O1");
-                put("attributeKey", "attributeValue");
+                put("ID", List.of("O1"));
+                put("attributeKey", List.of("attributeValue"));
             }
         });
 
@@ -70,8 +71,8 @@ public class FeatureAttributeRequiredValidationTest {
         String featureName = getRandomEntryFromSet(validation.featuresToValidate);
         GFF3Feature feature = TestUtils.createGFF3Feature(featureName, new HashMap<>() {
             {
-                put("ID", "O1");
-                put("Parent", "mom");
+                put("ID", List.of("O1"));
+                put("Parent", List.of("mom"));
             }
         });
 
@@ -83,7 +84,7 @@ public class FeatureAttributeRequiredValidationTest {
         String featureName = getRandomEntryFromSet(validation.featuresToValidate);
         GFF3Feature feature = TestUtils.createGFF3Feature(featureName, new HashMap<>() {
             {
-                put("ID", "O1");
+                put("ID", List.of("O1"));
             }
         });
 
