@@ -150,4 +150,14 @@ public class GFF3Feature {
     public void setAttribute(String name, Object value) {
         attributes.put(name, value);
     }
+
+    public boolean isFivePrimePartial() {
+        List<String> partialValue = getAttributeValueList(GFF3Attributes.PARTIAL);
+        return partialValue.size() == 1 && "start".equalsIgnoreCase(partialValue.get(0));
+    }
+
+    public boolean isThreePrimePartial() {
+        List<String> partialValue = getAttributeValueList(GFF3Attributes.PARTIAL);
+        return partialValue.size() == 1 && "end".equalsIgnoreCase(partialValue.get(0));
+    }
 }
