@@ -1,16 +1,18 @@
 package uk.ac.ebi.embl.gff3tools.fasta.sequenceutils;
 
 public final class LineEntry {
-    long baseStart;       // 1-based base index at line start (inclusive)
-    long baseEnd;         // 1-based base index at line end (inclusive)
-    long byteStart;       // absolute byte offset of first base in the line
-    long byteEndExclusive;// absolute byte offset just after the last base
+    public long baseStart;        // 1-based, inclusive (after edits)
+    public long baseEnd;          // 1-based, inclusive
+    public long byteStart;        // absolute byte offset of first base in this line
+    public long byteEndExclusive; // absolute byte offset one past last base
 
-    public LineEntry(long bStart, long bEnd, long byStart, long byEndEx) {
-        this.baseStart = bStart;
-        this.baseEnd = bEnd;
-        this.byteStart = byStart;
-        this.byteEndExclusive = byEndEx;
+    public LineEntry(long baseStart, long baseEnd, long byteStart, long byteEndExclusive) {
+        this.baseStart = baseStart;
+        this.baseEnd = baseEnd;
+        this.byteStart = byteStart;
+        this.byteEndExclusive = byteEndExclusive;
     }
-}
 
+    public long lengthBases() { return baseEnd - baseStart + 1; }
+    public long lengthBytes() { return byteEndExclusive - byteStart; } // ASCII: same as bases
+}

@@ -1,6 +1,7 @@
 package uk.ac.ebi.embl.gff3tools.fasta;
 
 import uk.ac.ebi.embl.gff3tools.exception.FastaReadException;
+import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.ByteSpan;
 import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.LineEntry;
 import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceAlphabet;
 import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceIndex;
@@ -51,6 +52,8 @@ public class SequentialFastaEntryReader implements AutoCloseable {
     public void close() throws IOException { channel.close(); }
     public boolean readingFile() { return channel.isOpen(); }
     public FastaEntry getCurrentEntry() { return current; }
+
+
 
     public boolean readNext() throws FastaReadException {
         try {
@@ -292,7 +295,7 @@ public class SequentialFastaEntryReader implements AutoCloseable {
         }
 
         channel.position(nextHdr);
-        return new SequenceIndex(firstBaseByte, lastBaseByte, lines);
+        return new SequenceIndex(firstBaseByte, lastBaseByte, 1, 1, lines); //todo fix
     }
 
 }

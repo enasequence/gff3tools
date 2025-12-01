@@ -2,114 +2,119 @@ package uk.ac.ebi.embl.gff3tools.fasta.sequenceutils;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Tests for SequenceIndex byte-range mapping and validation.
- */
 public class SequenceIndexTest {
 
-    // Helpers to build a sane fixture ----------------------------------------
-
-    private LineEntry line(long baseStart, long baseEnd, long byteStart, long byteEndEx) {
-        return new LineEntry(baseStart, baseEnd, byteStart, byteEndEx);
-    }
-
-    private SequenceIndex newIndexFixture() {
-        List<LineEntry> lines = new ArrayList<>();
-        // L1: 12 bases, bytes 100..111 (exclusive end 112)
-        lines.add(line(1, 12, 100, 112));
-        // L2: 10 bases, bytes 113..122 (exclusive end 123)
-        lines.add(line(13, 22, 113, 123));
-        // L3: 11 bases, bytes 124..134 (exclusive end 135)
-        lines.add(line(23, 33, 124, 135));
-        // first/last base bytes (inclusive): 100 and 134
-        return new SequenceIndex(100, 134, lines);
-    }
-
-    // ------------------------------------------------------------------------
-
-    @Test
-    void totalBases_isEndOfLastLine() {
-        SequenceIndex idx = newIndexFixture();
-        assertEquals(33, idx.totalBases());
-        assertEquals(100, idx.firstBaseByte);
-        assertEquals(134, idx.lastBaseByte);
-    }
-
-    @Test
-    void byteSpans_singleLine_inside() {
-        SequenceIndex idx = newIndexFixture();
-
-        // base 1..1 -> L1 offset 0 -> bytes [100,101)
-        var spans = idx.byteSpansForBaseRange(1, 1);
-        assertEquals(1, spans.size());
-        assertEquals(100, spans.get(0).start);
-        assertEquals(101, spans.get(0).endEx);
-
-        // base 12..12 -> last byte of L1 -> [111,112)
-        spans = idx.byteSpansForBaseRange(12, 12);
-        assertEquals(1, spans.size());
-        assertEquals(111, spans.get(0).start);
-        assertEquals(112, spans.get(0).endEx);
-
-        // base 15..18 -> within L2 (L2 baseStart=13 => offsets 2..5) -> [115,119)
-        spans = idx.byteSpansForBaseRange(15, 18);
-        assertEquals(1, spans.size());
-        assertEquals(115, spans.get(0).start);
-        assertEquals(119, spans.get(0).endEx);
+    /**
+     * Synthetic line layout (ASCII, 1 byte/base; '\n' not part of lines):
+     *
+     * Line1: bases 1..4  at bytes [100,104)  -> base->byte: 1:100, 2:101, 3:102, 4:103, '\n':104
+     * Line2: bases 5..8  at bytes [105,109)  -> 5:105, 6:106, 7:107, 8:108, '\n':109
+     * Line3: bases 9..12 at bytes [110,114)  -> 9:110, 10:111, 11:112, 12:113, '\n':114
+     *
+     * So:
+     *  - first base byte = 100
+     *  - last  base byte = 113
+     *  - total bases including edge Ns = 12
+     */
+    private SequenceIndex buildIndex(long startN, long endN) {
+        List<LineEntry> lines = List.of(
+                new LineEntry(1, 4,   100, 104),
+                new LineEntry(5, 8,   105, 109),
+                new LineEntry(9, 12,  110, 114)
+        );
+        return new SequenceIndex(
+                /*firstBaseByte*/100,
+                /*startNBasesCount*/startN,
+                /*lastBaseByte*/113,
+                /*endNBasesCount*/endN,
+                lines
+        );
     }
 
     @Test
-    void byteSpans_acrossLines() {
-        SequenceIndex idx = newIndexFixture();
+    void totals_including_and_trimmed() {
+        SequenceIndex idx = buildIndex(/*startN*/2, /*endN*/3);
 
-        // base 5..17 crosses L1 (5..12) and L2 (13..17)
-        var spans = idx.byteSpansForBaseRange(5, 17);
-        assertEquals(2, spans.size());
-
-        // L1 slice: offsetStart=4 => [104,112)
-        assertEquals(104, spans.get(0).start);
-        assertEquals(112, spans.get(0).endEx);
-
-        // L2 slice: base 13..17 => offsets 0..4 => [113,118)
-        assertEquals(113, spans.get(1).start);
-        assertEquals(118, spans.get(1).endEx);
+        assertEquals(12, idx.totalBasesIncludingEdgeNBases(), "totalBasesIncludingEdgeNBases");
+        assertEquals(7, idx.totalBases(), "trimmed totalBases");
     }
 
     @Test
-    void byteSpans_fullRange_allLines() {
-        SequenceIndex idx = newIndexFixture();
+    void byteSpan_including_edges_same_line() {
+        SequenceIndex idx = buildIndex(0, 0);
 
-        var spans = idx.byteSpansForBaseRange(1, 33);
-        assertEquals(3, spans.size());
+        // [from..to] = [2..4] -> bytes [101..103], endExclusive = 104
+        ByteSpan s = idx.byteSpanForBaseRangeIncludingEdgeNBases(2, 4);
 
-        assertEquals(100, spans.get(0).start); // full L1
-        assertEquals(112, spans.get(0).endEx);
-
-        assertEquals(113, spans.get(1).start); // full L2
-        assertEquals(123, spans.get(1).endEx);
-
-        assertEquals(124, spans.get(2).start); // full L3
-        assertEquals(135, spans.get(2).endEx);
+        assertEquals(101, s.start);
+        assertEquals(104, s.endEx);
+        assertEquals(3, s.length());
     }
 
     @Test
-    void badRanges_throw() {
-        SequenceIndex idx = newIndexFixture();
+    void byteSpan_including_edges_crosses_newline() {
+        SequenceIndex idx = buildIndex(0, 0);
 
-        assertThrows(IllegalArgumentException.class, () -> idx.byteSpansForBaseRange(0, 1));
-        assertThrows(IllegalArgumentException.class, () -> idx.byteSpansForBaseRange(10, 9));
+        // [2..5] crosses the newline between line1 and line2
+        // start = base2@101, endEx = base5@105 + 1 = 106, newline at 104 is included
+        ByteSpan s = idx.byteSpanForBaseRangeIncludingEdgeNBases(2, 5);
+
+        assertEquals(101, s.start);
+        assertEquals(106, s.endEx);
+        assertEquals(5, s.length()); // 2,3,\n,5,exclusive end char
     }
 
     @Test
-    void applyDeletion_currentImpl_throwsDueToUnmodifiable() { //TODO
-        // As written, SequenceIndex stores lines as Collections.unmodifiableList(lines)
-        // and applyDeletion() tries to mutate it via lines.clear() -> UnsupportedOperationException.
-        SequenceIndex idx = newIndexFixture();
-        assertThrows(UnsupportedOperationException.class, () -> idx.applyDeletion(3, 5));
+    void including_edges_validates_total() {
+        SequenceIndex idx = buildIndex(0, 0);
+        assertThrows(IllegalArgumentException.class,
+                () -> idx.byteSpanForBaseRangeIncludingEdgeNBases(1, 13),
+                "toBase beyond total (including Ns) should throw");
+    }
+
+    @Test
+    void trimmed_byteSpan_maps_through_startN() {
+        SequenceIndex idx = buildIndex(2, 3);
+        assertEquals(7, idx.totalBases());
+
+        ByteSpan s = idx.byteSpanForBaseRange(1, 3); // Ignore first 2 Ns, ignore last 3 Ns
+
+        assertEquals(102, s.start);
+        assertEquals(106, s.endEx);
+        assertEquals(4, s.length()); // 3 bases + exclusive end
+    }
+
+    @Test
+    void trimmed_span_crosses_multiple_lines() {
+        SequenceIndex idx = buildIndex(2, 3); // trimmed total = 7 bases
+
+        ByteSpan s = idx.byteSpanForBaseRange(4, 7);
+
+        assertEquals(106, s.start);
+        assertEquals(111, s.endEx);
+        assertEquals(5, s.length());
+    }
+
+    @Test
+    void trimmed_validates_range_against_trimmed_total() {
+        SequenceIndex idx = buildIndex(2, 3); // trimmed total = 7
+        assertThrows(IllegalArgumentException.class,
+                () -> idx.byteSpanForBaseRange(1, 8),
+                "toBase beyond trimmed total should throw");
+    }
+
+    @Test
+    void zero_edgeNs_behavior_matches_including_method() {
+        SequenceIndex idx = buildIndex(0, 0); //no additional N bases
+
+        ByteSpan a = idx.byteSpanForBaseRange(2, 5);
+        ByteSpan b = idx.byteSpanForBaseRangeIncludingEdgeNBases(2, 5);
+
+        assertEquals(b.start, a.start);
+        assertEquals(b.endEx, a.endEx);
     }
 }

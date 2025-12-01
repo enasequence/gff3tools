@@ -1,115 +1,82 @@
 package uk.ac.ebi.embl.gff3tools.fasta.sequenceutils;
 
+import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.ByteSpan;
+import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.LineEntry;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 public final class SequenceIndex {
-    public final long firstBaseByte;      // absolute byte offset of the first base (inclusive), -1 if none
-    public final long lastBaseByte;       // absolute byte offset of the last base (inclusive), -1 if none
-    final java.util.List<LineEntry> lines; // sorted by baseStart
 
-    public SequenceIndex(long firstBaseByte, long lastBaseByte, java.util.List<LineEntry> lines) {
+    public long firstBaseByte;      // -1 if empty
+    public long startNBasesCount;
+    public long lastBaseByte;       // -1 if empty
+    public long endNBasesCount;
+    private final List<LineEntry> lines;
+
+    public SequenceIndex(long firstBaseByte, long startNBasesCount,
+                         long lastBaseByte, long endNBasesCount, List<LineEntry> lines) {
         this.firstBaseByte = firstBaseByte;
-        this.lastBaseByte = lastBaseByte;
-        this.lines = java.util.Collections.unmodifiableList(lines);
+        this.startNBasesCount = startNBasesCount;
+        this.lastBaseByte  = lastBaseByte;
+        this.endNBasesCount = endNBasesCount;
+        this.lines = new ArrayList<>(lines);
     }
 
-    long totalBases() {
+    public List<LineEntry> linesView() { return Collections.unmodifiableList(lines); }
+
+    public long totalBasesIncludingEdgeNBases() {
         if (lines.isEmpty()) return 0;
-        return lines.get(lines.size()-1).baseEnd;
+        return lines.get(lines.size() - 1).baseEnd;
     }
 
-    /** Return one or more byte spans covering [fromBase..toBase], inclusive. */
-    java.util.List<ByteSpan> byteSpansForBaseRange(long fromBase, long toBase) {
-        if (fromBase < 1 || toBase < fromBase) throw new IllegalArgumentException("bad base range");
-        if (lines.isEmpty()) return java.util.List.of();
+    public long totalBases() {
+        long bases = totalBasesIncludingEdgeNBases() - endNBasesCount - startNBasesCount;
+        return Math.max(0, bases);
+    }
 
+    public ByteSpan byteSpanForBaseRangeIncludingEdgeNBases(long fromBase, long toBase) {
+        long total = totalBasesIncludingEdgeNBases();
+        if (fromBase < 1 || toBase < fromBase || toBase > total) {
+            throw new IllegalArgumentException("bad base range: " + fromBase + ".." + toBase);
+        }
         int i = findLineByBase(fromBase);
         int j = findLineByBase(toBase);
 
-        java.util.ArrayList<ByteSpan> out = new java.util.ArrayList<>(Math.max(1, j - i + 1));
-        for (int k = i; k <= j; k++) {
-            LineEntry L = lines.get(k);
-            long startBase = Math.max(fromBase, L.baseStart);
-            long endBase   = Math.min(toBase,   L.baseEnd);
+        LineEntry from = lines.get(i);
+        long offStart     = fromBase - from.baseStart;
 
-            long offsetStartInLine = startBase - L.baseStart;               // 0-based
-            long offsetEndInLineEx = (endBase - L.baseStart) + 1;           // exclusive
+        LineEntry to      = lines.get(j);
+        long offEndIncl   = toBase - to.baseStart;
 
-            long byteStart = L.byteStart + offsetStartInLine;               // ASCII 1 byte/base
-            long byteEndEx = L.byteStart + offsetEndInLineEx;               // exclusive
-            out.add(new ByteSpan(byteStart, byteEndEx));
-        }
-        return out;
+        long byteStart = from.byteStart + offStart;
+        long byteEndEx = to.byteStart + offEndIncl + 1; // half-open
+
+        return new ByteSpan(byteStart, byteEndEx);
     }
 
-    /** Naive in-place index adjustment after deleting [fromBase..toBase] (inclusive). */
-    void applyDeletion(long fromBase, long toBase) {
-        if (fromBase < 1 || toBase < fromBase) throw new IllegalArgumentException("bad base range");
-        if (lines.isEmpty()) return;
 
-        long deltaBases = (toBase - fromBase + 1);
-        long deltaBytes = deltaBases;
-
-        int first = findLineByBase(fromBase);
-        int last  = findLineByBase(toBase);
-
-        // Adjust partially affected first/last lines, remove fully-eaten ones, and shift the rest.
-        java.util.List<LineEntry> mutable = new java.util.ArrayList<>(lines);
-        // Trim front
-        LineEntry Lf = mutable.get(first);
-        if (fromBase > Lf.baseStart) {
-            // delete tail portion in first line
-            long cut = Math.min(deltaBases, Lf.baseEnd - fromBase + 1);
-            Lf.baseEnd -= cut;
-            Lf.byteEndExclusive -= cut;
-        } else {
-            // delete whole first line (or will be eaten by later logic)
+    public ByteSpan byteSpanForBaseRange(long fromBase, long toBase) {
+        long trimmedTotal = totalBases();
+        if (fromBase < 1 || toBase < fromBase || toBase > trimmedTotal) {
+            throw new IllegalArgumentException("bad base range: " + fromBase + ".." + toBase);
         }
-        // Trim back
-        LineEntry Ll = mutable.get(last);
-        if (toBase < Ll.baseEnd) {
-            long cut = Math.min(deltaBases, Ll.baseEnd - toBase);
-            // delete head portion in last line
-            long newBaseStart = toBase + 1;
-            long newByteStart = Ll.byteStart + (newBaseStart - Ll.baseStart);
-            Ll.baseStart = newBaseStart - deltaBases;
-            Ll.byteStart = newByteStart - deltaBytes;
-        } else {
-            // will be shifted/removed below
-        }
-
-        // Remove any lines whose base range collapsed
-        mutable.removeIf(le -> le.baseEnd < le.baseStart);
-
-        // Shift all lines strictly after the deletion by (-delta)
-        for (int idx = 0; idx < mutable.size(); idx++) {
-            LineEntry L = mutable.get(idx);
-            if (L.baseStart > toBase) {
-                L.baseStart -= deltaBases;
-                L.baseEnd   -= deltaBases;
-                L.byteStart -= deltaBytes;
-                L.byteEndExclusive -= deltaBytes;
-            }
-        }
-
-        // Re-freeze as unmodifiable
-        lines.clear(); // if you stored unmodifiable above, switch to a mutable field or a builder
-        lines.addAll(java.util.Collections.unmodifiableList(mutable));
-        // Note: first/last base bytes would also shift by -deltaBytes if deletion occurs before them.
-        // You can recompute from lines when needed.
+        long actualFromBase = startNBasesCount + fromBase;
+        long actualToBase   = startNBasesCount + toBase;
+        return byteSpanForBaseRangeIncludingEdgeNBases(actualFromBase, actualToBase);
     }
 
     private int findLineByBase(long base) {
-        int lo = 0, hi = lines.size()-1, ans = hi;
+        int lo = 0, hi = lines.size() - 1, ans = hi;
         while (lo <= hi) {
             int mid = (lo + hi) >>> 1;
             LineEntry L = lines.get(mid);
-            if (base < L.baseStart) { hi = mid - 1; }
-            else if (base > L.baseEnd) { lo = mid + 1; }
-            else { return mid; } // inside
-            ans = lo; // insertion point
+            if (base < L.baseStart) hi = mid - 1;
+            else if (base > L.baseEnd) lo = mid + 1;
+            else return mid;
+            ans = lo;
         }
-        return Math.max(0, Math.min(ans, lines.size()-1));
+        return Math.max(0, Math.min(ans, lines.size() - 1));
     }
 }
-
-
-
