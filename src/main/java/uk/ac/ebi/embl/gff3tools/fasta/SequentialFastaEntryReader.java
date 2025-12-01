@@ -1,7 +1,6 @@
 package uk.ac.ebi.embl.gff3tools.fasta;
 
 import uk.ac.ebi.embl.gff3tools.exception.FastaReadException;
-import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.ByteSpan;
 import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.LineEntry;
 import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceAlphabet;
 import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceIndex;
@@ -13,289 +12,411 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
-import java.util.OptionalLong;
+import java.util.*;
 
 public class SequentialFastaEntryReader implements AutoCloseable {
 
-    private static final int BUF_SIZE = 64 * 1024;
+    // -------- constants
+    private static final int SCAN_BUF_SIZE   = 64 * 1024;
+    private static final int COUNT_BUF_SIZE  = 8  * 1024;
     private static final byte GT = (byte) '>';
     private static final byte LF = (byte) '\n';
 
+    // -------- file + config
     private final FileChannel channel;
-    private final long fileSize; //size of file in bytes
-
+    private final long fileSize;
     private final JsonHeaderParser headerParser;
     private final SequenceAlphabet alphabet;
-    private FastaEntry current;
 
-    public SequentialFastaEntryReader(File file) throws FileNotFoundException {
+    // -------- state/result
+    private final Map<String, SequenceIndex> indexById = new LinkedHashMap<>();
+
+    // -------- ctor
+    public SequentialFastaEntryReader(File file) throws IOException {
         this(file, new JsonHeaderParser(), SequenceAlphabet.defaultNucleotideAlphabet());
     }
 
-    public SequentialFastaEntryReader(File file, JsonHeaderParser parser, SequenceAlphabet alphabet) throws FileNotFoundException {
-        if (file == null) throw new IllegalStateException("Input FASTA file is null");
+    public SequentialFastaEntryReader(File file, JsonHeaderParser parser, SequenceAlphabet alphabet)
+            throws FileNotFoundException, IOException {
+        Objects.requireNonNull(file, "Input FASTA file is null");
         if (!file.exists()) throw new FileNotFoundException(file.getAbsolutePath());
         if (file.isDirectory()) throw new FileNotFoundException("Directory: " + file.getAbsolutePath());
         if (!file.canRead()) throw new IllegalArgumentException("No read permission: " + file.getAbsolutePath());
 
-        this.headerParser = parser;
-        this.alphabet = alphabet;
+        this.headerParser = Objects.requireNonNull(parser, "parser");
+        this.alphabet = Objects.requireNonNull(alphabet, "alphabet");
 
-        try {
-            this.channel = new FileInputStream(file).getChannel();
-            this.fileSize = channel.size();
-        } catch (IOException e) {
-            throw new RuntimeException("Open channel failed", e);
-        }
+        this.channel = new FileInputStream(file).getChannel(); //exception will bubble up if fails
+        this.fileSize = channel.size();
     }
 
-    public void close() throws IOException { channel.close(); }
+    // -------- lifecycle of the read
+    @Override public void close() throws IOException { channel.close(); }
     public boolean readingFile() { return channel.isOpen(); }
-    public FastaEntry getCurrentEntry() { return current; }
 
+    // -------- main iteration
 
-
-    public boolean readNext() throws FastaReadException {
+    /** Reads the next FASTA entry, if there is none it returns an empty object*/
+    public Optional<FastaEntry> readNext(long from) throws FastaReadException {
         try {
-            long startPos = channel.position();
-            OptionalLong headerPos = goToNextFastaEntry();
-            if (headerPos.isPresent() || !peekIsGT(startPos)) return false;
+            OptionalLong headerPosition = seekToNextHeader(from);
+            if (headerPosition.isEmpty()) return Optional.empty(); // no next FASTA entry detected
+            channel.position(headerPosition.getAsLong()); //otherwise, position at start of new fasta
 
-            //parse id & header json
-            String headerLine = readAsciiLine();
-            if (headerLine == null) return false;
+            // parse header & build sequence index
+            String headerLine = readAsciiLineFromCurrentPosition(); // scan first line, parser
+            if (headerLine == null) throw new FastaReadException("Header is malformed");
             ParsedHeader ph = headerParser.parse(headerLine);
-            //find information about the current positions and line structure of the sequence
             SequenceIndex idx = buildSequenceIndex();
 
-            FastaEntry e = new FastaEntry();
-            e.setId(ph.getId());
-            e.setHeader(ph.getHeader());
-            e.setFastaStart(headerPos.getAsLong());
-            e.setSequenceStart(idx.firstBaseByte);
-            e.setSequenceEnd(idx.lastBaseByte);
-            e.setSequenceIndex(idx);
+            // produce current entry
+            FastaEntry newEntry = new FastaEntry();
+            newEntry.setId(ph.getId());
+            newEntry.setHeader(ph.getHeader());
+            newEntry.setFastaStartByte(headerPosition.getAsLong());
+            newEntry.setSequenceIndex(idx);
 
-            this.current = e;
-            return true;
+            return Optional.of(newEntry);
 
         } catch (IOException io) {
-            throw new FastaReadException("I/O while reading FASTA", io);
+            long position;
+            try{
+                position= channel.position();
+            } catch (IOException e) {
+                position = -1;
+            }
+            throw new FastaReadException("I/O while reading FASTA at byte " + position + ": " + io.getMessage(), io);
         }
     }
 
-    // ---- private helpers (the only code allowed to touch channel position) ----
+    // =====================================================================
+    // =                          SCANNING (to next header)                                 =
+    // =====================================================================
 
-    /** finds the first next '>' after the current fasta entry and puts the channel reader position there.
-     * If there is no later fasta entry, returns empty and leaves the channel reader position where it was.
-     * **/
-    private OptionalLong goToNextFastaEntry() throws IOException {
-        long currentPosition = channel.position(), originalPosition = currentPosition;
-        if (currentPosition >= fileSize) return OptionalLong.empty();
+    /** Finds next header ('>') that starts a line (at file start or after LF). */
+    private OptionalLong seekToNextHeader(long from) throws IOException {
+        if (from >= fileSize) return OptionalLong.empty();
 
-        //read the file content from current position (which should be somewhere in the current fasta entry or at the beginning of file) chunk by chunk
-        ByteBuffer buf = ByteBuffer.allocateDirect(BUF_SIZE);
-        while (currentPosition < fileSize) {
+        ByteBuffer buf = ByteBuffer.allocateDirect(SCAN_BUF_SIZE);
+
+        while (from < fileSize) {
             buf.clear();
-            int minToRead = (int) Math.min(buf.capacity(), fileSize - currentPosition);
-            buf.limit(minToRead);
-
-            int numberOfBytesRead = channel.read(buf, currentPosition);
-            if (numberOfBytesRead <= 0) break; //no bytes were read, probably paranoid
-
+            int want = (int) Math.min(buf.capacity(), fileSize - from);
+            buf.limit(want);
+            int n = channel.read(buf, from);
+            if (n <= 0) break;
             buf.flip();
+
             while (buf.hasRemaining()) {
-                if (buf.get() == GT) {
-                    long potentialFastaStart = currentPosition + buf.position() - 1;
-                    if(peekIsEndOfLine(potentialFastaStart - 1)) {
-                        // found new fasta entry start
-                        channel.position(potentialFastaStart);
-                        return OptionalLong.of(potentialFastaStart);
-                    }
+                long positionToCheck = from + buf.position();
+                byte b = buf.get();
+                if (peekIfFastaHeaderStart(b, positionToCheck)) {
+                    return OptionalLong.of(positionToCheck);
                 }
             }
-            currentPosition += numberOfBytesRead;
+            from += n;
         }
-        //found no fasta starting after the current channel reader position
-        channel.position(originalPosition);
         return OptionalLong.empty();
     }
 
-    /* Just checks if the character at the given position equals '>' char, does not move the channel.position() */
-    private boolean peekIsEndOfLine(long position) throws IOException {
-        if (position >= fileSize) return false;
-        ByteBuffer one = ByteBuffer.allocate(1);
-        int n = channel.read(one, position);
-        return n == 1 && one.get(0) == LF;
-    }
-
-    /* Just checks if the character at the given position equals '>' char, does not move the channel.position() */
-    private boolean peekIsGT(long position) throws IOException {
-        if (position >= fileSize) return false;
-        ByteBuffer one = ByteBuffer.allocate(1);
-        int n = channel.read(one, position);
-        return n == 1 && one.get(0) == GT;
-    }
-
-    /* returns entire next line from the current reader position or the maximum buffer size if the line is too large to safely process (unlikely).
-    * Places current channel reader position at the first next unread character. (end of line or )
-    * */ //TODO return boolean to see whether the line was read completely
-    private String readAsciiLine() throws IOException { //todo unfuck
-        if (channel.position() >= fileSize) return null;
+    /** Reads until end of one ASCII line from current channel.position() ( '\n' terminated or EOF).
+     * Advances channel past end of line or to EOF */
+    private String readAsciiLineFromCurrentPosition() throws IOException {
+        long scanPos = channel.position();
+        if (scanPos >= fileSize) return null;
 
         StringBuilder sb = new StringBuilder(256);
-        ByteBuffer buf = ByteBuffer.allocateDirect(BUF_SIZE);
-        long currentPosition = channel.position();
+        ByteBuffer buf = ByteBuffer.allocateDirect(SCAN_BUF_SIZE);
 
-        while (currentPosition < fileSize) {
+        while (scanPos < fileSize) {
+
+            // fill buffer from disk
             buf.clear();
-            int toRead = (int) Math.min(buf.capacity(), fileSize - currentPosition);
-            buf.limit(toRead);
-
-            int numberOfBytesRead = channel.read(buf, currentPosition);
-            if (numberOfBytesRead <= 0) break;
+            int want = (int) Math.min(buf.capacity(), fileSize - scanPos);
+            buf.limit(want);
+            int n = channel.read(buf, scanPos);
+            if (n <= 0) break;
 
             buf.flip();
 
-            //find end of line
-            int lfIndex = -1;
-            for (int i = 0; i < buf.remaining(); i++) {
-                if (buf.get(buf.position() + i) == LF) { lfIndex = i; break; }
-            }
-
-            if (lfIndex >= 0) { //if there is an "\n", read it and position the channel at the end of line
-                byte[] chunk = new byte[lfIndex];
-                buf.get(chunk);
-                sb.append(new String(chunk, StandardCharsets.US_ASCII));
-                buf.get(); // consume LF
-                channel.position(currentPosition + lfIndex + 1); //skip separator
-                int len = sb.length();
-                if (len>0 && sb.charAt(len-1)=='\r') sb.setLength(len-1);
+            // find end of line in the bytes we already have
+            int lfIndex = indexOf(buf, LF);
+            if (lfIndex >= 0)
+                {// if end of line found, append bytes up to (not including) LF
+                appendAscii(sb, buf, lfIndex);
+                long nextLineStart = scanPos + lfIndex + 1; // consume LF
+                channel.position(nextLineStart);
                 return sb.toString();
-            } else { //otherwise read entire chunk, but this is unlikely to happen as the buffer should be large enough
-                byte[] chunk = new byte[buf.remaining()];
-                buf.get(chunk);
-                sb.append(new String(chunk, StandardCharsets.US_ASCII));
-                currentPosition += numberOfBytesRead;
+            } else {
+                // no LF in this chunk; append all bytes and continue
+                appendAscii(sb, buf, buf.remaining());
+                scanPos += n;
             }
         }
 
+        // read up to EOF
         channel.position(fileSize);
         return sb.toString();
     }
 
-    private static final class ScanResult {
-        final long firstBase, lastBase, nextHeader;
-        ScanResult(long f, long l, long n){ firstBase=f; lastBase=l; nextHeader=n; }
-    }
-
-    private ScanResult findSequenceLimits() throws IOException {
-        long currentPosition = channel.position();
-        long first = -1, last = -1, nextHdr = fileSize;
-
-        ByteBuffer buf = ByteBuffer.allocateDirect(BUF_SIZE);
-
-        outer:
-        while (currentPosition < fileSize) {
-            buf.clear();
-            int toRead = (int) Math.min(buf.capacity(), fileSize - currentPosition);
-            buf.limit(toRead);
-            int n = channel.read(buf, currentPosition);
-            if (n<=0) break;
-            buf.flip();
-            while (buf.hasRemaining()) {
-                byte b = buf.get();
-                long abs = currentPosition + buf.position() - 1;
-                if (b == GT) { nextHdr = abs; break outer; }
-                if (alphabet.isAllowed(b)) {
-                    if (first < 0) first = abs;
-                    last = abs;
-                }
-            }
-            currentPosition += n;
+    /** gets index of a target byte character in a byte buffer, returns -1 if not found **/
+    private static int indexOf(ByteBuffer buf, byte target) {
+        for (int i = 0; i < buf.remaining(); i++) {
+            if (buf.get(buf.position() + i) == target) return i;
         }
-        channel.position(nextHdr);
-        return new ScanResult(first, last, nextHdr);
+        return -1;
     }
 
+    /** Append exactly len bytes from buf to sb as US-ASCII, advancing buf.position() by len. */
+    private static void appendAscii(StringBuilder sb, ByteBuffer buf, int len) {
+        byte[] chunk = new byte[len];
+        buf.get(chunk);
+        sb.append(new String(chunk, java.nio.charset.StandardCharsets.US_ASCII));
+    }
+
+    // =============================================================================
+    // =                      SEQUENCE INDEX SCAN & BUILD                          =
+    // =============================================================================
+
+    /** Builds the per-line index for the sequence starting at current position (right after header line). */
     private SequenceIndex buildSequenceIndex() throws IOException {
-        long pos = channel.position();
-        long firstBaseByte = -1, lastBaseByte = -1, nextHdr = fileSize;
+        ScanState s = initScanState(channel.position());
+        ByteBuffer buf = newScanBuffer();
 
-        long currentLineFirstByte = -1;      // byte of first base in current line
-        long currentLineLastByte  = -1;      // byte of last base in current line
-        long basesSoFar = 0;                 // total bases committed to 'lines'
-        long basesInCurrentLine = 0;
+        while (s.pos<fileSize) {
+            int n = fillBuffer(buf, s.pos);
+            if (n <= 0) break;
+            if (processBuffer(buf, s)) break; // true => we hit next header; stop scanning
+            s.pos += n;
+        }
 
-        java.util.ArrayList<LineEntry> lines = new java.util.ArrayList<>();
+        finalizeOpenLineIfAny(s);
+        // leave channel at next header (or EOF)
+        channel.position(s.nextHdr);
 
-        ByteBuffer buf = ByteBuffer.allocateDirect(BUF_SIZE);
+        long startN = 0, endN = 0;
+        if (!s.lines.isEmpty()) {
+            LineEntry first = s.lines.get(0);
+            LineEntry last  = s.lines.get(s.lines.size() - 1);
+            startN = countLeadingNsInLine(first);
+            endN   = countTrailingNsInLine(last);
+        }
 
-        outer:
-        while (pos < fileSize) {
+        return new SequenceIndex(s.firstBaseByte, startN, s.lastBaseByte, endN, s.lines);
+    }
+
+// ---------------------------------------------------------------------
+//                          scan helpers
+// ---------------------------------------------------------------------
+
+    /** All mutable scanning state for one sequence. */
+    private static final class ScanState {
+        long pos;                    // absolute file position we’re scanning from
+        long firstBaseByte = -1;     // byte of first allowed base seen
+        long lastBaseByte  = -1;     // byte of last  allowed base seen
+        long nextHdr;                // byte of next '>' that starts a line (or fileSize)
+
+        long lineFirstByte = -1;     // byte of first base in current line
+        long lineLastByte  = -1;     // byte of last  base in current line
+        long basesSoFar = 0;         // total bases committed to s.lines
+        long basesInLine = 0;        // bases accumulated in current line (not yet committed)
+
+        final java.util.ArrayList<LineEntry> lines = new java.util.ArrayList<>(256);
+        ScanState(long startPos, long fileSize) { this.pos = startPos; this.nextHdr = fileSize; }
+    }
+
+    private ScanState initScanState(long startPos) {
+        return new ScanState(startPos, fileSize);
+    }
+
+    private ByteBuffer newScanBuffer() {
+        return ByteBuffer.allocateDirect(SCAN_BUF_SIZE);
+    }
+
+    private int fillBuffer(ByteBuffer buf, long at) throws IOException {
+        buf.clear();
+        int want = (int) Math.min(buf.capacity(), fileSize - at);
+        buf.limit(want);
+        return channel.read(buf, at);
+    }
+
+    /**
+     * Process a filled buffer. Returns true if scanning should stop (we found the next header),
+     * false to keep scanning.
+     */
+    private boolean processBuffer(ByteBuffer buf, ScanState s) throws IOException {
+        buf.flip();
+        while (buf.hasRemaining()) {
+            // capture index BEFORE get(), so abs == s.pos + idx
+            int idx = buf.position();
+            byte b = buf.get();
+            long abs = s.pos + idx;
+
+            if (peekIfFastaHeaderStart(b, abs)) {
+                s.nextHdr = abs;
+                commitOpenLineIfAny(s);
+                return true; // done scanning current entry
+            }
+
+            if (isNewline(b)) {
+                commitOpenLineIfAny(s);
+                continue;
+            }
+
+            if (isAllowedBase(b)) {
+                observeBaseByte(abs, s);
+                continue;
+            }
+
+            // else: ignore unexpected bytes (spec: sequence lines contain bases + '\n')
+        }
+        return false;
+    }
+
+    // ---------------------------------------------------------------------
+    //                    state mutation helpers (lines)
+    // ---------------------------------------------------------------------
+
+    /** We saw a base at absolute byte 'abs'. Update current line + first/last markers. */
+    private void observeBaseByte(long abs, ScanState s) {
+        if (s.lineFirstByte < 0) s.lineFirstByte = abs;
+        s.lineLastByte = abs;
+        s.basesInLine++;
+
+        if (s.firstBaseByte < 0) s.firstBaseByte = abs;
+        s.lastBaseByte = abs;
+    }
+
+    /** If current line has bases, convert it into a LineEntry and reset line accumulators. */
+    private void commitOpenLineIfAny(ScanState s) {
+        if (s.basesInLine <= 0) return;
+
+        long baseStart = s.basesSoFar + 1;
+        long baseEnd   = s.basesSoFar + s.basesInLine;
+        long byteStart = s.lineFirstByte;
+        long byteEndEx = s.lineLastByte + 1; // half-open
+
+        s.lines.add(new LineEntry(baseStart, baseEnd, byteStart, byteEndEx));
+
+        s.basesSoFar += s.basesInLine;
+        s.basesInLine = 0;
+        s.lineFirstByte = -1;
+        s.lineLastByte  = -1;
+    }
+
+    /** If EOF hit with an unterminated line, commit it. */
+    private void finalizeOpenLineIfAny(ScanState s) {
+        commitOpenLineIfAny(s);
+    }
+
+
+    private static void addLine(List<LineEntry> lines,
+                                long basesSoFar,
+                                long basesInCurrentLine,
+                                long firstByte, long lastByte) {
+        long baseStart = basesSoFar + 1;
+        long baseEnd   = basesSoFar + basesInCurrentLine;
+        // byteEndExclusive is lastByte + 1 (ASCII 1 byte/base)
+        lines.add(new LineEntry(baseStart, baseEnd, firstByte, lastByte + 1));
+    }
+
+    // =====================================================================
+    // =                    EDGE 'N' COUNT HELPERS                          =
+    // =====================================================================
+
+    /** Count leading 'N'/'n' in the given line’s byte range. */
+    private long countLeadingNsInLine(LineEntry line) throws IOException {
+        long remaining = line.lengthBytes();
+        long offset = line.byteStart;
+        long count = 0;
+
+        ByteBuffer buf = ByteBuffer.allocateDirect(COUNT_BUF_SIZE);
+
+        while (remaining > 0) {
             buf.clear();
-            int toRead = (int) Math.min(buf.capacity(), fileSize - pos);
-            buf.limit(toRead);
-            int n = channel.read(buf, pos);
+            int want = (int) Math.min(buf.capacity(), remaining);
+            buf.limit(want);
+            int n = channel.read(buf, offset);
             if (n <= 0) break;
             buf.flip();
-            while (buf.hasRemaining()) {
+
+            for (int i = 0; i < n; i++) {
                 byte b = buf.get();
-                long abs = pos + buf.position() - 1;
-
-                if (b == GT) { // next header begins
-                    nextHdr = abs;
-                    // finalize the current line if it has bases
-                    if (basesInCurrentLine > 0) {
-                        long baseStart = basesSoFar + 1;
-                        long baseEnd   = basesSoFar + basesInCurrentLine;
-                        lines.add(new LineEntry(baseStart, baseEnd,
-                                currentLineFirstByte, currentLineLastByte + 1)); // end exclusive
-                        basesSoFar += basesInCurrentLine;
-                    }
-                    break outer;
+                if (isNBase(b)) {
+                    count++;
+                } else {
+                    return count;
                 }
-
-                if (b == '\n') {
-                    if (basesInCurrentLine > 0) {
-                        long baseStart = basesSoFar + 1;
-                        long baseEnd   = basesSoFar + basesInCurrentLine;
-                        lines.add(new LineEntry(baseStart, baseEnd,
-                                currentLineFirstByte, currentLineLastByte + 1));
-                        basesSoFar += basesInCurrentLine;
-                        basesInCurrentLine = 0;
-                        currentLineFirstByte = -1;
-                        currentLineLastByte = -1;
-                    }
-                    continue; // newline consumed
-                }
-
-                if (alphabet.isAllowed(b)) {
-                    if (currentLineFirstByte < 0) currentLineFirstByte = abs;
-                    currentLineLastByte = abs;
-                    basesInCurrentLine++;
-
-                    if (firstBaseByte < 0) firstBaseByte = abs;
-                    lastBaseByte = abs;
-                    continue;
-                }
-
-                // Non-allowed, non-newline byte: ignore (you said the lines only contain bases + '\n')
             }
-            pos += n;
+            remaining -= n;
+            offset += n;
         }
-
-        // EOF: finalize any unterminated line with bases
-        if (basesInCurrentLine > 0) {
-            long baseStart = basesSoFar + 1;
-            long baseEnd   = basesSoFar + basesInCurrentLine;
-            lines.add(new LineEntry(baseStart, baseEnd,
-                    currentLineFirstByte, currentLineLastByte + 1));
-            basesSoFar += basesInCurrentLine;
-        }
-
-        channel.position(nextHdr);
-        return new SequenceIndex(firstBaseByte, lastBaseByte, 1, 1, lines); //todo fix
+        return count;
     }
 
+    /** Count trailing 'N'/'n' in the given line’s byte range (scan forward, track tail run). */
+    private long countTrailingNsInLine(LineEntry line) throws IOException {
+        long remaining = line.lengthBytes();
+        long offset = line.byteStart;
+        long trailingRun = 0;
+
+        ByteBuffer buf = ByteBuffer.allocateDirect(COUNT_BUF_SIZE);
+
+        while (remaining > 0) {
+            buf.clear();
+            int want = (int) Math.min(buf.capacity(), remaining);
+            buf.limit(want);
+            int n = channel.read(buf, offset);
+            if (n <= 0) break;
+            buf.flip();
+
+            for (int i = 0; i < n; i++) {
+                byte b = buf.get();
+                if (isNBase(b)) {
+                    trailingRun++; // extend current tail run
+                } else {
+                    trailingRun = 0; // reset tail run on any non-N
+                }
+            }
+            remaining -= n;
+            offset += n;
+        }
+        return trailingRun;
+    }
+
+    // ---------------------------------------------------------------------
+    //                    helper peek byte functions
+    // ---------------------------------------------------------------------
+
+
+    /** True if absolute position is at file start OR previous byte is '\n'. */
+    private boolean peekIfLineStart(long absPos) throws IOException {
+        if (absPos == 0) return true;
+        if (absPos > fileSize) return false;
+        return peekByte(absPos - 1) == LF;
+    }
+
+    /** Absolute peek (does not change channel.position()). Returns 0 if OOB. */
+    private byte peekByte(long absPos) throws IOException {
+        if (absPos < 0 || absPos >= fileSize) return 0;
+        ByteBuffer one = ByteBuffer.allocate(1);
+        int n = channel.read(one, absPos);
+        return (n == 1) ? one.get(0) : 0;
+    }
+
+    private boolean peekIfFastaHeaderStart(byte b, long abs) throws IOException {
+        return b == GT && peekIfLineStart(abs);
+    }
+
+    private boolean isNewline(byte b) {
+        return b == LF; // we already normalize CRLF earlier; lines are LF-terminated in scanning
+    }
+
+    private boolean isAllowedBase(byte b) {
+        return alphabet.isAllowed(b);
+    }
+
+    private boolean isNBase(byte b) {
+        return alphabet.isNBase(b);
+    }
 }
