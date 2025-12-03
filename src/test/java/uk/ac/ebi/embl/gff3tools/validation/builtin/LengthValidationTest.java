@@ -38,7 +38,7 @@ public class LengthValidationTest {
     }
 
     @Test
-    public void testCdsIntronValidationSuccess() throws ValidationException {
+    public void testCdsIntronValidationSuccess() {
 
         GFF3Feature cds1 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, "CDS1"));
@@ -49,14 +49,11 @@ public class LengthValidationTest {
         gff3Annotation.addFeature(cds1);
         gff3Annotation.addFeature(cds2);
 
-        lengthValidation.validateIntronLength(cds1, 1);
-        lengthValidation.validateIntronLength(cds2, 2);
-
-        assertDoesNotThrow(() -> lengthValidation.validateIntronLengthWithinCDS(gff3Annotation, 1));
+        assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
     }
 
     @Test
-    public void testCdsIntronValidationSuccessWithArtificialLocation() throws ValidationException {
+    public void testCdsIntronValidationSuccessWithArtificialLocation() {
 
         GFF3Feature cds1 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
@@ -72,14 +69,11 @@ public class LengthValidationTest {
         gff3Annotation.addFeature(cds1);
         gff3Annotation.addFeature(cds2);
 
-        lengthValidation.validateIntronLength(cds1, 1);
-        lengthValidation.validateIntronLength(cds2, 2);
-
-        assertDoesNotThrow(() -> lengthValidation.validateIntronLengthWithinCDS(gff3Annotation, 1));
+        assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
     }
 
     @Test
-    public void testCdsIntronValidationSuccessWithPseudo() throws ValidationException {
+    public void testCdsIntronValidationSuccessWithPseudo() {
 
         GFF3Feature cds1 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, "CDS1"));
@@ -95,14 +89,11 @@ public class LengthValidationTest {
         gff3Annotation.addFeature(cds1);
         gff3Annotation.addFeature(cds2);
 
-        lengthValidation.validateIntronLength(cds1, 1);
-        lengthValidation.validateIntronLength(cds2, 2);
-
-        assertDoesNotThrow(() -> lengthValidation.validateIntronLengthWithinCDS(gff3Annotation, 1));
+        assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
     }
 
     @Test
-    public void testCdsIntronValidationFailureSmallIntron() throws ValidationException {
+    public void testCdsIntronValidationFailureSmallIntron() {
 
         GFF3Feature cds1 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, "CDS1"));
@@ -113,11 +104,8 @@ public class LengthValidationTest {
         gff3Annotation.addFeature(cds1);
         gff3Annotation.addFeature(cds2);
 
-        lengthValidation.validateIntronLength(cds1, 1);
-        lengthValidation.validateIntronLength(cds2, 2);
-
         ValidationException ex = assertThrows(
-                ValidationException.class, () -> lengthValidation.validateIntronLengthWithinCDS(gff3Annotation, 1));
+                ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
 
         assertTrue(ex.getMessage().contains("Intron usually expected to be at least 10 nt long"));
     }
