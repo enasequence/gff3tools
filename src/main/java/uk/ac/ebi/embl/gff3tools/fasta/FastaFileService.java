@@ -1,5 +1,7 @@
 package uk.ac.ebi.embl.gff3tools.fasta;
 
+import lombok.Getter;
+import lombok.Setter;
 import uk.ac.ebi.embl.gff3tools.exception.FastaFileException;
 
 import java.io.File;
@@ -11,29 +13,27 @@ import java.util.*;
  * and serves base-range slices by mapping (N..M bases) -> byte span via the cached SequenceIndex,
  * then asking the reader to stream bytes while skipping newlines.
  */
+@Getter
+@Setter
 public final class FastaFileService{
 
-    private final File file;
+    private File file;
     private SequentialFastaFileReader reader;                 // owned here
+    public List<FastaEntry> entriesArchive;
+    private List<FastaEntryInternal> entriesInternal;
 
-    private final List<FastaEntryInternal> entriesArchive;
-
-    public FastaFileService(File file) throws FastaFileException {
-        this.file = Objects.requireNonNull(file, "file");
+    public FastaFileService(){
         entriesArchive = new ArrayList<>();
+        this.file = null;
     }
 
     // ---------------------------- queries ----------------------------
 
-    public List<FastaEntryInternal> getAllReadFastaEntries() {
-        return Collections.unmodifiableList(entriesArchive);
+    public List<FastaEntry> getAllReadFastaEntries() {
+        return new ArrayList<>();
     }
 
-    public Optional<FastaEntryInternal> getPreviouslyReadFasta(String accessionId) throws FastaFileException {
-        return Optional.empty();
-    }
-
-    public Optional<FastaEntryInternal> getNewEntry(String newAccessionId) throws FastaFileException { //TODO it would be better if instead of getting the accessionId here, we can just call the accessionId generator service after (optionally) managing to read the entry
+    public Optional<FastaEntry> getFasta(String submissionId) throws FastaFileException {
         return Optional.empty();
     }
 
@@ -42,7 +42,7 @@ public final class FastaFileService{
      * Uses the cached index to translate bases -> bytes, then asks the reader to stream
      * ASCII bytes while skipping '\n' and '\r' on the fly.
      */
-    public Optional<String> getSequenceRange(String accessionId, long fromBase, long toBase) throws FastaFileException {
+    public Optional<String> getSequenceRange(SequenceRangeOption option, String accessionId, long fromBase, long toBase) throws FastaFileException {
         ensureFileReaderOpen();
         //TODO
         return Optional.empty();
@@ -50,22 +50,21 @@ public final class FastaFileService{
 
     // ---------------------------- interactions with the reader ----------------------------
 
-    /** Open the underlying reader and scan all entries and indexes into memory. */
-    public boolean readNewEntry (String accessionId) throws FastaFileException {
-        return false;
-    }
-
-    private void open() throws FastaFileException {
+    public void openNewFile(File fastaFile) throws FastaFileException {
         ensureFileReaderClosed(); // if already open, close first
+        this.file = Objects.requireNonNull(file, "file");
+        this.entriesArchive.clear();
         try {
-            reader = new SequentialFastaFileReader(file);
+            reader = new SequentialFastaFileReader(fastaFile);
+            var readEntries = reader.readAll();
+            //TODO assign
         } catch (IOException ioe) {
             throw new FastaFileException("Failed to open FASTA reader: " + file.getAbsolutePath(), ioe);
         }
     }
 
     /** Close the reader. Safe to call multiple times. */
-    private void close() throws FastaFileException {
+    public void close() throws FastaFileException {
         if (reader != null) {
             try { reader.close(); }
             catch (IOException ioe) {

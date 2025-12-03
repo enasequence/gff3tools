@@ -41,9 +41,20 @@ public class SequentialFastaFileReader implements AutoCloseable {
     @Override public void close() throws IOException { channel.close(); }
     public boolean readingFile() { return channel.isOpen(); }
 
+    public List<FastaEntryInternal> readAll() throws FastaFileException, IOException {
+        long position = 0;
+        List<FastaEntryInternal> entries = new ArrayList<>();
+        while (true){
+            var entry = readNext(position);
+            if (entry.isEmpty()) break;
+            entries.add(entry.get());
+            position = channel.position();
+        }
+        return entries;
+    }
 
     /** Reads the next FASTA entry starting at or after 'from'. */
-    public Optional<FastaEntryInternal> readNext(long from) throws FastaFileException {
+    private Optional<FastaEntryInternal> readNext(long from) throws FastaFileException {
         try {
             OptionalLong headerPosOpt = seekToNextHeader(from);
             if (headerPosOpt.isEmpty()) return Optional.empty();
