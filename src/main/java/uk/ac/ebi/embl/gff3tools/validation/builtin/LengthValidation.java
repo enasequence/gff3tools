@@ -44,53 +44,50 @@ public class LengthValidation extends Validation {
             "Intron usually expected to be at least 10 nt long. Please check accuracy and Use one of the following options for annotation: \n /artificial_location=\"heterogeneous population sequenced\" \n OR \n /artificial_location=\"low-quality sequence region\". \n Alternatively, use where appropriate: \n /pseudo, /pseudogene, /trans_splicing, /ribosomal_slippage";
 
     private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
-    private final Map<String, Map<String, List<GFF3Feature>>> annotationCds = new HashMap<>();
 
     @ValidationMethod(rule = "INTRON_LENGTH", type = ValidationType.FEATURE)
     public void validateIntronLength(GFF3Feature feature, int line) throws ValidationException {
-        String featureName = feature.getName();
         long length = feature.getLength();
-        Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(featureName);
-        if (soIdOpt.isEmpty()) {
-            return;
-        }
-        String soId = soIdOpt.get();
-        if (ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.INTRON.ID) && length < INTRON_FEATURE_MIN_LENGTH) {
+        Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
+        if (soIdOpt.isEmpty()) return;
+
+        if (ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.INTRON.ID)
+                && length < INTRON_FEATURE_MIN_LENGTH) {
             throw new ValidationException(line, INVALID_INTRON_LENGTH_MESSAGE.formatted(feature.accession()));
         }
-
-        boolean isCds =
-                OntologyTerm.CDS.ID.equals(soId) || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.CDS.ID);
-
-        if (!isCds) return;
-
-        if (isPseudo(feature)
-                || feature.hasAttribute(GFF3Attributes.RIBOSOMAL_SLIPPAGE)
-                || feature.hasAttribute(GFF3Attributes.TRANS_SPLICING)) {
-            return;
-        }
-
-        String accession = feature.accession();
-        String attributeId = feature.getAttributeByName(GFF3Attributes.ATTRIBUTE_ID);
-
-        annotationCds
-                .computeIfAbsent(accession, k -> new HashMap<>())
-                .computeIfAbsent(attributeId, k -> new ArrayList<>())
-                .add(feature);
     }
 
     @ValidationMethod(rule = "CDS_INTRON_LENGTH", type = ValidationType.ANNOTATION)
-    public void validateIntronLengthWithinCDS(GFF3Annotation gff3Annotation, int line) throws ValidationException {
+    public void validateCdsIntronLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
 
-        Map<String, List<GFF3Feature>> cdsFeaturesMap = annotationCds.remove(gff3Annotation.getAccession());
+        Map<String, List<GFF3Feature>> cdsListById = new HashMap<>();
 
-        if (cdsFeaturesMap == null) return;
+        for (GFF3Feature feature : gff3Annotation.getFeatures()) {
 
-        for (Map.Entry<String, List<GFF3Feature>> entry : cdsFeaturesMap.entrySet()) {
-            validateCdsIntronLength(entry.getValue(), line);
+            if (feature == null) continue;
+
+            Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
+            if (soIdOpt.isEmpty()) continue;
+
+            boolean isCds = OntologyTerm.CDS.ID.equals(soIdOpt.get())
+                    || ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.CDS.ID);
+
+            if (!isCds) continue;
+
+            if (isPseudo(feature)
+                    || feature.hasAttribute(GFF3Attributes.RIBOSOMAL_SLIPPAGE)
+                    || feature.hasAttribute(GFF3Attributes.TRANS_SPLICING)) {
+                continue;
+            }
+
+            String cdsId = feature.getAttributeByName(GFF3Attributes.ATTRIBUTE_ID);
+
+            cdsListById.computeIfAbsent(cdsId, k -> new ArrayList<>()).add(feature);
         }
 
-        cdsFeaturesMap.clear();
+        for (List<GFF3Feature> cdsGroup : cdsListById.values()) {
+            validateCdsIntronLength(cdsGroup, line);
+        }
     }
 
     private void validateCdsIntronLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
@@ -103,8 +100,8 @@ public class LengthValidation extends Validation {
         for (int i = 1; i < cdsList.size(); i++) {
             GFF3Feature prev = cdsList.get(i - 1);
             GFF3Feature curr = cdsList.get(i);
-            long intron = curr.getStart() - prev.getEnd();
-            if (intron >= 0 && intron < 10) {
+            long intronLen = curr.getStart() - prev.getEnd();
+            if (intronLen >= 0 && intronLen < 10) {
                 boolean artificial = prev.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION)
                         || curr.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION);
 
@@ -118,28 +115,22 @@ public class LengthValidation extends Validation {
 
     @ValidationMethod(rule = "EXON_LENGTH", type = ValidationType.FEATURE, severity = RuleSeverity.WARN)
     public void validateExonLength(GFF3Feature feature, int line) throws ValidationException {
-        String featureName = feature.getName();
         long length = feature.getLength();
+        Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
+        if (soIdOpt.isEmpty()) return;
 
-        Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(featureName);
-        if (soIdOpt.isEmpty()) {
-            return;
-        }
-        String soId = soIdOpt.get();
-        if (ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.EXON.ID) && length < EXON_FEATURE_MIN_LENGTH) {
+        if (ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.EXON.ID)
+                && length < EXON_FEATURE_MIN_LENGTH) {
             throw new ValidationException(line, INVALID_EXON_LENGTH_MESSAGE.formatted(feature.accession()));
         }
     }
 
     @ValidationMethod(rule = "PROPEPTIDE_LENGTH", type = ValidationType.FEATURE)
     public void validatePropeptideLength(GFF3Feature feature, int line) throws ValidationException {
-        String featureName = feature.getName();
-        Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(featureName);
-        if (soIdOpt.isEmpty()) {
-            return;
-        }
-        String soId = soIdOpt.get();
-        if (!OntologyTerm.PROPEPTIDE.ID.equals(soId)) {
+        Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
+        if (soIdOpt.isEmpty()) return;
+
+        if (!OntologyTerm.PROPEPTIDE.ID.equals(soIdOpt.get())) {
             return;
         }
         if (!feature.hasAttribute(GFF3Attributes.TRANSL_EXCEPT)
@@ -152,11 +143,9 @@ public class LengthValidation extends Validation {
 
     public boolean isPseudo(GFF3Feature feature) {
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
-        if (soIdOpt.isEmpty()) {
-            return false;
-        }
-        String soId = soIdOpt.get();
-        if (ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENIC_REGION.ID)) {
+        if (soIdOpt.isEmpty()) return false;
+
+        if (ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.PSEUDOGENIC_REGION.ID)) {
             return true;
         }
         return feature.hasAttribute(GFF3Attributes.PSEUDO) || feature.hasAttribute(GFF3Attributes.PSEUDOGENE);
