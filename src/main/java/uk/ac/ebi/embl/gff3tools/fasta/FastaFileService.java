@@ -3,6 +3,8 @@ package uk.ac.ebi.embl.gff3tools.fasta;
 import lombok.Getter;
 import lombok.Setter;
 import uk.ac.ebi.embl.gff3tools.exception.FastaFileException;
+import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.ByteSpan;
+import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceIndex;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,21 +19,17 @@ import java.util.*;
 @Setter
 public final class FastaFileService{
 
+    public List<FastaEntry> fastaEntries;
+    private HashMap<String, SequenceIndex> sequenceIndexes;
     private File file;
     private SequentialFastaFileReader reader;                 // owned here
-    public List<FastaEntry> entriesArchive;
-    private List<FastaEntryInternal> entriesInternal;
 
     public FastaFileService(){
-        entriesArchive = new ArrayList<>();
+        fastaEntries = new ArrayList<>();
         this.file = null;
     }
 
     // ---------------------------- queries ----------------------------
-
-    public List<FastaEntry> getAllReadFastaEntries() {
-        return new ArrayList<>();
-    }
 
     public Optional<FastaEntry> getFasta(String submissionId) throws FastaFileException {
         return Optional.empty();
@@ -42,10 +40,25 @@ public final class FastaFileService{
      * Uses the cached index to translate bases -> bytes, then asks the reader to stream
      * ASCII bytes while skipping '\n' and '\r' on the fly.
      */
-    public Optional<String> getSequenceRange(SequenceRangeOption option, String accessionId, long fromBase, long toBase) throws FastaFileException {
+    public String getSequenceRange(SequenceRangeOption option, String submissionId, long fromBase, long toBase) throws FastaFileException {
         ensureFileReaderOpen();
-        //TODO
-        return Optional.empty();
+        var index = sequenceIndexes.get(submissionId);
+        if (index == null) { throw new FastaFileException("No sequence index found for submissionId " + submissionId); }
+
+        ByteSpan span;
+        switch (option) {
+            case WHOLE_SEQUENCE:
+                span = index.byteSpanForBaseRangeIncludingEdgeNBases(fromBase, toBase);
+                break;
+            case WITHOUT_N_BASES:
+                span = index.byteSpanForBaseRange(fromBase, toBase);
+                break;
+            default:
+                throw new IllegalStateException("Unknown option " + option);
+        }
+
+        var result = reader.getSequenceSlice(span);
+        return result;
     }
 
     // ---------------------------- interactions with the reader ----------------------------
@@ -53,7 +66,8 @@ public final class FastaFileService{
     public void openNewFile(File fastaFile) throws FastaFileException {
         ensureFileReaderClosed(); // if already open, close first
         this.file = Objects.requireNonNull(file, "file");
-        this.entriesArchive.clear();
+        this.fastaEntries.clear();
+        this.sequenceIndexes.clear();
         try {
             reader = new SequentialFastaFileReader(fastaFile);
             var readEntries = reader.readAll();
@@ -79,7 +93,7 @@ public final class FastaFileService{
     }
 
     private void ensureFileReaderOpen() {
-        if (reader == null) throw new IllegalStateException("Service is not open. Call open() first.");
+        if (reader == null || !reader.readingFile()) throw new IllegalStateException("Service is not open. Call open() first.");
     }
 }
 

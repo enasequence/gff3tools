@@ -3,6 +3,7 @@ package uk.ac.ebi.embl.gff3tools.fasta;
 import uk.ac.ebi.embl.gff3tools.exception.FastaFileException;
 import uk.ac.ebi.embl.gff3tools.fasta.headerutils.JsonHeaderParser;
 import uk.ac.ebi.embl.gff3tools.fasta.headerutils.ParsedHeader;
+import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.ByteSpan;
 import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceAlphabet;
 import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceIndexBuilder;
 
@@ -40,6 +41,11 @@ public class SequentialFastaFileReader implements AutoCloseable {
 
     @Override public void close() throws IOException { channel.close(); }
     public boolean readingFile() { return channel.isOpen(); }
+
+    public String getSequenceSlice(ByteSpan span) {
+        //TODO
+        return "";
+    }
 
     public List<FastaEntryInternal> readAll() throws FastaFileException, IOException {
         long position = 0;
@@ -201,4 +207,5 @@ public class SequentialFastaFileReader implements AutoCloseable {
     private long safePos() {
         try { return channel.position(); } catch (IOException e) { return -1; }
     }
+
 }
