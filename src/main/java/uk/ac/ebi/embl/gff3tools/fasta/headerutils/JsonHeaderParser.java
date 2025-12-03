@@ -1,7 +1,8 @@
-package uk.ac.ebi.embl.gff3tools.fasta;
+package uk.ac.ebi.embl.gff3tools.fasta.headerutils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import uk.ac.ebi.embl.gff3tools.fasta.Topology;
 
 import java.io.IOException;
 import java.util.*;

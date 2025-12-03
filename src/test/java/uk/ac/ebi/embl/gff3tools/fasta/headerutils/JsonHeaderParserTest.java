@@ -1,6 +1,8 @@
-package uk.ac.ebi.embl.gff3tools.fasta;
+package uk.ac.ebi.embl.gff3tools.fasta.headerutils;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.fasta.Topology;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -21,7 +23,7 @@ public class JsonHeaderParserTest {
             FastaHeader h = ph.getHeader();
             assertEquals("Pinus sativa", h.getDescription());
             assertEquals("genomic", h.getMoleculeType());
-            assertEquals(Topology.CIRCULAR, h.getTopology());
+            Assertions.assertEquals(Topology.CIRCULAR, h.getTopology());
             assertTrue(h.getChromosomeType().isEmpty());
             assertTrue(h.getChromosomeLocation().isEmpty());
             assertTrue(h.getChromosomeName().isEmpty());

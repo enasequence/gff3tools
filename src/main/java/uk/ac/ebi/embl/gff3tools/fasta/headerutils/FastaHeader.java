@@ -1,7 +1,8 @@
-package uk.ac.ebi.embl.gff3tools.fasta;
+package uk.ac.ebi.embl.gff3tools.fasta.headerutils;
 
 import lombok.Getter;
 import lombok.Setter;
+import uk.ac.ebi.embl.gff3tools.fasta.Topology;
 
 import java.util.Optional;
 
