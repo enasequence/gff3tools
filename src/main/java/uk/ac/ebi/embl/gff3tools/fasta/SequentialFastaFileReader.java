@@ -43,7 +43,7 @@ public class SequentialFastaFileReader implements AutoCloseable {
     public boolean readingFile() { return channel.isOpen(); }
 
     public String getSequenceSlice(ByteSpan span) {
-        //TODO
+
         return "";
     }
 

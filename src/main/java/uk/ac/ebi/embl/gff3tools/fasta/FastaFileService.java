@@ -31,8 +31,14 @@ public final class FastaFileService{
 
     // ---------------------------- queries ----------------------------
 
+    public Optional<FastaEntry> setAccessionId(String submissionId, String accessionId) throws FastaFileException {
+        Optional<FastaEntry> target = fastaEntries.stream().filter(entry -> entry.getSubmissionId().equals(submissionId)).findFirst();
+        target.ifPresent(entry -> entry.setAccessionId(accessionId));
+        return target;
+    }
+
     public Optional<FastaEntry> getFasta(String submissionId) throws FastaFileException {
-        return Optional.empty();
+        return fastaEntries.stream().filter(entry -> entry.getSubmissionId().equals(submissionId)).findFirst();
     }
 
     /**
@@ -71,7 +77,17 @@ public final class FastaFileService{
         try {
             reader = new SequentialFastaFileReader(fastaFile);
             var readEntries = reader.readAll();
-            //TODO assign
+            for (var entry : readEntries) {
+                FastaEntry fastaEntry = new FastaEntry();
+                fastaEntry.setSubmissionId(entry.getSubmissionId());
+                fastaEntry.setHeader(entry.getHeader());
+                fastaEntry.setTotalBases(entry.sequenceIndex.totalBases());
+                fastaEntry.setStartCountNs(entry.sequenceIndex.startNBasesCount);
+                fastaEntry.setEndCountNs(entry.sequenceIndex.endNBasesCount);
+                fastaEntries.add(fastaEntry);
+
+                sequenceIndexes.put(entry.getSubmissionId(), entry.sequenceIndex);
+            }
         } catch (IOException ioe) {
             throw new FastaFileException("Failed to open FASTA reader: " + file.getAbsolutePath(), ioe);
         }
