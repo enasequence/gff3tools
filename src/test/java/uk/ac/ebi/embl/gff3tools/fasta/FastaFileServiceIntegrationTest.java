@@ -23,7 +23,7 @@ import uk.ac.ebi.embl.gff3tools.exception.FastaFileException;
 class FastaFileServiceIntegrationTest {
 
     @Test
-    void readsMalformedFastaJson_Failure() throws IOException {
+    void readingMalformedFastaJsonFailure() throws IOException { //more tests like this in the JsonHeaderParserTest
         File fasta = FastaTestResources.file("fasta", "malformedJsonFasta.txt");
         FastaFileService service = new FastaFileService();
 
@@ -36,7 +36,7 @@ class FastaFileServiceIntegrationTest {
 
 
     @Test
-    void readsMalformedFastaSequence_Failure() throws IOException {
+    void readingMalformedFastaSequenceFailure() throws IOException {
         File fasta = FastaTestResources.file("fasta", "malformedFasta.txt");
         FastaFileService service = new FastaFileService();
 
@@ -48,7 +48,7 @@ class FastaFileServiceIntegrationTest {
     }
 
     @Test
-    void basicFastaEntryManipulation_succeeds() throws IOException, FastaFileException {
+    void basicFastaEntryManipulationSucceeds() throws IOException, FastaFileException {
         File fasta = FastaTestResources.file("fasta", "example2.txt");
         FastaFileService service = new FastaFileService();
         service.openNewFile(fasta);

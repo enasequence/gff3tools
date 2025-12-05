@@ -41,7 +41,7 @@ public class SequenceIndexTest {
     }
 
     @Test
-    void totals_including_and_trimmed() {
+    void totalsIncludingAndTrimmed() {
         SequenceIndex idx = buildIndex(/*startN*/ 2, /*endN*/ 3);
 
         assertEquals(12, idx.totalBases(), "totalBasesIncludingEdgeNBases");
@@ -49,7 +49,7 @@ public class SequenceIndexTest {
     }
 
     @Test
-    void byteSpan_including_edges_same_line() {
+    void byteSpanIncludingEdgesSameLine() {
         SequenceIndex idx = buildIndex(0, 0);
 
         // [from..to] = [2..4] -> bytes [101..103], endExclusive = 104
@@ -61,7 +61,7 @@ public class SequenceIndexTest {
     }
 
     @Test
-    void byteSpan_including_edges_crosses_newline() {
+    void byteSpanIncludingEdgesCrossesNewline() {
         SequenceIndex idx = buildIndex(0, 0);
 
         // [2..5] crosses the newline between line1 and line2
@@ -74,7 +74,7 @@ public class SequenceIndexTest {
     }
 
     @Test
-    void including_edges_validates_total() {
+    void includingEdgesValidatesTotal() {
         SequenceIndex idx = buildIndex(0, 0);
         assertThrows(
                 IllegalArgumentException.class,
@@ -83,7 +83,7 @@ public class SequenceIndexTest {
     }
 
     @Test
-    void trimmed_byteSpan_maps_through_startN() {
+    void trimmedByteSpanMapsThroughStartN() {
         SequenceIndex idx = buildIndex(2, 3);
         assertEquals(7, idx.totalBasesExcludingEdgeNBases());
 
@@ -95,7 +95,7 @@ public class SequenceIndexTest {
     }
 
     @Test
-    void trimmed_span_crosses_multiple_lines() {
+    void trimmedSpanCrossesMultipleLines() {
         SequenceIndex idx = buildIndex(2, 3); // trimmed total = 7 bases
 
         ByteSpan s = idx.byteSpanForBaseRange(4, 7);
@@ -106,7 +106,7 @@ public class SequenceIndexTest {
     }
 
     @Test
-    void trimmed_validates_range_against_trimmed_total() {
+    void trimmedValidatesRangeAgainstTrimmedTotal() {
         SequenceIndex idx = buildIndex(2, 3); // trimmed total = 7
         assertThrows(
                 IllegalArgumentException.class,
@@ -115,7 +115,7 @@ public class SequenceIndexTest {
     }
 
     @Test
-    void zero_edgeNs_behavior_matches_including_method() {
+    void zeroEdgeNsBehaviorMatchesIncludingMethod() {
         SequenceIndex idx = buildIndex(0, 0); // no additional N bases
 
         ByteSpan a = idx.byteSpanForBaseRange(2, 5);

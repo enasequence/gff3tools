@@ -38,7 +38,7 @@ public class SequenceIndexBuilderTest {
     }
 
     @Test
-    void buildsIndex_ignoresEmptyLines_countsEdgeNs_only_withinWindow() throws Exception {
+    void buildsIndexCorrectly() throws Exception {
         // Layout (US-ASCII):
         // >ID1 | {"d":"x"}\n
         // NNAC\n
@@ -118,7 +118,7 @@ public class SequenceIndexBuilderTest {
     }
 
     @Test
-    void supportsCRLF_beforeNextHeader_and_stillWindowsCorrectly() throws Exception {
+    void ignoresCRLFCorrectly() throws Exception {
         // Mix CRLF lines in the sequence part; builder uses LF as terminator and ignores CR as non-base.
         String header = ">ID2\n";
         // simulate CRLF lines by inserting '\r' before '\n'
@@ -152,7 +152,7 @@ public class SequenceIndexBuilderTest {
     }
 
     @Test
-    void ignoresWhitespaceOnlyLines_and_middleLineNs_doNotAffectEdgeCounts() throws Exception {
+    void ignoresEmptyLinesCorrectly() throws Exception {
         String header = ">ID3\n";
         String l1 = "NACG\n"; // leading N = 1
         String l2 = "NNNN\n"; // middle line of Ns — must NOT affect start/end N counts
