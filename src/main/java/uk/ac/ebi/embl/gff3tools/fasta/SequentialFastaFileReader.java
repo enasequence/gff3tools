@@ -1,16 +1,25 @@
+/*
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package uk.ac.ebi.embl.gff3tools.fasta;
 
+import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.*;
 import uk.ac.ebi.embl.gff3tools.exception.FastaFileException;
 import uk.ac.ebi.embl.gff3tools.fasta.headerutils.JsonHeaderParser;
 import uk.ac.ebi.embl.gff3tools.fasta.headerutils.ParsedHeader;
 import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.ByteSpan;
 import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceAlphabet;
 import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceIndexBuilder;
-
-import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.*;
 
 public class SequentialFastaFileReader implements AutoCloseable {
 
@@ -39,18 +48,70 @@ public class SequentialFastaFileReader implements AutoCloseable {
         this.fileSize = channel.size();
     }
 
-    @Override public void close() throws IOException { channel.close(); }
-    public boolean readingFile() { return channel.isOpen(); }
+    @Override
+    public void close() throws IOException {
+        channel.close();
+    }
 
-    public String getSequenceSlice(ByteSpan span) {
+    public boolean readingFile() {
+        return channel.isOpen();
+    }
 
-        return "";
+    public String getSequenceSliceString(ByteSpan span) throws IOException {
+        return readAsciiWithoutNewlines(span.start, span.endEx);
+    }
+
+    public InputStream getSequenceSlice(ByteSpan span) {
+        return new InputStream() {
+            private long position = span.start;
+            private final long end = span.endEx;
+            private final ByteBuffer buffer = ByteBuffer.allocate(8192); // Adjust as needed
+
+            @Override
+            public int read() throws IOException {
+                while (true) {
+                    if (!buffer.hasRemaining()) {
+                        if (position >= end) return -1;
+
+                        buffer.clear();
+                        int toRead = (int) Math.min(buffer.capacity(), end - position);
+                        int read = channel.read(buffer, position);
+                        if (read == -1) return -1;
+
+                        position += read;
+                        buffer.flip();
+                    }
+
+                    // Peek the next byte
+                    if (buffer.hasRemaining()) {
+                        byte b = buffer.get();
+                        if (b == '\n') continue; // Filter out newline
+                        return b & 0xFF;
+                    }
+                }
+            }
+
+            @Override
+            public int read(byte[] b, int off, int len) throws IOException {
+                int totalRead = 0;
+
+                while (totalRead < len) {
+                    int next = read();
+                    if (next == -1) break;
+
+                    b[off + totalRead] = (byte) next;
+                    totalRead++;
+                }
+
+                return (totalRead == 0) ? -1 : totalRead;
+            }
+        };
     }
 
     public List<FastaEntryInternal> readAll() throws FastaFileException, IOException {
         long position = 0;
         List<FastaEntryInternal> entries = new ArrayList<>();
-        while (true){
+        while (true) {
             var entry = readNext(position);
             if (entry.isEmpty()) break;
             entries.add(entry.get());
@@ -114,11 +175,11 @@ public class SequentialFastaFileReader implements AutoCloseable {
             buf.flip();
             while (buf.hasRemaining()) {
                 byte b = buf.get();
-                if (b == LF || b == CR) continue;         // omit line breaks on the fly
-                sb.append((char)(b & 0xFF));               // ASCII
+                if (b == LF || b == CR) continue; // omit line breaks on the fly
+                sb.append((char) (b & 0xFF)); // ASCII
             }
             remain -= n;
-            off    += n;
+            off += n;
         }
         return sb.toString();
     }
@@ -205,7 +266,10 @@ public class SequentialFastaFileReader implements AutoCloseable {
     }
 
     private long safePos() {
-        try { return channel.position(); } catch (IOException e) { return -1; }
+        try {
+            return channel.position();
+        } catch (IOException e) {
+            return -1;
+        }
     }
-
 }

@@ -1,0 +1,9 @@
+>ID1 | {"description":"first"}
+NNAC
+ACGT
+
+TTNn
+
+>ID2 | {"description":"second"}
+ACGT
+GGGG

@@ -1,13 +1,22 @@
+/*
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package uk.ac.ebi.embl.gff3tools.fasta.headerutils;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.gff3tools.fasta.Topology;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.fasta.Topology;
 
 public class JsonHeaderParserTest {
 
@@ -15,7 +24,8 @@ public class JsonHeaderParserTest {
 
     @Test
     void parsesStandardHeaderWithJson() {
-        String line = ">AF123456.1 | { \"description\":\"Pinus sativa\", \"molecule_type\":\"genomic\", \"topology\":\"circular\" }";
+        String line =
+                ">AF123456.1 | { \"description\":\"Pinus sativa\", \"molecule_type\":\"genomic\", \"topology\":\"circular\" }";
         try {
             ParsedHeader ph = parser.parse(line);
 
@@ -45,7 +55,8 @@ public class JsonHeaderParserTest {
 
     @Test
     void parsesCurlyQuotesAndWeirdSpacingInKeys() {
-        String line = ">ID1 | {  \u201Cdescription\u201D: \u201CPinus\u201D,  \u201C molecule_type\u201D: \"genomic\" ,  \u201Ctopology\u201D:  \"CIRCULAR\" }";
+        String line =
+                ">ID1 | {  \u201Cdescription\u201D: \u201CPinus\u201D,  \u201C molecule_type\u201D: \"genomic\" ,  \u201Ctopology\u201D:  \"CIRCULAR\" }";
         try {
             ParsedHeader ph = parser.parse(line);
             FastaHeader h = ph.getHeader();
@@ -59,7 +70,8 @@ public class JsonHeaderParserTest {
 
     @Test
     void normalizesKeyVariantsAndChromosomeOptionals() {
-        String line = ">ID2 | { \"Description\":\"Desc\", \"molecule-type\":\"rna\", \"Chromosome Type\":\"plasmid\", \"chromosome_location\":\"chr12:100-200\", \"CHROMOSOME_NAME\":\"pX\" }";
+        String line =
+                ">ID2 | { \"Description\":\"Desc\", \"molecule-type\":\"rna\", \"Chromosome Type\":\"plasmid\", \"chromosome_location\":\"chr12:100-200\", \"CHROMOSOME_NAME\":\"pX\" }";
         try {
             ParsedHeader ph = parser.parse(line);
             FastaHeader h = ph.getHeader();
@@ -77,7 +89,8 @@ public class JsonHeaderParserTest {
     @Test
     void handlesNbspInJson() {
         String nbsp = "\u00A0";
-        String line = (">ID3 | {"+nbsp+"\"description\""+nbsp+":" + nbsp + "\"Alpha"+nbsp+"Beta\"" + nbsp + ",\"topology\":\"linear\"}");
+        String line = (">ID3 | {" + nbsp + "\"description\"" + nbsp + ":" + nbsp + "\"Alpha" + nbsp + "Beta\"" + nbsp
+                + ",\"topology\":\"linear\"}");
         try {
             ParsedHeader ph = parser.parse(line);
             FastaHeader h = ph.getHeader();
@@ -147,7 +160,8 @@ public class JsonHeaderParserTest {
             String msg = e.getMessage();
             assertNotNull(msg);
             assertTrue(msg.contains("OOPS"), "Message should include offending JSON token");
-            assertTrue(msg.contains("{\"description\": \"x\"") || msg.contains("{\"description\":\"x\""),
+            assertTrue(
+                    msg.contains("{\"description\": \"x\"") || msg.contains("{\"description\":\"x\""),
                     "Message should include JSON snippet");
         }
     }

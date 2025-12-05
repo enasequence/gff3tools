@@ -1,11 +1,20 @@
+/*
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package uk.ac.ebi.embl.gff3tools.fasta.headerutils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import uk.ac.ebi.embl.gff3tools.fasta.Topology;
-
 import java.io.IOException;
 import java.util.*;
+import uk.ac.ebi.embl.gff3tools.fasta.Topology;
 
 public class JsonHeaderParser {
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -31,16 +40,19 @@ public class JsonHeaderParser {
         if (raw == null || raw.isEmpty()) return;
 
         // Normalize curly quotes / NBSPs but keep the final JSON we actually tried to parse
-        String normalized = raw.replace('\u201C','"').replace('\u201D','"')
-                .replace('\u2018','\'').replace('\u2019','\'')
-                .replace('\u00A0',' ').trim();
+        String normalized = raw.replace('\u201C', '"')
+                .replace('\u201D', '"')
+                .replace('\u2018', '\'')
+                .replace('\u2019', '\'')
+                .replace('\u00A0', ' ')
+                .trim();
         try {
             JsonNode node = MAPPER.readTree(normalized);
-            Map<String,String> m = new HashMap<>();
+            Map<String, String> m = new HashMap<>();
             node.fields().forEachRemaining(e -> {
-                String k = e.getKey()==null?"":e.getKey();
-                k = k.trim().toLowerCase(Locale.ROOT).replaceAll("[\\s_-]+","");
-                String v = e.getValue().isNull()?null:e.getValue().asText();
+                String k = e.getKey() == null ? "" : e.getKey();
+                k = k.trim().toLowerCase(Locale.ROOT).replaceAll("[\\s_-]+", "");
+                String v = e.getValue().isNull() ? null : e.getValue().asText();
                 m.put(k, v);
             });
             h.setDescription(m.get("description"));
@@ -58,14 +70,19 @@ public class JsonHeaderParser {
         }
     }
 
-    private static String emptyToNull(String s){ return (s==null||s.isEmpty())?null:s; }
+    private static String emptyToNull(String s) {
+        return (s == null || s.isEmpty()) ? null : s;
+    }
 
-    private static Topology parseTopology(String s){
-        if (s==null) return null;
-        switch (s.trim().toUpperCase(Locale.ROOT)){
-            case "LINEAR": return Topology.LINEAR;
-            case "CIRCULAR": return Topology.CIRCULAR;
-            default: return null;
+    private static Topology parseTopology(String s) {
+        if (s == null) return null;
+        switch (s.trim().toUpperCase(Locale.ROOT)) {
+            case "LINEAR":
+                return Topology.LINEAR;
+            case "CIRCULAR":
+                return Topology.CIRCULAR;
+            default:
+                return null;
         }
     }
 }

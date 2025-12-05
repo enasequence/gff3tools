@@ -1,10 +1,19 @@
+/*
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package uk.ac.ebi.embl.gff3tools.fasta.sequenceutils;
 
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 public class SequenceIndexTest {
 
@@ -21,26 +30,22 @@ public class SequenceIndexTest {
      *  - total bases including edge Ns = 12
      */
     private SequenceIndex buildIndex(long startN, long endN) {
-        List<LineEntry> lines = List.of(
-                new LineEntry(1, 4,   100, 104),
-                new LineEntry(5, 8,   105, 109),
-                new LineEntry(9, 12,  110, 114)
-        );
+        List<LineEntry> lines =
+                List.of(new LineEntry(1, 4, 100, 104), new LineEntry(5, 8, 105, 109), new LineEntry(9, 12, 110, 114));
         return new SequenceIndex(
-                /*firstBaseByte*/100,
-                /*startNBasesCount*/startN,
-                /*lastBaseByte*/113,
-                /*endNBasesCount*/endN,
-                lines
-        );
+                /*firstBaseByte*/ 100,
+                /*startNBasesCount*/ startN,
+                /*lastBaseByte*/ 113,
+                /*endNBasesCount*/ endN,
+                lines);
     }
 
     @Test
     void totals_including_and_trimmed() {
-        SequenceIndex idx = buildIndex(/*startN*/2, /*endN*/3);
+        SequenceIndex idx = buildIndex(/*startN*/ 2, /*endN*/ 3);
 
-        assertEquals(12, idx.totalBasesIncludingEdgeNBases(), "totalBasesIncludingEdgeNBases");
-        assertEquals(7, idx.totalBases(), "trimmed totalBases");
+        assertEquals(12, idx.totalBases(), "totalBasesIncludingEdgeNBases");
+        assertEquals(7, idx.totalBasesExcludingEdgeNBases(), "trimmed totalBases");
     }
 
     @Test
@@ -71,7 +76,8 @@ public class SequenceIndexTest {
     @Test
     void including_edges_validates_total() {
         SequenceIndex idx = buildIndex(0, 0);
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(
+                IllegalArgumentException.class,
                 () -> idx.byteSpanForBaseRangeIncludingEdgeNBases(1, 13),
                 "toBase beyond total (including Ns) should throw");
     }
@@ -79,7 +85,7 @@ public class SequenceIndexTest {
     @Test
     void trimmed_byteSpan_maps_through_startN() {
         SequenceIndex idx = buildIndex(2, 3);
-        assertEquals(7, idx.totalBases());
+        assertEquals(7, idx.totalBasesExcludingEdgeNBases());
 
         ByteSpan s = idx.byteSpanForBaseRange(1, 3); // Ignore first 2 Ns, ignore last 3 Ns
 
@@ -102,14 +108,15 @@ public class SequenceIndexTest {
     @Test
     void trimmed_validates_range_against_trimmed_total() {
         SequenceIndex idx = buildIndex(2, 3); // trimmed total = 7
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(
+                IllegalArgumentException.class,
                 () -> idx.byteSpanForBaseRange(1, 8),
                 "toBase beyond trimmed total should throw");
     }
 
     @Test
     void zero_edgeNs_behavior_matches_including_method() {
-        SequenceIndex idx = buildIndex(0, 0); //no additional N bases
+        SequenceIndex idx = buildIndex(0, 0); // no additional N bases
 
         ByteSpan a = idx.byteSpanForBaseRange(2, 5);
         ByteSpan b = idx.byteSpanForBaseRangeIncludingEdgeNBases(2, 5);
