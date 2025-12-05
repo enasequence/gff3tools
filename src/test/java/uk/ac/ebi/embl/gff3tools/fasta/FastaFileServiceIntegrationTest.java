@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.fasta;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -21,9 +22,33 @@ import uk.ac.ebi.embl.gff3tools.exception.FastaFileException;
 
 class FastaFileServiceIntegrationTest {
 
+    @Test
+    void readsMalformedFastaJson_Failure() throws IOException {
+        File fasta = FastaTestResources.file("fasta", "malformedJsonFasta.txt");
+        FastaFileService service = new FastaFileService();
+
+        assertThrows(FastaFileException.class, () -> {
+            service.openNewFile(fasta);
+        });
+
+        service.close();
+    }
+
 
     @Test
-    void basicFastaEntryManipulation_test() throws FastaFileException {
+    void readsMalformedFastaSequence_Failure() throws IOException {
+        File fasta = FastaTestResources.file("fasta", "malformedFasta.txt");
+        FastaFileService service = new FastaFileService();
+
+        assertThrows(FastaFileException.class, () -> {
+            service.openNewFile(fasta);
+        });
+
+        service.close();
+    }
+
+    @Test
+    void basicFastaEntryManipulation_succeeds() throws IOException, FastaFileException {
         File fasta = FastaTestResources.file("fasta", "example2.txt");
         FastaFileService service = new FastaFileService();
         service.openNewFile(fasta);

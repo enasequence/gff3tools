@@ -1,0 +1,8 @@
+>ID1 | {"description":"something", "molecule_type":"dna", "topology":"linear"}
+NNAC
+ACGT;';';
+TTNn
+
+>ID2 | {"description":"x", "molecule_type":"dna", "topology":"linear"}
+ACGT
+GGGG

@@ -32,4 +32,32 @@ public final class SequenceAlphabet {
     public static SequenceAlphabet defaultNucleotideAlphabet() {
         return new SequenceAlphabet("ACGTURYSWKMBDHVNacgturyswkmbdhvn-.*");
     }
+
+    public String describeAllowed() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+
+        boolean first = true;
+        for (int i = 0; i < allowed.length; i++) {
+            if (allowed[i]) {
+                char c = (char) i;
+
+                // Render unprintables safely
+                String display;
+                if (c >= 32 && c < 127) {
+                    display = Character.toString(c);
+                } else {
+                    display = String.format("\\x%02X", i); // e.g. non-printable → \x1B
+                }
+
+                if (!first) sb.append(", ");
+                sb.append(display);
+                first = false;
+            }
+        }
+
+        sb.append("]");
+        return sb.toString();
+    }
+
 }

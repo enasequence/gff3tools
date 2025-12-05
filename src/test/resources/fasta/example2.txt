@@ -1,9 +1,9 @@
->ID1 | {"description":"first"}
+>ID1 | {"description":"x", "molecule_type":"dna", "topology":"linear"}
 NNAC
 ACGT
 
 TTNn
 
->ID2 | {"description":"second"}
+>ID2 | {"description":"x", "molecule_type":"dna", "topology":"circular"}v
 ACGT
 GGGG

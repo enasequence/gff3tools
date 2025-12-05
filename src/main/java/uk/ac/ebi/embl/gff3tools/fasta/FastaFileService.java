@@ -118,43 +118,35 @@ public final class FastaFileService {
 
     // ---------------------------- interactions with the reader ----------------------------
 
-    public void openNewFile(File fastaFile) throws FastaFileException {
+    public void openNewFile(File fastaFile) throws FastaFileException, IOException {
         ensureFileReaderClosed(); // if already open, close first
         this.file = Objects.requireNonNull(fastaFile, "file");
         this.fastaEntries.clear();
         this.sequenceIndexes.clear();
-        try {
-            reader = new SequentialFastaFileReader(fastaFile);
-            var readEntries = reader.readAll();
-            for (var entry : readEntries) {
-                FastaEntry fastaEntry = new FastaEntry();
-                fastaEntry.setSubmissionId(entry.getSubmissionId());
-                fastaEntry.setHeader(entry.getHeader());
-                fastaEntry.setTotalBases(entry.sequenceIndex.totalBases());
-                fastaEntry.setLeadingNsCount(entry.sequenceIndex.startNBasesCount);
-                fastaEntry.setTrailingNsCount(entry.sequenceIndex.endNBasesCount);
-                fastaEntries.add(fastaEntry);
+        reader = new SequentialFastaFileReader(fastaFile);
+        var readEntries = reader.readAll();
+        for (var entry : readEntries) {
+            FastaEntry fastaEntry = new FastaEntry();
+            fastaEntry.setSubmissionId(entry.getSubmissionId());
+            fastaEntry.setHeader(entry.getHeader());
+            fastaEntry.setTotalBases(entry.sequenceIndex.totalBases());
+            fastaEntry.setLeadingNsCount(entry.sequenceIndex.startNBasesCount);
+            fastaEntry.setTrailingNsCount(entry.sequenceIndex.endNBasesCount);
+            fastaEntries.add(fastaEntry);
 
-                sequenceIndexes.put(entry.getSubmissionId(), entry.sequenceIndex);
-            }
-        } catch (IOException ioe) {
-            throw new FastaFileException("Failed to open FASTA reader: " + file.getAbsolutePath(), ioe);
+            sequenceIndexes.put(entry.getSubmissionId(), entry.sequenceIndex);
         }
     }
 
     /** Close the reader. Safe to call multiple times. */
-    public void close() throws FastaFileException {
+    public void close() throws IOException {
         if (reader != null) {
-            try {
-                reader.close();
-            } catch (IOException ioe) {
-                throw new FastaFileException("Failed to close FASTA reader: " + file.getAbsolutePath(), ioe);
-            }
+            reader.close();
             reader = null;
         }
     }
 
-    private void ensureFileReaderClosed() throws FastaFileException {
+    private void ensureFileReaderClosed() throws IOException {
         if (reader != null) close();
     }
 

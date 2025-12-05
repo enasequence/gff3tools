@@ -14,12 +14,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.*;
+
+import uk.ac.ebi.embl.gff3tools.exception.FastaFileException;
 import uk.ac.ebi.embl.gff3tools.fasta.Topology;
 
 public class JsonHeaderParser {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    public ParsedHeader parse(String headerLine) throws IOException {
+    public ParsedHeader parse(String headerLine) throws FastaFileException {
         String rest = headerLine.substring(1); // headerLine starts with '>'
         int pipe = rest.indexOf('|');
         String idPart = (pipe >= 0 ? rest.substring(0, pipe) : rest).trim();
@@ -36,37 +38,76 @@ public class JsonHeaderParser {
         return new ParsedHeader(id, h);
     }
 
-    private static void fillFromJson(String raw, FastaHeader h) throws IOException {
-        if (raw == null || raw.isEmpty()) return;
+    private static void fillFromJson(String raw, FastaHeader h) throws FastaFileException {
+        if (raw == null || raw.isEmpty()) {
+            throw new FastaFileException(
+                    "FASTA header contains a '|', but no JSON object was provided. " +
+                            "Expected something like: >id { \"description\": \"...\", \"moleculeType\": \"DNA\", ... }"
+            );
+        }
 
-        // Normalize curly quotes / NBSPs but keep the final JSON we actually tried to parse
+        // Normalize curly quotes / NBSPs
         String normalized = raw.replace('\u201C', '"')
                 .replace('\u201D', '"')
                 .replace('\u2018', '\'')
                 .replace('\u2019', '\'')
                 .replace('\u00A0', ' ')
                 .trim();
+
+        JsonNode node;
         try {
-            JsonNode node = MAPPER.readTree(normalized);
-            Map<String, String> m = new HashMap<>();
-            node.fields().forEachRemaining(e -> {
-                String k = e.getKey() == null ? "" : e.getKey();
-                k = k.trim().toLowerCase(Locale.ROOT).replaceAll("[\\s_-]+", "");
-                String v = e.getValue().isNull() ? null : e.getValue().asText();
-                m.put(k, v);
-            });
-            h.setDescription(m.get("description"));
-            h.setMoleculeType(m.get("moleculetype"));
-            h.setTopology(parseTopology(m.get("topology")));
-            if (m.containsKey("chromosometype"))
-                h.setChromosomeType(Optional.ofNullable(emptyToNull(m.get("chromosometype"))));
-            if (m.containsKey("chromosomelocation"))
-                h.setChromosomeLocation(Optional.ofNullable(emptyToNull(m.get("chromosomelocation"))));
-            if (m.containsKey("chromosomename"))
-                h.setChromosomeName(Optional.ofNullable(emptyToNull(m.get("chromosomename"))));
+            node = MAPPER.readTree(normalized);
+            if (node == null || !node.isObject()) {
+                throw new FastaFileException(
+                        "FASTA header JSON did not parse into an object. " +
+                                "Received: " + normalized
+                );
+            }
         } catch (IOException e) {
-            // explode, and include the JSON we tried to parse
-            throw new IOException("Malformed FASTA header JSON: " + normalized, e);
+            throw new FastaFileException(
+                    "Malformed FASTA header JSON. Failed to parse: " + normalized, e
+            );
+        }
+
+        // Extract fields
+        Map<String, String> m = new HashMap<>();
+        node.fields().forEachRemaining(e -> {
+            String key = (e.getKey() == null ? "" : e.getKey())
+                    .trim().toLowerCase(Locale.ROOT)
+                    .replaceAll("[\\s_-]+", "");
+            String val = e.getValue().isNull() ? null : e.getValue().asText();
+            m.put(key, val);
+        });
+
+        // Assign values
+        h.setDescription(m.get("description"));
+        h.setMoleculeType(m.get("moleculetype"));
+        h.setTopology(parseTopology(m.get("topology")));
+
+        if (m.containsKey("chromosometype"))
+            h.setChromosomeType(Optional.ofNullable(emptyToNull(m.get("chromosometype"))));
+        if (m.containsKey("chromosomelocation"))
+            h.setChromosomeLocation(Optional.ofNullable(emptyToNull(m.get("chromosomelocation"))));
+        if (m.containsKey("chromosomename"))
+            h.setChromosomeName(Optional.ofNullable(emptyToNull(m.get("chromosomename"))));
+
+        // 🔍 Validate required fields
+        List<String> missing = new ArrayList<>();
+
+        if (h.description == null)
+            missing.add("description");
+
+        if (h.moleculeType == null)
+            missing.add("moleculeType");
+
+        if (h.topology == null)
+            missing.add("topology (must be 'LINEAR' or 'CIRCULAR')");
+
+        if (!missing.isEmpty()) {
+            throw new FastaFileException(
+                    "FASTA header JSON is missing required fields: " + missing +
+                            ". Parsed JSON was: " + normalized
+            );
         }
     }
 

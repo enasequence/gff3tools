@@ -10,6 +10,8 @@
  */
 package uk.ac.ebi.embl.gff3tools.fasta.sequenceutils;
 
+import uk.ac.ebi.embl.gff3tools.exception.FastaFileException;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -45,12 +47,12 @@ public final class SequenceIndexBuilder {
     }
 
     /** Build a SequenceIndex starting at 'startPos' (first byte after header line). */
-    public Result buildFrom(long startPos) throws IOException {
+    public Result buildFrom(long startPos) throws IOException, FastaFileException {
         ScanState s = new ScanState(startPos, fileSize);
         ByteBuffer buf = newScanBuffer();
 
         // ------------- scan raw bytes into provisional "sequence lines" -------------
-        while (hasMore(s.pos)) {
+        while (s.pos<fileSize) {
             int n = fillBuffer(buf, s.pos);
             if (n <= 0) break;
             if (processBuffer(buf, s)) break; // found next header
@@ -58,7 +60,7 @@ public final class SequenceIndexBuilder {
         }
         commitOpenLineIfAny(s);
 
-        // ------------- filter window & compute metadata (requirements 1–4) -------------
+        // ------------- filter window & compute metadata -------------
         List<LineEntry> filtered = filterLinesWithinWindow(s.lines, s.firstBaseByte, s.nextHdr);
 
         long firstBaseByte = filtered.isEmpty() ? -1 : filtered.get(0).byteStart;
@@ -97,10 +99,6 @@ public final class SequenceIndexBuilder {
         }
     }
 
-    private boolean hasMore(long p) {
-        return p < fileSize;
-    }
-
     private ByteBuffer newScanBuffer() {
         return ByteBuffer.allocateDirect(SCAN_BUF_SIZE);
     }
@@ -113,7 +111,7 @@ public final class SequenceIndexBuilder {
     }
 
     /** Returns true if we hit the next header and should stop scanning this entry. */
-    private boolean processBuffer(ByteBuffer buf, ScanState s) throws IOException {
+    private boolean processBuffer(ByteBuffer buf, ScanState s) throws IOException, FastaFileException {
         buf.flip();
         while (buf.hasRemaining()) {
             int idx = buf.position();
@@ -125,14 +123,21 @@ public final class SequenceIndexBuilder {
                 commitOpenLineIfAny(s); // finalize any in-flight line
                 return true;
             }
-            if (b == LF) { // end of a displayed sequence line
+            else if (b == LF) { // end of a displayed sequence line
                 commitOpenLineIfAny(s); // (2) only lines with bases are committed
                 continue;
             }
-            if (alphabet.isAllowed(b)) {
+            else if (alphabet.isAllowed(b)) {
                 observeBase(abs, s);
             }
-            // else: ignore non-allowed, non-newline junk on the line
+            else{
+                throw new FastaFileException(String.format(
+                        "Illegal character '%s' (byte value: %d) at absolute file position %d. " +
+                                "This character is not allowed by the current FASTA alphabet. " +
+                                "Expected only characters: %s",
+                        (char) (b & 0xFF), b & 0xFF, abs, alphabet.describeAllowed()
+                ));
+            }
         }
         return false;
     }
