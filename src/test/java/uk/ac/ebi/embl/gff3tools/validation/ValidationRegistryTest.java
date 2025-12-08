@@ -94,7 +94,8 @@ class ValidationRegistryTest {
         assertTrue(classes.contains(DummyFix.class), "Should include DummyFix");
 
         Set<Method> methods = result.stream().map(ValidatorDescriptor::method).collect(Collectors.toSet());
-        assertTrue(methods.contains(DummyValidation.class.getMethod("onExit")), "Should include DummyValidation.onExit");
+        assertTrue(
+                methods.contains(DummyValidation.class.getMethod("onExit")), "Should include DummyValidation.onExit");
         assertTrue(methods.contains(DummyFix.class.getMethod("onExit")), "Should include DummyFix.onExit");
     }
 
@@ -186,15 +187,13 @@ class ValidationRegistryTest {
 
         @Gff3Fix(name = "FIX1")
         class FixClass {
-            @ValidationMethod(rule = "F1", type = ValidationType.FEATURE)
+            @FixMethod(rule = "F1", type = ValidationType.FEATURE)
             public void fix() {}
         }
 
         List<ValidatorDescriptor> all = new ArrayList<>();
         all.add(new ValidatorDescriptor(ValClass.class, new ValClass(), getMethod(ValClass.class, "validate")));
-        all.add(new ValidatorDescriptor(ValClass.class, new ValClass(), getMethod(ValClass.class, "onExit")));
         all.add(new ValidatorDescriptor(FixClass.class, new FixClass(), getMethod(FixClass.class, "fix")));
-        all.add(new ValidatorDescriptor(FixClass.class, new FixClass(), getMethod(FixClass.class, "onExit")));
 
         setCachedValidators(all);
 
@@ -263,7 +262,7 @@ class ValidationRegistryTest {
         try {
             return clazz.getDeclaredMethod(name);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Did not find method %s".formatted(name), e);
         }
     }
 
