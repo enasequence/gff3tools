@@ -1,0 +1,34 @@
+ID   CAZ123; SV 1; linear; genomic DNA; WGS; INV; 15486859 BP.
+XX
+AC   CAZ123;
+XX
+XX
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..15486859
+FT                   /organism="Fasciola hepatica"
+FT                   /mol_type="genomic DNA"
+FT                   /note="contig: scaffold_11"
+FT                   /db_xref="taxon:6192"
+FT                   /submitter_seqid="scaffold_11"
+FT   CDS             complement(join(4172760..4172828,4173013..4173023,
+FT                   4173079..4173084,4173352..4173402,4173720..4173751,
+FT                   4173839..4173921,4174387..4174487,4174573..4174599,
+FT                   4174856..4174883))
+FT                   /codon_start=1
+FT                   /transl_table=1
+FT                   /locus_tag="FHB240107_LOCUS4240"
+FT                   /note="ID:g4259.t1.CDS1"
+FT                   /note="ID:g4259.t1.CDS2"
+FT                   /note="ID:g4259.t1.CDS3"
+FT                   /note="ID:g4259.t1.CDS4"
+FT                   /note="ID:g4259.t1.CDS5"
+FT                   /note="ID:g4259.t1.CDS6"
+FT                   /note="ID:g4259.t1.CDS7"
+FT                   /note="ID:g4259.t1.CDS8"
+FT                   /note="ID:g4259.t1.CDS9"
+FT                   /note="source:AUGUSTUS"
+FT                   /protein_id="CAM0511885.1"
+XX
+//
