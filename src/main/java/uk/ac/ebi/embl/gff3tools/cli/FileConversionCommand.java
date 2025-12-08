@@ -119,8 +119,8 @@ public class FileConversionCommand implements Runnable {
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
             // FASTA path to write translation sequences
             return masterFilePath == null
-                    ? new FFToGff3Converter(engine, masterFilePath)
-                    : new FFToGff3Converter(engine);
+                    ? new FFToGff3Converter(engine)
+                    : new FFToGff3Converter(engine, masterFilePath);
 
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
