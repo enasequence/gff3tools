@@ -10,9 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,15 +56,16 @@ public class RenameAttributesTest {
 
         Assertions.assertNotNull(feature);
         Assertions.assertEquals(2, feature.getAttributes().size());
-        Assertions.assertEquals("label:labTest", feature.getAttributes().get(GFF3Attributes.NOTE));
+        Assertions.assertEquals(
+                "label:labTest", feature.getAttributeByName(GFF3Attributes.NOTE).get());
     }
 
     @Test
     public void testFixFeatureRenameLabelAttributeWithLabelAndNote() {
         Map<String, List<String>> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.CITATION, List.of("PubMed:12345"));
-        attributes.put(GFF3Attributes.LABEL, List.of("labTest"));
-        attributes.put(GFF3Attributes.NOTE, List.of("notes"));
+        attributes.put(GFF3Attributes.CITATION, new ArrayList<>(Arrays.asList("PubMed:12345")));
+        attributes.put(GFF3Attributes.LABEL, new ArrayList<>(Arrays.asList("labTest")));
+        attributes.put(GFF3Attributes.NOTE, new ArrayList<>(Arrays.asList("notes")));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
 
@@ -74,7 +73,9 @@ public class RenameAttributesTest {
 
         Assertions.assertNotNull(feature);
         Assertions.assertEquals(2, feature.getAttributes().size());
-        Assertions.assertEquals("notes;label:labTest", feature.getAttributes().get(GFF3Attributes.NOTE));
+        Assertions.assertEquals(
+                "notes;label:labTest",
+                feature.getAttributeByName(GFF3Attributes.NOTE).get());
     }
 
     @Test
@@ -89,7 +90,8 @@ public class RenameAttributesTest {
 
         Assertions.assertNotNull(feature);
         Assertions.assertEquals(2, feature.getAttributes().size());
-        Assertions.assertEquals("notes", feature.getAttributes().get(GFF3Attributes.NOTE));
+        Assertions.assertEquals(
+                "notes", feature.getAttributeByName(GFF3Attributes.NOTE).get());
     }
 
     @Test
@@ -103,9 +105,11 @@ public class RenameAttributesTest {
 
         Assertions.assertNotNull(feature);
         Assertions.assertEquals(1, feature.getAttributes().size());
-        Assertions.assertNull(feature.getAttributes().get(GFF3Attributes.MOBILE_ELEMENT));
+        Assertions.assertTrue(
+                feature.getAttributeByName(GFF3Attributes.MOBILE_ELEMENT).isEmpty());
         Assertions.assertEquals(
-                "mobile_element:12345", feature.getAttributes().get(GFF3Attributes.MOBILE_ELEMENT_TYPE));
+                "mobile_element:12345",
+                feature.getAttributeByName(GFF3Attributes.MOBILE_ELEMENT_TYPE).get());
     }
 
     @Test
@@ -118,6 +122,8 @@ public class RenameAttributesTest {
 
         Assertions.assertNotNull(feature);
         Assertions.assertEquals(1, feature.getAttributes().size());
-        Assertions.assertEquals("mobile_element_type", feature.getAttributes().get(GFF3Attributes.MOBILE_ELEMENT_TYPE));
+        Assertions.assertEquals(
+                "mobile_element_type",
+                feature.getAttributeByName(GFF3Attributes.MOBILE_ELEMENT_TYPE).get());
     }
 }

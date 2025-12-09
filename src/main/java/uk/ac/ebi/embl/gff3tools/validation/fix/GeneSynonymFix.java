@@ -87,7 +87,7 @@ public class GeneSynonymFix {
                         featuresById.put(getFeatureKey(parent), parent);
                     }
 
-                    f.removeAttribute(GENE_SYNONYM);
+                    f.removeAttributes(GENE_SYNONYM);
                     featuresById.put(getFeatureKey(f), f);
                 }
             }

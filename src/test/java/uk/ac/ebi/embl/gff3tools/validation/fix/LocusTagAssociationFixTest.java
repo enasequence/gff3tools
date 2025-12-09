@@ -45,7 +45,7 @@ public class LocusTagAssociationFixTest {
         fix.fix(f1, 1);
         fix.fix(f2, 2);
 
-        assertEquals(List.of("LT001"), f2.getAttributeByName(LOCUS_TAG));
+        assertEquals("LT001", f2.getAttributeByName(LOCUS_TAG).get());
         assertEquals("LT001", fix.mappingSnapshot(TestUtils.defaultAccession()).get("geneX"));
     }
 
@@ -61,7 +61,7 @@ public class LocusTagAssociationFixTest {
         fix.fix(a, 1);
         fix.fix(b, 2);
 
-        assertEquals(List.of("LT002"), b.getAttributeByName(LOCUS_TAG)); // corrected
+        assertEquals("LT002", b.getAttributeByName(LOCUS_TAG).get()); // corrected
         assertEquals("LT001", fix.mappingSnapshot(TestUtils.defaultAccession()).get("geneX"));
     }
 
@@ -93,7 +93,7 @@ public class LocusTagAssociationFixTest {
         fix.fix(f1, 1);
         fix.fix(f2, 2);
 
-        assertEquals(List.of("LT_A"), f2.getAttributeByName(LOCUS_TAG));
+        assertEquals("LT_A", f2.getAttributeByName(LOCUS_TAG).get());
         assertEquals("LT_A", fix.mappingSnapshot(TestUtils.defaultAccession()).get("geneA"));
     }
 
@@ -114,7 +114,7 @@ public class LocusTagAssociationFixTest {
         fix.fix(a2, 3);
         fix.fix(b2, 4); // defines chrB mapping
 
-        assertEquals(List.of("LT_A1"), a2.getAttributeByName(LOCUS_TAG));
+        assertEquals("LT_A1", a2.getAttributeByName(LOCUS_TAG).get());
         assertTrue(b1.getAttributeByName(LOCUS_TAG).isEmpty());
 
         assertEquals("LT_A1", fix.mappingSnapshot("chrA").get("geneX"));

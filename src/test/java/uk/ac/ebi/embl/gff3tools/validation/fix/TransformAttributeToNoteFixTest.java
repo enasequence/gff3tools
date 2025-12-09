@@ -12,10 +12,7 @@ package uk.ac.ebi.embl.gff3tools.validation.fix;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
@@ -44,8 +41,8 @@ class TransformAttributeToNoteFixTest {
     @Test
     void movesProductToNote_whenPseudoPresent_andRemovesProduct() {
         Map<String, List<String>> attrs = new HashMap<>(Map.of(
-                PRODUCT, List.of("kinase"),
-                PSEUDO, List.of("true")));
+                PRODUCT, new ArrayList<>(List.of("kinase")),
+                PSEUDO, new ArrayList<>(List.of("true"))));
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", "gene_parent", attrs);
 
@@ -53,22 +50,24 @@ class TransformAttributeToNoteFixTest {
 
         assertFalse(feature.hasAttribute(PRODUCT));
         assertTrue(feature.hasAttribute(PSEUDO));
-        assertEquals(List.of("kinase"), feature.getAttributeByName(NOTE));
+        assertEquals("kinase", feature.getAttributeByName(NOTE).get());
     }
 
     @Test
     void appendsProductToExistingNote_whenPseudogenePresent() {
         Map<String, List<String>> attrs = new HashMap<>(Map.of(
-                PRODUCT, List.of("beta-lactamase"),
-                PSEUDOGENE, List.of("processed"),
-                NOTE, List.of("existing-info")));
+                PRODUCT, new ArrayList<>(List.of("beta-lactamase")),
+                PSEUDOGENE, new ArrayList<>(List.of("processed")),
+                NOTE, new ArrayList<>(List.of("existing-info"))));
 
         GFF3Feature feature = TestUtils.createGFF3Feature("CDS", "mRNA1", attrs);
 
         fixer.fix(feature, 1);
 
         assertFalse(feature.hasAttribute(PRODUCT));
-        assertEquals(List.of("existing-info", "beta-lactamase"), feature.getAttributeByName(NOTE));
+        assertEquals(
+                List.of("existing-info", "beta-lactamase"),
+                feature.getAttributeListByName(NOTE).get());
     }
 
     @Test
@@ -113,16 +112,16 @@ class TransformAttributeToNoteFixTest {
     @Test
     void handlesBothExclusivesPresent_gracefully() {
         Map<String, List<String>> attrs = new HashMap<>(Map.of(
-                PRODUCT, List.of("transferase"),
-                PSEUDO, List.of("true"),
-                PSEUDOGENE, List.of("unknown")));
+                PRODUCT, new ArrayList<>(List.of("transferase")),
+                PSEUDO, new ArrayList<>(List.of("true")),
+                PSEUDOGENE, new ArrayList<>(List.of("unknown"))));
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", "parent", attrs);
 
         fixer.fix(feature, 1);
 
         assertFalse(feature.hasAttribute(PRODUCT));
-        assertEquals(List.of("transferase"), feature.getAttributeByName(NOTE));
+        assertEquals("transferase", feature.getAttributeByName(NOTE).get());
     }
 
     @Test

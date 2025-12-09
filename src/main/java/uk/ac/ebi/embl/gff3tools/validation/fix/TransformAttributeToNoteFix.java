@@ -50,7 +50,7 @@ public class TransformAttributeToNoteFix {
                 if (!valueToAppend.isEmpty()) {
                     appendToNote(feature, valueToAppend);
                 }
-                feature.removeAttribute(pair.toRemove);
+                feature.removeAttributes(pair.toRemove);
             }
         }
     }

@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.MOD_BASE;
 import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.PROTEIN_ID;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +46,7 @@ public class AttributeValueFixTest {
         attributeValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(1, feature.getAttributes().size());
-        assertEquals("protein_id", feature.getAttributeByName(PROTEIN_ID));
+        assertEquals("protein_id", feature.getAttributeByName(PROTEIN_ID).get());
     }
 
     @Test
@@ -58,21 +59,21 @@ public class AttributeValueFixTest {
         attributeValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(2, feature.getAttributes().size());
-        assertEquals("protein_id", feature.getAttributeByName(PROTEIN_ID));
-        assertEquals("ac4c", feature.getAttributeByName(MOD_BASE));
+        assertEquals("protein_id", feature.getAttributeByName(PROTEIN_ID).get());
+        assertEquals("ac4c", feature.getAttributeByName(MOD_BASE).get());
     }
 
     @Test
     public void testFixFeatureWithModBaseDihydrouridine() {
         Map<String, List<String>> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PROTEIN_ID, List.of("protein_id"));
-        attributes.put(GFF3Attributes.MOD_BASE, List.of("d"));
+        attributes.put(GFF3Attributes.PROTEIN_ID, new ArrayList<>(List.of("protein_id")));
+        attributes.put(GFF3Attributes.MOD_BASE, new ArrayList<>(List.of("d")));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         attributeValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(2, feature.getAttributes().size());
-        assertEquals("protein_id", feature.getAttributeByName(PROTEIN_ID));
-        assertEquals("dhu", feature.getAttributeByName(MOD_BASE));
+        assertEquals("protein_id", feature.getAttributeByName(PROTEIN_ID).get());
+        assertEquals("dhu", feature.getAttributeByName(MOD_BASE).get());
     }
 }

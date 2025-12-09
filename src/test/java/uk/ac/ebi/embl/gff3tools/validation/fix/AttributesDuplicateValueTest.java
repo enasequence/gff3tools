@@ -51,7 +51,8 @@ public class AttributesDuplicateValueTest {
         feature = attributesDuplicateValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
         Assertions.assertNotNull(feature.getAttributes());
-        assertEquals("123123", feature.getAttributeByName(GFF3Attributes.LOCUS_TAG));
+        assertEquals(
+                "123123", feature.getAttributeByName(GFF3Attributes.LOCUS_TAG).get());
         assertEquals(1, feature.getAttributes().size());
     }
 
@@ -68,7 +69,8 @@ public class AttributesDuplicateValueTest {
         feature = attributesDuplicateValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
         Assertions.assertNotNull(feature.getAttributes());
-        assertEquals("123123", feature.getAttributeByName(GFF3Attributes.LOCUS_TAG));
+        assertEquals(
+                "123123", feature.getAttributeByName(GFF3Attributes.LOCUS_TAG).get());
         assertEquals(
                 2,
                 feature.getAttributeListByName(GFF3Attributes.OLD_LOCUS_TAG)
@@ -90,7 +92,8 @@ public class AttributesDuplicateValueTest {
         feature = attributesDuplicateValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
         Assertions.assertNotNull(feature.getAttributes());
-        assertEquals("123123", feature.getAttributeByName(GFF3Attributes.LOCUS_TAG));
+        assertEquals(
+                "123123", feature.getAttributeByName(GFF3Attributes.LOCUS_TAG).get());
         assertTrue(feature.getAttributeByName(GFF3Attributes.OLD_LOCUS_TAG).isEmpty());
     }
 

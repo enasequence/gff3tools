@@ -34,7 +34,7 @@ public class RenameAttributes {
         String mobileElement =
                 feature.getAttributeByName(GFF3Attributes.MOBILE_ELEMENT).orElse(null);
         if (label != null) {
-            feature.removeAttribute(GFF3Attributes.LABEL);
+            feature.removeAttributes(GFF3Attributes.LABEL);
             String noteValue = feature.getAttributeByName(GFF3Attributes.NOTE).orElse(null);
             String newNote;
             if (noteValue != null) {
@@ -42,7 +42,8 @@ public class RenameAttributes {
             } else {
                 newNote = "label:" + label.trim();
             }
-            feature.setAttribute(GFF3Attributes.NOTE, newNote);
+            feature.removeAttributes(GFF3Attributes.NOTE);
+            feature.addAttribute(GFF3Attributes.NOTE, newNote);
             log.info(
                     "Moving {} attribute value to {} attribute at line: {}",
                     GFF3Attributes.LABEL,
@@ -50,8 +51,8 @@ public class RenameAttributes {
                     line);
         }
         if (mobileElement != null) {
-            feature.removeAttribute(GFF3Attributes.MOBILE_ELEMENT);
-            feature.setAttribute(GFF3Attributes.MOBILE_ELEMENT_TYPE, mobileElement);
+            feature.removeAttributes(GFF3Attributes.MOBILE_ELEMENT);
+            feature.addAttribute(GFF3Attributes.MOBILE_ELEMENT_TYPE, mobileElement);
             log.info(
                     "Moving {} attribute value to {} attribute at line: {}",
                     GFF3Attributes.MOBILE_ELEMENT,

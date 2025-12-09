@@ -20,6 +20,7 @@ public class Gff3Utils {
 
         List<String> attributeValue = attributes.getOrDefault(key, new ArrayList<>());
         attributeValue.add(value);
+        attributes.put(key, attributeValue);
     }
 
     public static void addAttributes(Map<String, List<String>> attributes, String key, List<String> value) {
