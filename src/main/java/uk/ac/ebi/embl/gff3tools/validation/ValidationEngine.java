@@ -41,10 +41,6 @@ public class ValidationEngine {
         executeValidations(target, line);
     }
 
-    public <T> void onExit() {
-        executeExits();
-    }
-
     public <T> void executeValidations(T target, int line) throws ValidationException {
         List<ValidatorDescriptor> validators = validationRegistry.getValidations();
 
