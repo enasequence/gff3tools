@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.fasta;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Reader;
 import java.util.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -93,7 +94,7 @@ public final class FastaFileService {
      * Uses the cached index to translate bases -> bytes, then asks the reader to stream
      * ASCII bytes while skipping '\n' and '\r' on the fly.
      */
-    public InputStream streamSequenceRange(SequenceRangeOption option, String submissionId, long fromBase, long toBase)
+    public Reader streamSequenceRange(SequenceRangeOption option, String submissionId, long fromBase, long toBase)
             throws FastaFileException {
         ensureFileReaderOpen();
         var index = sequenceIndexes.get(submissionId);
@@ -113,7 +114,7 @@ public final class FastaFileService {
                 throw new IllegalStateException("Unknown option " + option);
         }
 
-        return reader.getSequenceSlice(span);
+        return reader.getSequenceSliceReader(span);
     }
 
     // ---------------------------- interactions with the reader ----------------------------

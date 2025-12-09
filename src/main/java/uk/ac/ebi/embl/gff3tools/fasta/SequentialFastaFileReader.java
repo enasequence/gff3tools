@@ -24,6 +24,7 @@ import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceIndexBuilder;
 public class SequentialFastaFileReader implements AutoCloseable {
 
     private static final int BUFFER_SIZE = 64 * 1024;
+    private static final int CHAR_BUF_SIZE = 8192;
     private static final byte GT = (byte) '>';
     private static final byte LF = (byte) '\n';
     private static final byte CR = (byte) '\r';
@@ -61,50 +62,87 @@ public class SequentialFastaFileReader implements AutoCloseable {
         return readAsciiWithoutNewlines(span.start, span.endEx);
     }
 
-    public InputStream getSequenceSlice(ByteSpan span) {
-        return new InputStream() {
-            private long position = span.start;
-            private final long end = span.endEx;
-            private final ByteBuffer buffer = ByteBuffer.allocate(8192); // Adjust as needed
+    /** Char-stream view over [span.start, span.endEx): ASCII decode, skip LF/CR.
+     *  Uses absolute reads; does NOT change channel.position(). */
+    /** Char-stream view over [span.start, span.endEx): ASCII decode, skip LF/CR.
+     *  Uses absolute reads; does NOT change channel.position(). */
+    public java.io.Reader getSequenceSliceReader(ByteSpan span) {
+        final long start = span.start;
+        final long endEx = span.endEx;
 
-            @Override
-            public int read() throws IOException {
-                while (true) {
-                    if (!buffer.hasRemaining()) {
-                        if (position >= end) return -1;
+        return new java.io.Reader() {
+            private long pos = start;
 
-                        buffer.clear();
-                        int toRead = (int) Math.min(buffer.capacity(), end - position);
-                        int read = channel.read(buffer, position);
-                        if (read == -1) return -1;
-
-                        position += read;
-                        buffer.flip();
-                    }
-
-                    // Peek the next byte
-                    if (buffer.hasRemaining()) {
-                        byte b = buffer.get();
-                        if (b == '\n') continue; // Filter out newline
-                        return b & 0xFF;
-                    }
-                }
+            // Allocate direct buffer for I/O…
+            private final java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocateDirect(CHAR_BUF_SIZE);
+            {
+                // …but mark it EMPTY so the very first read() refills it from the channel.
+                // Without this, hasRemaining() is true and you'd read uninitialized bytes (→ '\0').
+                buf.limit(0);
             }
 
             @Override
-            public int read(byte[] b, int off, int len) throws IOException {
-                int totalRead = 0;
+            public int read(char[] characterBuffer,
+                            int startingWriteIndexInCharacterBuffer,
+                            int maximumNumberOfCharsToRead) throws java.io.IOException {
 
-                while (totalRead < len) {
-                    int next = read();
-                    if (next == -1) break;
+                // --- Validate caller’s target window [off .. off + len)
+                if (characterBuffer == null) throw new NullPointerException("characterBuffer");
+                if (startingWriteIndexInCharacterBuffer < 0 ||
+                        maximumNumberOfCharsToRead < 0 ||
+                        startingWriteIndexInCharacterBuffer + maximumNumberOfCharsToRead > characterBuffer.length) {
+                    throw new IndexOutOfBoundsException(
+                            "off=" + startingWriteIndexInCharacterBuffer +
+                                    " len=" + maximumNumberOfCharsToRead +
+                                    " bufLen=" + characterBuffer.length);
+                }
+                if (maximumNumberOfCharsToRead == 0) return 0;
 
-                    b[off + totalRead] = (byte) next;
-                    totalRead++;
+                // IMPORTANT: if you didn’t already do this in a ctor/initializer block:
+                // Newly-allocated ByteBuffer has remaining() == true. Mark it empty so we refill first.
+                if (buf.limit() != 0 && !buf.hasRemaining() && pos == span.start) {
+                    // no-op branch, kept to show intent; prefer the initializer approach below
                 }
 
-                return (totalRead == 0) ? -1 : totalRead;
+                int out = 0;
+
+                while (out < maximumNumberOfCharsToRead) {
+                    // Refill byte buffer if empty
+                    if (!buf.hasRemaining()) {
+                        if (pos >= endEx) break;                 // EOF for this slice
+
+                        buf.clear();                              // position=0, limit=capacity
+                        int toRead = (int) Math.min(buf.capacity(), endEx - pos);
+                        buf.limit(toRead);                        // HARD cap at span end
+                        int n = channel.read(buf, pos);           // ABSOLUTE read; file cursor unchanged
+                        if (n <= 0) break;                        // EOF / I/O issue
+                        pos += n;
+                        buf.flip();                               // prepare for reading the bytes we just filled
+                    }
+
+                    // Drain bytes -> chars into caller’s window [off .. off+len)
+                    while (buf.hasRemaining() && out < maximumNumberOfCharsToRead) {
+                        byte b = buf.get();
+                        if (b == LF || b == CR) continue;         // skip EOL bytes
+                        // ASCII decode: write into cbuf starting at 'off', advancing by 'out'
+                        characterBuffer[startingWriteIndexInCharacterBuffer + out] = (char) (b & 0xFF);
+                        out++;
+                    }
+                }
+
+                // If we produced nothing AND we’re at EOF, signal -1 per Reader contract
+                return (out == 0) ? -1 : out;
             }
+
+            @Override
+            public int read() throws java.io.IOException {
+                char[] one = new char[1];
+                int n = read(one, 0, 1);
+                return (n == -1) ? -1 : one[0];
+            }
+
+            @Override public boolean ready() { return buf.hasRemaining() || pos < endEx; }
+            @Override public void close() { /* no-op: we don’t own the channel */ }
         };
     }
 

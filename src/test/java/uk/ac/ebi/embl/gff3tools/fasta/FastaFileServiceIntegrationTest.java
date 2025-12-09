@@ -12,8 +12,10 @@ package uk.ac.ebi.embl.gff3tools.fasta;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -87,6 +89,42 @@ class FastaFileServiceIntegrationTest {
         long adjustedTotalBases = entry1.get().totalBases - entry1.get().leadingNsCount - entry1.get().trailingNsCount;
         String sequence1withoutNbases = service.getSequenceRangeAsString(SequenceRangeOption.WITHOUT_N_BASES, entry1.get().submissionId, 1, adjustedTotalBases);
         assertEquals("ACACGTTT", sequence1withoutNbases);
+
+        service.close();
+    }
+
+    @Test
+    void gettingStringAsAStringVsStreamProducesSameResult() throws IOException, FastaFileException {
+        File fasta = FastaTestResources.file("fasta", "example2.txt");
+        FastaFileService service = new FastaFileService();
+        service.openNewFile(fasta);
+
+        List<FastaEntry> entries = service.getFastaEntries();
+        assertEquals(2, entries.size(), "should parse 2 FASTA entries");
+
+        Set<String> ids =
+                Set.of(entries.get(0).getSubmissionId(), entries.get(1).getSubmissionId());
+        assertTrue(ids.contains("ID1"));
+        Optional<FastaEntry> entry1 = service.getFastaWithSubmissionId("ID1");
+
+        String sequence1 = service.getSequenceRangeAsString(SequenceRangeOption.WHOLE_SEQUENCE, entry1.get().submissionId, 1, entry1.get().totalBases);
+        assertEquals("NNACACGTTTNn", sequence1);
+
+        String streamedSequence;
+        try (java.io.Reader r = service.streamSequenceRange(SequenceRangeOption.WHOLE_SEQUENCE, entry1.get().submissionId, 1, entry1.get().totalBases)) {
+            StringBuilder sb = new StringBuilder();
+            char[] cbuf = new char[8192];
+            int n;
+            while ((n = r.read(cbuf)) != -1) {
+                // -------------------- STRING BUILD SPOT --------------------
+                // At this point cbuf[0..n) already contains *decoded* characters,
+                // with all EOLs removed by the Reader above. Appending grows the StringBuilder.
+                sb.append(cbuf, 0, n);          // <<< chars -> StringBuilder (later -> String)
+                // -----------------------------------------------------------
+            }
+            streamedSequence = sb.toString();
+        }
+        assertEquals("NNACACGTTTNn", streamedSequence);
 
         service.close();
     }
