@@ -42,10 +42,10 @@ public class LengthValidationTest {
     public void testCdsIntronValidationSuccess() {
 
         GFF3Feature cds1 = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, "CDS1"));
+                OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
 
         GFF3Feature cds2 = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), 115L, 200L, Map.of(GFF3Attributes.ATTRIBUTE_ID, "CDS1"));
+                OntologyTerm.CDS.name(), 115L, 200L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
 
         gff3Annotation.addFeature(cds1);
         gff3Annotation.addFeature(cds2);
@@ -61,11 +61,11 @@ public class LengthValidationTest {
                 1L,
                 100L,
                 Map.of(
-                        GFF3Attributes.ATTRIBUTE_ID, "CDS1",
-                        GFF3Attributes.ARTIFICIAL_LOCATION, "true"));
+                        GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1"),
+                        GFF3Attributes.ARTIFICIAL_LOCATION, List.of("true")));
 
         GFF3Feature cds2 = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), 105L, 200L, Map.of(GFF3Attributes.ATTRIBUTE_ID, "CDS1"));
+                OntologyTerm.CDS.name(), 105L, 200L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
 
         gff3Annotation.addFeature(cds1);
         gff3Annotation.addFeature(cds2);
@@ -77,15 +77,15 @@ public class LengthValidationTest {
     public void testCdsIntronValidationSuccessWithPseudo() {
 
         GFF3Feature cds1 = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, "CDS1"));
+                OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
 
         GFF3Feature cds2 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 105L,
                 200L,
                 Map.of(
-                        GFF3Attributes.ATTRIBUTE_ID, "CDS1",
-                        GFF3Attributes.PSEUDO, "true"));
+                        GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1"),
+                        GFF3Attributes.PSEUDO, List.of("true")));
 
         gff3Annotation.addFeature(cds1);
         gff3Annotation.addFeature(cds2);
@@ -97,10 +97,10 @@ public class LengthValidationTest {
     public void testCdsIntronValidationFailureSmallIntron() {
 
         GFF3Feature cds1 = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, "CDS1"));
+                OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
 
         GFF3Feature cds2 = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), 102L, 200L, Map.of(GFF3Attributes.ATTRIBUTE_ID, "CDS1"));
+                OntologyTerm.CDS.name(), 102L, 200L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
 
         gff3Annotation.addFeature(cds1);
         gff3Annotation.addFeature(cds2);
