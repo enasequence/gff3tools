@@ -64,6 +64,18 @@ public class ValidationEngine {
         }
     }
 
+    public void executeExits() {
+        List<ValidatorDescriptor> validators = validationRegistry.getExits();
+
+        for (ValidatorDescriptor validator : validators) {
+            try {
+                validator.method().invoke(validator.instance());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
     public <T> void executeFixs(T target, int line) throws ValidationException {
         List<ValidatorDescriptor> validators = validationRegistry.getFixs();
 

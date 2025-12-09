@@ -181,6 +181,7 @@ public class GFF3FileReader implements AutoCloseable {
             // After the loop, handle the last accumulated annotation.
             annotationHandler.handle(previousAnnotation);
 
+            validationEngine.executeExits();
         } catch (IOException e) {
             throw new ReadException(e);
         }

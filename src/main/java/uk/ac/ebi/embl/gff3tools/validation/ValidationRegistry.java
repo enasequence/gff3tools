@@ -102,7 +102,9 @@ public class ValidationRegistry {
     }
 
     private boolean isMethodAnnotationPresent(Method method) {
-        return method.isAnnotationPresent(ValidationMethod.class) || method.isAnnotationPresent(FixMethod.class);
+        return method.isAnnotationPresent(ValidationMethod.class)
+                || method.isAnnotationPresent(FixMethod.class)
+                || method.isAnnotationPresent(ExitMethod.class);
     }
 
     private List<ClassInfo> getValidationList() {
@@ -132,6 +134,7 @@ public class ValidationRegistry {
     public List<ValidatorDescriptor> getValidations() {
         return cachedValidators.stream()
                 .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Validation.class))
+                .filter(vd -> vd.method().isAnnotationPresent(ValidationMethod.class))
                 .collect(Collectors.toList());
     }
 
@@ -141,6 +144,13 @@ public class ValidationRegistry {
     public List<ValidatorDescriptor> getFixs() {
         return cachedValidators.stream()
                 .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Fix.class))
+                .filter(vd -> vd.method().isAnnotationPresent(FixMethod.class))
+                .collect(Collectors.toList());
+    }
+
+    public List<ValidatorDescriptor> getExits() {
+        return cachedValidators.stream()
+                .filter(vd -> vd.method().isAnnotationPresent(ExitMethod.class))
                 .collect(Collectors.toList());
     }
 
