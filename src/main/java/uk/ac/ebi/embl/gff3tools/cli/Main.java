@@ -23,7 +23,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 @Command(
         name = "gff3tools",
-        subcommands = {FileConversionCommand.class, CommandLine.HelpCommand.class},
+        subcommands = {FileConversionCommand.class, ValidationCommand.class, CommandLine.HelpCommand.class},
         description = "Utility to convert and validate gff3 files")
 public class Main {
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);

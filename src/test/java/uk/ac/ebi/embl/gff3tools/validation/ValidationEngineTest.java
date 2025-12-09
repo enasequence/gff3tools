@@ -64,7 +64,7 @@ public class ValidationEngineTest {
                         "",
                         new HashMap<>()),
                 1);
-        assertTrue(validationEngine.getParsingErrors().isEmpty());
+        assertTrue(validationEngine.getParsingWarnings().isEmpty());
     }
 
     @Test
@@ -161,7 +161,7 @@ public class ValidationEngineTest {
 
             GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
             engine.executeValidations(feature, 1);
-            assertEquals(1, engine.getParsingErrors().size());
+            assertEquals(1, engine.getParsingWarnings().size());
         }
     }
 
@@ -242,7 +242,7 @@ public class ValidationEngineTest {
                 .thenReturn(RuleSeverity.WARN);
 
         engine.handleSyntacticError(vex);
-        assertEquals(1, engine.getParsingErrors().size());
+        assertEquals(1, engine.getParsingWarnings().size());
     }
 
     @Test
