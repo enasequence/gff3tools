@@ -33,7 +33,8 @@ public class AttributeValueFix {
                 feature.getAttributeByName(GFF3Attributes.MOD_BASE).orElse(null);
         if (modBaseValue != null && modBaseValue.trim().equalsIgnoreCase("d")) {
             log.info("Updating value from  'd' to 'dhu' on {} attribute at line: {}", GFF3Attributes.MOD_BASE, line);
-            feature.setAttribute(GFF3Attributes.MOD_BASE, "dhu");
+            feature.removeAttributes(GFF3Attributes.MOD_BASE);
+            feature.addAttribute(GFF3Attributes.MOD_BASE, "dhu");
         }
     }
 }

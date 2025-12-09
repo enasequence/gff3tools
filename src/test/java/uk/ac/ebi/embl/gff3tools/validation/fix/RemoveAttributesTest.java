@@ -43,9 +43,10 @@ public class RemoveAttributesTest {
         removeAttributes.fixFeature(feature, 1);
 
         Assertions.assertNotNull(feature);
-        Assertions.assertNull(feature.getAttributeByName(GFF3Attributes.CITATION));
-        Assertions.assertNull(feature.getAttributeByName(GFF3Attributes.COMPARE));
-        Assertions.assertEquals("example", feature.getAttributeByName("note"));
+        Assertions.assertTrue(
+                feature.getAttributeByName(GFF3Attributes.CITATION).isEmpty());
+        Assertions.assertTrue(feature.getAttributeByName(GFF3Attributes.COMPARE).isEmpty());
+        Assertions.assertEquals("example", feature.getAttributeByName("note").get());
     }
 
     @Test
@@ -59,8 +60,11 @@ public class RemoveAttributesTest {
         removeAttributes.fixFeature(feature, 1);
 
         Assertions.assertNotNull(feature);
-        Assertions.assertEquals("PubMed:12345", feature.getAttributeByName(GFF3Attributes.CITATION));
-        Assertions.assertEquals("comp1", feature.getAttributeByName(GFF3Attributes.COMPARE));
+        Assertions.assertEquals(
+                "PubMed:12345",
+                feature.getAttributeByName(GFF3Attributes.CITATION).get());
+        Assertions.assertEquals(
+                "comp1", feature.getAttributeByName(GFF3Attributes.COMPARE).get());
     }
 
     @Test
@@ -73,8 +77,11 @@ public class RemoveAttributesTest {
 
         removeAttributes.fixFeature(feature, 1);
 
-        Assertions.assertEquals("PubMed:9999", feature.getAttributeByName(GFF3Attributes.CITATION));
-        Assertions.assertEquals("cmp", feature.getAttributeByName(GFF3Attributes.COMPARE));
+        Assertions.assertEquals(
+                "PubMed:9999",
+                feature.getAttributeByName(GFF3Attributes.CITATION).get());
+        Assertions.assertEquals(
+                "cmp", feature.getAttributeByName(GFF3Attributes.COMPARE).get());
     }
 
     @Test
@@ -86,7 +93,8 @@ public class RemoveAttributesTest {
 
         removeAttributes.fixFeature(feature, 1);
 
-        Assertions.assertEquals("no citation or compare", feature.getAttributeByName("note"));
+        Assertions.assertEquals(
+                "no citation or compare", feature.getAttributeByName("note").get());
     }
 
     @Test

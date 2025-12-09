@@ -109,7 +109,7 @@ public class AttributesValueValidation extends Validation {
         if (feature.hasAttribute(GFF3Attributes.NOTE) && feature.hasAttribute(GFF3Attributes.PROVIRAL)) {
             Optional<String> opv = feature.getAttributeByName(GFF3Attributes.PROVIRAL)
                     .filter((pv) -> pv.matches(PROVIRAL_VALUE_PATTERN));
-            if (opv.isPresent()) {
+            if (opv.isEmpty()) {
                 throw new ValidationException(
                         line,
                         INVALID_ATTRIBUTE_VALUE_PATTERN.formatted(GFF3Attributes.PROVIRAL, PROVIRAL_VALUE_PATTERN));

@@ -126,13 +126,15 @@ public class GFF3Feature {
         }
     }
 
-    public void removeAttribute(String key) {
+    public void removeAttributes(String key) {
         attributes.remove(key);
     }
 
-    public void setAttribute(String name, String value) {
+    public void addAttribute(String name, String value) {
         if (value != null && !value.trim().isBlank()) {
-            attributes.getOrDefault(name, new ArrayList<String>()).add(value.trim());
+            List<String> attribute = attributes.getOrDefault(name, new ArrayList<>());
+            attribute.add(value.trim());
+            attributes.put(name, attribute);
         }
     }
 
