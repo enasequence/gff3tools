@@ -137,12 +137,14 @@ public class GFF3Feature {
     }
 
     public boolean isFivePrimePartial() {
-        List<String> partialValue = getAttributeValueList(GFF3Attributes.PARTIAL);
-        return partialValue.size() == 1 && "start".equalsIgnoreCase(partialValue.get(0));
+        return getAttributeByName(GFF3Attributes.PARTIAL)
+                .map((v) -> v.equalsIgnoreCase("start"))
+                .orElse(false);
     }
 
     public boolean isThreePrimePartial() {
-        List<String> partialValue = getAttributeValueList(GFF3Attributes.PARTIAL);
-        return partialValue.size() == 1 && "end".equalsIgnoreCase(partialValue.get(0));
+        return getAttributeByName(GFF3Attributes.PARTIAL)
+                .map((v) -> v.equalsIgnoreCase("end"))
+                .orElse(false);
     }
 }
