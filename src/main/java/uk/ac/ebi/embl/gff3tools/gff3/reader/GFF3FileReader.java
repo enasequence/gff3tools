@@ -66,6 +66,7 @@ public class GFF3FileReader implements AutoCloseable {
     public GFF3Annotation readAnnotation() throws IOException, ValidationException {
 
         String line;
+        GFF3Feature feature;
         while ((line = readLine()) != null) {
             if (line.isBlank()) {
                 // Ignore blank lines
@@ -91,10 +92,7 @@ public class GFF3FileReader implements AutoCloseable {
                     return previousAnnotation;
                 }
                 continue;
-            } else if ((m = GFF3_FEATURE.matcher(line)).matches()) {
-
-                GFF3Feature feature = readFeature(m);
-
+            } else if ((feature = readFeature(line)) != null) {
                 if (!feature.accession().equals(currentAccession)) {
                     // In case of different accession create a new GFF3Annotation and return the
                     // previous one.
@@ -202,42 +200,74 @@ public class GFF3FileReader implements AutoCloseable {
         return new GFF3SequenceRegion(accessionId, accessionVersion, start, end);
     }
 
-    private GFF3Feature readFeature(Matcher m) throws ValidationException {
+    private GFF3Feature readFeature(String line) throws ValidationException {
 
-        String accession = m.group("accession");
-        String accessionId = m.group("accessionId");
-        Optional<Integer> accessionVersion =
-                Optional.ofNullable(m.group("accessionVersion")).map(Integer::parseInt);
-        String source = m.group("source");
-        String name = m.group("name");
-        long start = Long.parseLong(m.group("start"));
-        long end = Long.parseLong(m.group("end"));
-        String score = m.group("score");
-        String strand = m.group("strand");
-        String phase = m.group("phase");
-        String attributes = m.group("attributes");
+        String[] parts = line.split("\t");
+        if (parts.length < 9) {
+            return null; // GFF2 features must have at least 9 fields
+        }
+        String accession = parts[0];
+        String source = parts[1];
+        String name = parts[2];
+        String start_str = parts[3];
+        String end_str = parts[4];
+        String score = parts[5];
+        String strand = parts[6];
+        String phase = parts[7];
+        String attributes = parts[8];
 
-        Map<String, Object> attributesMap = attributesFromString(attributes);
+        // Add additional checks as necessary
+        if (!accession.isEmpty()
+                && !source.isEmpty()
+                && !name.isEmpty()
+                && (strand.equals("+") || strand.equals("-") || strand.equals(".") || strand.equals("?"))
+                && isValidNumber(start_str)
+                && isValidNumber(end_str)) {
 
-        Optional<String> id = Optional.ofNullable((String) attributesMap.get("ID"));
-        Optional<String> parentId = Optional.ofNullable((String) attributesMap.get("Parent"));
+            String[] accessionParts = accession.split(".");
 
-        GFF3Feature feature = new GFF3Feature(
-                id,
-                parentId,
-                accessionId,
-                accessionVersion,
-                source,
-                name,
-                start,
-                end,
-                score,
-                strand,
-                phase,
-                attributesMap);
+            String accessionId = accessionParts.length > 0 ? accessionParts[0] : parts[0];
+            Optional<Integer> accessionVersion = Optional.ofNullable(
+                            accessionParts.length > 1 ? accessionParts[0] : null)
+                    .map(Integer::parseInt);
 
-        validationEngine.validate(feature, lineCount);
-        return feature;
+            long start = Long.parseLong(parts[3]);
+            long end = Long.parseLong(parts[4]);
+
+            Map<String, Object> attributesMap = attributesFromString(attributes);
+
+            Optional<String> id = Optional.ofNullable((String) attributesMap.get("ID"));
+            Optional<String> parentId = Optional.ofNullable((String) attributesMap.get("Parent"));
+
+            GFF3Feature feature = new GFF3Feature(
+                    id,
+                    parentId,
+                    accessionId,
+                    accessionVersion,
+                    source,
+                    name,
+                    start,
+                    end,
+                    score,
+                    strand,
+                    phase,
+                    attributesMap);
+
+            validationEngine.validate(feature, lineCount);
+            return feature;
+        } else {
+            return null;
+        }
+    }
+
+    private boolean isValidNumber(String n) {
+        byte[] bytes = n.getBytes();
+        for (byte aByte : bytes) {
+            if (aByte < '0' || aByte > '9') {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void validateAndSetSequenceRegion() throws ValidationException {
