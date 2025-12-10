@@ -18,10 +18,10 @@ import uk.ac.ebi.embl.gff3tools.fasta.Topology;
 @Getter
 @Setter
 public class FastaHeader {
-    String description; // mandatory (can be empty if you insist)
-    String moleculeType; // mandatory (can be null if empty allowed)
-    Topology topology; // mandatory (can be null if empty allowed)
-    Optional<String> chromosomeType; // optional (doesnt have to be a json)
+    String description; // mandatory
+    String moleculeType; // mandatory
+    Topology topology; // mandatory
+    Optional<String> chromosomeType; // optional (doesnt have to be in the json at all)
     Optional<String> chromosomeLocation; // optional
     Optional<String> chromosomeName; // optional
 }
