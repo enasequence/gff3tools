@@ -153,7 +153,7 @@ public class SequentialFastaFileReader implements AutoCloseable {
             var entry = readNext(position);
             if (entry.isEmpty()) break;
             entries.add(entry.get());
-            position = channel.position();
+            position = entry.get().getSequenceIndex().lastBaseByte; // read from the end of last sequence
         }
         return entries;
     }
