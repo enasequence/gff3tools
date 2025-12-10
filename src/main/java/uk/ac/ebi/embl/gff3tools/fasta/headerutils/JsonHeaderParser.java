@@ -85,13 +85,10 @@ public class JsonHeaderParser {
         if (m.containsKey("chromosomename"))
             h.setChromosomeName(Optional.ofNullable(emptyToNull(m.get("chromosomename"))));
 
-        // 🔍 Validate required fields
+        // Validate required fields
         List<String> missing = new ArrayList<>();
-
         if (h.description == null) missing.add("description");
-
         if (h.moleculeType == null) missing.add("moleculeType");
-
         if (h.topology == null) missing.add("topology (must be 'LINEAR' or 'CIRCULAR')");
 
         if (!missing.isEmpty()) {
