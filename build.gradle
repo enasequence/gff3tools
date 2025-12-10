@@ -10,7 +10,7 @@ plugins {
 base {
     archivesName = 'gff3tools'
     group = 'uk.ac.ebi.ena'
-    version = '2.3.0'
+    version = '2.4.0'
 }
 
 java {
