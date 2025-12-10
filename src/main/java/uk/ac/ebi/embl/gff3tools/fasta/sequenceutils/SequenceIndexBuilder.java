@@ -10,17 +10,16 @@
  */
 package uk.ac.ebi.embl.gff3tools.fasta.sequenceutils;
 
-import uk.ac.ebi.embl.gff3tools.exception.FastaFileException;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
+import uk.ac.ebi.embl.gff3tools.exception.FastaFileException;
 
 public final class SequenceIndexBuilder {
-    private static final int SCAN_BUF_SIZE = 4 * 1024 * 1024;  // 4 MB
-    private static final int COUNT_BUF_SIZE = 4 * 1024 * 1024;  // 2 MB
+    private static final int SCAN_BUF_SIZE = 4 * 1024 * 1024; // 4 MB
+    private static final int COUNT_BUF_SIZE = 4 * 1024 * 1024; // 2 MB
 
     private static final byte GT = (byte) '>';
     private static final byte LF = (byte) '\n';
@@ -51,7 +50,7 @@ public final class SequenceIndexBuilder {
         ByteBuffer buf = newScanBuffer();
 
         // ------------- scan raw bytes into provisional "sequence lines" -------------
-        while (s.pos<fileSize) {
+        while (s.pos < fileSize) {
             int n = fillBuffer(buf, s.pos);
             if (n <= 0) break;
             if (processBuffer(buf, s)) break; // found next header
@@ -121,21 +120,17 @@ public final class SequenceIndexBuilder {
                 s.nextHdr = abs; // stop window at header byte
                 commitOpenLineIfAny(s); // finalize any in-flight line
                 return true;
-            }
-            else if (b == LF) { // end of a displayed sequence line
+            } else if (b == LF) { // end of a displayed sequence line
                 commitOpenLineIfAny(s); // (2) only lines with bases are committed
                 continue;
-            }
-            else if (alphabet.isAllowed(b)) {
+            } else if (alphabet.isAllowed(b)) {
                 observeBase(abs, s);
-            }
-            else{
+            } else {
                 throw new FastaFileException(String.format(
-                        "Illegal character '%s' (byte value: %d) at absolute file position %d. " +
-                                "This character is not allowed by the current FASTA alphabet. " +
-                                "Expected only characters: %s",
-                        (char) (b & 0xFF), b & 0xFF, abs, alphabet.describeAllowed()
-                ));
+                        "Illegal character '%s' (byte value: %d) at absolute file position %d. "
+                                + "This character is not allowed by the current FASTA alphabet. "
+                                + "Expected only characters: %s",
+                        (char) (b & 0xFF), b & 0xFF, abs, alphabet.describeAllowed()));
             }
         }
         return false;

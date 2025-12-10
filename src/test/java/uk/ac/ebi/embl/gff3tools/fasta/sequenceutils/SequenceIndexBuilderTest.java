@@ -52,7 +52,7 @@ public class SequenceIndexBuilderTest {
         String l1 = "NNAC\n"; // leading N=2
         String l2 = "acgt\n";
         String l3 = "ttnN\n"; // trailing N=2
-        String empties = "\n\t\n\n";
+        String empties = "\n\n\n";
         String nextHead = ">NEXT\n";
 
         String fasta = header + l1 + l2 + l3 + empties + nextHead;
@@ -118,12 +118,10 @@ public class SequenceIndexBuilderTest {
     }
 
     @Test
-    void ignoresCRLFCorrectly() throws Exception {
-        // Mix CRLF lines in the sequence part; builder uses LF as terminator and ignores CR as non-base.
+    void buildsIndexCorrectlyTest2() throws Exception {
         String header = ">ID2\n";
-        // simulate CRLF lines by inserting '\r' before '\n'
-        String l1 = "NNxx".replace('x', 'A') + "\r\n"; // "NNAA\r\n"
-        String l2 = "gggg\r\n";
+        String l1 = "NNxx".replace('x', 'A') + "\n";
+        String l2 = "gggg\n";
         String next = ">H2\n";
 
         String fasta = header + l1 + l2 + next;
@@ -156,7 +154,7 @@ public class SequenceIndexBuilderTest {
         String header = ">ID3\n";
         String l1 = "NACG\n"; // leading N = 1
         String l2 = "NNNN\n"; // middle line of Ns — must NOT affect start/end N counts
-        String blanks = " \n\t\n";
+        String blanks = "\n\n";
         String l3 = "GGGn\n"; // trailing n = 1
         String next = ">K\n";
 

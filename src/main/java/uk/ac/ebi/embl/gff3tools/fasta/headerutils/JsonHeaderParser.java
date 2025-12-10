@@ -14,7 +14,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.*;
-
 import uk.ac.ebi.embl.gff3tools.exception.FastaFileException;
 import uk.ac.ebi.embl.gff3tools.fasta.Topology;
 
@@ -40,10 +39,8 @@ public class JsonHeaderParser {
 
     private static void fillFromJson(String raw, FastaHeader h) throws FastaFileException {
         if (raw == null || raw.isEmpty()) {
-            throw new FastaFileException(
-                    "FASTA header contains a '|', but no JSON object was provided. " +
-                            "Expected something like: >id { \"description\": \"...\", \"moleculeType\": \"DNA\", ... }"
-            );
+            throw new FastaFileException("FASTA header contains a '|', but no JSON object was provided. "
+                    + "Expected something like: >id { \"description\": \"...\", \"moleculeType\": \"DNA\", ... }");
         }
 
         // Normalize curly quotes / NBSPs
@@ -59,21 +56,18 @@ public class JsonHeaderParser {
             node = MAPPER.readTree(normalized);
             if (node == null || !node.isObject()) {
                 throw new FastaFileException(
-                        "FASTA header JSON did not parse into an object. " +
-                                "Received: " + normalized
-                );
+                        "FASTA header JSON did not parse into an object. " + "Received: " + normalized);
             }
         } catch (IOException e) {
-            throw new FastaFileException(
-                    "Malformed FASTA header JSON. Failed to parse: " + normalized, e
-            );
+            throw new FastaFileException("Malformed FASTA header JSON. Failed to parse: " + normalized, e);
         }
 
         // Extract fields
         Map<String, String> m = new HashMap<>();
         node.fields().forEachRemaining(e -> {
             String key = (e.getKey() == null ? "" : e.getKey())
-                    .trim().toLowerCase(Locale.ROOT)
+                    .trim()
+                    .toLowerCase(Locale.ROOT)
                     .replaceAll("[\\s_-]+", "");
             String val = e.getValue().isNull() ? null : e.getValue().asText();
             m.put(key, val);
@@ -94,20 +88,15 @@ public class JsonHeaderParser {
         // 🔍 Validate required fields
         List<String> missing = new ArrayList<>();
 
-        if (h.description == null)
-            missing.add("description");
+        if (h.description == null) missing.add("description");
 
-        if (h.moleculeType == null)
-            missing.add("moleculeType");
+        if (h.moleculeType == null) missing.add("moleculeType");
 
-        if (h.topology == null)
-            missing.add("topology (must be 'LINEAR' or 'CIRCULAR')");
+        if (h.topology == null) missing.add("topology (must be 'LINEAR' or 'CIRCULAR')");
 
         if (!missing.isEmpty()) {
             throw new FastaFileException(
-                    "FASTA header JSON is missing required fields: " + missing +
-                            ". Parsed JSON was: " + normalized
-            );
+                    "FASTA header JSON is missing required fields: " + missing + ". Parsed JSON was: " + normalized);
         }
     }
 

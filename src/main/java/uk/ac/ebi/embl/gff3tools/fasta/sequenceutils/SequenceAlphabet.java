@@ -59,5 +59,4 @@ public final class SequenceAlphabet {
         sb.append("]");
         return sb.toString();
     }
-
 }

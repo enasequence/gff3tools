@@ -1,15 +1,21 @@
 /*
- * Copyright 2025 EMBL...
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
  */
 package uk.ac.ebi.embl.gff3tools.fasta.headerutils;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.exception.FastaFileException;
 import uk.ac.ebi.embl.gff3tools.fasta.Topology;
-
-import java.util.Optional;
 
 public class JsonHeaderParserTest {
 
@@ -38,9 +44,8 @@ public class JsonHeaderParserTest {
 
     @Test
     void picksFirstTokenAsIdEvenWithExtraStuff() {
-        String line =
-                ">AF123456.1   extra tokens here   | " +
-                        " {\"description\":\"x\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}";
+        String line = ">AF123456.1   extra tokens here   | "
+                + " {\"description\":\"x\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}";
 
         ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
         assertEquals("AF123456.1", ph.getId());
@@ -61,9 +66,8 @@ public class JsonHeaderParserTest {
 
     @Test
     void normalizesKeyVariantsAndChromosomeOptionals() {
-        String line =
-                ">ID2 | { \"Description\":\"Desc\", \"molecule-type\":\"rna\", \"topology\":\"linear\", " +
-                        "\"Chromosome Type\":\"plasmid\", \"chromosome_location\":\"chr12:100-200\", \"CHROMOSOME_NAME\":\"pX\" }";
+        String line = ">ID2 | { \"Description\":\"Desc\", \"molecule-type\":\"rna\", \"topology\":\"linear\", "
+                + "\"Chromosome Type\":\"plasmid\", \"chromosome_location\":\"chr12:100-200\", \"CHROMOSOME_NAME\":\"pX\" }";
 
         ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
         FastaHeader h = ph.getHeader();
@@ -79,10 +83,9 @@ public class JsonHeaderParserTest {
     @Test
     void handlesNbspInJson() {
         String nbsp = "\u00A0";
-        String line =
-                ">ID3 | {" +
-                        nbsp + "\"description\"" + nbsp + ":" + nbsp + "\"Alpha" + nbsp + "Beta\"" + "," +
-                        "\"molecule_type\":\"rna\", \"topology\":\"linear\"}";
+        String line = ">ID3 | {" + nbsp
+                + "\"description\"" + nbsp + ":" + nbsp + "\"Alpha" + nbsp + "Beta\"" + ","
+                + "\"molecule_type\":\"rna\", \"topology\":\"linear\"}";
 
         ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
         FastaHeader h = ph.getHeader();
@@ -107,8 +110,8 @@ public class JsonHeaderParserTest {
 
     @Test
     void trimsIdAndHandlesJustChevron() {
-        ParsedHeader ph1 = assertDoesNotThrow(() ->
-                parser.parse(">   AF111   | {\"description\":\"x\",\"molecule_type\":\"dna\",\"topology\":\"linear\"}"));
+        ParsedHeader ph1 = assertDoesNotThrow(() -> parser.parse(
+                ">   AF111   | {\"description\":\"x\",\"molecule_type\":\"dna\",\"topology\":\"linear\"}"));
         assertEquals("AF111", ph1.getId());
 
         // No pipe: JSON not required
@@ -116,7 +119,6 @@ public class JsonHeaderParserTest {
         assertEquals("", ph2.getId());
         assertNull(ph2.getHeader().getDescription());
     }
-
 
     // ---------------------------------------------------------
     // INVALID CASES — MUST THROW FASTAFIleException
@@ -154,7 +156,6 @@ public class JsonHeaderParserTest {
         assertTrue(e.getMessage().contains("topology"));
     }
 
-
     // ---------------------------------------------------------
     // MALFORMED JSON
     // ---------------------------------------------------------
@@ -178,7 +179,6 @@ public class JsonHeaderParserTest {
         assertTrue(e.getMessage().contains("OOPS"));
         assertTrue(e.getMessage().contains("{\"description"));
     }
-
 
     @Test
     void malformedJsonWithTrailingCommaThrowsAndMentionsComma() {

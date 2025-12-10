@@ -56,9 +56,8 @@ public final class FastaFileService {
     }
 
     /** Return a sequence slice as a String (no EOLs) for [fromBase..toBase] inclusive. */
-    public String getSequenceSliceString(SequenceRangeOption option,
-                                         String submissionId,
-                                         long fromBase, long toBase) throws FastaFileException {
+    public String getSequenceSliceString(SequenceRangeOption option, String submissionId, long fromBase, long toBase)
+            throws FastaFileException {
         ensureFileReaderOpen();
         SequenceIndex index = sequenceIndexes.get(submissionId);
         if (index == null) {
@@ -82,11 +81,9 @@ public final class FastaFileService {
         } catch (IOException ioe) {
             throw new FastaFileException(
                     "I/O while reading slice for " + submissionId + " bytes " + span.start + ".." + (span.endEx - 1),
-                    ioe
-            );
+                    ioe);
         }
     }
-
 
     /**
      * Return a sequence slice for reader [fromBase..toBase] (1-based, inclusive) for the given ID.
@@ -132,7 +129,9 @@ public final class FastaFileService {
             fastaEntry.setTotalBases(entry.sequenceIndex.totalBases());
             fastaEntry.setLeadingNsCount(entry.sequenceIndex.startNBasesCount);
             fastaEntry.setTrailingNsCount(entry.sequenceIndex.endNBasesCount);
-            long adjustedBases = entry.sequenceIndex.totalBases()- entry.sequenceIndex.startNBasesCount- entry.sequenceIndex.endNBasesCount;
+            long adjustedBases = entry.sequenceIndex.totalBases()
+                    - entry.sequenceIndex.startNBasesCount
+                    - entry.sequenceIndex.endNBasesCount;
             fastaEntry.setTotalBasesWithoutNBases(adjustedBases);
             fastaEntries.add(fastaEntry);
 

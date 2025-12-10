@@ -23,8 +23,8 @@ import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceIndexBuilder;
 
 public class SequentialFastaFileReader implements AutoCloseable {
 
-    private static final int BUFFER_SIZE    = 4 * 1024 * 1024;  // 4 MB
-    private static final int CHAR_BUF_SIZE  = 512 * 1024;       // 512 KB
+    private static final int BUFFER_SIZE = 4 * 1024 * 1024; // 4 MB
+    private static final int CHAR_BUF_SIZE = 512 * 1024; // 512 KB
     private static final byte GT = (byte) '>';
     private static final byte LF = (byte) '\n';
     private static final byte CR = (byte) '\r';
@@ -72,6 +72,7 @@ public class SequentialFastaFileReader implements AutoCloseable {
             private long pos = start;
 
             private final java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocateDirect(CHAR_BUF_SIZE);
+
             {
                 // allocate buffer and mark it EMPTY so the very first read() refills it from the channel.
                 // Without this, hasRemaining() is true and we'll read uninitialized bytes (→ '\0').
@@ -79,9 +80,9 @@ public class SequentialFastaFileReader implements AutoCloseable {
             }
 
             @Override
-            public int read(char[] characterBuffer,
-                            int startingWriteIndexInCharacterBuffer,
-                            int maximumNumberOfCharsToRead) throws java.io.IOException {
+            public int read(
+                    char[] characterBuffer, int startingWriteIndexInCharacterBuffer, int maximumNumberOfCharsToRead)
+                    throws java.io.IOException {
                 // --- Validate caller’s target window [off .. off + len) ---
                 ValidateTargetWindow(characterBuffer, startingWriteIndexInCharacterBuffer, maximumNumberOfCharsToRead);
                 if (maximumNumberOfCharsToRead == 0) return 0;
@@ -90,21 +91,21 @@ public class SequentialFastaFileReader implements AutoCloseable {
                 while (out < maximumNumberOfCharsToRead) {
                     // --- Prep the buffer for next read & fill it out ---
                     if (!buf.hasRemaining()) {
-                        if (pos >= endEx) break; //if end of slice reached, stop reading
+                        if (pos >= endEx) break; // if end of slice reached, stop reading
 
                         buf.clear();
                         int toRead = (int) Math.min(buf.capacity(), endEx - pos);
                         buf.limit(toRead);
 
                         int n = channel.read(buf, pos);
-                        if (n <= 0) break; //if no bytes were read, break
+                        if (n <= 0) break; // if no bytes were read, break
                         pos += n;
                         buf.flip();
                     }
                     // Drain bytes + ASCII decode -> writees chars into caller’s window [off .. off+len)
                     while (buf.hasRemaining() && out < maximumNumberOfCharsToRead) {
                         byte b = buf.get();
-                        if (b == LF || b == CR) continue;         // skip irrelevant bytes
+                        if (b == LF || b == CR) continue; // skip irrelevant bytes
                         characterBuffer[startingWriteIndexInCharacterBuffer + out] = (char) (b & 0xFF);
                         out++;
                     }
@@ -113,17 +114,16 @@ public class SequentialFastaFileReader implements AutoCloseable {
                 return (out == 0) ? -1 : out;
             }
 
-            private void ValidateTargetWindow(char[] characterBuffer,
-                              int startingWriteIndexInCharacterBuffer,
-                              int maximumNumberOfCharsToRead) throws java.io.IOException {
+            private void ValidateTargetWindow(
+                    char[] characterBuffer, int startingWriteIndexInCharacterBuffer, int maximumNumberOfCharsToRead)
+                    throws java.io.IOException {
                 if (characterBuffer == null) throw new NullPointerException("characterBuffer");
-                if (startingWriteIndexInCharacterBuffer < 0 ||
-                        maximumNumberOfCharsToRead < 0 ||
-                        startingWriteIndexInCharacterBuffer + maximumNumberOfCharsToRead > characterBuffer.length) {
-                    throw new IndexOutOfBoundsException(
-                            "off=" + startingWriteIndexInCharacterBuffer +
-                                    " len=" + maximumNumberOfCharsToRead +
-                                    " bufLen=" + characterBuffer.length);
+                if (startingWriteIndexInCharacterBuffer < 0
+                        || maximumNumberOfCharsToRead < 0
+                        || startingWriteIndexInCharacterBuffer + maximumNumberOfCharsToRead > characterBuffer.length) {
+                    throw new IndexOutOfBoundsException("off=" + startingWriteIndexInCharacterBuffer + " len="
+                            + maximumNumberOfCharsToRead + " bufLen="
+                            + characterBuffer.length);
                 }
             }
 
@@ -134,8 +134,15 @@ public class SequentialFastaFileReader implements AutoCloseable {
                 return (n == -1) ? -1 : one[0];
             }
 
-            @Override public boolean ready() { return buf.hasRemaining() || pos < endEx; }
-            @Override public void close() { /* no-op, channel is kept alive */ }
+            @Override
+            public boolean ready() {
+                return buf.hasRemaining() || pos < endEx;
+            }
+
+            @Override
+            public void close() {
+                /* no-op, channel is kept alive */
+            }
         };
     }
 
