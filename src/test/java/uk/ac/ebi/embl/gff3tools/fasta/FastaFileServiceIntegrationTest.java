@@ -17,6 +17,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.exception.FastaFileException;
 
@@ -24,7 +26,7 @@ class FastaFileServiceIntegrationTest {
 
     @Test
     void readingMalformedFastaJsonFailure() throws IOException { //more tests like this in the JsonHeaderParserTest
-        File fasta = FastaTestResources.file("fasta", "malformedJsonFasta.txt");
+        File fasta = FastaTestResources.file("fasta", "malformed_json_fasta.txt");
         FastaFileService service = new FastaFileService();
 
         assertThrows(FastaFileException.class, () -> {
@@ -37,7 +39,7 @@ class FastaFileServiceIntegrationTest {
 
     @Test
     void readingMalformedFastaSequenceFailure() throws IOException {
-        File fasta = FastaTestResources.file("fasta", "malformedFasta.txt");
+        File fasta = FastaTestResources.file("fasta", "malformed_fasta.txt");
         FastaFileService service = new FastaFileService();
 
         assertThrows(FastaFileException.class, () -> {
@@ -56,8 +58,9 @@ class FastaFileServiceIntegrationTest {
         List<FastaEntry> entries = service.getFastaEntries();
         assertEquals(2, entries.size(), "should parse 2 FASTA entries");
 
-        Set<String> ids =
-                Set.of(entries.get(0).getSubmissionId(), entries.get(1).getSubmissionId());
+        Set<String> ids = entries.stream()
+                .map(e -> e.getSubmissionId())
+                .collect(Collectors.toSet());
         assertTrue(ids.contains("ID1"));
         assertTrue(ids.contains("ID2"));
 
@@ -99,8 +102,9 @@ class FastaFileServiceIntegrationTest {
         List<FastaEntry> entries = service.getFastaEntries();
         assertEquals(2, entries.size(), "should parse 2 FASTA entries");
 
-        Set<String> ids =
-                Set.of(entries.get(0).getSubmissionId(), entries.get(1).getSubmissionId());
+        Set<String> ids = entries.stream()
+                .map(e -> e.getSubmissionId())
+                .collect(Collectors.toSet());
         assertTrue(ids.contains("ID1"));
         assertTrue(ids.contains("ID2"));
         Optional<FastaEntry> entry1 = service.getFastaWithSubmissionId("ID1");
@@ -162,8 +166,9 @@ class FastaFileServiceIntegrationTest {
         List<FastaEntry> entries = service.getFastaEntries();
         assertEquals(2, entries.size(), "should parse 2 FASTA entries");
 
-        Set<String> ids =
-                Set.of(entries.get(0).getSubmissionId(), entries.get(1).getSubmissionId());
+        Set<String> ids = entries.stream()
+                .map(e -> e.getSubmissionId())
+                .collect(Collectors.toSet());
         assertTrue(ids.contains("ID1"));
         assertTrue(ids.contains("ID2"));
         Optional<FastaEntry> entry1 = service.getFastaWithSubmissionId("ID1");
@@ -208,4 +213,40 @@ class FastaFileServiceIntegrationTest {
 
         service.close();
     }
+
+    // to run this, curl the sequence with: curl -o single_fasta_large_sequence.txt https://www.ebi.ac.uk/ena/cram/md5/11398cc4b68f2cceb4fd50b742d4b1ec
+    // then to add the fasta header run something like :
+    //
+    // tmp="$(mktemp "${TMPDIR:-/tmp}/prepend.XXXXXX")" &&
+    //{ printf '%s\n' '>ID1 | {"description":"x", "molecule_type":"dna", "topology":"linear"}'; cat -- single_fasta_large_sequence.txt; } >"$tmp" &&
+    //mv -f -- "$tmp" single_fasta_large_sequence.txt
+    //
+    // then just move the fasta into whatever/gff3tools/src/test/resources/fasta/
+    // and run the test
+    //@Test
+    void readBigSequenceSuccessfully() throws IOException, FastaFileException {
+        File fasta = FastaTestResources.file("fasta", "single_fasta_large_sequence.txt");
+        FastaFileService service = new FastaFileService();
+        service.openNewFile(fasta);
+
+        List<FastaEntry> entries = service.getFastaEntries();
+        assertEquals(1, entries.size(), "should parse 1 FASTA entry");
+
+        Set<String> ids = entries.stream()
+                .map(e -> e.getSubmissionId())
+                .collect(Collectors.toSet());
+        assertTrue(ids.contains("ID1"));
+        Optional<FastaEntry> entry1 = service.getFastaWithSubmissionId("ID1");
+
+        //get first 16 chars
+        String sequenceStart = service.getSequenceSliceString(SequenceRangeOption.WHOLE_SEQUENCE, entry1.get().submissionId, 1, 16);
+        assertEquals(sequenceStart, "GGGCTTTAAATGGCTC");
+
+        //get last 16 chars
+        String sequenceEnd = service.getSequenceSliceString(SequenceRangeOption.WHOLE_SEQUENCE, entry1.get().submissionId, entry1.get().totalBases-15, entry1.get().totalBases);
+        assertEquals(sequenceEnd, "GAATTCTGATGGCTGT");
+
+        service.close();
+    }
+
 }

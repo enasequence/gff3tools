@@ -19,9 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class SequenceIndexBuilder {
-
-    private static final int SCAN_BUF_SIZE = 64 * 1024;
-    private static final int COUNT_BUF_SIZE = 8 * 1024;
+    private static final int SCAN_BUF_SIZE = 4 * 1024 * 1024;  // 4 MB
+    private static final int COUNT_BUF_SIZE = 4 * 1024 * 1024;  // 2 MB
 
     private static final byte GT = (byte) '>';
     private static final byte LF = (byte) '\n';

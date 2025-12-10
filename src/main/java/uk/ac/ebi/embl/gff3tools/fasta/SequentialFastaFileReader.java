@@ -23,8 +23,8 @@ import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceIndexBuilder;
 
 public class SequentialFastaFileReader implements AutoCloseable {
 
-    private static final int BUFFER_SIZE = 64 * 1024;
-    private static final int CHAR_BUF_SIZE = 8192;
+    private static final int BUFFER_SIZE    = 4 * 1024 * 1024;  // 4 MB
+    private static final int CHAR_BUF_SIZE  = 512 * 1024;       // 512 KB
     private static final byte GT = (byte) '>';
     private static final byte LF = (byte) '\n';
     private static final byte CR = (byte) '\r';
