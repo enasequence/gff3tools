@@ -281,4 +281,43 @@ public class AttributesRelationValidationTest {
 
         Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateExclusiveAttributes(feature, 1));
     }
+
+    @Test
+    public void testValidateFeatureCircularRNASuccess() {
+        GFF3Feature cds = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.CIRCULAR_RNA, "true"));
+        GFF3Feature trna = TestUtils.createGFF3Feature(
+                OntologyTerm.TRNA.name(), OntologyTerm.TRNA.name(), Map.of(GFF3Attributes.CIRCULAR_RNA, "true"));
+        GFF3Feature mrna = TestUtils.createGFF3Feature(
+                OntologyTerm.MRNA.name(), OntologyTerm.MRNA.name(), Map.of(GFF3Attributes.CHROMOSOME, "chromosome"));
+
+        Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateCircularRNAAttribute(cds, 1));
+        Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateCircularRNAAttribute(trna, 2));
+        Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateCircularRNAAttribute(mrna, 3));
+    }
+
+    @Test
+    public void testValidateFeatureCircularRNAFailure() {
+        GFF3Feature cds = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.CIRCULAR_RNA, "true"));
+        GFF3Feature trna = TestUtils.createGFF3Feature(
+                OntologyTerm.PROPEPTIDE.name(),
+                OntologyTerm.PROPEPTIDE.name(),
+                Map.of(GFF3Attributes.CIRCULAR_RNA, "true"));
+
+        Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateCircularRNAAttribute(cds, 1));
+        ValidationException ex = Assertions.assertThrows(
+                ValidationException.class, () -> attributesRelationValidation.validateCircularRNAAttribute(trna, 2));
+
+        Assertions.assertTrue(ex.getMessage()
+                .contains("Attribute circularRNA is not allowed in feature \"%s\"".formatted(trna.getName())));
+    }
+
+    @Test
+    public void testValidateFeatureCircularRNAFalseFailure() {
+        GFF3Feature cds = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.CIRCULAR_RNA, "false"));
+
+        Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateCircularRNAAttribute(cds, 1));
+    }
 }

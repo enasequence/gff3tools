@@ -13,9 +13,11 @@ package uk.ac.ebi.embl.gff3tools.gff3.reader;
 import java.io.*;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
@@ -32,6 +34,7 @@ public class GFF3FileReader implements AutoCloseable {
     static Pattern SEQUENCE_REGION_DIRECTIVE = Pattern.compile(
             "^##sequence-region\\s+(?<accession>(?<accessionId>[^.]+)(?:\\.(?<accessionVersion>\\d+))?)\\s+(?<start>[0-9]+)\\s+(?<end>[0-9]+)$");
     static Pattern RESOLUTION_DIRECTIVE = Pattern.compile("^###$");
+    static Pattern TRANSLATION_ID_PATTERN = Pattern.compile("^>(?<translationId>.*)");
     static Pattern COMMENT = Pattern.compile("^#.*$");
     static Pattern GFF3_FEATURE = Pattern.compile(
             "^(?<accession>(?<accessionId>[^.]+)(?:\\.(?<accessionVersion>\\d+))?)\\t(?<source>.+)\\t(?<name>.+)\\t(?<start>[0-9]+)\\t(?<end>[0-9]+)\\t(?<score>.+)\\t(?<strand>\\+|\\-|\\.|\\?)\\t(?<phase>.+)\\t(?<attributes>.+)?$");
@@ -45,12 +48,19 @@ public class GFF3FileReader implements AutoCloseable {
     public GFF3Species gff3Species;
     private final Set<String> processedAccessions;
 
-    public GFF3FileReader(ValidationEngine validationEngine, Reader reader) {
+    private final Map<String, OffsetRange> translationMap;
+    private final GFF3TranslationReader translationReader;
+
+    public GFF3FileReader(ValidationEngine validationEngine, Reader reader, Path gff3Path) {
         this.validationEngine = validationEngine;
         this.bufferedReader = new BufferedReader(reader);
         lineCount = 0;
         currentAnnotation = new GFF3Annotation();
         processedAccessions = new HashSet<>();
+        translationReader = new GFF3TranslationReader(validationEngine, gff3Path);
+
+        // Offset range should be read only once
+        translationMap = translationReader.readTranslationOffset();
     }
 
     public GFF3Annotation readAnnotation() throws IOException, ValidationException {
@@ -60,6 +70,9 @@ public class GFF3FileReader implements AutoCloseable {
             if (line.isBlank()) {
                 // Ignore blank lines
                 continue;
+            }
+            if (line.startsWith("##FASTA")) {
+                break;
             }
             Matcher m = SPECIES_DIRECTIVE.matcher(line);
             if (m.matches()) {
@@ -77,9 +90,6 @@ public class GFF3FileReader implements AutoCloseable {
                     validationEngine.validate(previousAnnotation, lineCount);
                     return previousAnnotation;
                 }
-                continue;
-            } else if (COMMENT.matcher(line).matches()) {
-                // Skip comment
                 continue;
             } else if ((m = GFF3_FEATURE.matcher(line)).matches()) {
 
@@ -104,7 +114,11 @@ public class GFF3FileReader implements AutoCloseable {
                 } else {
                     currentAnnotation.addFeature(feature);
                 }
-
+            } else if (COMMENT.matcher(line).matches()) {
+                // Skip comment
+                continue;
+            } else if (TRANSLATION_ID_PATTERN.matcher(line).matches()) {
+                return null;
             } else {
                 validationEngine.handleSyntacticError(
                         new InvalidGFF3RecordException(lineCount, "Invalid gff3 record \"" + line + "\""));
@@ -167,6 +181,7 @@ public class GFF3FileReader implements AutoCloseable {
             // After the loop, handle the last accumulated annotation.
             annotationHandler.handle(previousAnnotation);
 
+            validationEngine.executeExits();
         } catch (IOException e) {
             throw new ReadException(e);
         }
@@ -271,6 +286,20 @@ public class GFF3FileReader implements AutoCloseable {
         }
         validationEngine.handleSyntacticError(new InvalidGFF3HeaderException(lineCount, "GFF3 header not found"));
         return null;
+    }
+
+    public Map<String, OffsetRange> getTranslationOffsetForAnnotation(GFF3Annotation annotation) {
+        return translationMap.entrySet().stream()
+                .filter(e -> e.getKey().startsWith(annotation.getAccession()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    public Map<String, OffsetRange> getTranslationOffsetMap() {
+        return translationMap;
+    }
+
+    public String getTranslation(OffsetRange offsetRange) {
+        return translationReader.readTranslation(offsetRange);
     }
 
     public GFF3Species getSpecies() {

@@ -31,9 +31,9 @@ class GFF3ToFFConverterTest {
         Map<String, Path> testFiles = TestUtils.getTestFiles("gff3toff_rules", ".gff3");
 
         for (String filePrefix : testFiles.keySet()) {
-
+            Path testFileDir = testFiles.get(filePrefix).getParent();
             String inFile = testFiles.get(filePrefix).toString();
-            String outFile = filePrefix + ".embl";
+            String outFile = testFileDir.resolve(filePrefix + "-out.embl").toString();
             String[] args = {"conversion", inFile, outFile};
             try {
                 StringWriter err = new StringWriter();

@@ -22,12 +22,12 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 public class ValidationEngine {
     private static Logger LOG = LoggerFactory.getLogger(ValidationEngine.class);
 
-    private final List<ValidationException> parsingErrors;
+    private final List<ValidationException> parsingWarnings;
     public ValidationConfig validationConfig;
     public ValidationRegistry validationRegistry;
 
     ValidationEngine(ValidationConfig validationConfig, ValidationRegistry validationRegistry) {
-        this.parsingErrors = new java.util.ArrayList<>();
+        this.parsingWarnings = new java.util.ArrayList<>();
         this.validationConfig = validationConfig;
         this.validationRegistry = validationRegistry;
     }
@@ -64,6 +64,18 @@ public class ValidationEngine {
         }
     }
 
+    public void executeExits() {
+        List<ValidatorDescriptor> validators = validationRegistry.getExits();
+
+        for (ValidatorDescriptor validator : validators) {
+            try {
+                validator.method().invoke(validator.instance());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
     public <T> void executeFixs(T target, int line) throws ValidationException {
         List<ValidatorDescriptor> validators = validationRegistry.getFixs();
 
@@ -93,7 +105,7 @@ public class ValidationEngine {
         switch (severity) {
             case OFF -> {}
             case WARN -> {
-                parsingErrors.add(exception);
+                parsingWarnings.add(exception);
                 LOG.warn(exception.getMessage());
             }
             case ERROR -> {
@@ -102,8 +114,8 @@ public class ValidationEngine {
         }
     }
 
-    public List<ValidationException> getParsingErrors() {
-        return parsingErrors;
+    public List<ValidationException> getParsingWarnings() {
+        return parsingWarnings;
     }
 
     private void handleRuleException(Exception e, RuleSeverity severity, String rule) throws ValidationException {
@@ -113,7 +125,7 @@ public class ValidationEngine {
         }
         if (cause instanceof ValidationException ve) {
             if (severity == RuleSeverity.WARN) {
-                parsingErrors.add(new ValidationException(rule, ve.getMessage()));
+                parsingWarnings.add(new ValidationException(rule, ve.getMessage()));
             } else if (severity == RuleSeverity.ERROR) {
                 throw new ValidationException(rule, ve.getLine(), ve.getMessage());
             } else {

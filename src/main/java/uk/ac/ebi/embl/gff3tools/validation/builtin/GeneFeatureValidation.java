@@ -11,7 +11,9 @@
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import java.util.*;
+import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
@@ -23,6 +25,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
+@Slf4j
 @Gff3Validation(name = "GENE_FEATURE")
 public class GeneFeatureValidation extends Validation {
 
@@ -39,131 +42,121 @@ public class GeneFeatureValidation extends Validation {
 
     private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
 
-    private final Map<String, Map<String, String>> annotationGeneToLocusTag = new HashMap<>();
-    private final Map<String, Map<String, String>> annotationGeneToPseudoGene = new HashMap<>();
-    private final Map<String, Map<String, GFF3Feature>> annotationLocusTagToGeneFeature = new HashMap<>();
-    private final Map<String, Map<String, String>> annotationLocusTagToGene = new HashMap<>();
-    private final Map<String, Map<String, List<String>>> annotationLocusTagToSynonyms = new HashMap<>();
+    @ValidationMethod(rule = "GENE_ASSOCIATION", type = ValidationType.ANNOTATION, severity = RuleSeverity.WARN)
+    public void validateGeneAssociation(GFF3Annotation gff3Annotation, int line) throws ValidationException {
+        Map<String, String> geneToLocusTag = new HashMap<>();
+        Map<String, String> geneToPseudoGene = new HashMap<>();
+        for (GFF3Feature feature : gff3Annotation.getFeatures()) {
+            if (feature == null || !feature.hasAttribute(GFF3Attributes.GENE)) return;
 
-    @ValidationMethod(rule = "GENE_ASSOCIATION", type = ValidationType.FEATURE, severity = RuleSeverity.WARN)
-    public void validateGeneAssociation(GFF3Feature feature, int line) throws ValidationException {
-        if (feature == null || !feature.hasAttribute(GFF3Attributes.GENE)) return;
+            String geneName = feature.getAttributeByName(GFF3Attributes.GENE);
+            String locusTag = feature.getAttributeByName(GFF3Attributes.LOCUS_TAG);
+            String existingLocus = geneToLocusTag.get(geneName);
+            Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
 
-        Map<String, String> geneToLocusTag =
-                annotationGeneToLocusTag.computeIfAbsent(feature.accession(), k -> new HashMap<>());
-        Map<String, String> geneToPseudoGene =
-                annotationGeneToPseudoGene.computeIfAbsent(feature.accession(), k -> new HashMap<>());
+            if (soIdOpt.isEmpty()) continue;
 
-        String geneName = feature.getAttributeByName(GFF3Attributes.GENE);
-        String locusTag = feature.getAttributeByName(GFF3Attributes.LOCUS_TAG);
-        String existingLocus = geneToLocusTag.get(geneName);
+            String soId = soIdOpt.get();
+            if (existingLocus != null && !Objects.equals(existingLocus, locusTag)) {
+                boolean isRrna = soId.equals(OntologyTerm.RRNA.ID)
+                        || soId.equals(OntologyTerm.PSEUDOGENIC_RRNA.ID)
+                        || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENIC_RRNA.ID);
 
-        Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
-        if (existingLocus != null && !Objects.equals(existingLocus, locusTag)) {
-            boolean isRrna = soIdOpt.map(soId -> soId.equals(OntologyTerm.RRNA.ID)
-                            || soId.equals(OntologyTerm.PSEUDOGENIC_RRNA.ID)
-                            || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENIC_RRNA.ID))
-                    .orElse(false);
+                if (!isRrna) {
+                    throw new ValidationException(
+                            line,
+                            GENE_ASSOCIATION_VALIDATION.formatted(
+                                    geneName, GFF3Attributes.LOCUS_TAG, existingLocus, locusTag));
+                }
+            }
+            geneToLocusTag.put(geneName, locusTag);
 
-            if (!isRrna) {
+            String pseudoGeneName = feature.getAttributeByName(GFF3Attributes.PSEUDOGENE);
+            String existingPseudo = geneToPseudoGene.get(geneName);
+            if (existingPseudo != null && !Objects.equals(existingPseudo, pseudoGeneName)) {
                 throw new ValidationException(
                         line,
                         GENE_ASSOCIATION_VALIDATION.formatted(
-                                geneName, GFF3Attributes.LOCUS_TAG, existingLocus, locusTag));
+                                geneName, GFF3Attributes.PSEUDOGENE, existingPseudo, pseudoGeneName));
             }
-        }
-        geneToLocusTag.put(geneName, locusTag);
-
-        String pseudoGeneName = feature.getAttributeByName(GFF3Attributes.PSEUDOGENE);
-        String existingPseudo = geneToPseudoGene.get(geneName);
-        if (existingPseudo != null && !Objects.equals(existingPseudo, pseudoGeneName)) {
-            throw new ValidationException(
-                    line,
-                    GENE_ASSOCIATION_VALIDATION.formatted(
-                            geneName, GFF3Attributes.PSEUDOGENE, existingPseudo, pseudoGeneName));
-        }
-        geneToPseudoGene.put(geneName, pseudoGeneName);
-    }
-
-    @ValidationMethod(rule = "GENE_LOCUS_TAG_ASSOCIATION", type = ValidationType.FEATURE)
-    public void validateGeneLocusTagAssociation(GFF3Feature feature, int line) throws ValidationException {
-        String featureName = feature.getName();
-        Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(featureName);
-
-        if (soIdOpt.isEmpty()) {
-            return;
-        }
-
-        String soId = soIdOpt.get();
-
-        // Check if feature is a gene or pseudogene type
-        boolean isGene = soId.equals(OntologyTerm.GENE.ID)
-                || soId.equals(OntologyTerm.PSEUDOGENE.ID)
-                || soId.equals(OntologyTerm.UNITARY_PSEUDOGENE.ID)
-                || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENE.ID)
-                || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.UNITARY_PSEUDOGENE.ID);
-
-        if (!isGene) {
-            return;
-        }
-        Map<String, GFF3Feature> locusTagToGeneFeature =
-                annotationLocusTagToGeneFeature.computeIfAbsent(feature.accession(), k -> new HashMap<>());
-
-        String locusTag = feature.getAttributeByName(GFF3Attributes.LOCUS_TAG);
-        if (locusTag == null || locusTag.isBlank()) {
-            return;
-        }
-
-        GFF3Feature existing = locusTagToGeneFeature.putIfAbsent(locusTag, feature);
-
-        if (existing != null) {
-            throw new ValidationException(
-                    line, GENE_FEATURE_LOCUS_VALIDATION.formatted(locusTag, existing.getName(), feature.getName()));
+            geneToPseudoGene.put(geneName, pseudoGeneName);
         }
     }
 
-    @ValidationMethod(rule = "LOCUS_TAG_ASSOCIATION", type = ValidationType.FEATURE)
-    public void validateLocusTagAssociation(GFF3Feature feature, int line) throws ValidationException {
-        if (feature == null || !feature.hasAttribute(GFF3Attributes.LOCUS_TAG)) {
-            return;
-        }
+    @ValidationMethod(rule = "GENE_LOCUS_TAG_ASSOCIATION", type = ValidationType.ANNOTATION)
+    public void validateGeneLocusTagAssociation(GFF3Annotation gff3Annotation, int line) throws ValidationException {
+        Map<String, GFF3Feature> locusTagToGeneFeature = new HashMap<>();
+        for (GFF3Feature feature : gff3Annotation.getFeatures()) {
+            Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
 
-        String locusTag = feature.getAttributeByName(GFF3Attributes.LOCUS_TAG);
-        if (locusTag == null || locusTag.isBlank()) {
-            return;
-        }
+            if (soIdOpt.isEmpty()) continue;
 
-        Map<String, String> locusTagToGene =
-                annotationLocusTagToGene.computeIfAbsent(feature.accession(), k -> new HashMap<>());
-        Map<String, List<String>> locusTagToSynonyms =
-                annotationLocusTagToSynonyms.computeIfAbsent(feature.accession(), k -> new HashMap<>());
+            String soId = soIdOpt.get();
 
-        if (isGeneOrCds(feature)) {
-            // Extract the first gene and gene_synonym values to check duplicate
-            extractLocusMappings(feature, locusTagToGene, locusTagToSynonyms);
-        }
+            // Check if feature is a gene or pseudogene type
+            boolean isGene = soId.equals(OntologyTerm.GENE.ID)
+                    || soId.equals(OntologyTerm.PSEUDOGENE.ID)
+                    || soId.equals(OntologyTerm.UNITARY_PSEUDOGENE.ID)
+                    || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENE.ID)
+                    || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.UNITARY_PSEUDOGENE.ID);
 
-        String currentGene = feature.getAttributeByName(GFF3Attributes.GENE);
-        List<String> currentSynonyms = parseSynonyms(feature.getAttributeByName(GFF3Attributes.GENE_SYNONYM));
+            if (!isGene) {
+                return;
+            }
 
-        if (currentGene != null) {
-            String masterGene = locusTagToGene.get(locusTag);
-            if (masterGene != null && !masterGene.equals(currentGene)) {
+            String locusTag = feature.getAttributeByName(GFF3Attributes.LOCUS_TAG);
+            if (locusTag == null || locusTag.isBlank()) {
+                return;
+            }
+
+            GFF3Feature existing = locusTagToGeneFeature.putIfAbsent(locusTag, feature);
+            if (existing != null) {
                 throw new ValidationException(
-                        line, DIFFERENT_GENE_VALUES_MESSAGE.formatted(locusTag, masterGene, currentGene));
+                        line, GENE_FEATURE_LOCUS_VALIDATION.formatted(locusTag, existing.getName(), feature.getName()));
             }
-            locusTagToGene.putIfAbsent(locusTag, currentGene);
         }
+    }
 
-        List<String> masterSynonyms = locusTagToSynonyms.get(locusTag);
-        if (masterSynonyms != null) {
-            if (!currentSynonyms.isEmpty()
-                    && !masterSynonyms.isEmpty()
-                    && !areSynonymListsEqual(masterSynonyms, currentSynonyms)) {
-                throw new ValidationException(line, DIFFERENT_GENE_SYNONYM_VALUES_MESSAGE.formatted(locusTag));
+    @ValidationMethod(rule = "LOCUS_TAG_ASSOCIATION", type = ValidationType.ANNOTATION)
+    public void validateLocusTagAssociation(GFF3Annotation gff3Annotation, int line) throws ValidationException {
+        Map<String, String> locusTagToGene = new HashMap<>();
+        Map<String, List<String>> locusTagToSynonyms = new HashMap<>();
+        for (GFF3Feature feature : gff3Annotation.getFeatures()) {
+            if (feature == null || !feature.hasAttribute(GFF3Attributes.LOCUS_TAG)) {
+                return;
             }
-        } else {
-            locusTagToSynonyms.put(locusTag, currentSynonyms);
+
+            String locusTag = feature.getAttributeByName(GFF3Attributes.LOCUS_TAG);
+            if (locusTag == null || locusTag.isBlank()) {
+                return;
+            }
+
+            if (isGeneOrCds(feature)) {
+                extractLocusMappings(feature, locusTagToGene, locusTagToSynonyms);
+            }
+
+            String currentGene = feature.getAttributeByName(GFF3Attributes.GENE);
+            List<String> currentSynonyms = parseSynonyms(feature.getAttributeByName(GFF3Attributes.GENE_SYNONYM));
+
+            if (currentGene != null) {
+                String masterGene = locusTagToGene.get(locusTag);
+                if (masterGene != null && !masterGene.equals(currentGene)) {
+                    throw new ValidationException(
+                            line, DIFFERENT_GENE_VALUES_MESSAGE.formatted(locusTag, masterGene, currentGene));
+                }
+                locusTagToGene.putIfAbsent(locusTag, currentGene);
+            }
+
+            List<String> masterSynonyms = locusTagToSynonyms.get(locusTag);
+            if (masterSynonyms != null) {
+                if (!currentSynonyms.isEmpty()
+                        && !masterSynonyms.isEmpty()
+                        && !areSynonymListsEqual(masterSynonyms, currentSynonyms)) {
+                    throw new ValidationException(line, DIFFERENT_GENE_SYNONYM_VALUES_MESSAGE.formatted(locusTag));
+                }
+            } else {
+                locusTagToSynonyms.put(locusTag, currentSynonyms);
+            }
         }
     }
 

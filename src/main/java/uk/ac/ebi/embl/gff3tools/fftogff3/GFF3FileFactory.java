@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.fftogff3;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -25,9 +26,11 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 
 public class GFF3FileFactory {
     ValidationEngine engine;
+    Path fastaFilePath = null;
 
-    public GFF3FileFactory(ValidationEngine engine) {
+    public GFF3FileFactory(ValidationEngine engine, Path fastaFilePath) {
         this.engine = engine;
+        this.fastaFilePath = fastaFilePath;
     }
 
     public GFF3File from(EmblEntryReader entryReader, Entry masterEntry) throws ValidationException, ReadException {
@@ -35,18 +38,25 @@ public class GFF3FileFactory {
         GFF3Species species = null;
         List<GFF3Annotation> annotations = new ArrayList<>();
         GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
+        GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(engine, directivesFactory, fastaFilePath);
         try {
             while (entryReader.read() != null && entryReader.isEntry()) {
                 Entry entry = entryReader.getEntry();
                 if (species == null) {
                     species = directivesFactory.createSpecies(entry, masterEntry);
                 }
-                annotations.add(new GFF3AnnotationFactory(engine, directivesFactory).from(entry));
+                annotations.add(annotationFactory.from(entry));
             }
         } catch (IOException e) {
             throw new ReadException(e);
         }
 
-        return new GFF3File(header, species, annotations, engine.getParsingErrors());
+        return GFF3File.builder()
+                .header(header)
+                .species(species)
+                .annotations(annotations)
+                .fastaFilePath(fastaFilePath)
+                .parsingWarnings(engine.getParsingWarnings())
+                .build();
     }
 }

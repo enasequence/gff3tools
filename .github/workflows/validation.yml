@@ -14,12 +14,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref }}
 
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 17
 
       - name: Cache Gradle dependencies
         uses: actions/cache@v4
@@ -35,4 +36,4 @@ jobs:
         run: ./gradlew spotlessCheck -Pgitlab_private_token=dummy-token
 
       - name: Run all tests
-        run: ./gradlew test -Pgitlab_private_token=dummy-token
+        run: ./gradlew test --info -Pgitlab_private_token=dummy-token

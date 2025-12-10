@@ -27,6 +27,9 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
+import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
+import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -44,12 +47,15 @@ public class GFF3Mapper {
     Map<String, GFF3Feature> parentFeatures;
     // Used to keep track of features that will be merged using a location join
     Map<String, Feature> joinableFeatureMap;
-    Entry entry;
 
-    public GFF3Mapper() {
+    Entry entry;
+    GFF3FileReader gff3FileReader;
+
+    public GFF3Mapper(GFF3FileReader gff3FileReader) {
         parentFeatures = new HashMap<>();
         joinableFeatureMap = new HashMap<>();
         entry = null;
+        this.gff3FileReader = gff3FileReader;
     }
 
     public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) throws ValidationException {
@@ -80,13 +86,14 @@ public class GFF3Mapper {
                 parentFeatures.put(gff3Feature.getId().get(), gff3Feature);
             }
 
-            mapGFF3Feature(gff3Feature);
+            mapGFF3Feature(gff3Feature, gff3FileReader.getTranslationOffsetMap());
         }
 
         return entry;
     }
 
-    private void mapGFF3Feature(GFF3Feature gff3Feature) throws ValidationException {
+    private void mapGFF3Feature(GFF3Feature gff3Feature, Map<String, OffsetRange> translationMap)
+            throws ValidationException {
 
         Map<String, Object> attributes = gff3Feature.getAttributes();
         String featureHashId = (String) attributes.getOrDefault("ID", gff3Feature.hashCodeString());
@@ -154,6 +161,10 @@ public class GFF3Mapper {
                 }
 
                 joinableFeatureMap.put(featureHashId, ffFeature);
+
+                // Transform GFF3 translation to /translation qualifier
+                mapTranslation(gff3Feature, ffFeature, featureHashId, translationMap);
+
                 entry.addFeature(ffFeature);
             } else {
                 throw new ValidationException(
@@ -166,6 +177,17 @@ public class GFF3Mapper {
             if (gene != null) {
                 ffFeature.addQualifier("gene", gene);
             }
+        }
+    }
+
+    /**
+     * Transform GFF3 translation to /translation qualifier
+     */
+    private void mapTranslation(
+            GFF3Feature gff3Feature, Feature ffFeature, String featureId, Map<String, OffsetRange> translationMap) {
+        String translationKey = TranslationWriter.getTranslationKey(gff3Feature.accession(), featureId);
+        if (translationMap.get(translationKey) != null) {
+            ffFeature.addQualifier("translation", gff3FileReader.getTranslation(translationMap.get(translationKey)));
         }
     }
 

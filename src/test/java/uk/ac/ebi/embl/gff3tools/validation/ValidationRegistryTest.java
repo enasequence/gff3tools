@@ -47,6 +47,9 @@ class ValidationRegistryTest {
 
         @ValidationMethod(rule = "RULE_1", type = ValidationType.FEATURE)
         public void validate() {}
+
+        @ExitMethod
+        public void onExit() {}
     }
 
     @Gff3Fix(name = "FIX_LENGTH", enabled = true)
@@ -55,6 +58,9 @@ class ValidationRegistryTest {
 
         @FixMethod(rule = "FIX_RULE_1", type = ValidationType.FEATURE)
         public void fix() {}
+
+        @ExitMethod
+        public void onExit() {}
     }
 
     @Test
@@ -81,11 +87,16 @@ class ValidationRegistryTest {
         List<ValidatorDescriptor> result = (List<ValidatorDescriptor>) buildMethod.invoke(registry, classInfos);
 
         // Assertions
-        assertEquals(2, result.size(), "Should build validators for both Gff3Validation and Gff3Fix");
+        assertEquals(4, result.size(), "Should build validators for both Gff3Validation and Gff3Fix");
 
         Set<Class<?>> classes = result.stream().map(ValidatorDescriptor::clazz).collect(Collectors.toSet());
         assertTrue(classes.contains(DummyValidation.class), "Should include DummyValidation");
         assertTrue(classes.contains(DummyFix.class), "Should include DummyFix");
+
+        Set<Method> methods = result.stream().map(ValidatorDescriptor::method).collect(Collectors.toSet());
+        assertTrue(
+                methods.contains(DummyValidation.class.getMethod("onExit")), "Should include DummyValidation.onExit");
+        assertTrue(methods.contains(DummyFix.class.getMethod("onExit")), "Should include DummyFix.onExit");
     }
 
     @Test
@@ -95,6 +106,47 @@ class ValidationRegistryTest {
         class ValClass {
             @ValidationMethod(rule = "R1", type = ValidationType.FEATURE)
             public void validate() {}
+
+            @ExitMethod
+            public void onExit() {}
+        }
+
+        @Gff3Fix(name = "FIX1")
+        class FixClass {
+            @FixMethod(rule = "F1", type = ValidationType.FEATURE)
+            public void fix() {}
+
+            @ExitMethod
+            public void onExit() {}
+        }
+
+        List<ValidatorDescriptor> all = new ArrayList<>();
+        all.add(new ValidatorDescriptor(ValClass.class, new ValClass(), getMethod(ValClass.class, "validate")));
+        all.add(new ValidatorDescriptor(ValClass.class, new ValClass(), getMethod(ValClass.class, "onExit")));
+        all.add(new ValidatorDescriptor(FixClass.class, new FixClass(), getMethod(FixClass.class, "fix")));
+        all.add(new ValidatorDescriptor(FixClass.class, new FixClass(), getMethod(FixClass.class, "onExit")));
+
+        // Inject cachedValidators
+        setCachedValidators(all);
+
+        List<ValidatorDescriptor> result = registry.getValidations();
+        assertEquals(1, result.size());
+        assertEquals(ValClass.class, result.get(0).clazz());
+    }
+
+    @Test
+    @DisplayName("Should filter exits correctly")
+    void testGetExitsFiltersOnly() {
+        @Gff3Validation(name = "VAL1")
+        class ValClass {
+            @ValidationMethod(rule = "R1", type = ValidationType.FEATURE)
+            public void validate() {}
+        }
+
+        @Gff3Validation(name = "VAL2")
+        class Val2Class {
+            @ExitMethod
+            public void onExit() {}
         }
 
         @Gff3Fix(name = "FIX1")
@@ -103,16 +155,25 @@ class ValidationRegistryTest {
             public void fix() {}
         }
 
+        @Gff3Fix(name = "FIX2")
+        class Fix2Class {
+            @ExitMethod
+            public void onExit() {}
+        }
+
         List<ValidatorDescriptor> all = new ArrayList<>();
         all.add(new ValidatorDescriptor(ValClass.class, new ValClass(), getMethod(ValClass.class, "validate")));
+        all.add(new ValidatorDescriptor(Val2Class.class, new Val2Class(), getMethod(Val2Class.class, "onExit")));
         all.add(new ValidatorDescriptor(FixClass.class, new FixClass(), getMethod(FixClass.class, "fix")));
+        all.add(new ValidatorDescriptor(Fix2Class.class, new Fix2Class(), getMethod(Fix2Class.class, "onExit")));
 
         // Inject cachedValidators
         setCachedValidators(all);
 
-        List<ValidatorDescriptor> result = registry.getValidations();
-        assertEquals(1, result.size());
-        assertEquals(ValClass.class, result.get(0).clazz());
+        List<ValidatorDescriptor> result = registry.getExits();
+        assertEquals(2, result.size());
+        assertEquals(Val2Class.class, result.get(0).clazz());
+        assertEquals(Fix2Class.class, result.get(1).clazz());
     }
 
     @Test
@@ -126,7 +187,7 @@ class ValidationRegistryTest {
 
         @Gff3Fix(name = "FIX1")
         class FixClass {
-            @ValidationMethod(rule = "F1", type = ValidationType.FEATURE)
+            @FixMethod(rule = "F1", type = ValidationType.FEATURE)
             public void fix() {}
         }
 
@@ -201,7 +262,7 @@ class ValidationRegistryTest {
         try {
             return clazz.getDeclaredMethod(name);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Did not find method %s".formatted(name), e);
         }
     }
 

@@ -64,7 +64,7 @@ public class ValidationEngineTest {
                         "",
                         new HashMap<>()),
                 1);
-        assertTrue(validationEngine.getParsingErrors().isEmpty());
+        assertTrue(validationEngine.getParsingWarnings().isEmpty());
     }
 
     @Test
@@ -161,7 +161,7 @@ public class ValidationEngineTest {
 
             GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
             engine.executeValidations(feature, 1);
-            assertEquals(1, engine.getParsingErrors().size());
+            assertEquals(1, engine.getParsingWarnings().size());
         }
     }
 
@@ -242,7 +242,7 @@ public class ValidationEngineTest {
                 .thenReturn(RuleSeverity.WARN);
 
         engine.handleSyntacticError(vex);
-        assertEquals(1, engine.getParsingErrors().size());
+        assertEquals(1, engine.getParsingWarnings().size());
     }
 
     @Test
@@ -252,5 +252,28 @@ public class ValidationEngineTest {
                 .thenReturn(RuleSeverity.ERROR);
 
         assertThrows(ValidationException.class, () -> engine.handleSyntacticError(vex));
+    }
+
+    @Test
+    void testExecuteValidations_invokesExitMethod() throws Exception {
+        // Mock method with @ValidationMethod
+        class DummyValidator {
+            @ExitMethod()
+            public void onExit() {}
+        }
+
+        Method m = DummyValidator.class.getDeclaredMethod("onExit");
+        DummyValidator instance = spy(new DummyValidator());
+
+        ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyValidator.class, instance, m);
+        List<ValidatorDescriptor> descriptors = List.of(descriptor);
+
+        try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
+
+            mocked.when(validationRegistry::getExits).thenReturn(descriptors);
+
+            engine.executeExits();
+            verify(instance, times(1)).onExit();
+        }
     }
 }

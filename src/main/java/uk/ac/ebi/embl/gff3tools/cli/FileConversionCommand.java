@@ -12,50 +12,29 @@ package uk.ac.ebi.embl.gff3tools.cli;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
-import io.vavr.Function0;
-import java.io.*;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.Converter;
-import uk.ac.ebi.embl.gff3tools.exception.*;
+import uk.ac.ebi.embl.gff3tools.exception.CLIException;
+import uk.ac.ebi.embl.gff3tools.exception.FormatSupportException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
-import uk.ac.ebi.embl.gff3tools.validation.*;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 // Using pandoc CLI interface conventions
 @CommandLine.Command(name = "conversion", description = "Performs format conversions to or from gff3")
-public class FileConversionCommand implements Runnable {
-
-    @CommandLine.Option(
-            names = "--rules",
-            paramLabel = "<key:value,key:value>",
-            description = "Specify rules in the format key:value")
-    public CliRulesOption rules;
-
-    @CommandLine.Option(names = "-f", description = "The type of the file to be converted")
-    public ConversionFileFormat fromFileType;
-
-    @CommandLine.Option(names = "-t", description = "The type of the file to convert to")
-    public ConversionFileFormat toFileType;
-
-    @CommandLine.Option(names = "-m", description = "Optional master file")
-    public Path masterFilePath;
-
-    @CommandLine.Parameters(
-            paramLabel = "[input-file]",
-            defaultValue = "",
-            showDefaultValue = CommandLine.Help.Visibility.NEVER)
-    public Path inputFilePath;
+@Slf4j
+public class FileConversionCommand extends AbstractCommand {
 
     @CommandLine.Parameters(
             paramLabel = "[output-file]",
@@ -65,8 +44,7 @@ public class FileConversionCommand implements Runnable {
 
     @Override
     public void run() {
-        Map<String, RuleSeverity> ruleOverrides =
-                Optional.ofNullable(rules).map((r) -> r.rules()).orElse(new HashMap<>());
+        Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
 
         try (BufferedReader inputReader = getPipe(
                         Files::newBufferedReader,
@@ -86,43 +64,24 @@ public class FileConversionCommand implements Runnable {
             fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
             toFileType = validateFileType(toFileType, outputFilePath, "-t");
             ValidationEngine engine = initValidationEngine(ruleOverrides);
-            Converter converter = getConverter(engine, fromFileType, toFileType, masterFilePath);
+            Converter converter = getConverter(engine, fromFileType, toFileType);
             converter.convert(inputReader, outputWriter);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
     }
 
-    private ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides)
-            throws UnregisteredValidationRuleException {
-        ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
-        engineBuilder.overrideMethodRules(ruleOverrides);
-
-        // TODO: override validator
-        // engineBuilder.overrideClassRules()
-
-        // TODO: override validator
-        // engineBuilder.overrideMethodFixs()
-
-        // TODO: Create and set connection
-        // engineBuilder.setConnection(connection);
-
-        return engineBuilder.build();
-    }
-
     private Converter getConverter(
-            ValidationEngine engine,
-            ConversionFileFormat inputFileType,
-            ConversionFileFormat outputFileType,
-            Path masterFilePath)
+            ValidationEngine engine, ConversionFileFormat inputFileType, ConversionFileFormat outputFileType)
             throws FormatSupportException {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
-            return new Gff3ToFFConverter(engine);
+            // Need input file to random access the translation sequence.
+            return new Gff3ToFFConverter(engine, inputFilePath);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
-
+            // FASTA path to write translation sequences
             return masterFilePath == null
-                    ? new FFToGff3Converter(engine, masterFilePath)
-                    : new FFToGff3Converter(engine);
+                    ? new FFToGff3Converter(engine)
+                    : new FFToGff3Converter(engine, masterFilePath);
 
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
@@ -150,25 +109,6 @@ public class FileConversionCommand implements Runnable {
             }
         }
         return fileFormat;
-    }
-
-    @FunctionalInterface
-    interface NewPipeFunction<T> {
-        T apply(Path p, Charset c) throws IOException;
-    }
-
-    private <T> T getPipe(NewPipeFunction<T> newFilePipe, Function0<T> newStdPipe, Path filePath) throws ExitException {
-        if (!filePath.toString().isEmpty()) {
-            try {
-                return newFilePipe.apply(filePath, StandardCharsets.UTF_8);
-            } catch (NoSuchFileException e) {
-                throw new NonExistingFile("The file does not exist: " + filePath, e);
-            } catch (IOException e) {
-                throw new ReadException("Error opening file: " + filePath, e);
-            }
-        } else {
-            return newStdPipe.apply();
-        }
     }
 
     public static String getFileExtension(Path path) {

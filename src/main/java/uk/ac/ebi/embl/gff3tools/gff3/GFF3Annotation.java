@@ -77,7 +77,7 @@ public class GFF3Annotation implements IGFF3Feature {
         return "%s=%s".formatted(encodedKey, encodedValue);
     }
 
-    private static String urlEncode(String s) {
+    public static String urlEncode(String s) {
         return URLEncoder.encode(s, StandardCharsets.UTF_8).replace("+", " ");
     }
 
@@ -129,5 +129,9 @@ public class GFF3Annotation implements IGFF3Feature {
 
     public List<GFF3Feature> getAllFeatures() {
         return Collections.unmodifiableList(this.features);
+    }
+
+    public void removeFeature(GFF3Feature feature) {
+        features.remove(feature);
     }
 }
