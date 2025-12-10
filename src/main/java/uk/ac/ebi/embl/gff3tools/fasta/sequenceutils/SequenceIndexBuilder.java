@@ -82,7 +82,7 @@ public final class SequenceIndexBuilder {
         long pos; // absolute scan position
         long firstBaseByte = -1; // first allowed base byte seen
         long lastBaseByte = -1; // last  allowed base byte seen
-        long nextHdr; // byte of next header (or fileSize)
+        long nextHdr; // byte of next header (or file end)
 
         long lineFirstByte = -1; // first allowed base byte in current line
         long lineLastByte = -1; // last  allowed base byte in current line
@@ -121,7 +121,7 @@ public final class SequenceIndexBuilder {
                 commitOpenLineIfAny(s); // finalize any in-flight line
                 return true;
             } else if (b == LF) { // end of a displayed sequence line
-                commitOpenLineIfAny(s); // (2) only lines with bases are committed
+                commitOpenLineIfAny(s); // only lines with bases are committed
                 continue;
             } else if (alphabet.isAllowed(b)) {
                 observeBase(abs, s);
@@ -164,7 +164,7 @@ public final class SequenceIndexBuilder {
     }
 
     private void commitOpenLineIfAny(ScanState s) {
-        if (s.basesInLine <= 0) return; // (2) skip empty lines
+        if (s.basesInLine <= 0) return; // skip empty lines
         long baseStart = s.basesSoFar + 1;
         long baseEnd = s.basesSoFar + s.basesInLine;
         long byteStart = s.lineFirstByte;
@@ -191,7 +191,6 @@ public final class SequenceIndexBuilder {
                 out.add(L);
             }
         }
-        // baseStart/baseEnd are already contiguous (1..N) in raw; filtering preserves order & numbering
         return out;
     }
 
