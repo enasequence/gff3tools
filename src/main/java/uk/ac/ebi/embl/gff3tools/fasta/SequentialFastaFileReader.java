@@ -64,8 +64,6 @@ public class SequentialFastaFileReader implements AutoCloseable {
 
     /** Char-stream view over [span.start, span.endEx): ASCII decode, skip LF/CR.
      *  Uses absolute reads; does NOT change channel.position(). */
-    /** Char-stream view over [span.start, span.endEx): ASCII decode, skip LF/CR.
-     *  Uses absolute reads; does NOT change channel.position(). */
     public java.io.Reader getSequenceSliceReader(ByteSpan span) {
         final long start = span.start;
         final long endEx = span.endEx;
@@ -73,11 +71,10 @@ public class SequentialFastaFileReader implements AutoCloseable {
         return new java.io.Reader() {
             private long pos = start;
 
-            // Allocate direct buffer for I/O…
             private final java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocateDirect(CHAR_BUF_SIZE);
             {
-                // …but mark it EMPTY so the very first read() refills it from the channel.
-                // Without this, hasRemaining() is true and you'd read uninitialized bytes (→ '\0').
+                // allocate buffer and mark it EMPTY so the very first read() refills it from the channel.
+                // Without this, hasRemaining() is true and we'll read uninitialized bytes (→ '\0').
                 buf.limit(0);
             }
 
@@ -85,8 +82,40 @@ public class SequentialFastaFileReader implements AutoCloseable {
             public int read(char[] characterBuffer,
                             int startingWriteIndexInCharacterBuffer,
                             int maximumNumberOfCharsToRead) throws java.io.IOException {
+                // --- Validate caller’s target window [off .. off + len) ---
+                ValidateTargetWindow(characterBuffer, startingWriteIndexInCharacterBuffer, maximumNumberOfCharsToRead);
+                if (maximumNumberOfCharsToRead == 0) return 0;
 
-                // --- Validate caller’s target window [off .. off + len)
+                int out = 0;
+                while (out < maximumNumberOfCharsToRead) {
+                    // --- Prep the buffer for next read & fill it out ---
+                    if (!buf.hasRemaining()) {
+                        if (pos >= endEx) break; //if end of slice reached, stop reading
+
+                        buf.clear();
+                        int toRead = (int) Math.min(buf.capacity(), endEx - pos);
+                        buf.limit(toRead);
+
+                        int n = channel.read(buf, pos);
+                        if (n <= 0) break; //if no bytes were read, break
+                        pos += n;
+                        buf.flip();
+                    }
+                    // Drain bytes + ASCII decode -> writees chars into caller’s window [off .. off+len)
+                    while (buf.hasRemaining() && out < maximumNumberOfCharsToRead) {
+                        byte b = buf.get();
+                        if (b == LF || b == CR) continue;         // skip irrelevant bytes
+                        characterBuffer[startingWriteIndexInCharacterBuffer + out] = (char) (b & 0xFF);
+                        out++;
+                    }
+                }
+                // If we produced nothing AND we’re at EOF, signal -1
+                return (out == 0) ? -1 : out;
+            }
+
+            private void ValidateTargetWindow(char[] characterBuffer,
+                              int startingWriteIndexInCharacterBuffer,
+                              int maximumNumberOfCharsToRead) throws java.io.IOException {
                 if (characterBuffer == null) throw new NullPointerException("characterBuffer");
                 if (startingWriteIndexInCharacterBuffer < 0 ||
                         maximumNumberOfCharsToRead < 0 ||
@@ -96,42 +125,6 @@ public class SequentialFastaFileReader implements AutoCloseable {
                                     " len=" + maximumNumberOfCharsToRead +
                                     " bufLen=" + characterBuffer.length);
                 }
-                if (maximumNumberOfCharsToRead == 0) return 0;
-
-                // IMPORTANT: if you didn’t already do this in a ctor/initializer block:
-                // Newly-allocated ByteBuffer has remaining() == true. Mark it empty so we refill first.
-                if (buf.limit() != 0 && !buf.hasRemaining() && pos == span.start) {
-                    // no-op branch, kept to show intent; prefer the initializer approach below
-                }
-
-                int out = 0;
-
-                while (out < maximumNumberOfCharsToRead) {
-                    // Refill byte buffer if empty
-                    if (!buf.hasRemaining()) {
-                        if (pos >= endEx) break;                 // EOF for this slice
-
-                        buf.clear();                              // position=0, limit=capacity
-                        int toRead = (int) Math.min(buf.capacity(), endEx - pos);
-                        buf.limit(toRead);                        // HARD cap at span end
-                        int n = channel.read(buf, pos);           // ABSOLUTE read; file cursor unchanged
-                        if (n <= 0) break;                        // EOF / I/O issue
-                        pos += n;
-                        buf.flip();                               // prepare for reading the bytes we just filled
-                    }
-
-                    // Drain bytes -> chars into caller’s window [off .. off+len)
-                    while (buf.hasRemaining() && out < maximumNumberOfCharsToRead) {
-                        byte b = buf.get();
-                        if (b == LF || b == CR) continue;         // skip EOL bytes
-                        // ASCII decode: write into cbuf starting at 'off', advancing by 'out'
-                        characterBuffer[startingWriteIndexInCharacterBuffer + out] = (char) (b & 0xFF);
-                        out++;
-                    }
-                }
-
-                // If we produced nothing AND we’re at EOF, signal -1 per Reader contract
-                return (out == 0) ? -1 : out;
             }
 
             @Override
@@ -142,7 +135,7 @@ public class SequentialFastaFileReader implements AutoCloseable {
             }
 
             @Override public boolean ready() { return buf.hasRemaining() || pos < endEx; }
-            @Override public void close() { /* no-op: we don’t own the channel */ }
+            @Override public void close() { /* no-op, channel is kept alive */ }
         };
     }
 

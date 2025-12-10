@@ -21,6 +21,7 @@ public class FastaEntry {
     public String accessionId;
     public FastaHeader header; // json info
     public long totalBases;
+    public long totalBasesWithoutNBases;
     public long leadingNsCount;
     public long trailingNsCount;
 }

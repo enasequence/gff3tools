@@ -12,7 +12,6 @@ package uk.ac.ebi.embl.gff3tools.fasta;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.Reader;
 import java.util.*;
 import lombok.Getter;
@@ -57,9 +56,9 @@ public final class FastaFileService {
     }
 
     /** Return a sequence slice as a String (no EOLs) for [fromBase..toBase] inclusive. */
-    public String getSequenceRangeAsString(SequenceRangeOption option,
-                                           String submissionId,
-                                           long fromBase, long toBase) throws FastaFileException {
+    public String getSequenceSliceString(SequenceRangeOption option,
+                                         String submissionId,
+                                         long fromBase, long toBase) throws FastaFileException {
         ensureFileReaderOpen();
         SequenceIndex index = sequenceIndexes.get(submissionId);
         if (index == null) {
@@ -94,7 +93,7 @@ public final class FastaFileService {
      * Uses the cached index to translate bases -> bytes, then asks the reader to stream
      * ASCII bytes while skipping '\n' and '\r' on the fly.
      */
-    public Reader streamSequenceRange(SequenceRangeOption option, String submissionId, long fromBase, long toBase)
+    public Reader getSequenceSliceReader(SequenceRangeOption option, String submissionId, long fromBase, long toBase)
             throws FastaFileException {
         ensureFileReaderOpen();
         var index = sequenceIndexes.get(submissionId);
@@ -133,6 +132,8 @@ public final class FastaFileService {
             fastaEntry.setTotalBases(entry.sequenceIndex.totalBases());
             fastaEntry.setLeadingNsCount(entry.sequenceIndex.startNBasesCount);
             fastaEntry.setTrailingNsCount(entry.sequenceIndex.endNBasesCount);
+            long adjustedBases = entry.sequenceIndex.totalBases()- entry.sequenceIndex.startNBasesCount- entry.sequenceIndex.endNBasesCount;
+            fastaEntry.setTotalBasesWithoutNBases(adjustedBases);
             fastaEntries.add(fastaEntry);
 
             sequenceIndexes.put(entry.getSubmissionId(), entry.sequenceIndex);
