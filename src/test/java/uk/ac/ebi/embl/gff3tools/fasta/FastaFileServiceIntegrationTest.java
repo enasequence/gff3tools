@@ -230,7 +230,7 @@ class FastaFileServiceIntegrationTest {
     //
     // then just move the fasta into whatever/gff3tools/src/test/resources/fasta/
     // and run the test
-    //@Test
+    // @Test
     void readBigSequenceSuccessfully() throws IOException, FastaFileException {
         File fasta = FastaTestResources.file("fasta", "single_fasta_large_sequence.txt");
         FastaFileService service = new FastaFileService();
