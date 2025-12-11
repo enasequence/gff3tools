@@ -28,8 +28,6 @@ public class GeneFeatureValidationTest {
 
     private GFF3Annotation gff3Annotation;
 
-    private GFF3Feature feature;
-
     @BeforeEach
     public void setUp() {
         gff3Annotation = new GFF3Annotation();
@@ -51,9 +49,8 @@ public class GeneFeatureValidationTest {
                 OntologyTerm.GENE.name(),
                 Map.of(GFF3Attributes.GENE, List.of("gene2"), GFF3Attributes.LOCUS_TAG, List.of("locus3")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f1, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f2, 2));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f3, 3));
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 1));
     }
 
     @Test
@@ -69,9 +66,9 @@ public class GeneFeatureValidationTest {
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 OntologyTerm.GENE.name(), OntologyTerm.GENE.name(), Map.of(GFF3Attributes.GENE, List.of("gene3")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f1, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f2, 2));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f3, 3));
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 1));
     }
 
     @Test
@@ -87,9 +84,9 @@ public class GeneFeatureValidationTest {
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 OntologyTerm.RRNA.name(), OntologyTerm.RRNA.name(), Map.of(GFF3Attributes.GENE, List.of("gene2")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f1, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f2, 2));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f3, 3));
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 1));
     }
 
     @Test
@@ -103,10 +100,10 @@ public class GeneFeatureValidationTest {
                 OntologyTerm.GENE.name(),
                 Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.LOCUS_TAG, List.of("locus2")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f1, 1));
+        gff3Annotation.setFeatures(List.of(f1, f2));
 
         ValidationException ex = Assertions.assertThrows(
-                ValidationException.class, () -> geneFeatureValidation.validateGeneAssociation(f2, 2));
+                ValidationException.class, () -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 2));
 
         Assertions.assertTrue(
                 ex.getMessage()
@@ -129,9 +126,9 @@ public class GeneFeatureValidationTest {
                 OntologyTerm.SIGNAL_PEPTIDE.name(),
                 Map.of(GFF3Attributes.GENE, List.of("gene3"), GFF3Attributes.PSEUDOGENE, List.of("pseudoGene3")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f1, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f2, 2));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f3, 3));
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 1));
     }
 
     @Test
@@ -149,10 +146,10 @@ public class GeneFeatureValidationTest {
                 OntologyTerm.GENE.name(),
                 Map.of(GFF3Attributes.GENE, List.of("gene2"), GFF3Attributes.PSEUDOGENE, List.of("pseudoGene3")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f1, 1));
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
         ValidationException ex = Assertions.assertThrows(
-                ValidationException.class, () -> geneFeatureValidation.validateGeneAssociation(f2, 2));
+                ValidationException.class, () -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 2));
 
         Assertions.assertTrue(
                 ex.getMessage()
@@ -178,9 +175,13 @@ public class GeneFeatureValidationTest {
                 "annotation2",
                 Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.LOCUS_TAG, List.of("locus3")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f1, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f2, 2));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f3, 3));
+        gff3Annotation.setFeatures(List.of(f1, f2));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 1));
+
+        gff3Annotation.setFeatures(List.of(f2, f3));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 1));
     }
 
     @Test
@@ -198,8 +199,9 @@ public class GeneFeatureValidationTest {
                 Map.of(GFF3Attributes.GENE, List.of("gene2"), GFF3Attributes.LOCUS_TAG, List.of("locus2")));
 
         // No conflicts yet
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f1, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f2, 2));
+        gff3Annotation.setFeatures(List.of(f1, f2));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 1));
 
         // Same annotation, same gene with different locus_tag - conflict
         GFF3Feature f3 = TestUtils.createGFF3Feature(
@@ -208,8 +210,10 @@ public class GeneFeatureValidationTest {
                 "annotation1",
                 Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.LOCUS_TAG, List.of("locus3")));
 
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
+
         ValidationException ex = Assertions.assertThrows(
-                ValidationException.class, () -> geneFeatureValidation.validateGeneAssociation(f3, 3));
+                ValidationException.class, () -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 1));
 
         Assertions.assertTrue(
                 ex.getMessage()
@@ -223,7 +227,8 @@ public class GeneFeatureValidationTest {
                 "annotation2",
                 Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.LOCUS_TAG, List.of("locus3")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f4, 4));
+        gff3Annotation.setFeatures(List.of(f4));
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 4));
     }
 
     @Test
@@ -238,9 +243,9 @@ public class GeneFeatureValidationTest {
                 OntologyTerm.OPERON.name(),
                 OntologyTerm.OPERON.name(),
                 Map.of(GFF3Attributes.PRODUCT, List.of("product")));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(f1, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(f2, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(f3, 1));
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(gff3Annotation, 1));
     }
 
     @Test
@@ -257,9 +262,9 @@ public class GeneFeatureValidationTest {
                 "unitary_pseudogene",
                 "unitary_pseudogene",
                 Map.of(GFF3Attributes.PSEUDOGENE, List.of("unitary_pseudogene")));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(f1, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(f2, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(f3, 1));
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(gff3Annotation, 1));
     }
 
     @Test
@@ -284,9 +289,9 @@ public class GeneFeatureValidationTest {
                         List.of("locus123"),
                         GFF3Attributes.PSEUDOGENE,
                         List.of("unitary_pseudogene")));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(f1, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(f2, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(f3, 1));
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(gff3Annotation, 1));
     }
 
     @Test
@@ -306,8 +311,9 @@ public class GeneFeatureValidationTest {
                         GFF3Attributes.PSEUDOGENE,
                         List.of("non_processed_pseudogene")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(f1, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(f2, 2));
+        gff3Annotation.setFeatures(List.of(f1, f2));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 3));
 
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 "processed_pseudogene",
@@ -315,7 +321,9 @@ public class GeneFeatureValidationTest {
                 "annotation2",
                 Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus1"), GFF3Attributes.PSEUDOGENE, List.of("pseudogene")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(f3, 3));
+        gff3Annotation.setFeatures(List.of(f1, f2));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 3));
     }
 
     @Test
@@ -336,8 +344,9 @@ public class GeneFeatureValidationTest {
                         GFF3Attributes.PSEUDOGENE,
                         List.of("non_processed_pseudogene")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(f1, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(f2, 2));
+        gff3Annotation.setFeatures(List.of(f1, f2));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 3));
 
         // Same annotation, same locus_tag
         GFF3Feature f3 = TestUtils.createGFF3Feature(
@@ -346,8 +355,11 @@ public class GeneFeatureValidationTest {
                 "annotation1",
                 Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus1"), GFF3Attributes.PSEUDOGENE, List.of("pseudogene")));
 
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
+
         ValidationException ex = Assertions.assertThrows(
-                ValidationException.class, () -> geneFeatureValidation.validateGeneLocusTagAssociation(f3, 3));
+                ValidationException.class,
+                () -> geneFeatureValidation.validateGeneLocusTagAssociation(gff3Annotation, 3));
 
         Assertions.assertTrue(ex.getMessage()
                 .contains("locus_tag=\"%s\" already used by \"%s\" and \"%s\""
@@ -360,7 +372,9 @@ public class GeneFeatureValidationTest {
                 "annotation2",
                 Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus1"), GFF3Attributes.PSEUDOGENE, List.of("pseudogene")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(f4, 4));
+        gff3Annotation.setFeatures(List.of(f4));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(gff3Annotation, 4));
     }
 
     @Test
@@ -378,10 +392,11 @@ public class GeneFeatureValidationTest {
                         GFF3Attributes.PSEUDOGENE,
                         List.of("non_processed_pseudogene")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(f1, 1));
+        gff3Annotation.setFeatures(List.of(f1, f2));
 
         ValidationException ex = Assertions.assertThrows(
-                ValidationException.class, () -> geneFeatureValidation.validateGeneLocusTagAssociation(f2, 1));
+                ValidationException.class,
+                () -> geneFeatureValidation.validateGeneLocusTagAssociation(gff3Annotation, 1));
 
         Assertions.assertTrue(ex.getMessage()
                 .contains("locus_tag=\"%s\" already used by \"%s\" and \"%s\""
@@ -403,9 +418,9 @@ public class GeneFeatureValidationTest {
                 OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag2"), GFF3Attributes.GENE, List.of("gene3")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f1, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f2, 2));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f3, 3));
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(gff3Annotation, 1));
     }
 
     @Test
@@ -423,17 +438,15 @@ public class GeneFeatureValidationTest {
                 OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag2"), GFF3Attributes.GENE, List.of("gene3")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f1, 1));
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
         ValidationException ex = Assertions.assertThrows(
-                ValidationException.class, () -> geneFeatureValidation.validateLocusTagAssociation(f2, 1));
+                ValidationException.class, () -> geneFeatureValidation.validateLocusTagAssociation(gff3Annotation, 1));
 
         Assertions.assertTrue(ex.getMessage()
                 .contains(
                         "Features sharing locus_tag \"%s\" are associated with \"gene\" qualifiers with different values"
                                 .formatted("locus_tag1")));
-
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f3, 1));
     }
 
     @Test
@@ -462,16 +475,15 @@ public class GeneFeatureValidationTest {
                         List.of("locus_tag2"),
                         GFF3Attributes.GENE_SYNONYM,
                         List.of("synonym1,synonym2,synonym5")));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f1, 1));
+
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
         ValidationException ex = Assertions.assertThrows(
-                ValidationException.class, () -> geneFeatureValidation.validateLocusTagAssociation(f2, 1));
+                ValidationException.class, () -> geneFeatureValidation.validateLocusTagAssociation(gff3Annotation, 1));
 
         Assertions.assertTrue(ex.getMessage()
                 .contains("Features sharing locus_tag \"%s\" are associated with \"gene_synonym\""
                         .formatted("locus_tag1")));
-
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f3, 1));
     }
 
     @Test
@@ -495,9 +507,7 @@ public class GeneFeatureValidationTest {
 
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f1, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f2, 2));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f3, 3));
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(gff3Annotation, 1));
     }
 
     @Test
@@ -527,9 +537,9 @@ public class GeneFeatureValidationTest {
                         GFF3Attributes.GENE_SYNONYM,
                         List.of("synonym1,synonym2,synonym3")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f1, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f2, 2));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f3, 3));
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(gff3Annotation, 1));
     }
 
     @Test
@@ -555,12 +565,15 @@ public class GeneFeatureValidationTest {
                         GFF3Attributes.GENE_SYNONYM,
                         List.of("synonym1,synonym2,synonym3")));
 
-        GFF3Feature f5 = TestUtils.createGFF3Feature(
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(gff3Annotation, 1));
+
+        GFF3Feature f4 = TestUtils.createGFF3Feature(
                 OntologyTerm.GENE.name(),
                 OntologyTerm.GENE.name(),
                 "annotation2",
                 Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag1"), GFF3Attributes.GENE, List.of("gene2")));
-        GFF3Feature f6 = TestUtils.createGFF3Feature(
+        GFF3Feature f5 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 "annotation2",
@@ -570,11 +583,9 @@ public class GeneFeatureValidationTest {
                         GFF3Attributes.GENE_SYNONYM,
                         List.of("synonym1,synonym2,synonym4")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f1, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f2, 2));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f3, 3));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f5, 4));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f6, 5));
+        gff3Annotation.setFeatures(List.of(f4, f5));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(gff3Annotation, 1));
     }
 
     @Test
@@ -599,9 +610,9 @@ public class GeneFeatureValidationTest {
                         GFF3Attributes.GENE_SYNONYM,
                         List.of("synonym1,synonym2,synonym3")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f1, 1));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f2, 2));
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f3, 3));
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(gff3Annotation, 1));
 
         // Same annotation annotation1 - conflicting gene for same locus_tag - should throw
         GFF3Feature f4 = TestUtils.createGFF3Feature(
@@ -610,8 +621,10 @@ public class GeneFeatureValidationTest {
                 "annotation1",
                 Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag1"), GFF3Attributes.GENE, List.of("gene2")));
 
+        gff3Annotation.setFeatures(List.of(f1, f2, f3, f4));
+
         ValidationException ex = Assertions.assertThrows(
-                ValidationException.class, () -> geneFeatureValidation.validateLocusTagAssociation(f4, 4));
+                ValidationException.class, () -> geneFeatureValidation.validateLocusTagAssociation(gff3Annotation, 4));
 
         Assertions.assertTrue(
                 ex.getMessage()
@@ -629,8 +642,10 @@ public class GeneFeatureValidationTest {
                         GFF3Attributes.GENE_SYNONYM,
                         List.of("synonym1,synonym2,synonym4")));
 
+        gff3Annotation.setFeatures(List.of(f1, f2, f3, f5));
+
         ValidationException ex2 = Assertions.assertThrows(
-                ValidationException.class, () -> geneFeatureValidation.validateLocusTagAssociation(f5, 5));
+                ValidationException.class, () -> geneFeatureValidation.validateLocusTagAssociation(gff3Annotation, 5));
 
         Assertions.assertTrue(ex2.getMessage()
                 .contains("Features sharing locus_tag \"locus_tag3\" are associated with \"gene_synonym\""));
@@ -642,6 +657,8 @@ public class GeneFeatureValidationTest {
                 "annotation2",
                 Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag1"), GFF3Attributes.GENE, List.of("gene2")));
 
-        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(f6, 6));
+        gff3Annotation.setFeatures(List.of(f6));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(gff3Annotation, 6));
     }
 }
