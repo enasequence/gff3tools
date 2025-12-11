@@ -116,7 +116,7 @@ public final class FastaFileService {
     // ---------------------------- interactions with the reader ----------------------------
 
     public void openNewFile(File fastaFile) throws FastaFileException, IOException {
-        ensureFileReaderClosed(); // if already open, close first
+        close(); // if already open, close first
         this.file = Objects.requireNonNull(fastaFile, "file");
         this.fastaEntries.clear();
         this.sequenceIndexes.clear();
@@ -145,10 +145,6 @@ public final class FastaFileService {
             reader.close();
             reader = null;
         }
-    }
-
-    private void ensureFileReaderClosed() throws IOException {
-        if (reader != null) close();
     }
 
     private void ensureFileReaderOpen() {
