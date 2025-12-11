@@ -81,11 +81,13 @@ public class GeneSynonymFix {
 
                 if (!getFeatureKey(f).equals(getFeatureKey(parent))) {
                     if (!parent.hasAttribute(GENE_SYNONYM)) {
-                        parent.setAttributeValueList(GENE_SYNONYM, f.getAttributeValueList(GENE_SYNONYM));
+                        parent.setAttributeValueList(
+                                GENE_SYNONYM,
+                                f.getAttributeListByName(GENE_SYNONYM).get());
                         featuresById.put(getFeatureKey(parent), parent);
                     }
 
-                    f.removeAttribute(GENE_SYNONYM);
+                    f.removeAttributes(GENE_SYNONYM);
                     featuresById.put(getFeatureKey(f), f);
                 }
             }
