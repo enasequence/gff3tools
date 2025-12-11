@@ -33,7 +33,7 @@ public final class FastaFileService {
 
     private HashMap<String, SequenceIndex> sequenceIndexes = new HashMap<>();
     private File file;
-    private SequentialFastaFileReader reader; // owned here
+    private SequentialFastaFileReader reader;
 
     public FastaFileService() {
         this.file = null;
