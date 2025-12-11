@@ -194,9 +194,7 @@ public class SequentialFastaFileReader implements AutoCloseable {
             if (headerPosOpt.isEmpty()) return Optional.empty();
 
             long headerPos = headerPosOpt.getAsLong();
-            channel.position(headerPos);
-
-            String headerLine = readHeaderLine();
+            String headerLine = readHeaderLine(headerPos);
             if (headerLine == null) throw new FastaFileException("Header is malformed at byte " + headerPos);
             ParsedHeader ph = headerParser.parse(headerLine);
 
@@ -257,8 +255,10 @@ public class SequentialFastaFileReader implements AutoCloseable {
         return (n == 1) ? one.get(0) : 0;
     }
 
-    /** Reads one ASCII line from current position, advances past LF or to EOF. */
-    private String readHeaderLine() throws IOException {
+    /** Reads one ASCII line from input position, assuming the position handed to it contains '>', advances past LF or to EOF. */
+    private String readHeaderLine(long from) throws IOException {
+        channel.position(from);
+
         long scanPos = channel.position();
         if (scanPos >= fileSize) return null;
 
