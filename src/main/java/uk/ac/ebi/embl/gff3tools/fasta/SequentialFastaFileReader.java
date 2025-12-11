@@ -59,7 +59,7 @@ public class SequentialFastaFileReader implements AutoCloseable {
     }
 
     public String getSequenceSliceString(ByteSpan span) throws IOException {
-        return readAsciiWithoutNewlines(span.start, span.endEx);
+        return getHeaderASCIILine(span.start, span.endEx);
     }
 
     /** Char-stream view over [span.start, span.endEx): ASCII decode, skip LF/CR.
@@ -192,7 +192,7 @@ public class SequentialFastaFileReader implements AutoCloseable {
     }
 
     /** Read ASCII bytes from [byteStart, byteEndExclusive) skipping LF/CR; does not change channel.position(). */
-    public String readAsciiWithoutNewlines(long byteStart, long byteEndExclusive) throws IOException {
+    public String getHeaderASCIILine(long byteStart, long byteEndExclusive) throws IOException {
         if (byteStart < 0 || byteEndExclusive < byteStart || byteEndExclusive > fileSize) {
             throw new IllegalArgumentException("Bad byte window: " + byteStart + ".." + byteEndExclusive);
         }
