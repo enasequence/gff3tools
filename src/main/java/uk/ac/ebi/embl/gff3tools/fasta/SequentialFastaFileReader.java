@@ -59,7 +59,36 @@ public class SequentialFastaFileReader implements AutoCloseable {
     }
 
     public String getSequenceSliceString(ByteSpan span) throws IOException {
-        return getHeaderASCIILine(span.start, span.endEx);
+        long byteStart = span.start;
+        long byteEndExclusive = span.endEx;
+
+        if (byteStart < 0 || byteEndExclusive < byteStart || byteEndExclusive > fileSize) {
+            throw new IllegalArgumentException("Bad byte window: " + byteStart + ".." + byteEndExclusive);
+        }
+        long remain = byteEndExclusive - byteStart;
+        long off = byteStart;
+
+        // pre-size builder with a sane cap (skip newlines, so content <= remain)
+        int expect = (int) Math.min(remain, 1_000_000L);
+        StringBuilder sb = new StringBuilder(expect);
+
+        ByteBuffer buf = ByteBuffer.allocateDirect(BUFFER_SIZE);
+        while (remain > 0) {
+            buf.clear();
+            int want = (int) Math.min(buf.capacity(), remain);
+            buf.limit(want);
+            int n = channel.read(buf, off);
+            if (n <= 0) break;
+            buf.flip();
+            while (buf.hasRemaining()) {
+                byte b = buf.get();
+                if (b == LF || b == CR) continue;
+                sb.append((char) (b & 0xFF));
+            }
+            remain -= n;
+            off += n;
+        }
+        return sb.toString();
     }
 
     /** Char-stream view over [span.start, span.endEx): ASCII decode, skip LF/CR.
@@ -167,7 +196,7 @@ public class SequentialFastaFileReader implements AutoCloseable {
             long headerPos = headerPosOpt.getAsLong();
             channel.position(headerPos);
 
-            String headerLine = readAsciiLineFromCurrentPosition();
+            String headerLine = readHeaderLine();
             if (headerLine == null) throw new FastaFileException("Header is malformed at byte " + headerPos);
             ParsedHeader ph = headerParser.parse(headerLine);
 
@@ -189,37 +218,6 @@ public class SequentialFastaFileReader implements AutoCloseable {
             long pos = safePos();
             throw new FastaFileException("I/O while reading FASTA at byte " + pos + ": " + io.getMessage(), io);
         }
-    }
-
-    /** Read ASCII bytes from [byteStart, byteEndExclusive) skipping LF/CR; does not change channel.position(). */
-    public String getHeaderASCIILine(long byteStart, long byteEndExclusive) throws IOException {
-        if (byteStart < 0 || byteEndExclusive < byteStart || byteEndExclusive > fileSize) {
-            throw new IllegalArgumentException("Bad byte window: " + byteStart + ".." + byteEndExclusive);
-        }
-        long remain = byteEndExclusive - byteStart;
-        long off = byteStart;
-
-        // pre-size builder with a sane cap (skip newlines, so content <= remain)
-        int expect = (int) Math.min(remain, 1_000_000L);
-        StringBuilder sb = new StringBuilder(expect);
-
-        ByteBuffer buf = ByteBuffer.allocateDirect(BUFFER_SIZE);
-        while (remain > 0) {
-            buf.clear();
-            int want = (int) Math.min(buf.capacity(), remain);
-            buf.limit(want);
-            int n = channel.read(buf, off);
-            if (n <= 0) break;
-            buf.flip();
-            while (buf.hasRemaining()) {
-                byte b = buf.get();
-                if (b == LF || b == CR) continue; // omit line breaks on the fly
-                sb.append((char) (b & 0xFF)); // ASCII
-            }
-            remain -= n;
-            off += n;
-        }
-        return sb.toString();
     }
 
     // ------------------ header seeking & line reading ------------------
@@ -260,7 +258,7 @@ public class SequentialFastaFileReader implements AutoCloseable {
     }
 
     /** Reads one ASCII line from current position, advances past LF or to EOF. */
-    private String readAsciiLineFromCurrentPosition() throws IOException {
+    private String readHeaderLine() throws IOException {
         long scanPos = channel.position();
         if (scanPos >= fileSize) return null;
 
