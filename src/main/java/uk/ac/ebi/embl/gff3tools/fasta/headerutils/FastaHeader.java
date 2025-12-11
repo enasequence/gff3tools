@@ -10,7 +10,6 @@
  */
 package uk.ac.ebi.embl.gff3tools.fasta.headerutils;
 
-import java.util.Optional;
 import lombok.Getter;
 import lombok.Setter;
 import uk.ac.ebi.embl.gff3tools.fasta.Topology;
@@ -21,7 +20,7 @@ public class FastaHeader {
     String description; // mandatory
     String moleculeType; // mandatory
     Topology topology; // mandatory
-    Optional<String> chromosomeType; // optional (doesnt have to be in the json at all)
-    Optional<String> chromosomeLocation; // optional
-    Optional<String> chromosomeName; // optional
+    String chromosomeType; // optional (doesnt have to be in the json at all)
+    String chromosomeLocation; // optional
+    String chromosomeName; // optional
 }

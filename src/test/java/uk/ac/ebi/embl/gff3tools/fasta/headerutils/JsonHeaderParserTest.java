@@ -12,7 +12,6 @@ package uk.ac.ebi.embl.gff3tools.fasta.headerutils;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.exception.FastaFileException;
 import uk.ac.ebi.embl.gff3tools.fasta.Topology;
@@ -37,9 +36,9 @@ public class JsonHeaderParserTest {
         assertEquals("Pinus sativa", h.getDescription());
         assertEquals("genomic", h.getMoleculeType());
         assertEquals(Topology.CIRCULAR, h.getTopology());
-        assertTrue(h.getChromosomeType().isEmpty());
-        assertTrue(h.getChromosomeLocation().isEmpty());
-        assertTrue(h.getChromosomeName().isEmpty());
+        assertEquals(null, h.getChromosomeType());
+        assertEquals(null, h.getChromosomeLocation());
+        assertEquals(null, h.getChromosomeName());
     }
 
     @Test
@@ -75,9 +74,9 @@ public class JsonHeaderParserTest {
         assertEquals("Desc", h.getDescription());
         assertEquals("rna", h.getMoleculeType());
         assertEquals(Topology.LINEAR, h.getTopology());
-        assertEquals(Optional.of("plasmid"), h.getChromosomeType());
-        assertEquals(Optional.of("chr12:100-200"), h.getChromosomeLocation());
-        assertEquals(Optional.of("pX"), h.getChromosomeName());
+        assertEquals("plasmid", h.getChromosomeType());
+        assertEquals("chr12:100-200", h.getChromosomeLocation());
+        assertEquals("pX", h.getChromosomeName());
     }
 
     @Test

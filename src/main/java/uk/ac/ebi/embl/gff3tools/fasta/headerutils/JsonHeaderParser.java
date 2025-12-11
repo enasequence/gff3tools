@@ -27,9 +27,6 @@ public class JsonHeaderParser {
         String id = idPart.isEmpty() ? "" : idPart.split("\\s+")[0];
 
         FastaHeader h = new FastaHeader();
-        h.setChromosomeType(Optional.empty());
-        h.setChromosomeLocation(Optional.empty());
-        h.setChromosomeName(Optional.empty());
 
         if (pipe >= 0) {
             fillFromJson(rest.substring(pipe + 1).trim(), h); // may throw IOException
@@ -77,13 +74,9 @@ public class JsonHeaderParser {
         h.setDescription(m.get("description"));
         h.setMoleculeType(m.get("moleculetype"));
         h.setTopology(parseTopology(m.get("topology")));
-
-        if (m.containsKey("chromosometype"))
-            h.setChromosomeType(Optional.ofNullable(emptyToNull(m.get("chromosometype"))));
-        if (m.containsKey("chromosomelocation"))
-            h.setChromosomeLocation(Optional.ofNullable(emptyToNull(m.get("chromosomelocation"))));
-        if (m.containsKey("chromosomename"))
-            h.setChromosomeName(Optional.ofNullable(emptyToNull(m.get("chromosomename"))));
+        h.setChromosomeType(m.get("chromosometype"));
+        h.setChromosomeLocation(m.get("chromosomelocation"));
+        h.setChromosomeName(emptyToNull(m.get("chromosomename")));
 
         // Validate required fields
         List<String> missing = new ArrayList<>();
