@@ -23,6 +23,7 @@ public final class SequenceIndexBuilder {
 
     private static final byte GT = (byte) '>';
     private static final byte LF = (byte) '\n';
+    private static final byte CR = (byte) '\r';
 
     public static final class Result {
         public final SequenceIndex index;
@@ -120,7 +121,7 @@ public final class SequenceIndexBuilder {
                 s.nextHdr = abs; // stop window at header byte
                 commitOpenLineIfAny(s); // finalize any in-flight line
                 return true;
-            } else if (b == LF) { // end of a displayed sequence line
+            } else if (b == LF || b == CR) { // end of a displayed sequence line or CR
                 commitOpenLineIfAny(s); // only lines with bases are committed
                 continue;
             } else if (alphabet.isAllowed(b)) {

@@ -18,7 +18,7 @@ import java.util.Objects;
 public final class FastaTestResources {
     private FastaTestResources() {}
 
-    /** Returns a Path to a resource like ("fasta", "example2.txt"). */
+    /** Returns a Path to a resource like ("fasta", "example.txt"). */
     public static Path path(String dir, String fileName) {
         Objects.requireNonNull(dir, "dir");
         Objects.requireNonNull(fileName, "fileName");

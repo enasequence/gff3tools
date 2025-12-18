@@ -41,6 +41,7 @@ public class JsonHeaderParser {
         }
 
         // Normalize curly quotes / NBSPs
+
         String normalized = raw.replace('\u201C', '"')
                 .replace('\u201D', '"')
                 .replace('\u2018', '\'')

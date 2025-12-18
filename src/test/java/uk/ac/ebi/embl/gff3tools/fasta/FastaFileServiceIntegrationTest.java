@@ -48,8 +48,65 @@ class FastaFileServiceIntegrationTest {
     }
 
     @Test
+    void proccessingEntriesWithCarriageReturnsCorrectly() throws IOException, FastaFileException {
+        File fasta = FastaTestResources.file("fasta", "example_with_carriage_return_char.txt");
+        FastaFileService service = new FastaFileService();
+        service.openNewFile(fasta);
+
+        List<FastaEntry> entries = service.getFastaEntries();
+        assertEquals(2, entries.size(), "should parse 2 FASTA entries");
+
+        Set<String> ids = entries.stream().map(e -> e.getSubmissionId()).collect(Collectors.toSet());
+        assertTrue(ids.contains("AF123456.1"));
+        assertTrue(ids.contains("AF123455.2"));
+
+        Optional<FastaEntry> entry1 = service.getFastaWithSubmissionId("AF123456.1");
+        Optional<FastaEntry> entry2 = service.getFastaWithSubmissionId("AF123455.2");
+        Optional<FastaEntry> imaginaryEntry = service.getFastaWithSubmissionId("ID3");
+        assertTrue(entry1.isPresent(), "index for AF123456.1 must exist");
+        assertTrue(entry2.isPresent(), "index for AF123455.2 must exist");
+        assertTrue(imaginaryEntry.isEmpty(), "index for ID3 must not exist");
+
+        // From the sample file above:
+        assertEquals(9, entry1.get().leadingNsCount, "AF123456.1 leading Ns");
+        assertEquals(1, entry1.get().trailingNsCount, "AF123456.1 trailing Ns");
+        assertEquals(0, entry2.get().leadingNsCount, "AF123455.2 leading Ns");
+        assertEquals(0, entry2.get().trailingNsCount, "AF123455.2 trailing Ns");
+
+        String sequence1StartSlice =
+                service.getSequenceSliceString(SequenceRangeOption.WITHOUT_N_BASES, entry1.get().submissionId, 1, 11);
+        assertEquals("CCCGGCGCGGG", sequence1StartSlice);
+
+        String sequence1EndSlice = service.getSequenceSliceString(
+                SequenceRangeOption.WITHOUT_N_BASES,
+                entry1.get().submissionId,
+                entry1.get().totalBasesWithoutNBases - 9,
+                entry1.get().totalBasesWithoutNBases);
+        assertEquals("AAAAAAAAAA", sequence1EndSlice);
+
+        String sequence2withoutNbases = service.getSequenceSliceString(
+                SequenceRangeOption.WITHOUT_N_BASES,
+                entry2.get().submissionId,
+                1,
+                entry2.get().totalBasesWithoutNBases);
+        assertEquals(
+                "CCCGGCGCGGGCAAGAAGCTGCCGCGTCTGCCCAAGTGTGCCCGCTGCCGCAACCACGGC"
+                        + "TACTCCTCGCCGCTGAAGGGGCACAAGCGGTTCTGCATGTGGCGGGACTGCCAGTGCAAG"
+                        + "AAGTGCAGCCTGATCCGCCGAGCGGCAGGGGTGATGGCCGTGCAGGTTGCACTGAGGAGG"
+                        + "ATGTGTTTGTAGTGGTTCCTCGTAGGCTCCAGACGTTTTCTCCTCGTATCGCCAAATTAA"
+                        + "CGCGTTTTGTAGTGGTTCCTCGTAGGCTCCAGACGTTTTCTCCTCAGACGTGGCCAGCAA"
+                        + "ACAAGTCTCAAAAAAAAGTTACGTGCGTTTCTGCGAGTGTTATTTTGTTAAGAACGGCTC"
+                        + "ACAGTGTCCTCTTCCTGTGTTACAGAAGCCAACCTGAAATGAAACTAGTCTGGAAAAATT"
+                        + "CATTGTTCTCTGTAGTTGCAGCTGTACCTGAAATAAAAATGTTATTGATGACTGAAAAAA"
+                        + "AAAAAAAAAAAA",
+                sequence2withoutNbases);
+
+        service.close();
+    }
+
+    @Test
     void gettingSequenceSliceAsStringReturnsCorrectly() throws IOException, FastaFileException {
-        File fasta = FastaTestResources.file("fasta", "example2.txt");
+        File fasta = FastaTestResources.file("fasta", "example.txt");
         FastaFileService service = new FastaFileService();
         service.openNewFile(fasta);
 
@@ -97,7 +154,7 @@ class FastaFileServiceIntegrationTest {
 
     @Test
     void gettingSequenceViaReaderGivesCorrectResult() throws IOException, FastaFileException {
-        File fasta = FastaTestResources.file("fasta", "example2.txt");
+        File fasta = FastaTestResources.file("fasta", "example.txt");
         FastaFileService service = new FastaFileService();
         service.openNewFile(fasta);
 
@@ -163,7 +220,7 @@ class FastaFileServiceIntegrationTest {
 
     @Test
     void gettingStringAsAStringVsStreamProducesSameResultSlices() throws IOException, FastaFileException {
-        File fasta = FastaTestResources.file("fasta", "example2.txt");
+        File fasta = FastaTestResources.file("fasta", "example.txt");
         FastaFileService service = new FastaFileService();
         service.openNewFile(fasta);
 
