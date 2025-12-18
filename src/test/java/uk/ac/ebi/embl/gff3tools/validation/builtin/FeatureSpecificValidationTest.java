@@ -39,7 +39,9 @@ public class FeatureSpecificValidationTest {
     @Test
     public void testValidateOperonFeaturesWithNoOperon() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.PRODUCT, "16S ribosomalRNA "));
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
+                Map.of(GFF3Attributes.PRODUCT, List.of("16S ribosomalRNA ")));
 
         Assertions.assertDoesNotThrow(() -> attributeSpecificValidation.validateOperonFeatures(feature, 1));
     }
@@ -47,7 +49,9 @@ public class FeatureSpecificValidationTest {
     @Test
     public void testValidateOperonFeaturesWithOperonQualifier() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.OPERON.name(), OntologyTerm.OPERON.name(), Map.of(GFF3Attributes.OPERON, "operon"));
+                OntologyTerm.OPERON.name(),
+                OntologyTerm.OPERON.name(),
+                Map.of(GFF3Attributes.OPERON, List.of("operon")));
 
         Assertions.assertDoesNotThrow(() -> attributeSpecificValidation.validateOperonFeatures(feature, 1));
     }
@@ -55,7 +59,7 @@ public class FeatureSpecificValidationTest {
     @Test
     public void testValidateOperonQualifierWithoutOperonFeature() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.OPERON, "operon"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.OPERON, List.of("operon")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> attributeSpecificValidation.validateOperonFeatures(feature, 1));
@@ -69,11 +73,11 @@ public class FeatureSpecificValidationTest {
     @Test
     public void testValidateMultipleOperonQualifierWithoutOperonFeature() {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.OPERON, "operon1"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.OPERON, List.of("operon1")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 OntologyTerm.SIGNAL_PEPTIDE.name(),
                 OntologyTerm.SIGNAL_PEPTIDE.name(),
-                Map.of(GFF3Attributes.OPERON, "operon1"));
+                Map.of(GFF3Attributes.OPERON, List.of("operon1")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> attributeSpecificValidation.validateOperonFeatures(f1, 1));
@@ -98,15 +102,15 @@ public class FeatureSpecificValidationTest {
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 Map.of(
-                        GFF3Attributes.LOCUS_TAG, "L1",
-                        GFF3Attributes.PSEUDO, ""));
+                        GFF3Attributes.LOCUS_TAG, List.of("L1"),
+                        GFF3Attributes.PSEUDO, List.of("true")));
 
         GFF3Feature peptide = TestUtils.createGFF3Feature(
                 OntologyTerm.SIGNAL_PEPTIDE.name(),
                 OntologyTerm.SIGNAL_PEPTIDE.name(),
                 Map.of(
-                        GFF3Attributes.LOCUS_TAG, "L1",
-                        GFF3Attributes.PSEUDO, "true"));
+                        GFF3Attributes.LOCUS_TAG, List.of("L1"),
+                        GFF3Attributes.PSEUDO, List.of("true")));
 
         gff3Annotation.setFeatures(List.of(cds, peptide));
 
@@ -119,13 +123,13 @@ public class FeatureSpecificValidationTest {
                 OntologyTerm.CDS_REGION.name(),
                 OntologyTerm.CDS_REGION.name(),
                 Map.of(
-                        GFF3Attributes.LOCUS_TAG, "L1",
-                        GFF3Attributes.PSEUDO, "true"));
+                        GFF3Attributes.LOCUS_TAG, List.of("L1"),
+                        GFF3Attributes.PSEUDO, List.of("true")));
 
         GFF3Feature peptide = TestUtils.createGFF3Feature(
                 OntologyTerm.SIGNAL_PEPTIDE.name(),
                 OntologyTerm.SIGNAL_PEPTIDE.name(),
-                Map.of(GFF3Attributes.LOCUS_TAG, "L1"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("L1")));
 
         gff3Annotation.setFeatures(List.of(cds, peptide));
 
@@ -143,13 +147,13 @@ public class FeatureSpecificValidationTest {
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 Map.of(
-                        GFF3Attributes.LOCUS_TAG, "L1",
-                        GFF3Attributes.PSEUDO, "true"));
+                        GFF3Attributes.LOCUS_TAG, List.of("L1"),
+                        GFF3Attributes.PSEUDO, List.of("true")));
 
         GFF3Feature peptide = TestUtils.createGFF3Feature(
                 OntologyTerm.SIGNAL_PEPTIDE.name(),
                 OntologyTerm.SIGNAL_PEPTIDE.name(),
-                Map.of(GFF3Attributes.LOCUS_TAG, "L2"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("L2")));
 
         gff3Annotation.setFeatures(List.of(cds, peptide));
 
@@ -162,13 +166,13 @@ public class FeatureSpecificValidationTest {
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 Map.of(
-                        GFF3Attributes.GENE, "geneA",
-                        GFF3Attributes.PSEUDO, "true"));
+                        GFF3Attributes.GENE, List.of("geneA"),
+                        GFF3Attributes.PSEUDO, List.of("true")));
 
         GFF3Feature peptide = TestUtils.createGFF3Feature(
                 OntologyTerm.TRANSIT_PEPTIDE.name(),
                 OntologyTerm.TRANSIT_PEPTIDE.name(),
-                Map.of(GFF3Attributes.GENE, "geneA"));
+                Map.of(GFF3Attributes.GENE, List.of("geneA")));
 
         gff3Annotation.setFeatures(List.of(cds, peptide));
 

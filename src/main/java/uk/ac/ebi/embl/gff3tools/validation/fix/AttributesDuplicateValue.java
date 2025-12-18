@@ -34,12 +34,14 @@ public class AttributesDuplicateValue {
             return feature;
         }
 
-        List<String> oldLocusTags = feature.getAttributeValueList(GFF3Attributes.OLD_LOCUS_TAG);
-        if (oldLocusTags == null || oldLocusTags.isEmpty()) {
+        List<String> oldLocusTags =
+                feature.getAttributeListByName(GFF3Attributes.OLD_LOCUS_TAG).orElse(new ArrayList<>());
+        if (oldLocusTags.isEmpty()) {
             return feature;
         }
 
-        Object locusTagObj = feature.getAttributes().get(GFF3Attributes.LOCUS_TAG);
+        String locusTagObj =
+                feature.getAttributeByName(GFF3Attributes.LOCUS_TAG).orElse(null);
         String currentLocusTag = locusTagObj != null ? locusTagObj.toString().trim() : null;
 
         Set<String> cleanedTags = new LinkedHashSet<>();
@@ -56,7 +58,7 @@ public class AttributesDuplicateValue {
 
             if (cleanedTags.isEmpty()) {
                 log.info("Removing duplicate or blank values from {} at line: {}", GFF3Attributes.OLD_LOCUS_TAG, line);
-                feature.removeAttribute(GFF3Attributes.OLD_LOCUS_TAG);
+                feature.removeAttributes(GFF3Attributes.OLD_LOCUS_TAG);
             } else {
                 log.info("Set {} attribute at line: {}", GFF3Attributes.OLD_LOCUS_TAG, line);
                 feature.setAttributeValueList(GFF3Attributes.OLD_LOCUS_TAG, new ArrayList<>(cleanedTags));

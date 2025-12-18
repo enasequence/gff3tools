@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.validation.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,8 +36,8 @@ public class EcNumberValueFixTest {
 
     @Test
     public void testEcNumberValueFixWithoutEcNumber() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PROTEIN_ID, "protein_id");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PROTEIN_ID, List.of("protein_id"));
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
@@ -45,8 +46,8 @@ public class EcNumberValueFixTest {
 
     @Test
     public void testEcNumberValueFixWithoutEcNumberDeleted() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.EC_NUMBER, "deleted");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.EC_NUMBER, List.of("deleted"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
@@ -56,8 +57,8 @@ public class EcNumberValueFixTest {
 
     @Test
     public void testEcNumberValueFixWithEcNumberInvalid() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.EC_NUMBER, "123124");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.EC_NUMBER, List.of("123124"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
@@ -67,8 +68,8 @@ public class EcNumberValueFixTest {
 
     @Test
     public void testEcNumberValueFixWithEcNumberValidNumeric() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.EC_NUMBER, "1.2.3.4");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.EC_NUMBER, List.of("1.2.3.4"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
@@ -78,8 +79,8 @@ public class EcNumberValueFixTest {
 
     @Test
     public void testEcNumberValueFixWithEcNumberValidWithHyphen() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.EC_NUMBER, "1.-.3.-");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.EC_NUMBER, List.of("1.-.3.-"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
@@ -89,8 +90,8 @@ public class EcNumberValueFixTest {
 
     @Test
     public void testEcNumberValueFixWithAlphaNumeric() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.EC_NUMBER, "0.2.3.n1");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.EC_NUMBER, List.of("0.2.3.n1"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
@@ -100,8 +101,8 @@ public class EcNumberValueFixTest {
 
     @Test
     public void testEcNumberValueFixWithInvalidAlphabets() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.EC_NUMBER, "0.2.3.x");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.EC_NUMBER, List.of("0.2.3.x"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
@@ -111,8 +112,8 @@ public class EcNumberValueFixTest {
 
     @Test
     public void testEcNumberValueFixWithInvalidLength() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.EC_NUMBER, "0.2.3.1.2.");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.EC_NUMBER, List.of("0.2.3.1.2."));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
@@ -122,8 +123,8 @@ public class EcNumberValueFixTest {
 
     @Test
     public void testEcNumberValueFixWithLeadingDot() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.EC_NUMBER, "..0.2.3.1..");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.EC_NUMBER, List.of("..0.2.3.1.."));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);

@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,8 +35,8 @@ public class AssemblyGapValidationTest {
 
     @Test
     public void testValidateAssemblyGapInvalidAttributes() {
-        GFF3Feature f1 = TestUtils.createGFF3Feature("gap", "gap", Map.of(GFF3Attributes.ATTRIBUTE_ID, "id"));
-        GFF3Feature f2 = TestUtils.createGFF3Feature("gap", "gap", Map.of(GFF3Attributes.PRODUCT, "product1"));
+        GFF3Feature f1 = TestUtils.createGFF3Feature("gap", "gap", Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("id")));
+        GFF3Feature f2 = TestUtils.createGFF3Feature("gap", "gap", Map.of(GFF3Attributes.PRODUCT, List.of("product1")));
 
         Assertions.assertDoesNotThrow(() -> assemblyGapValidation.validateGapFeature(f1, 1));
 
@@ -48,8 +49,9 @@ public class AssemblyGapValidationTest {
 
     @Test
     public void testValidateAssemblyGapInvalidAttributeValue() {
-        GFF3Feature f1 = TestUtils.createGFF3Feature("gap", "gap", Map.of(GFF3Attributes.GAP_TYPE, "ap12"));
-        GFF3Feature f2 = TestUtils.createGFF3Feature("gap", "gap", Map.of(GFF3Attributes.GAP_TYPE, "centromere"));
+        GFF3Feature f1 = TestUtils.createGFF3Feature("gap", "gap", Map.of(GFF3Attributes.GAP_TYPE, List.of("ap12")));
+        GFF3Feature f2 =
+                TestUtils.createGFF3Feature("gap", "gap", Map.of(GFF3Attributes.GAP_TYPE, List.of("centromere")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> assemblyGapValidation.validateGapFeature(f1, 1));
@@ -60,10 +62,10 @@ public class AssemblyGapValidationTest {
 
     @Test
     public void testValidateAssemblyGapFeatureWithoutLinkage() {
-        GFF3Feature f1 =
-                TestUtils.createGFF3Feature("gap", "gap", Map.of(GFF3Attributes.GAP_TYPE, "between scaffolds"));
-        GFF3Feature f2 =
-                TestUtils.createGFF3Feature("gene", "gene", Map.of(GFF3Attributes.GAP_TYPE, "between scaffolds"));
+        GFF3Feature f1 = TestUtils.createGFF3Feature(
+                "gap", "gap", Map.of(GFF3Attributes.GAP_TYPE, List.of("between scaffolds")));
+        GFF3Feature f2 = TestUtils.createGFF3Feature(
+                "gene", "gene", Map.of(GFF3Attributes.GAP_TYPE, List.of("between s)caffolds")));
 
         Assertions.assertDoesNotThrow(() -> assemblyGapValidation.validateGapFeature(f1, 1));
         ValidationException ex = Assertions.assertThrows(
@@ -78,11 +80,19 @@ public class AssemblyGapValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 "gap",
                 "gap",
-                Map.of(GFF3Attributes.GAP_TYPE, "between scaffolds", GFF3Attributes.ESTIMATED_LENGTH, "12"));
+                Map.of(
+                        GFF3Attributes.GAP_TYPE,
+                        List.of("between scaffolds"),
+                        GFF3Attributes.ESTIMATED_LENGTH,
+                        List.of("12")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 "gap",
                 "gap",
-                Map.of(GFF3Attributes.GAP_TYPE, "between scaffolds", GFF3Attributes.ESTIMATED_LENGTH, "20"));
+                Map.of(
+                        GFF3Attributes.GAP_TYPE,
+                        List.of("between scaffolds"),
+                        GFF3Attributes.ESTIMATED_LENGTH,
+                        List.of("20")));
 
         Assertions.assertDoesNotThrow(() -> assemblyGapValidation.validateGapFeature(f1, 1));
         Assertions.assertDoesNotThrow(() -> assemblyGapValidation.validateGapFeature(f2, 1));
@@ -93,7 +103,11 @@ public class AssemblyGapValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 "gap",
                 "gap",
-                Map.of(GFF3Attributes.GAP_TYPE, "between scaffolds", GFF3Attributes.LINKAGE_EVIDENCE, "paired ends"));
+                Map.of(
+                        GFF3Attributes.GAP_TYPE,
+                        List.of("between scaffolds"),
+                        GFF3Attributes.LINKAGE_EVIDENCE,
+                        List.of("paired ends")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> assemblyGapValidation.validateGapFeature(f1, 1));
@@ -106,7 +120,11 @@ public class AssemblyGapValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 "gap",
                 "gap",
-                Map.of(GFF3Attributes.GAP_TYPE, "within scaffold", GFF3Attributes.ESTIMATED_LENGTH, "10"));
+                Map.of(
+                        GFF3Attributes.GAP_TYPE,
+                        List.of("within scaffold"),
+                        GFF3Attributes.ESTIMATED_LENGTH,
+                        List.of("10")));
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> assemblyGapValidation.validateGapFeature(f1, 1));
@@ -122,17 +140,21 @@ public class AssemblyGapValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 "gap",
                 "gap",
-                Map.of(GFF3Attributes.GAP_TYPE, "within scaffold", GFF3Attributes.LINKAGE_EVIDENCE, "paired ends"));
+                Map.of(
+                        GFF3Attributes.GAP_TYPE,
+                        List.of("within scaffold"),
+                        GFF3Attributes.LINKAGE_EVIDENCE,
+                        List.of("paired ends")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 "gap",
                 "gap",
                 Map.of(
                         GFF3Attributes.GAP_TYPE,
-                        "repeat within scaffold",
+                        List.of("repeat within scaffold"),
                         GFF3Attributes.LINKAGE_EVIDENCE,
-                        "paired ends",
+                        List.of("paired ends"),
                         GFF3Attributes.ESTIMATED_LENGTH,
-                        "12"));
+                        List.of("12")));
 
         Assertions.assertDoesNotThrow(() -> assemblyGapValidation.validateGapFeature(f1, 1));
         Assertions.assertDoesNotThrow(() -> assemblyGapValidation.validateGapFeature(f2, 1));
@@ -144,18 +166,22 @@ public class AssemblyGapValidationTest {
                 "gap",
                 1,
                 10,
-                Map.of(GFF3Attributes.GAP_TYPE, "within scaffold", GFF3Attributes.LINKAGE_EVIDENCE, "paired ends"));
+                Map.of(
+                        GFF3Attributes.GAP_TYPE,
+                        List.of("within scaffold"),
+                        GFF3Attributes.LINKAGE_EVIDENCE,
+                        List.of("paired ends")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 "gap",
                 0,
                 0,
                 Map.of(
                         GFF3Attributes.GAP_TYPE,
-                        "repeat within scaffold",
+                        List.of("repeat within scaffold"),
                         GFF3Attributes.LINKAGE_EVIDENCE,
-                        "paired ends",
+                        List.of("paired ends"),
                         GFF3Attributes.ESTIMATED_LENGTH,
-                        "12"));
+                        List.of("12")));
         Assertions.assertDoesNotThrow(() -> assemblyGapValidation.validateGapFeature(f1, 1));
 
         ValidationException ex = Assertions.assertThrows(

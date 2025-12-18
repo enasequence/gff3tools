@@ -46,7 +46,7 @@ public class GFF3Annotation implements IGFF3Feature {
         writer.write('\t');
         writer.write(feature.getAttributes().entrySet().stream()
                 .sorted(
-                        Comparator.comparingInt((Map.Entry<String, Object> e) -> {
+                        Comparator.comparingInt((Map.Entry<String, List<String>> e) -> {
                                     String key = e.getKey();
                                     if (key.equals("ID")) return -2; // Highest priority
                                     if (key.equals("Parent")) return -1; // Next
@@ -58,22 +58,12 @@ public class GFF3Annotation implements IGFF3Feature {
                 .collect(Collectors.joining(";", "", ";")));
     }
 
-    private static String encodeAttribute(Map.Entry<String, Object> entry) {
+    private static String encodeAttribute(Map.Entry<String, List<String>> entry) {
         String encodedKey = urlEncode(entry.getKey());
-        Object value = entry.getValue();
+        List<String> value = entry.getValue();
 
-        String encodedValue;
-        if (value instanceof List<?> valueList) {
-            // Convert each item in the list to string and URL-encode it
-            encodedValue = valueList.stream()
-                    .map(Object::toString)
-                    .map(GFF3Annotation::urlEncode)
-                    .collect(Collectors.joining(","));
-        } else {
-            // Convert single value to string and URL-encode it
-            encodedValue = urlEncode(value.toString());
-        }
-
+        // URL-encode each item on the list and concatenate them.
+        String encodedValue = value.stream().map(GFF3Annotation::urlEncode).collect(Collectors.joining(","));
         return "%s=%s".formatted(encodedKey, encodedValue);
     }
 
@@ -119,16 +109,6 @@ public class GFF3Annotation implements IGFF3Feature {
                     .map(GFF3Feature::accession)
                     .orElseThrow(RuntimeException::new);
         }
-    }
-
-    public List<GFF3Feature> getFeaturesByName(String featureName) {
-        return features.stream()
-                .filter(ftr -> ftr.getName().equalsIgnoreCase(featureName))
-                .collect(Collectors.toList());
-    }
-
-    public List<GFF3Feature> getAllFeatures() {
-        return Collections.unmodifiableList(this.features);
     }
 
     public void removeFeature(GFF3Feature feature) {
