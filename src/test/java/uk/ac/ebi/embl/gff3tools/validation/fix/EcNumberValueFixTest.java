@@ -10,9 +10,10 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +37,7 @@ public class EcNumberValueFixTest {
     @Test
     public void testEcNumberValueFixWithoutEcNumber() {
         Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PROTEIN_ID, "protein_id");
+        attributes.put(GFF3Attributes.PROTEIN_ID, List.of("transfer RNA-leucine", "tRNA-Thr"));
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
@@ -129,5 +130,64 @@ public class EcNumberValueFixTest {
         ecNumberValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(0, feature.getAttributes().size());
+    }
+
+    @Test
+    public void testEcNumberValueFixWithUnknownProduct() {
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PRODUCT, List.of("unknown", "transfer RNA-leucine", "tRNA-Thr"));
+        attributes.put(GFF3Attributes.EC_NUMBER, "..0.2.3.1..");
+
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
+        ecNumberValueFix.fixFeature(feature, 1);
+        Assertions.assertNotNull(feature);
+        assertEquals(1, feature.getAttributes().size());
+        assertFalse(feature.hasAttribute(GFF3Attributes.EC_NUMBER));
+    }
+
+    @Test
+    public void testEcNumberValueFixOnProductWithECNumber() {
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PRODUCT, List.of("product EC:1.1.1.1", "transfer RNA-leucine", "tRNA-Thr"));
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
+        ecNumberValueFix.fixFeature(feature, 1);
+        Assertions.assertNotNull(feature);
+        assertEquals(2, feature.getAttributes().size());
+        assertTrue(feature.hasAttribute(GFF3Attributes.EC_NUMBER));
+    }
+
+    @Test
+    public void testEcNumberValueFixOnProductWithEcNumber() {
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PRODUCT, List.of("transfer RNA-leucine", "product [Ec:1.1.1.1]", "tRNA-Thr"));
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
+        ecNumberValueFix.fixFeature(feature, 1);
+        Assertions.assertNotNull(feature);
+        assertEquals(2, feature.getAttributes().size());
+        assertTrue(feature.hasAttribute(GFF3Attributes.EC_NUMBER));
+    }
+
+    @Test
+    public void testEcNumberValueFixOnProductWithecNumber() {
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PRODUCT, List.of("product (ec:1.1.1.1)", "protein"));
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
+        ecNumberValueFix.fixFeature(feature, 1);
+        Assertions.assertNotNull(feature);
+        assertEquals(2, feature.getAttributes().size());
+        assertTrue(feature.hasAttribute(GFF3Attributes.EC_NUMBER));
+    }
+
+    @Test
+    public void testEcNumberValueFixRemoveEc() {
+        Map<String, Object> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PRODUCT, List.of("product", "protein"));
+        attributes.put(GFF3Attributes.EC_NUMBER, "product");
+
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
+        ecNumberValueFix.fixFeature(feature, 1);
+        Assertions.assertNotNull(feature);
+        assertEquals(1, feature.getAttributes().size());
+        assertFalse(feature.hasAttribute(GFF3Attributes.EC_NUMBER));
     }
 }
