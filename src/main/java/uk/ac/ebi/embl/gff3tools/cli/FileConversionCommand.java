@@ -14,6 +14,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.file.Files;
@@ -69,6 +70,16 @@ public class FileConversionCommand extends AbstractCommand {
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
+
+        if (outputFilePath != null) {
+            try {
+                long sizeBytes = Files.size(outputFilePath);
+                log.info("GFF3 file generated: {} ({})", outputFilePath.getFileName(), humanReadableSize(sizeBytes));
+
+            } catch (IOException e) {
+                log.warn("Unable to determine GFF3 file size for {}", outputFilePath, e);
+            }
+        }
     }
 
     private Converter getConverter(
@@ -118,5 +129,12 @@ public class FileConversionCommand extends AbstractCommand {
             return fileName.substring(lastIndexOfDot + 1);
         }
         return null; // No extension found
+    }
+
+    private static String humanReadableSize(long bytes) {
+        if (bytes < 1024) return bytes + " bytes";
+        int exp = (int) (Math.log(bytes) / Math.log(1024));
+        String unit = "KMGTPE".charAt(exp - 1) + "B";
+        return String.format("%.2f %s", bytes / Math.pow(1024, exp), unit);
     }
 }
