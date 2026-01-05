@@ -34,10 +34,9 @@ public class DuplicateFeatureValidation extends Validation {
 
         for (GFF3Feature feature : annotation.getFeatures()) {
 
-            String proteinId =
-                    feature.getAttributeByName(GFF3Attributes.PROTEIN_ID).orElse(null);
+            String proteinId = feature.getAttribute(GFF3Attributes.PROTEIN_ID).orElse(null);
             String attributeId =
-                    feature.getAttributeByName(GFF3Attributes.ATTRIBUTE_ID).orElse(null);
+                    feature.getAttribute(GFF3Attributes.ATTRIBUTE_ID).orElse(null);
 
             if (proteinId == null || attributeId == null) continue;
 

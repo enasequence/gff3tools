@@ -36,17 +36,17 @@ public class LocusTagAssociationFix {
         for (GFF3Feature feature : gff3Annotation.getFeatures()) {
             if (feature == null) return;
 
-            String gene = feature.getAttributeByName(GENE).orElse(null);
+            String gene = feature.getAttribute(GENE).orElse(null);
             if (gene == null) return;
 
-            String presentLocus = feature.getAttributeByName(LOCUS_TAG).orElse(null);
+            String presentLocus = feature.getAttribute(LOCUS_TAG).orElse(null);
 
             if (geneToLocusTag.containsKey(gene) && (presentLocus == null || presentLocus.isEmpty())) {
                 // add locus tag to features which dont have it
                 String known = geneToLocusTag.get(gene);
                 List<String> locusValues = new ArrayList<>();
                 locusValues.add(known);
-                feature.setAttributeValueList(LOCUS_TAG, locusValues);
+                feature.setAttributeList(LOCUS_TAG, locusValues);
             } else if (presentLocus != null) {
                 // if unremembered locus tag present, remember it (first seen wins)
                 geneToLocusTag.putIfAbsent(gene, presentLocus);

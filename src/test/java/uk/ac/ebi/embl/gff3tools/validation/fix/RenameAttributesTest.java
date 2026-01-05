@@ -57,7 +57,7 @@ public class RenameAttributesTest {
         Assertions.assertNotNull(feature);
         Assertions.assertEquals(2, feature.getAttributes().size());
         Assertions.assertEquals(
-                "label:labTest", feature.getAttributeByName(GFF3Attributes.NOTE).get());
+                "label:labTest", feature.getAttribute(GFF3Attributes.NOTE).get());
     }
 
     @Test
@@ -74,8 +74,7 @@ public class RenameAttributesTest {
         Assertions.assertNotNull(feature);
         Assertions.assertEquals(2, feature.getAttributes().size());
         Assertions.assertEquals(
-                "notes;label:labTest",
-                feature.getAttributeByName(GFF3Attributes.NOTE).get());
+                "notes;label:labTest", feature.getAttribute(GFF3Attributes.NOTE).get());
     }
 
     @Test
@@ -91,7 +90,7 @@ public class RenameAttributesTest {
         Assertions.assertNotNull(feature);
         Assertions.assertEquals(2, feature.getAttributes().size());
         Assertions.assertEquals(
-                "notes", feature.getAttributeByName(GFF3Attributes.NOTE).get());
+                "notes", feature.getAttribute(GFF3Attributes.NOTE).get());
     }
 
     @Test
@@ -106,10 +105,10 @@ public class RenameAttributesTest {
         Assertions.assertNotNull(feature);
         Assertions.assertEquals(1, feature.getAttributes().size());
         Assertions.assertTrue(
-                feature.getAttributeByName(GFF3Attributes.MOBILE_ELEMENT).isEmpty());
+                feature.getAttribute(GFF3Attributes.MOBILE_ELEMENT).isEmpty());
         Assertions.assertEquals(
                 "mobile_element:12345",
-                feature.getAttributeByName(GFF3Attributes.MOBILE_ELEMENT_TYPE).get());
+                feature.getAttribute(GFF3Attributes.MOBILE_ELEMENT_TYPE).get());
     }
 
     @Test
@@ -124,6 +123,6 @@ public class RenameAttributesTest {
         Assertions.assertEquals(1, feature.getAttributes().size());
         Assertions.assertEquals(
                 "mobile_element_type",
-                feature.getAttributeByName(GFF3Attributes.MOBILE_ELEMENT_TYPE).get());
+                feature.getAttribute(GFF3Attributes.MOBILE_ELEMENT_TYPE).get());
     }
 }

@@ -50,7 +50,7 @@ class TransformAttributeToNoteFixTest {
 
         assertFalse(feature.hasAttribute(PRODUCT));
         assertTrue(feature.hasAttribute(PSEUDO));
-        assertEquals("kinase", feature.getAttributeByName(NOTE).get());
+        assertEquals("kinase", feature.getAttribute(NOTE).get());
     }
 
     @Test
@@ -67,7 +67,7 @@ class TransformAttributeToNoteFixTest {
         assertFalse(feature.hasAttribute(PRODUCT));
         assertEquals(
                 List.of("existing-info", "beta-lactamase"),
-                feature.getAttributeListByName(NOTE).get());
+                feature.getAttributeList(NOTE).get());
     }
 
     @Test
@@ -121,7 +121,7 @@ class TransformAttributeToNoteFixTest {
         fixer.fix(feature, 1);
 
         assertFalse(feature.hasAttribute(PRODUCT));
-        assertEquals("transferase", feature.getAttributeByName(NOTE).get());
+        assertEquals("transferase", feature.getAttribute(NOTE).get());
     }
 
     @Test

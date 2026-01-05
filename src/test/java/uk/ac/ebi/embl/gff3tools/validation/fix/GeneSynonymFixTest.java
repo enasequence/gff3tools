@@ -78,8 +78,7 @@ public class GeneSynonymFixTest {
         // gene_synonym moved to parent gene and removed from child
         assertTrue(gene.hasAttribute(GENE_SYNONYM));
         assertEquals(
-                List.of("syn1", "syn2"),
-                gene.getAttributeListByName(GENE_SYNONYM).orElse(new ArrayList<>()));
+                List.of("syn1", "syn2"), gene.getAttributeList(GENE_SYNONYM).orElse(new ArrayList<>()));
         assertFalse(cds.hasAttribute(GENE_SYNONYM));
     }
 
@@ -112,8 +111,7 @@ public class GeneSynonymFixTest {
         // gene_synonym moved to parent gene and removed from child
         assertTrue(genelike.hasAttribute(GENE_SYNONYM));
         assertEquals(
-                List.of("syn1", "syn2"),
-                genelike.getAttributeListByName(GENE_SYNONYM).orElse(new ArrayList<>()));
+                List.of("syn1", "syn2"), genelike.getAttributeList(GENE_SYNONYM).orElse(new ArrayList<>()));
         assertFalse(cds.hasAttribute(GENE_SYNONYM));
     }
 
@@ -140,8 +138,7 @@ public class GeneSynonymFixTest {
 
         // Parent keeps its original synonyms and child loses its synonyms
         assertTrue(gene.hasAttribute(GENE_SYNONYM));
-        assertEquals(
-                List.of("parentSyn"), gene.getAttributeListByName(GENE_SYNONYM).orElse(new ArrayList<>()));
+        assertEquals(List.of("parentSyn"), gene.getAttributeList(GENE_SYNONYM).orElse(new ArrayList<>()));
         assertFalse(cds.hasAttribute(GENE_SYNONYM));
     }
 
@@ -172,8 +169,7 @@ public class GeneSynonymFixTest {
 
         // should have pushed gene_synonym to the top-most ancestor with same location (root)
         assertTrue(root.hasAttribute(GENE_SYNONYM));
-        assertEquals(
-                List.of("leafSyn"), root.getAttributeListByName(GENE_SYNONYM).orElse(new ArrayList<>()));
+        assertEquals(List.of("leafSyn"), root.getAttributeList(GENE_SYNONYM).orElse(new ArrayList<>()));
         assertFalse(leaf.hasAttribute(GENE_SYNONYM));
     }
 
@@ -203,9 +199,7 @@ public class GeneSynonymFixTest {
         // Because seqId is treated as a "gene feature", no movement should occur
         assertFalse(region.hasAttribute(GENE_SYNONYM));
         assertTrue(genefeature.hasAttribute(GENE_SYNONYM));
-        assertEquals(
-                List.of("syn1"),
-                genefeature.getAttributeListByName(GENE_SYNONYM).orElse(new ArrayList<>()));
+        assertEquals(List.of("syn1"), genefeature.getAttributeList(GENE_SYNONYM).orElse(new ArrayList<>()));
     }
 
     @Test
@@ -234,9 +228,7 @@ public class GeneSynonymFixTest {
         // Because seqId is treated as a "gene feature", no movement should occur
         assertFalse(region.hasAttribute(GENE_SYNONYM));
         assertTrue(genefeature.hasAttribute(GENE_SYNONYM));
-        assertEquals(
-                List.of("syn1"),
-                genefeature.getAttributeListByName(GENE_SYNONYM).orElse(new ArrayList<>()));
+        assertEquals(List.of("syn1"), genefeature.getAttributeList(GENE_SYNONYM).orElse(new ArrayList<>()));
     }
 
     @Test

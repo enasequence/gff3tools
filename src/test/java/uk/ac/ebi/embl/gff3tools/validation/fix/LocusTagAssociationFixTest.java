@@ -56,7 +56,7 @@ public class LocusTagAssociationFixTest {
 
         fix.fix(gff3Annotation, 1);
 
-        assertEquals("LT001", f2.getAttributeByName(LOCUS_TAG).get());
+        assertEquals("LT001", f2.getAttribute(LOCUS_TAG).get());
     }
 
     @Test
@@ -72,7 +72,7 @@ public class LocusTagAssociationFixTest {
 
         fix.fix(gff3Annotation, 1);
 
-        assertEquals("LT002", f2.getAttributeByName(LOCUS_TAG).get()); // corrected
+        assertEquals("LT002", f2.getAttribute(LOCUS_TAG).get()); // corrected
     }
 
     @Test
@@ -84,7 +84,7 @@ public class LocusTagAssociationFixTest {
 
         fix.fix(gff3Annotation, 1);
 
-        assertTrue(f1.getAttributeByName(LOCUS_TAG).isEmpty());
+        assertTrue(f1.getAttribute(LOCUS_TAG).isEmpty());
     }
 
     @Test
@@ -103,7 +103,7 @@ public class LocusTagAssociationFixTest {
         gff3Annotation.addFeature(f2);
         fix.fix(gff3Annotation, 1);
 
-        assertEquals("LT_A", f2.getAttributeByName(LOCUS_TAG).get());
+        assertEquals("LT_A", f2.getAttribute(LOCUS_TAG).get());
     }
 
     @Test
@@ -121,11 +121,11 @@ public class LocusTagAssociationFixTest {
         gff3Annotation.setFeatures(List.of(a1, a2));
         fix.fix(gff3Annotation, 1);
 
-        assertEquals("LT_A1", a2.getAttributeByName(LOCUS_TAG).get());
+        assertEquals("LT_A1", a2.getAttribute(LOCUS_TAG).get());
 
         gff3Annotation.setFeatures(List.of(b1, b2));
 
         fix.fix(gff3Annotation, 1);
-        assertTrue(b1.getAttributeByName(LOCUS_TAG).isEmpty());
+        assertTrue(b1.getAttribute(LOCUS_TAG).isEmpty());
     }
 }

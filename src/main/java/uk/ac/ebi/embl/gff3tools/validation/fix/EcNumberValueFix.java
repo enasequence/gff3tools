@@ -31,12 +31,12 @@ public class EcNumberValueFix {
             description = "Remove the EC_number attribute if not matches the pattern",
             type = FEATURE)
     public void fixFeature(GFF3Feature feature, int line) {
-        String ecNumber = feature.getAttributeByName(GFF3Attributes.EC_NUMBER).orElse(null);
+        String ecNumber = feature.getAttribute(GFF3Attributes.EC_NUMBER).orElse(null);
         if (ecNumber == null || ecNumber.isBlank()) return;
 
         if (ecNumber.equalsIgnoreCase("deleted") || !isValidECNumber(ecNumber.trim())) {
             log.info("Removing invalid values on {} attribute at line: {}", GFF3Attributes.EC_NUMBER, line);
-            feature.removeAttributes(GFF3Attributes.EC_NUMBER);
+            feature.removeAttributeList(GFF3Attributes.EC_NUMBER);
         }
     }
 

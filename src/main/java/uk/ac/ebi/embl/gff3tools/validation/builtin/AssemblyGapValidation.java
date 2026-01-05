@@ -67,8 +67,7 @@ public class AssemblyGapValidation extends Validation {
             boolean hasGapType = feature.hasAttribute(GFF3Attributes.GAP_TYPE);
             boolean hasLinkageEvidence = feature.hasAttribute(GFF3Attributes.LINKAGE_EVIDENCE);
             if (OntologyTerm.GAP.ID.equals(soId)) {
-                String gapType =
-                        feature.getAttributeByName(GFF3Attributes.GAP_TYPE).orElse(null);
+                String gapType = feature.getAttribute(GFF3Attributes.GAP_TYPE).orElse(null);
                 if (gapType != null && !GAP_TYPE.containsKey(gapType)) {
                     throw new ValidationException(VALIDATION_RULE, line, INVALID_GAP_TYPE.formatted(gapType));
                 }

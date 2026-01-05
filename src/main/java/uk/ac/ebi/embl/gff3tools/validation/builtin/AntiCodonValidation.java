@@ -45,7 +45,7 @@ public class AntiCodonValidation extends Validation {
                     feature,
                     line,
                     GFF3Attributes.ANTI_CODON,
-                    feature.getAttributeByName(GFF3Attributes.ANTI_CODON).orElse(null));
+                    feature.getAttribute(GFF3Attributes.ANTI_CODON).orElse(null));
         }
     }
 
@@ -56,7 +56,7 @@ public class AntiCodonValidation extends Validation {
                     feature,
                     line,
                     GFF3Attributes.TRANSL_EXCEPT,
-                    feature.getAttributeByName(GFF3Attributes.TRANSL_EXCEPT).orElse(null));
+                    feature.getAttribute(GFF3Attributes.TRANSL_EXCEPT).orElse(null));
         }
     }
 
@@ -119,10 +119,10 @@ public class AntiCodonValidation extends Validation {
         String attribute = null;
 
         if (feature.hasAttribute(GFF3Attributes.ANTI_CODON)) {
-            value = feature.getAttributeByName(GFF3Attributes.ANTI_CODON).orElse(null);
+            value = feature.getAttribute(GFF3Attributes.ANTI_CODON).orElse(null);
             attribute = GFF3Attributes.ANTI_CODON;
         } else if (feature.hasAttribute(GFF3Attributes.TRANSL_EXCEPT)) {
-            value = feature.getAttributeByName(GFF3Attributes.TRANSL_EXCEPT).orElse(null);
+            value = feature.getAttribute(GFF3Attributes.TRANSL_EXCEPT).orElse(null);
             attribute = GFF3Attributes.TRANSL_EXCEPT;
         }
 

@@ -279,7 +279,7 @@ public class GFF3AnnotationFactory {
 
     public void orderRootAndChildren(List<GFF3Feature> gffFeatures, GFF3Feature root) {
 
-        String locusTag = root.getAttributeByName("locus_tag").orElse(null);
+        String locusTag = root.getAttribute("locus_tag").orElse(null);
         gffFeatures.add(root);
 
         // Recursively process children

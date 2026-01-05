@@ -95,7 +95,7 @@ public class GFF3Mapper {
     private void mapGFF3Feature(GFF3Feature gff3Feature, Map<String, OffsetRange> translationMap)
             throws ValidationException {
 
-        String existingID = gff3Feature.getAttributeByName("ID").orElse(null);
+        String existingID = gff3Feature.getAttribute("ID").orElse(null);
         String featureHashId = existingID == null ? gff3Feature.hashCodeString() : existingID;
 
         Location location = mapGFF3Location(gff3Feature);
@@ -127,7 +127,7 @@ public class GFF3Mapper {
                         .findTermByNameOrSynonym(gff3FeatureName)
                         .orElse(null);
             }
-            if (gff3Feature.getAttributeByName("Is_circular").isPresent()
+            if (gff3Feature.getAttribute("Is_circular").isPresent()
                     && OntologyTerm.REGION.ID.equalsIgnoreCase(gff3Id)) {
                 // Do not convert "region" features. These are added when doing EMBL->GFF3 mapping to
                 // represent circular topologies. The topology in the EMBL mapping will be provided
@@ -205,7 +205,7 @@ public class GFF3Mapper {
 
     private String getGeneForFeature(GFF3Feature gff3Feature) {
         if (gff3Feature.hasAttribute("gene")) {
-            return gff3Feature.getAttributeByName("gene").get();
+            return gff3Feature.getAttribute("gene").get();
         } else if (gff3Feature.getParentId().isPresent()) {
             GFF3Feature parent = parentFeatures.get(gff3Feature.getParentId().get());
             return getGeneForFeature(parent);

@@ -46,7 +46,7 @@ public class AttributeValueFixTest {
         attributeValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(1, feature.getAttributes().size());
-        assertEquals("protein_id", feature.getAttributeByName(PROTEIN_ID).get());
+        assertEquals("protein_id", feature.getAttribute(PROTEIN_ID).get());
     }
 
     @Test
@@ -59,8 +59,8 @@ public class AttributeValueFixTest {
         attributeValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(2, feature.getAttributes().size());
-        assertEquals("protein_id", feature.getAttributeByName(PROTEIN_ID).get());
-        assertEquals("ac4c", feature.getAttributeByName(MOD_BASE).get());
+        assertEquals("protein_id", feature.getAttribute(PROTEIN_ID).get());
+        assertEquals("ac4c", feature.getAttribute(MOD_BASE).get());
     }
 
     @Test
@@ -73,7 +73,7 @@ public class AttributeValueFixTest {
         attributeValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(2, feature.getAttributes().size());
-        assertEquals("protein_id", feature.getAttributeByName(PROTEIN_ID).get());
-        assertEquals("dhu", feature.getAttributeByName(MOD_BASE).get());
+        assertEquals("protein_id", feature.getAttribute(PROTEIN_ID).get());
+        assertEquals("dhu", feature.getAttribute(MOD_BASE).get());
     }
 }

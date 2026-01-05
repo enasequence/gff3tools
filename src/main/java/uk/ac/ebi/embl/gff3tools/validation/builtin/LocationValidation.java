@@ -47,7 +47,7 @@ public class LocationValidation extends Validation {
         boolean isCircular = Boolean.TRUE
                 .toString()
                 .equalsIgnoreCase(
-                        feature.getAttributeByName(GFF3Attributes.CIRCULAR_RNA).orElse("false"));
+                        feature.getAttribute(GFF3Attributes.CIRCULAR_RNA).orElse("false"));
         if (!isCircular && end < start) {
             throw new ValidationException(line, INVALID_START_END_MESSAGE.formatted(feature.accession()));
         }

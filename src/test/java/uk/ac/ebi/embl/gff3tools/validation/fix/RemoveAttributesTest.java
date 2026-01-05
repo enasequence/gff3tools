@@ -43,10 +43,9 @@ public class RemoveAttributesTest {
         removeAttributes.fixFeature(feature, 1);
 
         Assertions.assertNotNull(feature);
-        Assertions.assertTrue(
-                feature.getAttributeByName(GFF3Attributes.CITATION).isEmpty());
-        Assertions.assertTrue(feature.getAttributeByName(GFF3Attributes.COMPARE).isEmpty());
-        Assertions.assertEquals("example", feature.getAttributeByName("note").get());
+        Assertions.assertTrue(feature.getAttribute(GFF3Attributes.CITATION).isEmpty());
+        Assertions.assertTrue(feature.getAttribute(GFF3Attributes.COMPARE).isEmpty());
+        Assertions.assertEquals("example", feature.getAttribute("note").get());
     }
 
     @Test
@@ -61,10 +60,9 @@ public class RemoveAttributesTest {
 
         Assertions.assertNotNull(feature);
         Assertions.assertEquals(
-                "PubMed:12345",
-                feature.getAttributeByName(GFF3Attributes.CITATION).get());
+                "PubMed:12345", feature.getAttribute(GFF3Attributes.CITATION).get());
         Assertions.assertEquals(
-                "comp1", feature.getAttributeByName(GFF3Attributes.COMPARE).get());
+                "comp1", feature.getAttribute(GFF3Attributes.COMPARE).get());
     }
 
     @Test
@@ -78,10 +76,9 @@ public class RemoveAttributesTest {
         removeAttributes.fixFeature(feature, 1);
 
         Assertions.assertEquals(
-                "PubMed:9999",
-                feature.getAttributeByName(GFF3Attributes.CITATION).get());
+                "PubMed:9999", feature.getAttribute(GFF3Attributes.CITATION).get());
         Assertions.assertEquals(
-                "cmp", feature.getAttributeByName(GFF3Attributes.COMPARE).get());
+                "cmp", feature.getAttribute(GFF3Attributes.COMPARE).get());
     }
 
     @Test
@@ -94,7 +91,7 @@ public class RemoveAttributesTest {
         removeAttributes.fixFeature(feature, 1);
 
         Assertions.assertEquals(
-                "no citation or compare", feature.getAttributeByName("note").get());
+                "no citation or compare", feature.getAttribute("note").get());
     }
 
     @Test

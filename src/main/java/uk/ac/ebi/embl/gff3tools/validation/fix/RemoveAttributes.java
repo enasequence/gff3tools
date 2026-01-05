@@ -33,12 +33,12 @@ public class RemoveAttributes {
 
         if (feature.hasAttribute(GFF3Attributes.CITATION)) {
             log.info("Removing {} attribute at line: {}", GFF3Attributes.CITATION, line);
-            feature.removeAttributes(GFF3Attributes.CITATION);
+            feature.removeAttributeList(GFF3Attributes.CITATION);
         }
 
         if (feature.hasAttribute(GFF3Attributes.COMPARE)) {
             log.info("Removing {} attribute at line: {}", GFF3Attributes.COMPARE, line);
-            feature.removeAttributes(GFF3Attributes.COMPARE);
+            feature.removeAttributeList(GFF3Attributes.COMPARE);
         }
     }
 }
