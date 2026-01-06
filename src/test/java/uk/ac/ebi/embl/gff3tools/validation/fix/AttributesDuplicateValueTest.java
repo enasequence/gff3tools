@@ -50,9 +50,8 @@ public class AttributesDuplicateValueTest {
         feature = TestUtils.createGFF3Feature("propeptide", "propeptide", attributes);
         feature = attributesDuplicateValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
-        Assertions.assertNotNull(feature.getAttributes());
         assertEquals("123123", feature.getAttribute(GFF3Attributes.LOCUS_TAG).get());
-        assertEquals(1, feature.getAttributes().size());
+        assertEquals(1, feature.getAttributeKeys().size());
     }
 
     @Test
@@ -67,7 +66,7 @@ public class AttributesDuplicateValueTest {
         feature = TestUtils.createGFF3Feature("propeptide", "propeptide", attributes);
         feature = attributesDuplicateValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
-        Assertions.assertNotNull(feature.getAttributes());
+        Assertions.assertNotNull(feature.getAttributeKeys());
         assertEquals("123123", feature.getAttribute(GFF3Attributes.LOCUS_TAG).get());
         assertEquals(
                 2, feature.getAttributeList(GFF3Attributes.OLD_LOCUS_TAG).get().size());
@@ -86,7 +85,7 @@ public class AttributesDuplicateValueTest {
         feature = TestUtils.createGFF3Feature("propeptide", "propeptide", attributes);
         feature = attributesDuplicateValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
-        Assertions.assertNotNull(feature.getAttributes());
+        Assertions.assertNotNull(feature.getAttributeKeys());
         assertEquals("123123", feature.getAttribute(GFF3Attributes.LOCUS_TAG).get());
         assertTrue(feature.getAttribute(GFF3Attributes.OLD_LOCUS_TAG).isEmpty());
     }
@@ -105,7 +104,7 @@ public class AttributesDuplicateValueTest {
         feature = TestUtils.createGFF3Feature("propeptide", "propeptide", attributes);
         feature = attributesDuplicateValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
-        Assertions.assertNotNull(feature.getAttributes());
+        Assertions.assertNotNull(feature.getAttributeKeys());
         assertEquals(
                 2, feature.getAttributeList(GFF3Attributes.OLD_LOCUS_TAG).get().size());
     }
@@ -125,7 +124,7 @@ public class AttributesDuplicateValueTest {
         feature = attributesDuplicateValueFix.fixFeature(feature, 1);
 
         Assertions.assertNotNull(feature);
-        Assertions.assertNotNull(feature.getAttributes());
+        Assertions.assertNotNull(feature.getAttributeKeys());
         assertEquals(
                 1, feature.getAttributeList(GFF3Attributes.OLD_LOCUS_TAG).get().size());
     }

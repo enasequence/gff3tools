@@ -125,36 +125,11 @@ class TransformAttributeToNoteFixTest {
     }
 
     @Test
-    void nullOrEmptyAttributes_areIgnoredWithoutExplosion() {
-        GFF3Feature withNullAttributes = new GFF3Feature(
-                Optional.of("gene"),
-                Optional.empty(),
-                "1234",
-                Optional.empty(),
-                ".",
-                "gene",
-                1,
-                10,
-                ".",
-                "+",
-                "",
-                null);
+    void emptyAttributes_areIgnoredWithoutExplosion() {
 
         GFF3Feature withEmptyAttributes = new GFF3Feature(
-                Optional.of("gene"),
-                Optional.empty(),
-                "1234",
-                Optional.empty(),
-                ".",
-                "gene",
-                1,
-                10,
-                ".",
-                "+",
-                "",
-                new HashMap<>());
+                Optional.of("gene"), Optional.empty(), "1234", Optional.empty(), ".", "gene", 1, 10, ".", "+", "");
 
-        assertDoesNotThrow(() -> fixer.fix(withNullAttributes, 1));
         assertDoesNotThrow(() -> fixer.fix(withEmptyAttributes, 1));
     }
 }

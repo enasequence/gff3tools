@@ -14,7 +14,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
@@ -34,7 +36,11 @@ public class GFF3Feature {
     final String score;
     final String strand;
     final String phase;
-    private final Map<String, List<String>> attributes;
+
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    @NonNull
+    private Map<String, List<String>> attributes = new HashMap<>();
 
     // Mutable members
     List<GFF3Feature> children = new ArrayList<>();
@@ -106,6 +112,14 @@ public class GFF3Feature {
     }
 
     /**
+     * Gets the list of attribute keys present in the feature.
+     * @return The list of attributes present.
+     */
+    public Set<String> getAttributeKeys() {
+        return attributes.keySet();
+    }
+
+    /**
      * Gets the attributes associated with the specified name.
      * @param name the name of the attribute.
      * @return an Optional containing the list of attribute values, if present.
@@ -150,6 +164,36 @@ public class GFF3Feature {
     }
 
     /**
+     * Adds values to the list of attributes for the given name.
+     * If no attribute is found for the given name a new list will be created.
+     * Makes use of addAttribute
+     *
+     * @param name the name of the attribute.
+     * @param values the list of values to add to this attribute.
+     */
+    public void addAttributes(String key, List<String> values) {
+        if (values != null) {
+            for (String value : values) {
+                addAttribute(key, value);
+            }
+        }
+    }
+
+    /**
+     * Adds attributes to the feature.
+     * This function will not existing attributes if they exist.
+     *
+     * @param values the list of values to add to this attribute.
+     */
+    public void addAttributes(Map<String, List<String>> values) {
+        if (values != null) {
+            for (Map.Entry<String, List<String>> entry : values.entrySet()) {
+                addAttributes(entry.getKey(), entry.getValue());
+            }
+        }
+    }
+
+    /**
      * Removes the attribute by the given name from this feature.
      * @param name the name of the attribute.
      */
@@ -167,7 +211,7 @@ public class GFF3Feature {
     public void addAttribute(String name, String value) {
         if (value != null && !value.trim().isBlank()) {
             List<String> attribute = attributes.getOrDefault(name, new ArrayList<>());
-            attribute.add(value.trim());
+            attribute.add(value);
             attributes.put(name, attribute);
         }
     }

@@ -41,7 +41,7 @@ public class EcNumberValueFixTest {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
-        assertEquals(1, feature.getAttributes().size());
+        assertEquals(1, feature.getAttributeKeys().size());
     }
 
     @Test
@@ -52,7 +52,7 @@ public class EcNumberValueFixTest {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
-        assertEquals(0, feature.getAttributes().size());
+        assertEquals(0, feature.getAttributeKeys().size());
     }
 
     @Test
@@ -63,7 +63,7 @@ public class EcNumberValueFixTest {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
-        assertEquals(0, feature.getAttributes().size());
+        assertEquals(0, feature.getAttributeKeys().size());
     }
 
     @Test
@@ -74,7 +74,7 @@ public class EcNumberValueFixTest {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
-        assertEquals(1, feature.getAttributes().size());
+        assertEquals(1, feature.getAttributeKeys().size());
     }
 
     @Test
@@ -85,7 +85,7 @@ public class EcNumberValueFixTest {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
-        assertEquals(1, feature.getAttributes().size());
+        assertEquals(1, feature.getAttributeKeys().size());
     }
 
     @Test
@@ -96,7 +96,7 @@ public class EcNumberValueFixTest {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
-        assertEquals(1, feature.getAttributes().size());
+        assertEquals(1, feature.getAttributeKeys().size());
     }
 
     @Test
@@ -107,7 +107,7 @@ public class EcNumberValueFixTest {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
-        assertEquals(0, feature.getAttributes().size());
+        assertEquals(0, feature.getAttributeKeys().size());
     }
 
     @Test
@@ -118,7 +118,7 @@ public class EcNumberValueFixTest {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
-        assertEquals(0, feature.getAttributes().size());
+        assertEquals(0, feature.getAttributeKeys().size());
     }
 
     @Test
@@ -129,6 +129,6 @@ public class EcNumberValueFixTest {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
-        assertEquals(0, feature.getAttributes().size());
+        assertEquals(0, feature.getAttributeKeys().size());
     }
 }

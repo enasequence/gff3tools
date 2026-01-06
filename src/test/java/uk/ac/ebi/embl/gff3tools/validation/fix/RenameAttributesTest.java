@@ -41,7 +41,7 @@ public class RenameAttributesTest {
         renameAttributes.fixFeature(feature, 1);
 
         Assertions.assertNotNull(feature);
-        Assertions.assertEquals(2, feature.getAttributes().size());
+        Assertions.assertEquals(2, feature.getAttributeKeys().size());
     }
 
     @Test
@@ -55,7 +55,7 @@ public class RenameAttributesTest {
         renameAttributes.fixFeature(feature, 1);
 
         Assertions.assertNotNull(feature);
-        Assertions.assertEquals(2, feature.getAttributes().size());
+        Assertions.assertEquals(2, feature.getAttributeKeys().size());
         Assertions.assertEquals(
                 "label:labTest", feature.getAttribute(GFF3Attributes.NOTE).get());
     }
@@ -72,7 +72,7 @@ public class RenameAttributesTest {
         renameAttributes.fixFeature(feature, 1);
 
         Assertions.assertNotNull(feature);
-        Assertions.assertEquals(2, feature.getAttributes().size());
+        Assertions.assertEquals(2, feature.getAttributeKeys().size());
         Assertions.assertEquals(
                 "notes;label:labTest", feature.getAttribute(GFF3Attributes.NOTE).get());
     }
@@ -88,7 +88,7 @@ public class RenameAttributesTest {
         renameAttributes.fixFeature(feature, 1);
 
         Assertions.assertNotNull(feature);
-        Assertions.assertEquals(2, feature.getAttributes().size());
+        Assertions.assertEquals(2, feature.getAttributeKeys().size());
         Assertions.assertEquals(
                 "notes", feature.getAttribute(GFF3Attributes.NOTE).get());
     }
@@ -103,7 +103,7 @@ public class RenameAttributesTest {
         renameAttributes.fixFeature(feature, 1);
 
         Assertions.assertNotNull(feature);
-        Assertions.assertEquals(1, feature.getAttributes().size());
+        Assertions.assertEquals(1, feature.getAttributeKeys().size());
         Assertions.assertTrue(
                 feature.getAttribute(GFF3Attributes.MOBILE_ELEMENT).isEmpty());
         Assertions.assertEquals(
@@ -120,7 +120,7 @@ public class RenameAttributesTest {
         renameAttributes.fixFeature(feature, 1);
 
         Assertions.assertNotNull(feature);
-        Assertions.assertEquals(1, feature.getAttributes().size());
+        Assertions.assertEquals(1, feature.getAttributeKeys().size());
         Assertions.assertEquals(
                 "mobile_element_type",
                 feature.getAttribute(GFF3Attributes.MOBILE_ELEMENT_TYPE).get());

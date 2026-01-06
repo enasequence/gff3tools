@@ -168,8 +168,7 @@ public class GFF3AnnotationTest {
                 100,
                 ".",
                 "+",
-                ".",
-                new HashMap<>());
+                ".");
         annotation2.addFeature(feature2);
         assertEquals("ACC00002", annotation2.getAccession());
 

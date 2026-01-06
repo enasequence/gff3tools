@@ -40,8 +40,8 @@ public class TransformAttributeToNoteFix {
     public void fix(GFF3Feature feature, int line) {
 
         if (feature == null
-                || feature.getAttributes() == null
-                || feature.getAttributes().isEmpty()) return;
+                || feature.getAttributeKeys() == null
+                || feature.getAttributeKeys().isEmpty()) return;
 
         for (ExclusiveAttributePair pair : pairs) {
             if (feature.hasAttribute(pair.toRemove) && feature.hasAttribute(pair.exclusive)) {

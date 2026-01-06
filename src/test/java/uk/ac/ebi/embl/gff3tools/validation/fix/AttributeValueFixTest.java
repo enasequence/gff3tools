@@ -45,7 +45,7 @@ public class AttributeValueFixTest {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         attributeValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
-        assertEquals(1, feature.getAttributes().size());
+        assertEquals(1, feature.getAttributeKeys().size());
         assertEquals("protein_id", feature.getAttribute(PROTEIN_ID).get());
     }
 
@@ -58,7 +58,7 @@ public class AttributeValueFixTest {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         attributeValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
-        assertEquals(2, feature.getAttributes().size());
+        assertEquals(2, feature.getAttributeKeys().size());
         assertEquals("protein_id", feature.getAttribute(PROTEIN_ID).get());
         assertEquals("ac4c", feature.getAttribute(MOD_BASE).get());
     }
@@ -72,7 +72,7 @@ public class AttributeValueFixTest {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         attributeValueFix.fixFeature(feature, 1);
         Assertions.assertNotNull(feature);
-        assertEquals(2, feature.getAttributes().size());
+        assertEquals(2, feature.getAttributeKeys().size());
         assertEquals("protein_id", feature.getAttribute(PROTEIN_ID).get());
         assertEquals("dhu", feature.getAttribute(MOD_BASE).get());
     }

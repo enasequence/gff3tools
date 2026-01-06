@@ -91,11 +91,10 @@ public class AssemblyGapValidation extends Validation {
                     throw new ValidationException(VALIDATION_RULE, line, INVALID_LOCATION_MESSAGE);
                 }
 
-                for (Map.Entry<String, List<String>> attribute :
-                        feature.getAttributes().entrySet()) {
-                    if (!permittedAttributes.contains(attribute.getKey())) {
+                for (String attributeKey : feature.getAttributeKeys()) {
+                    if (!permittedAttributes.contains(attributeKey)) {
                         throw new ValidationException(
-                                VALIDATION_RULE, line, INVALID_ATTRIBUTE_MESSAGE.formatted(attribute.getKey()));
+                                VALIDATION_RULE, line, INVALID_ATTRIBUTE_MESSAGE.formatted(attributeKey));
                     }
                 }
 

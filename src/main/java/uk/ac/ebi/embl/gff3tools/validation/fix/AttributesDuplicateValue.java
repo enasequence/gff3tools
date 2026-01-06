@@ -30,7 +30,7 @@ public class AttributesDuplicateValue {
             description = "Remove the duplicate values in the old_locus_tag and locus_tag",
             type = FEATURE)
     public GFF3Feature fixFeature(GFF3Feature feature, int line) {
-        if (feature == null || feature.getAttributes() == null) {
+        if (feature == null || feature.getAttributeKeys().isEmpty()) {
             return feature;
         }
 

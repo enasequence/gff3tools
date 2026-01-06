@@ -227,18 +227,8 @@ public class GFF3FileReader implements AutoCloseable {
                 .map((l) -> l.get(0));
 
         GFF3Feature feature = new GFF3Feature(
-                id,
-                parentId,
-                accessionId,
-                accessionVersion,
-                source,
-                name,
-                start,
-                end,
-                score,
-                strand,
-                phase,
-                attributesMap);
+                id, parentId, accessionId, accessionVersion, source, name, start, end, score, strand, phase);
+        feature.addAttributes(attributesMap);
 
         validationEngine.validate(feature, lineCount);
         return feature;

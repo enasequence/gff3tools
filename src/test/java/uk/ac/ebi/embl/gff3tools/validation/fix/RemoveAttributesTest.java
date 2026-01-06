@@ -101,6 +101,6 @@ public class RemoveAttributesTest {
 
         removeAttributes.fixFeature(feature, 1);
 
-        Assertions.assertTrue(feature.getAttributes().isEmpty());
+        Assertions.assertTrue(feature.getAttributeKeys().isEmpty());
     }
 }

@@ -114,8 +114,9 @@ public class GFF3AnnotationFactory {
     }
 
     private boolean lacksCircularAttribute() {
-        return !geneMap.values().stream().flatMap(List::stream).anyMatch(feature -> feature.getAttributes()
-                .containsKey("Is_circular"));
+        return !geneMap.values().stream()
+                .flatMap(List::stream)
+                .anyMatch(feature -> feature.hasAttribute("Is_circular"));
     }
 
     private boolean isCircularTopology(Entry entry) {
@@ -124,7 +125,7 @@ public class GFF3AnnotationFactory {
 
     private GFF3Feature createLandmarkFeature(GFF3SequenceRegion sequenceRegion, Entry entry) {
         CompoundLocation<Location> locations = entry.getPrimarySourceFeature().getLocations();
-        return new GFF3Feature(
+        GFF3Feature feature = new GFF3Feature(
                 Optional.of(sequenceRegion.accession()),
                 Optional.empty(),
                 sequenceRegion.accessionId(),
@@ -135,8 +136,12 @@ public class GFF3AnnotationFactory {
                 locations.getMaxPosition(),
                 ".",
                 "+",
-                ".",
-                Map.of("ID", List.of(sequenceRegion.accession()), "Is_circular", List.of("true")));
+                ".");
+
+        feature.addAttribute("ID", sequenceRegion.accession());
+        feature.addAttribute("Is_circular", "true");
+
+        return feature;
     }
 
     private List<GFF3Feature> transformFeature(
@@ -181,8 +186,8 @@ public class GFF3AnnotationFactory {
                     location.getEndPosition(),
                     score,
                     getStrand(location, compoundLocation),
-                    getPhase(ffFeature),
-                    attributes);
+                    getPhase(ffFeature));
+            gff3Feature.addAttributes(attributes);
             validationEngine.validate(gff3Feature, -1);
             gff3Features.add(gff3Feature);
         }
@@ -288,21 +293,21 @@ public class GFF3AnnotationFactory {
                 orderRootAndChildren(gffFeatures, child);
             } else {
                 // Leaf node processing
-                if (locusTag != null && child.getAttributes().get("locus_tag") == null) {
+                if (locusTag != null && !child.hasAttribute("locus_tag")) {
                     // Add parent's locus_tag only when it is not present in children
-                    child.getAttributes().put("locus_tag", List.of(locusTag));
+                    child.addAttribute("locus_tag", locusTag);
                 }
-                child.getAttributes().remove("gene");
+                child.removeAttributeList("gene");
                 gffFeatures.add(child);
             }
         }
 
         if (hasParent(root, gffFeatures)) {
             // Parent cleanup
-            root.getAttributes().remove("gene");
+            root.removeAttributeList("gene");
         } else {
             // Child cleanup
-            root.getAttributes().remove("Parent");
+            root.removeAttributeList("Parent");
         }
     }
 

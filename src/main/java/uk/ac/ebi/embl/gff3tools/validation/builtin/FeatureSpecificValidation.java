@@ -131,11 +131,11 @@ public class FeatureSpecificValidation extends Validation {
 
     private void checkPseudoQualifier(GFF3Feature cdsFeature, List<GFF3Feature> peptideFeatures, int line)
             throws ValidationException {
-        boolean hasPseudo = cdsFeature.getAttributes().containsKey(GFF3Attributes.PSEUDO);
+        boolean hasPseudo = cdsFeature.hasAttribute(GFF3Attributes.PSEUDO);
 
         if (hasPseudo) {
             for (GFF3Feature peptide : peptideFeatures) {
-                if (!peptide.getAttributes().containsKey(GFF3Attributes.PSEUDO)) {
+                if (!peptide.hasAttribute(GFF3Attributes.PSEUDO)) {
                     throw new ValidationException(
                             line,
                             PSEUDO_ATTRIBUTE_REQUIRED_VALIDATION.formatted(peptide.getName(), cdsFeature.getName()));

@@ -106,7 +106,7 @@ public class AttributesRelationValidation extends Validation {
     @ValidationMethod(rule = "REQUIRED_ATTRIBUTES", type = ValidationType.ANNOTATION)
     public void validateRequiredAttributes(GFF3Annotation annotation, int line) throws ValidationException {
         Set<String> presentQualifiers = annotation.getFeatures().stream()
-                .flatMap(f -> f.getAttributes().keySet().stream())
+                .flatMap(f -> f.getAttributeKeys().stream())
                 .collect(Collectors.toSet());
 
         if (presentQualifiers.contains(GFF3Attributes.SATELLITE)) {
@@ -148,7 +148,7 @@ public class AttributesRelationValidation extends Validation {
             type = ValidationType.FEATURE,
             severity = RuleSeverity.WARN)
     public void validateMutuallyExclusiveAttributes(GFF3Feature feature, int line) throws ValidationException {
-        Set<String> featureAttributeKeys = new HashSet<>(feature.getAttributes().keySet());
+        Set<String> featureAttributeKeys = new HashSet<>(feature.getAttributeKeys());
         featureAttributeKeys.retainAll(MUTUALLY_EXCLUSIVE.keySet());
 
         if (featureAttributeKeys.isEmpty()) {

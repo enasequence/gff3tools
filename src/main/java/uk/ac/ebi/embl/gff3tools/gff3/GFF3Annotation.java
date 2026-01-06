@@ -44,24 +44,24 @@ public class GFF3Annotation implements IGFF3Feature {
 
     private void writeAttributes(Writer writer, GFF3Feature feature) throws IOException {
         writer.write('\t');
-        writer.write(feature.getAttributes().entrySet().stream()
+        writer.write(feature.getAttributeKeys().stream()
                 .sorted(
-                        Comparator.comparingInt((Map.Entry<String, List<String>> e) -> {
-                                    String key = e.getKey();
+                        Comparator.comparingInt((String key) -> {
                                     if (key.equals("ID")) return -2; // Highest priority
                                     if (key.equals("Parent")) return -1; // Next
                                     return 0; // Others
                                 })
-                                .thenComparing(Map.Entry.comparingByKey()) // Sort others by key
+                                .thenComparing(Comparator.naturalOrder()) // Sort others by key
                         )
-                .map(GFF3Annotation::encodeAttribute)
+                .map((key) -> {
+                    List<String> attributes = feature.getAttributeList(key).orElse(new ArrayList<>());
+                    return encodeAttribute(key, attributes);
+                })
                 .collect(Collectors.joining(";", "", ";")));
     }
 
-    private static String encodeAttribute(Map.Entry<String, List<String>> entry) {
-        String encodedKey = urlEncode(entry.getKey());
-        List<String> value = entry.getValue();
-
+    private static String encodeAttribute(String key, List<String> value) {
+        String encodedKey = urlEncode(key);
         // URL-encode each item on the list and concatenate them.
         String encodedValue = value.stream().map(GFF3Annotation::urlEncode).collect(Collectors.joining(","));
         return "%s=%s".formatted(encodedKey, encodedValue);

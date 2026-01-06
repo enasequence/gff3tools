@@ -146,7 +146,10 @@ public class GFF3Mapper {
                 locations.addLocation(location);
                 ffFeature.setLocations(locations);
 
-                ffFeature.addQualifiers(mapGFF3Attributes(gff3Feature.getAttributes()));
+                for (String key : gff3Feature.getAttributeKeys()) {
+                    List<String> attributes = gff3Feature.getAttributeList(key).orElse(new ArrayList<>());
+                    ffFeature.addQualifiers(mapGFF3Attributes(key, attributes));
+                }
 
                 // Add qualifiers from feature mapping when it's not present in the flat file qualifier
                 for (Map.Entry<String, String> entry :
@@ -218,7 +221,7 @@ public class GFF3Mapper {
 
         long start = gff3Feature.getStart();
         long end = gff3Feature.getEnd();
-        List<String> partials = gff3Feature.getAttributes().getOrDefault("partial", new ArrayList<>());
+        List<String> partials = gff3Feature.getAttributeList("partial").orElse(new ArrayList<>());
 
         boolean isComplement = gff3Feature.getStrand().equals("-");
         Location location = this.locationFactory.createLocalRange(start, end, isComplement);
@@ -233,25 +236,16 @@ public class GFF3Mapper {
         return location;
     }
 
-    private Collection<Qualifier> mapGFF3Attributes(Map<String, List<String>> attributes) {
-        Collection<Qualifier> qualifierList = new ArrayList();
+    private Collection<Qualifier> mapGFF3Attributes(String attributeKey, List<String> attributes) {
+        Collection<Qualifier> qualifierList = new ArrayList<>();
 
-        for (Object o : attributes.entrySet()) {
-            Map.Entry<String, String> attributePairs = (Map.Entry) o;
-            String attributeKey = attributePairs.getKey();
-            if (qmap.containsKey(attributeKey)) {
-                attributeKey = qmap.get(attributeKey);
-            }
-            if (!attributeKey.isBlank()) {
-                Object value = attributePairs.getValue();
-                if (value instanceof List) {
-                    List<String> values = (List<String>) value;
-                    for (String val : values) {
-                        qualifierList.add(createQualifier(attributeKey, val));
-                    }
-                } else {
-                    qualifierList.add(createQualifier(attributeKey, value.toString()));
-                }
+        if (qmap.containsKey(attributeKey)) {
+            attributeKey = qmap.get(attributeKey);
+        }
+
+        if (!attributeKey.isBlank()) {
+            for (String val : attributes) {
+                qualifierList.add(createQualifier(attributeKey, val));
             }
         }
 
