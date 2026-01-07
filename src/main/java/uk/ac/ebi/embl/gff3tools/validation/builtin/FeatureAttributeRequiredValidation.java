@@ -53,8 +53,8 @@ public class FeatureAttributeRequiredValidation extends Validation {
         String featureName = feature.getName();
 
         if (featuresToValidate.contains(featureName)
-                && (feature.getAttributes().keySet().equals(Set.of("ID", "Parent"))
-                        || feature.getAttributes().keySet().equals(Set.of("ID")))) {
+                && (feature.getAttributeKeys().equals(Set.of("ID", "Parent"))
+                        || feature.getAttributeKeys().equals(Set.of("ID")))) {
             throw new ValidationException(line, NO_QUALIFIERS_MESSAGE.formatted(feature.accession(), featureName));
         }
     }

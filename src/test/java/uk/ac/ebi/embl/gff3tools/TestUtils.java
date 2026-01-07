@@ -64,7 +64,7 @@ public class TestUtils {
         String id = featureName.map(v -> v + "_gene").orElse("_gene");
         String parent = parentFeatureName.map(v -> v + "_gene").orElse("_gene");
 
-        return new GFF3Feature(
+        GFF3Feature feature = new GFF3Feature(
                 featureName,
                 parentFeatureName,
                 DEFAULT_ACCESSION,
@@ -75,14 +75,17 @@ public class TestUtils {
                 800,
                 ".",
                 "+",
-                "",
-                new HashMap<>(Map.of("ID", id, "Parent", parent, "gene", "geneX")));
+                "");
+        feature.addAttribute("ID", id);
+        feature.addAttribute("Parent", parent);
+        feature.addAttribute("gene", "geneX");
+        return feature;
     }
 
     public static GFF3Feature createGFF3Feature(
-            String featureName, String parentFeatureName, Map<String, Object> attributes) {
+            String featureName, String parentFeatureName, Map<String, List<String>> attributes) {
 
-        return new GFF3Feature(
+        GFF3Feature feature = new GFF3Feature(
                 Optional.of(featureName),
                 Optional.of(parentFeatureName),
                 DEFAULT_ACCESSION,
@@ -93,8 +96,9 @@ public class TestUtils {
                 800,
                 ".",
                 "+",
-                "",
-                attributes);
+                "");
+        feature.addAttributes(attributes);
+        return feature;
     }
 
     public static GFF3Feature createGFF3Feature(String featureName, long start, long end) {
@@ -110,13 +114,12 @@ public class TestUtils {
                 end,
                 ".",
                 "+",
-                "",
-                new HashMap<>());
+                "");
     }
 
-    public static GFF3Feature createGFF3Feature(String featureName, Map<String, Object> attributes) {
+    public static GFF3Feature createGFF3Feature(String featureName, Map<String, List<String>> attributes) {
 
-        return new GFF3Feature(
+        GFF3Feature feature = new GFF3Feature(
                 Optional.of(featureName),
                 Optional.empty(),
                 DEFAULT_ACCESSION,
@@ -127,14 +130,16 @@ public class TestUtils {
                 800,
                 ".",
                 "+",
-                "",
-                attributes);
+                "");
+
+        feature.addAttributes(attributes);
+        return feature;
     }
 
     public static GFF3Feature createGFF3Feature(
-            String featureName, long start, long end, Map<String, Object> attributes) {
+            String featureName, long start, long end, Map<String, List<String>> attributes) {
 
-        return new GFF3Feature(
+        GFF3Feature feature = new GFF3Feature(
                 Optional.of(featureName),
                 Optional.empty(),
                 DEFAULT_ACCESSION,
@@ -145,14 +150,15 @@ public class TestUtils {
                 end,
                 ".",
                 "+",
-                "",
-                attributes);
+                "");
+        feature.addAttributes(attributes);
+        return feature;
     }
 
     public static GFF3Feature createGFF3Feature(
-            String featureName, String parentFeatureName, String seqId, Map<String, Object> attributes) {
+            String featureName, String parentFeatureName, String seqId, Map<String, List<String>> attributes) {
 
-        return new GFF3Feature(
+        GFF3Feature feature = new GFF3Feature(
                 Optional.of(featureName),
                 Optional.of(parentFeatureName),
                 seqId,
@@ -163,13 +169,15 @@ public class TestUtils {
                 800,
                 ".",
                 "+",
-                "",
-                attributes);
+                "");
+
+        feature.addAttributes(attributes);
+        return feature;
     }
 
     public static GFF3Feature createGFF3FeatureWithAccession(
-            String seqId, String name, Map<String, Object> attributes) {
-        return new GFF3Feature(
+            String seqId, String name, Map<String, List<String>> attributes) {
+        GFF3Feature feature = new GFF3Feature(
                 Optional.of(name),
                 Optional.empty(),
                 seqId, // seqId -> controls accession()
@@ -180,9 +188,10 @@ public class TestUtils {
                 100,
                 ".",
                 "+",
-                "",
-                new HashMap<>(attributes) // mutable!
-                );
+                "");
+
+        feature.addAttributes(attributes);
+        return feature;
     }
 
     public static String defaultAccession() {

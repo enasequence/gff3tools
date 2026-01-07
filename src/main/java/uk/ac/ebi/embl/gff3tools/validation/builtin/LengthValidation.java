@@ -80,7 +80,7 @@ public class LengthValidation extends Validation {
                 continue;
             }
 
-            String cdsId = feature.getAttributeByName(GFF3Attributes.ATTRIBUTE_ID);
+            String cdsId = feature.getAttribute(GFF3Attributes.ATTRIBUTE_ID).orElse(null);
 
             cdsListById.computeIfAbsent(cdsId, k -> new ArrayList<>()).add(feature);
         }

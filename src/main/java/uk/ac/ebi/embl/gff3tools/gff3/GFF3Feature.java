@@ -14,7 +14,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
@@ -34,7 +36,11 @@ public class GFF3Feature {
     final String score;
     final String strand;
     final String phase;
-    final Map<String, Object> attributes;
+
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    @NonNull
+    private Map<String, List<String>> attributes = new HashMap<>();
 
     // Mutable members
     List<GFF3Feature> children = new ArrayList<>();
@@ -55,7 +61,8 @@ public class GFF3Feature {
     }
 
     public String hashCodeString() {
-        Map<String, Object> hashAttributes = new HashMap<>(attributes);
+        // TODO Do we need to do this?
+        Map<String, List<String>> hashAttributes = new HashMap<>(attributes);
         // Removing partial from the attribute as it can change for the first and last
         // location in a compound Join
         hashAttributes.remove("partial");
@@ -84,24 +91,18 @@ public class GFF3Feature {
         }
     }
 
-    private String getAttributeString(Map<String, Object> attributes) {
+    private String getAttributeString(Map<String, List<String>> attributes) {
         StringBuilder attrBuilder = new StringBuilder();
 
         attributes.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
             String key = entry.getKey();
-            Object value = entry.getValue();
+            List<String> list = entry.getValue();
 
-            attrBuilder.append(key).append("=");
-
-            if (value instanceof List) {
-                List<?> list = new ArrayList<>((List<?>) value);
-                list.sort(Comparator.comparing(Object::toString));
+            for (String value : list) {
+                attrBuilder.append(key).append("=").append(value).append(";");
                 attrBuilder.append(list);
-            } else {
-                attrBuilder.append(value.toString());
+                attrBuilder.append(";");
             }
-
-            attrBuilder.append(";");
         });
         return attrBuilder.toString();
     }
@@ -110,54 +111,120 @@ public class GFF3Feature {
         return Math.max(end - start + 1, 0);
     }
 
-    public String getAttributeByName(String name) {
-        String value = (String) attributes.get(name);
-        return value == null || value.isBlank() ? null : value.trim();
+    /**
+     * Gets the list of attribute keys present in the feature.
+     * @return The list of attributes present.
+     */
+    public Set<String> getAttributeKeys() {
+        return attributes.keySet();
     }
 
+    /**
+     * Gets the attributes associated with the specified name.
+     * @param name the name of the attribute.
+     * @return an Optional containing the list of attribute values, if present.
+     */
+    public Optional<List<String>> getAttributeList(String name) {
+        return Optional.ofNullable(attributes.get(name));
+    }
+
+    /**
+     * Gets the first attribute associated with the specified name.
+     * @param name the name of the attribute.
+     * @return an Optional containing the first attribute, if present.
+     */
+    public Optional<String> getAttribute(String name) {
+        return getAttributeList(name).filter((l) -> !l.isEmpty()).map((l) -> l.get(0));
+    }
+
+    /**
+     * Returns if the feature contains an attribute by the given name
+     * @param name the name of the attribute.
+     * @return a boolean denoting the presence of the named attribute.
+     */
     public boolean hasAttribute(String name) {
         return attributes.containsKey(name) && attributes.get(name) != null;
     }
 
-    public List<String> getAttributeValueList(String key) {
-        Object value = attributes.get(key);
-        if (value == null) return List.of();
-
-        if (value instanceof List<?>) {
-            return (List<String>) value;
-        } else {
-            List<String> out = new ArrayList<>();
-            out.add(value.toString());
-            return out;
-        }
-    }
-
-    public void setAttributeValueList(String key, List<String> values) {
+    /**
+     * Sets the attributes for a given name on this feature.
+     * If the values is an empty list and an attribute with the given name exists for the feature,
+     * the attribute is removed.
+     *
+     * @param name the name of the attribute.
+     * @param values the list of values for the named attribute
+     */
+    public void setAttributeList(String key, List<String> values) {
         values.removeIf(s -> s == null || s.trim().isBlank()); // remove empty bits
         if (values.isEmpty()) {
             attributes.remove(key);
-        } else if (values.size() == 1) {
-            attributes.put(key, values.get(0));
         } else {
             attributes.put(key, values);
         }
     }
 
-    public void removeAttribute(String key) {
+    /**
+     * Adds values to the list of attributes for the given name.
+     * If no attribute is found for the given name a new list will be created.
+     * Makes use of addAttribute
+     *
+     * @param name the name of the attribute.
+     * @param values the list of values to add to this attribute.
+     */
+    public void addAttributes(String key, List<String> values) {
+        if (values != null) {
+            for (String value : values) {
+                addAttribute(key, value);
+            }
+        }
+    }
+
+    /**
+     * Adds attributes to the feature.
+     * This function will not existing attributes if they exist.
+     *
+     * @param values the list of values to add to this attribute.
+     */
+    public void addAttributes(Map<String, List<String>> values) {
+        if (values != null) {
+            for (Map.Entry<String, List<String>> entry : values.entrySet()) {
+                addAttributes(entry.getKey(), entry.getValue());
+            }
+        }
+    }
+
+    /**
+     * Removes the attribute by the given name from this feature.
+     * @param name the name of the attribute.
+     */
+    public void removeAttributeList(String key) {
         attributes.remove(key);
     }
 
-    public void setAttribute(String name, Object value) {
-        attributes.put(name, value);
+    /**
+     * Adds an attribute to the list of attributes for the given name.
+     * If no attribute is found for the given name a new list will be created with a single element.
+     *
+     * @param name the name of the attribute.
+     * @param value the value of the attribute.
+     */
+    public void addAttribute(String name, String value) {
+        if (value != null && !value.trim().isBlank()) {
+            List<String> attribute = attributes.getOrDefault(name, new ArrayList<>());
+            attribute.add(value);
+            attributes.put(name, attribute);
+        }
     }
 
     public boolean isFivePrimePartial() {
-        List<String> partialValue = getAttributeValueList(GFF3Attributes.PARTIAL);
-        return partialValue.size() == 1 && "start".equalsIgnoreCase(partialValue.get(0));
+        return getAttribute(GFF3Attributes.PARTIAL)
+                .map((v) -> v.equalsIgnoreCase("start"))
+                .orElse(false);
     }
 
     public boolean isThreePrimePartial() {
-        List<String> partialValue = getAttributeValueList(GFF3Attributes.PARTIAL);
-        return partialValue.size() == 1 && "end".equalsIgnoreCase(partialValue.get(0));
+        return getAttribute(GFF3Attributes.PARTIAL)
+                .map((v) -> v.equalsIgnoreCase("end"))
+                .orElse(false);
     }
 }

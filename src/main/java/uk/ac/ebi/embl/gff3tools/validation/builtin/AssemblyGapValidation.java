@@ -67,7 +67,7 @@ public class AssemblyGapValidation extends Validation {
             boolean hasGapType = feature.hasAttribute(GFF3Attributes.GAP_TYPE);
             boolean hasLinkageEvidence = feature.hasAttribute(GFF3Attributes.LINKAGE_EVIDENCE);
             if (OntologyTerm.GAP.ID.equals(soId)) {
-                String gapType = feature.getAttributeByName(GFF3Attributes.GAP_TYPE);
+                String gapType = feature.getAttribute(GFF3Attributes.GAP_TYPE).orElse(null);
                 if (gapType != null && !GAP_TYPE.containsKey(gapType)) {
                     throw new ValidationException(VALIDATION_RULE, line, INVALID_GAP_TYPE.formatted(gapType));
                 }
@@ -91,11 +91,10 @@ public class AssemblyGapValidation extends Validation {
                     throw new ValidationException(VALIDATION_RULE, line, INVALID_LOCATION_MESSAGE);
                 }
 
-                for (Map.Entry<String, Object> attribute :
-                        feature.getAttributes().entrySet()) {
-                    if (!permittedAttributes.contains(attribute.getKey())) {
+                for (String attributeKey : feature.getAttributeKeys()) {
+                    if (!permittedAttributes.contains(attributeKey)) {
                         throw new ValidationException(
-                                VALIDATION_RULE, line, INVALID_ATTRIBUTE_MESSAGE.formatted(attribute.getKey()));
+                                VALIDATION_RULE, line, INVALID_ATTRIBUTE_MESSAGE.formatted(attributeKey));
                     }
                 }
 

@@ -44,36 +44,26 @@ public class GFF3Annotation implements IGFF3Feature {
 
     private void writeAttributes(Writer writer, GFF3Feature feature) throws IOException {
         writer.write('\t');
-        writer.write(feature.getAttributes().entrySet().stream()
+        writer.write(feature.getAttributeKeys().stream()
                 .sorted(
-                        Comparator.comparingInt((Map.Entry<String, Object> e) -> {
-                                    String key = e.getKey();
+                        Comparator.comparingInt((String key) -> {
                                     if (key.equals("ID")) return -2; // Highest priority
                                     if (key.equals("Parent")) return -1; // Next
                                     return 0; // Others
                                 })
-                                .thenComparing(Map.Entry.comparingByKey()) // Sort others by key
+                                .thenComparing(Comparator.naturalOrder()) // Sort others by key
                         )
-                .map(GFF3Annotation::encodeAttribute)
+                .map((key) -> {
+                    List<String> attributes = feature.getAttributeList(key).orElse(new ArrayList<>());
+                    return encodeAttribute(key, attributes);
+                })
                 .collect(Collectors.joining(";", "", ";")));
     }
 
-    private static String encodeAttribute(Map.Entry<String, Object> entry) {
-        String encodedKey = urlEncode(entry.getKey());
-        Object value = entry.getValue();
-
-        String encodedValue;
-        if (value instanceof List<?> valueList) {
-            // Convert each item in the list to string and URL-encode it
-            encodedValue = valueList.stream()
-                    .map(Object::toString)
-                    .map(GFF3Annotation::urlEncode)
-                    .collect(Collectors.joining(","));
-        } else {
-            // Convert single value to string and URL-encode it
-            encodedValue = urlEncode(value.toString());
-        }
-
+    private static String encodeAttribute(String key, List<String> value) {
+        String encodedKey = urlEncode(key);
+        // URL-encode each item on the list and concatenate them.
+        String encodedValue = value.stream().map(GFF3Annotation::urlEncode).collect(Collectors.joining(","));
         return "%s=%s".formatted(encodedKey, encodedValue);
     }
 
@@ -119,16 +109,6 @@ public class GFF3Annotation implements IGFF3Feature {
                     .map(GFF3Feature::accession)
                     .orElseThrow(RuntimeException::new);
         }
-    }
-
-    public List<GFF3Feature> getFeaturesByName(String featureName) {
-        return features.stream()
-                .filter(ftr -> ftr.getName().equalsIgnoreCase(featureName))
-                .collect(Collectors.toList());
-    }
-
-    public List<GFF3Feature> getAllFeatures() {
-        return Collections.unmodifiableList(this.features);
     }
 
     public void removeFeature(GFF3Feature feature) {

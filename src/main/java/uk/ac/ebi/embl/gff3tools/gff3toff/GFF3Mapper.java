@@ -95,8 +95,8 @@ public class GFF3Mapper {
     private void mapGFF3Feature(GFF3Feature gff3Feature, Map<String, OffsetRange> translationMap)
             throws ValidationException {
 
-        Map<String, Object> attributes = gff3Feature.getAttributes();
-        String featureHashId = (String) attributes.getOrDefault("ID", gff3Feature.hashCodeString());
+        String existingID = gff3Feature.getAttribute("ID").orElse(null);
+        String featureHashId = existingID == null ? gff3Feature.hashCodeString() : existingID;
 
         Location location = mapGFF3Location(gff3Feature);
         Feature ffFeature = joinableFeatureMap.get(featureHashId);
@@ -127,7 +127,8 @@ public class GFF3Mapper {
                         .findTermByNameOrSynonym(gff3FeatureName)
                         .orElse(null);
             }
-            if (attributes.get("Is_circular") != null && OntologyTerm.REGION.ID.equalsIgnoreCase(gff3Id)) {
+            if (gff3Feature.getAttribute("Is_circular").isPresent()
+                    && OntologyTerm.REGION.ID.equalsIgnoreCase(gff3Id)) {
                 // Do not convert "region" features. These are added when doing EMBL->GFF3 mapping to
                 // represent circular topologies. The topology in the EMBL mapping will be provided
                 // by the fasta headers.
@@ -145,7 +146,10 @@ public class GFF3Mapper {
                 locations.addLocation(location);
                 ffFeature.setLocations(locations);
 
-                ffFeature.addQualifiers(mapGFF3Attributes(attributes));
+                for (String key : gff3Feature.getAttributeKeys()) {
+                    List<String> attributes = gff3Feature.getAttributeList(key).orElse(new ArrayList<>());
+                    ffFeature.addQualifiers(mapGFF3Attributes(key, attributes));
+                }
 
                 // Add qualifiers from feature mapping when it's not present in the flat file qualifier
                 for (Map.Entry<String, String> entry :
@@ -203,8 +207,8 @@ public class GFF3Mapper {
     }
 
     private String getGeneForFeature(GFF3Feature gff3Feature) {
-        if (gff3Feature.getAttributes().containsKey("gene")) {
-            return (String) gff3Feature.getAttributes().get("gene");
+        if (gff3Feature.hasAttribute("gene")) {
+            return gff3Feature.getAttribute("gene").get();
         } else if (gff3Feature.getParentId().isPresent()) {
             GFF3Feature parent = parentFeatures.get(gff3Feature.getParentId().get());
             return getGeneForFeature(parent);
@@ -217,9 +221,7 @@ public class GFF3Mapper {
 
         long start = gff3Feature.getStart();
         long end = gff3Feature.getEnd();
-        Object partialsRaw = gff3Feature.getAttributes().getOrDefault("partial", new ArrayList<>());
-        List<String> partials =
-                partialsRaw instanceof String ? List.of((String) partialsRaw) : (List<String>) partialsRaw;
+        List<String> partials = gff3Feature.getAttributeList("partial").orElse(new ArrayList<>());
 
         boolean isComplement = gff3Feature.getStrand().equals("-");
         Location location = this.locationFactory.createLocalRange(start, end, isComplement);
@@ -234,25 +236,16 @@ public class GFF3Mapper {
         return location;
     }
 
-    private Collection<Qualifier> mapGFF3Attributes(Map<String, Object> attributes) {
-        Collection<Qualifier> qualifierList = new ArrayList();
+    private Collection<Qualifier> mapGFF3Attributes(String attributeKey, List<String> attributes) {
+        Collection<Qualifier> qualifierList = new ArrayList<>();
 
-        for (Object o : attributes.entrySet()) {
-            Map.Entry<String, String> attributePairs = (Map.Entry) o;
-            String attributeKey = attributePairs.getKey();
-            if (qmap.containsKey(attributeKey)) {
-                attributeKey = qmap.get(attributeKey);
-            }
-            if (!attributeKey.isBlank()) {
-                Object value = attributePairs.getValue();
-                if (value instanceof List) {
-                    List<String> values = (List<String>) value;
-                    for (String val : values) {
-                        qualifierList.add(createQualifier(attributeKey, val));
-                    }
-                } else {
-                    qualifierList.add(createQualifier(attributeKey, value.toString()));
-                }
+        if (qmap.containsKey(attributeKey)) {
+            attributeKey = qmap.get(attributeKey);
+        }
+
+        if (!attributeKey.isBlank()) {
+            for (String val : attributes) {
+                qualifierList.add(createQualifier(attributeKey, val));
             }
         }
 

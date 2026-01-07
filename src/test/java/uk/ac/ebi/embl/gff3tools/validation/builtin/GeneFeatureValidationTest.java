@@ -39,15 +39,15 @@ public class GeneFeatureValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.GENE, "gene1", GFF3Attributes.LOCUS_TAG, "locus1"));
+                Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.LOCUS_TAG, List.of("locus1")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 OntologyTerm.GENE.name(),
                 OntologyTerm.GENE.name(),
-                Map.of(GFF3Attributes.GENE, "gene1", GFF3Attributes.LOCUS_TAG, "locus1"));
+                Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.LOCUS_TAG, List.of("locus1")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 OntologyTerm.GENE.name(),
                 OntologyTerm.GENE.name(),
-                Map.of(GFF3Attributes.GENE, "gene2", GFF3Attributes.LOCUS_TAG, "locus3"));
+                Map.of(GFF3Attributes.GENE, List.of("gene2"), GFF3Attributes.LOCUS_TAG, List.of("locus3")));
 
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
         Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 1));
@@ -58,13 +58,14 @@ public class GeneFeatureValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.GENE, "gene1", GFF3Attributes.LOCUS_TAG, "locus1"));
+                Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.LOCUS_TAG, List.of("locus1")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 OntologyTerm.SIGNAL_PEPTIDE.name(),
                 OntologyTerm.SIGNAL_PEPTIDE.name(),
-                Map.of(GFF3Attributes.GENE, "gene2", GFF3Attributes.LOCUS_TAG, "locus2"));
+                Map.of(GFF3Attributes.GENE, List.of("gene2"), GFF3Attributes.LOCUS_TAG, List.of("locus2")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
-                OntologyTerm.GENE.name(), OntologyTerm.GENE.name(), Map.of(GFF3Attributes.GENE, "gene3"));
+                OntologyTerm.GENE.name(), OntologyTerm.GENE.name(), Map.of(GFF3Attributes.GENE, List.of("gene3")));
+
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
         Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 1));
@@ -75,13 +76,13 @@ public class GeneFeatureValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 OntologyTerm.RRNA.name(),
                 OntologyTerm.RRNA.name(),
-                Map.of(GFF3Attributes.GENE, "gene1", GFF3Attributes.LOCUS_TAG, "locus1"));
+                Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.LOCUS_TAG, List.of("locus1")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 OntologyTerm.RRNA.name(),
                 OntologyTerm.RRNA.name(),
-                Map.of(GFF3Attributes.GENE, "gene1", GFF3Attributes.LOCUS_TAG, "locus2"));
+                Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.LOCUS_TAG, List.of("locus2")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
-                OntologyTerm.RRNA.name(), OntologyTerm.RRNA.name(), Map.of(GFF3Attributes.GENE, "gene2"));
+                OntologyTerm.RRNA.name(), OntologyTerm.RRNA.name(), Map.of(GFF3Attributes.GENE, List.of("gene2")));
 
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
@@ -93,11 +94,11 @@ public class GeneFeatureValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.GENE, "gene1", GFF3Attributes.LOCUS_TAG, "locus1"));
+                Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.LOCUS_TAG, List.of("locus1")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 OntologyTerm.GENE.name(),
                 OntologyTerm.GENE.name(),
-                Map.of(GFF3Attributes.GENE, "gene1", GFF3Attributes.LOCUS_TAG, "locus2"));
+                Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.LOCUS_TAG, List.of("locus2")));
 
         gff3Annotation.setFeatures(List.of(f1, f2));
 
@@ -115,15 +116,15 @@ public class GeneFeatureValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 OntologyTerm.GENE.name(),
                 OntologyTerm.GENE.name(),
-                Map.of(GFF3Attributes.GENE, "gene1", GFF3Attributes.PSEUDOGENE, "pseudoGene1"));
+                Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.PSEUDOGENE, List.of("pseudoGene1")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.GENE, "gene1", GFF3Attributes.PSEUDOGENE, "pseudoGene1"));
+                Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.PSEUDOGENE, List.of("pseudoGene1")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 OntologyTerm.SIGNAL_PEPTIDE.name(),
                 OntologyTerm.SIGNAL_PEPTIDE.name(),
-                Map.of(GFF3Attributes.GENE, "gene3", GFF3Attributes.PSEUDOGENE, "pseudoGene3"));
+                Map.of(GFF3Attributes.GENE, List.of("gene3"), GFF3Attributes.PSEUDOGENE, List.of("pseudoGene3")));
 
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
@@ -135,15 +136,15 @@ public class GeneFeatureValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.GENE, "gene1", GFF3Attributes.PSEUDOGENE, "pseudoGene1"));
+                Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.PSEUDOGENE, List.of("pseudoGene1")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 OntologyTerm.GENE.name(),
                 OntologyTerm.GENE.name(),
-                Map.of(GFF3Attributes.GENE, "gene1", GFF3Attributes.PSEUDOGENE, "pseudoGene2"));
+                Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.PSEUDOGENE, List.of("pseudoGene2")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 OntologyTerm.GENE.name(),
                 OntologyTerm.GENE.name(),
-                Map.of(GFF3Attributes.GENE, "gene2", GFF3Attributes.PSEUDOGENE, "pseudoGene3"));
+                Map.of(GFF3Attributes.GENE, List.of("gene2"), GFF3Attributes.PSEUDOGENE, List.of("pseudoGene3")));
 
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
@@ -162,17 +163,17 @@ public class GeneFeatureValidationTest {
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 "annotation1",
-                Map.of(GFF3Attributes.GENE, "gene1", GFF3Attributes.LOCUS_TAG, "locus1"));
+                Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.LOCUS_TAG, List.of("locus1")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 OntologyTerm.GENE.name(),
                 OntologyTerm.GENE.name(),
                 "annotation1",
-                Map.of(GFF3Attributes.GENE, "gene2", GFF3Attributes.LOCUS_TAG, "locus2"));
+                Map.of(GFF3Attributes.GENE, List.of("gene2"), GFF3Attributes.LOCUS_TAG, List.of("locus2")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 "annotation2",
-                Map.of(GFF3Attributes.GENE, "gene1", GFF3Attributes.LOCUS_TAG, "locus3"));
+                Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.LOCUS_TAG, List.of("locus3")));
 
         gff3Annotation.setFeatures(List.of(f1, f2));
 
@@ -189,20 +190,25 @@ public class GeneFeatureValidationTest {
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 "annotation1",
-                Map.of(GFF3Attributes.GENE, "gene1", GFF3Attributes.LOCUS_TAG, "locus1"));
+                Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.LOCUS_TAG, List.of("locus1")));
 
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 OntologyTerm.GENE.name(),
                 OntologyTerm.GENE.name(),
                 "annotation1",
-                Map.of(GFF3Attributes.GENE, "gene2", GFF3Attributes.LOCUS_TAG, "locus2"));
+                Map.of(GFF3Attributes.GENE, List.of("gene2"), GFF3Attributes.LOCUS_TAG, List.of("locus2")));
+
+        // No conflicts yet
+        gff3Annotation.setFeatures(List.of(f1, f2));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 1));
 
         // Same annotation, same gene with different locus_tag - conflict
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 "annotation1",
-                Map.of(GFF3Attributes.GENE, "gene1", GFF3Attributes.LOCUS_TAG, "locus3"));
+                Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.LOCUS_TAG, List.of("locus3")));
 
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
@@ -219,7 +225,7 @@ public class GeneFeatureValidationTest {
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 "annotation2",
-                Map.of(GFF3Attributes.GENE, "gene1", GFF3Attributes.LOCUS_TAG, "locus3"));
+                Map.of(GFF3Attributes.GENE, List.of("gene1"), GFF3Attributes.LOCUS_TAG, List.of("locus3")));
 
         gff3Annotation.setFeatures(List.of(f4));
         Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 4));
@@ -228,13 +234,15 @@ public class GeneFeatureValidationTest {
     @Test
     public void testValidateGeneLocusTagAssociationWithoutGeneFeature() {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.PRODUCT, "product"));
+                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.PRODUCT, List.of("product")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 OntologyTerm.SIGNAL_PEPTIDE.name(),
                 OntologyTerm.SIGNAL_PEPTIDE.name(),
-                Map.of(GFF3Attributes.PRODUCT, "product"));
+                Map.of(GFF3Attributes.PRODUCT, List.of("product")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
-                OntologyTerm.OPERON.name(), OntologyTerm.OPERON.name(), Map.of(GFF3Attributes.PRODUCT, "product"));
+                OntologyTerm.OPERON.name(),
+                OntologyTerm.OPERON.name(),
+                Map.of(GFF3Attributes.PRODUCT, List.of("product")));
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
         Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(gff3Annotation, 1));
@@ -245,14 +253,15 @@ public class GeneFeatureValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 OntologyTerm.PSEUDOGENE.name(),
                 OntologyTerm.PSEUDOGENE.name(),
-                Map.of(GFF3Attributes.PSEUDOGENE, "pseudogene"));
+                Map.of(GFF3Attributes.PSEUDOGENE, List.of("pseudogene")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 "non_processed_pseudogene",
                 "non_processed_pseudogene",
-                Map.of(GFF3Attributes.PSEUDOGENE, "non_processed_pseudogene"));
+                Map.of(GFF3Attributes.PSEUDOGENE, List.of("non_processed_pseudogene")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
-                "unitary_pseudogene", "unitary_pseudogene", Map.of(GFF3Attributes.PSEUDOGENE, "unitary_pseudogene"));
-
+                "unitary_pseudogene",
+                "unitary_pseudogene",
+                Map.of(GFF3Attributes.PSEUDOGENE, List.of("unitary_pseudogene")));
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
         Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(gff3Annotation, 1));
@@ -263,16 +272,23 @@ public class GeneFeatureValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 "processed_pseudogene",
                 "processed_pseudogene",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus1", GFF3Attributes.PSEUDOGENE, "pseudogene"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus1"), GFF3Attributes.PSEUDOGENE, List.of("pseudogene")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 "non_processed_pseudogene",
                 "non_processed_pseudogene",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus12", GFF3Attributes.PSEUDOGENE, "non_processed_pseudogene"));
+                Map.of(
+                        GFF3Attributes.LOCUS_TAG,
+                        List.of("locus12"),
+                        GFF3Attributes.PSEUDOGENE,
+                        List.of("non_processed_pseudogene")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 "unitary_pseudogene",
                 "unitary_pseudogene",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus123", GFF3Attributes.PSEUDOGENE, "unitary_pseudogene"));
-
+                Map.of(
+                        GFF3Attributes.LOCUS_TAG,
+                        List.of("locus123"),
+                        GFF3Attributes.PSEUDOGENE,
+                        List.of("unitary_pseudogene")));
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
         Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneLocusTagAssociation(gff3Annotation, 1));
@@ -284,20 +300,28 @@ public class GeneFeatureValidationTest {
                 "processed_pseudogene",
                 "processed_pseudogene",
                 "annotation1",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus1", GFF3Attributes.PSEUDOGENE, "pseudogene"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus1"), GFF3Attributes.PSEUDOGENE, List.of("pseudogene")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 "non_processed_pseudogene",
                 "non_processed_pseudogene",
                 "annotation1",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus12", GFF3Attributes.PSEUDOGENE, "non_processed_pseudogene"));
+                Map.of(
+                        GFF3Attributes.LOCUS_TAG,
+                        List.of("locus12"),
+                        GFF3Attributes.PSEUDOGENE,
+                        List.of("non_processed_pseudogene")));
+
+        gff3Annotation.setFeatures(List.of(f1, f2));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 3));
 
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 "processed_pseudogene",
                 "processed_pseudogene",
                 "annotation2",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus1", GFF3Attributes.PSEUDOGENE, "pseudogene"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus1"), GFF3Attributes.PSEUDOGENE, List.of("pseudogene")));
 
-        gff3Annotation.setFeatures(List.of(f1, f2, f3));
+        gff3Annotation.setFeatures(List.of(f1, f2));
 
         Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 3));
     }
@@ -308,20 +332,28 @@ public class GeneFeatureValidationTest {
                 "processed_pseudogene",
                 "processed_pseudogene",
                 "annotation1",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus1", GFF3Attributes.PSEUDOGENE, "pseudogene"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus1"), GFF3Attributes.PSEUDOGENE, List.of("pseudogene")));
 
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 "non_processed_pseudogene",
                 "non_processed_pseudogene",
                 "annotation1",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus12", GFF3Attributes.PSEUDOGENE, "non_processed_pseudogene"));
+                Map.of(
+                        GFF3Attributes.LOCUS_TAG,
+                        List.of("locus12"),
+                        GFF3Attributes.PSEUDOGENE,
+                        List.of("non_processed_pseudogene")));
+
+        gff3Annotation.setFeatures(List.of(f1, f2));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateGeneAssociation(gff3Annotation, 3));
 
         // Same annotation, same locus_tag
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 "processed_pseudogene",
                 "processed_pseudogene",
                 "annotation1",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus1", GFF3Attributes.PSEUDOGENE, "pseudogene"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus1"), GFF3Attributes.PSEUDOGENE, List.of("pseudogene")));
 
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
@@ -338,7 +370,7 @@ public class GeneFeatureValidationTest {
                 "processed_pseudogene",
                 "processed_pseudogene",
                 "annotation2",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus1", GFF3Attributes.PSEUDOGENE, "pseudogene"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus1"), GFF3Attributes.PSEUDOGENE, List.of("pseudogene")));
 
         gff3Annotation.setFeatures(List.of(f4));
 
@@ -350,11 +382,15 @@ public class GeneFeatureValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 "processed_pseudogene",
                 "processed_pseudogene",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus1", GFF3Attributes.PSEUDOGENE, "pseudogene"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus1"), GFF3Attributes.PSEUDOGENE, List.of("pseudogene")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 "non_processed_pseudogene",
                 "non_processed_pseudogene",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus1", GFF3Attributes.PSEUDOGENE, "non_processed_pseudogene"));
+                Map.of(
+                        GFF3Attributes.LOCUS_TAG,
+                        List.of("locus1"),
+                        GFF3Attributes.PSEUDOGENE,
+                        List.of("non_processed_pseudogene")));
 
         gff3Annotation.setFeatures(List.of(f1, f2));
 
@@ -372,15 +408,15 @@ public class GeneFeatureValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 OntologyTerm.GENE.name(),
                 OntologyTerm.GENE.name(),
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus_tag1", GFF3Attributes.GENE, "gene1"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag1"), GFF3Attributes.GENE, List.of("gene1")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus_tag1", GFF3Attributes.GENE, "gene1"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag1"), GFF3Attributes.GENE, List.of("gene1")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus_tag2", GFF3Attributes.GENE, "gene3"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag2"), GFF3Attributes.GENE, List.of("gene3")));
 
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
@@ -392,15 +428,15 @@ public class GeneFeatureValidationTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus_tag1", GFF3Attributes.GENE, "gene1"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag1"), GFF3Attributes.GENE, List.of("gene1")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus_tag1", GFF3Attributes.GENE, "gene2"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag1"), GFF3Attributes.GENE, List.of("gene2")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus_tag2", GFF3Attributes.GENE, "gene3"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag2"), GFF3Attributes.GENE, List.of("gene3")));
 
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
@@ -420,25 +456,25 @@ public class GeneFeatureValidationTest {
                 OntologyTerm.CDS.name(),
                 Map.of(
                         GFF3Attributes.LOCUS_TAG,
-                        "locus_tag1",
+                        List.of("locus_tag1"),
                         GFF3Attributes.GENE_SYNONYM,
-                        "synonym1,synonym2,synonym3"));
+                        List.of("synonym1,synonym2,synonym3")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 Map.of(
                         GFF3Attributes.LOCUS_TAG,
-                        "locus_tag1",
+                        List.of("locus_tag1"),
                         GFF3Attributes.GENE_SYNONYM,
-                        "synonym1,synonym2,synonym4"));
+                        List.of("synonym1,synonym2,synonym4")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 Map.of(
                         GFF3Attributes.LOCUS_TAG,
-                        "locus_tag2",
+                        List.of("locus_tag2"),
                         GFF3Attributes.GENE_SYNONYM,
-                        "synonym1,synonym2,synonym5"));
+                        List.of("synonym1,synonym2,synonym5")));
 
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
@@ -457,13 +493,17 @@ public class GeneFeatureValidationTest {
                 OntologyTerm.CDS.name(),
                 Map.of(
                         GFF3Attributes.LOCUS_TAG,
-                        "locus_tag1",
+                        List.of("locus_tag1"),
                         GFF3Attributes.GENE_SYNONYM,
-                        "synonym1,synonym2,synonym3"));
+                        List.of("synonym1,synonym2,synonym3")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.LOCUS_TAG, "locus_tag1"));
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag1")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.LOCUS_TAG, "locus_tag2"));
+                OntologyTerm.CDS.name(),
+                OntologyTerm.CDS.name(),
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag2")));
 
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
@@ -477,25 +517,25 @@ public class GeneFeatureValidationTest {
                 OntologyTerm.CDS.name(),
                 Map.of(
                         GFF3Attributes.LOCUS_TAG,
-                        "locus_tag1",
+                        List.of("locus_tag1"),
                         GFF3Attributes.GENE_SYNONYM,
-                        "synonym1,synonym2,synonym3"));
+                        List.of("synonym1,synonym2,synonym3")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 Map.of(
                         GFF3Attributes.LOCUS_TAG,
-                        "locus_tag1",
+                        List.of("locus_tag1"),
                         GFF3Attributes.GENE_SYNONYM,
-                        "synonym1,synonym2,synonym3"));
+                        List.of("synonym1,synonym2,synonym3")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 Map.of(
                         GFF3Attributes.LOCUS_TAG,
-                        "locus_tag2",
+                        List.of("locus_tag2"),
                         GFF3Attributes.GENE_SYNONYM,
-                        "synonym1,synonym2,synonym3"));
+                        List.of("synonym1,synonym2,synonym3")));
 
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
 
@@ -508,12 +548,12 @@ public class GeneFeatureValidationTest {
                 OntologyTerm.GENE.name(),
                 OntologyTerm.GENE.name(),
                 "annotation1",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus_tag1", GFF3Attributes.GENE, "gene1"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag1"), GFF3Attributes.GENE, List.of("gene1")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 "annotation1",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus_tag2", GFF3Attributes.GENE, "gene2"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag2"), GFF3Attributes.GENE, List.of("gene2")));
 
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
@@ -521,9 +561,9 @@ public class GeneFeatureValidationTest {
                 "annotation1",
                 Map.of(
                         GFF3Attributes.LOCUS_TAG,
-                        "locus_tag1",
+                        List.of("locus_tag1"),
                         GFF3Attributes.GENE_SYNONYM,
-                        "synonym1,synonym2,synonym3"));
+                        List.of("synonym1,synonym2,synonym3")));
 
         gff3Annotation.setFeatures(List.of(f1, f2, f3));
         Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(gff3Annotation, 1));
@@ -532,16 +572,16 @@ public class GeneFeatureValidationTest {
                 OntologyTerm.GENE.name(),
                 OntologyTerm.GENE.name(),
                 "annotation2",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus_tag1", GFF3Attributes.GENE, "gene2"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag1"), GFF3Attributes.GENE, List.of("gene2")));
         GFF3Feature f5 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 "annotation2",
                 Map.of(
                         GFF3Attributes.LOCUS_TAG,
-                        "locus_tag1",
+                        List.of("locus_tag1"),
                         GFF3Attributes.GENE_SYNONYM,
-                        "synonym1,synonym2,synonym4"));
+                        List.of("synonym1,synonym2,synonym4")));
 
         gff3Annotation.setFeatures(List.of(f4, f5));
 
@@ -554,28 +594,32 @@ public class GeneFeatureValidationTest {
                 OntologyTerm.GENE.name(),
                 OntologyTerm.GENE.name(),
                 "annotation1",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus_tag1", GFF3Attributes.GENE, "gene1"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag1"), GFF3Attributes.GENE, List.of("gene1")));
         GFF3Feature f2 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 "annotation1",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus_tag2", GFF3Attributes.GENE, "gene2"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag2"), GFF3Attributes.GENE, List.of("gene2")));
         GFF3Feature f3 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
                 "annotation1",
                 Map.of(
                         GFF3Attributes.LOCUS_TAG,
-                        "locus_tag3",
+                        List.of("locus_tag3"),
                         GFF3Attributes.GENE_SYNONYM,
-                        "synonym1,synonym2,synonym3"));
+                        List.of("synonym1,synonym2,synonym3")));
+
+        gff3Annotation.setFeatures(List.of(f1, f2, f3));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(gff3Annotation, 1));
 
         // Same annotation annotation1 - conflicting gene for same locus_tag - should throw
         GFF3Feature f4 = TestUtils.createGFF3Feature(
                 OntologyTerm.GENE.name(),
                 OntologyTerm.GENE.name(),
                 "annotation1",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus_tag1", GFF3Attributes.GENE, "gene2"));
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag1"), GFF3Attributes.GENE, List.of("gene2")));
 
         gff3Annotation.setFeatures(List.of(f1, f2, f3, f4));
 
@@ -591,26 +635,30 @@ public class GeneFeatureValidationTest {
         GFF3Feature f5 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 OntologyTerm.CDS.name(),
-                "annotation2",
+                "annotation1",
                 Map.of(
                         GFF3Attributes.LOCUS_TAG,
-                        "locus_tag3",
+                        List.of("locus_tag3"),
                         GFF3Attributes.GENE_SYNONYM,
-                        "synonym1,synonym2,synonym4"));
+                        List.of("synonym1,synonym2,synonym4")));
 
-        // Cross-annotation validation - should not conflict
-        GFF3Feature f6 = TestUtils.createGFF3Feature(
-                OntologyTerm.GENE.name(),
-                OntologyTerm.GENE.name(),
-                "annotation2",
-                Map.of(GFF3Attributes.LOCUS_TAG, "locus_tag1", GFF3Attributes.GENE, "gene2"));
-
-        gff3Annotation.setFeatures(List.of(f1, f2, f3, f5, f6));
+        gff3Annotation.setFeatures(List.of(f1, f2, f3, f5));
 
         ValidationException ex2 = Assertions.assertThrows(
                 ValidationException.class, () -> geneFeatureValidation.validateLocusTagAssociation(gff3Annotation, 5));
 
         Assertions.assertTrue(ex2.getMessage()
                 .contains("Features sharing locus_tag \"locus_tag3\" are associated with \"gene_synonym\""));
+
+        // Cross-annotation validation - should not conflict
+        GFF3Feature f6 = TestUtils.createGFF3Feature(
+                OntologyTerm.GENE.name(),
+                OntologyTerm.GENE.name(),
+                "annotation2",
+                Map.of(GFF3Attributes.LOCUS_TAG, List.of("locus_tag1"), GFF3Attributes.GENE, List.of("gene2")));
+
+        gff3Annotation.setFeatures(List.of(f6));
+
+        Assertions.assertDoesNotThrow(() -> geneFeatureValidation.validateLocusTagAssociation(gff3Annotation, 6));
     }
 }

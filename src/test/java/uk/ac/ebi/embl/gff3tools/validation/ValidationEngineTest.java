@@ -51,18 +51,7 @@ public class ValidationEngineTest {
         ValidationEngine validationEngine = validationEngineBuilder.build();
         validationEngine.validate(
                 new GFF3Feature(
-                        Optional.empty(),
-                        Optional.empty(),
-                        "",
-                        Optional.empty(),
-                        "",
-                        "gene",
-                        1L,
-                        2L,
-                        "",
-                        "",
-                        "",
-                        new HashMap<>()),
+                        Optional.empty(), Optional.empty(), "", Optional.empty(), "", "gene", 1L, 2L, "", "", ""),
                 1);
         assertTrue(validationEngine.getParsingWarnings().isEmpty());
     }
@@ -73,8 +62,8 @@ public class ValidationEngineTest {
 
         ValidationEngine validationEngine = validationEngineBuilder.build();
 
-        GFF3Feature invalidFeature = new GFF3Feature(
-                Optional.empty(), Optional.empty(), "", Optional.empty(), "", "", 0L, 2L, "", "", "", new HashMap<>());
+        GFF3Feature invalidFeature =
+                new GFF3Feature(Optional.empty(), Optional.empty(), "", Optional.empty(), "", "", 0L, 2L, "", "", "");
         ValidationException ex =
                 Assertions.assertThrows(ValidationException.class, () -> validationEngine.validate(invalidFeature, 1));
 

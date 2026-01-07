@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
@@ -23,8 +24,8 @@ public class GFF3FeatureTest {
 
     @Test
     public void testGFF3FeatureFivePrimePartialTrue() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PARTIAL, "start");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PARTIAL, List.of("start"));
         GFF3Feature feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), attributes);
         assertTrue(feature.isFivePrimePartial());
         assertFalse(feature.isThreePrimePartial());
@@ -32,8 +33,8 @@ public class GFF3FeatureTest {
 
     @Test
     public void testGFF3FeatureFivePrimePartialFalse() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PARTIAL, "start,end");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PARTIAL, List.of("start,end"));
         GFF3Feature feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), attributes);
         assertFalse(feature.isFivePrimePartial());
         assertFalse(feature.isThreePrimePartial());
@@ -41,8 +42,8 @@ public class GFF3FeatureTest {
 
     @Test
     public void testGFF3FeatureThreePrimePartialTrue() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PARTIAL, "end");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PARTIAL, List.of("end"));
         GFF3Feature feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), attributes);
         assertTrue(feature.isThreePrimePartial());
         assertFalse(feature.isFivePrimePartial());
@@ -50,8 +51,8 @@ public class GFF3FeatureTest {
 
     @Test
     public void testGFF3FeatureThreePrimePartialFalse() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PARTIAL, "end,start");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PARTIAL, List.of("end,start"));
         GFF3Feature feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), attributes);
         assertFalse(feature.isThreePrimePartial());
         assertFalse(feature.isFivePrimePartial());
@@ -59,8 +60,8 @@ public class GFF3FeatureTest {
 
     @Test
     public void testGFF3FeaturePartialFalse() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PARTIAL, "start,end");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PARTIAL, List.of("start,end"));
         GFF3Feature feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), attributes);
         assertFalse(feature.isThreePrimePartial());
         assertFalse(feature.isFivePrimePartial());
@@ -68,8 +69,8 @@ public class GFF3FeatureTest {
 
     @Test
     public void testGFF3FeatureFivePrimePartialCaseSensitive() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PARTIAL, "START");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PARTIAL, List.of("START"));
         GFF3Feature feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), attributes);
         assertTrue(feature.isFivePrimePartial());
         assertFalse(feature.isThreePrimePartial());
@@ -77,8 +78,8 @@ public class GFF3FeatureTest {
 
     @Test
     public void testGFF3FeatureThreePartialCaseSensitive() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PARTIAL, "END");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.PARTIAL, List.of("END"));
         GFF3Feature feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), attributes);
         assertFalse(feature.isFivePrimePartial());
         assertTrue(feature.isThreePrimePartial());

@@ -10,9 +10,11 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
+import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.GENE;
+import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.LOCUS_TAG;
+
 import java.util.*;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
@@ -34,33 +36,21 @@ public class LocusTagAssociationFix {
         for (GFF3Feature feature : gff3Annotation.getFeatures()) {
             if (feature == null) return;
 
-            // Grab the first non-blank gene value (commonly one; if multiple exist, use the first).
-            String gene = firstNonBlank(feature.getAttributeValueList(GFF3Attributes.GENE));
+            String gene = feature.getAttribute(GENE).orElse(null);
             if (gene == null) return;
 
-            String presentLocus = firstNonBlank(feature.getAttributeValueList(GFF3Attributes.LOCUS_TAG));
+            String presentLocus = feature.getAttribute(LOCUS_TAG).orElse(null);
 
             if (geneToLocusTag.containsKey(gene) && (presentLocus == null || presentLocus.isEmpty())) {
                 // add locus tag to features which dont have it
                 String known = geneToLocusTag.get(gene);
                 List<String> locusValues = new ArrayList<>();
                 locusValues.add(known);
-                feature.setAttributeValueList(GFF3Attributes.LOCUS_TAG, locusValues);
+                feature.setAttributeList(LOCUS_TAG, locusValues);
             } else if (presentLocus != null) {
                 // if unremembered locus tag present, remember it (first seen wins)
                 geneToLocusTag.putIfAbsent(gene, presentLocus);
             }
         }
-    }
-
-    private static String firstNonBlank(List<String> values) {
-        if (values == null) return null;
-        for (String v : values) {
-            if (v != null) {
-                String t = v.trim();
-                if (!t.isBlank()) return t;
-            }
-        }
-        return null;
     }
 }

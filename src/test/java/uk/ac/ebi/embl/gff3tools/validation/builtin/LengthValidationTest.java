@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,10 +42,10 @@ public class LengthValidationTest {
     public void testCdsIntronValidationSuccess() {
 
         GFF3Feature cds1 = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, "CDS1"));
+                OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
 
         GFF3Feature cds2 = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), 115L, 200L, Map.of(GFF3Attributes.ATTRIBUTE_ID, "CDS1"));
+                OntologyTerm.CDS.name(), 115L, 200L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
 
         gff3Annotation.addFeature(cds1);
         gff3Annotation.addFeature(cds2);
@@ -60,11 +61,11 @@ public class LengthValidationTest {
                 1L,
                 100L,
                 Map.of(
-                        GFF3Attributes.ATTRIBUTE_ID, "CDS1",
-                        GFF3Attributes.ARTIFICIAL_LOCATION, "true"));
+                        GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1"),
+                        GFF3Attributes.ARTIFICIAL_LOCATION, List.of("true")));
 
         GFF3Feature cds2 = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), 105L, 200L, Map.of(GFF3Attributes.ATTRIBUTE_ID, "CDS1"));
+                OntologyTerm.CDS.name(), 105L, 200L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
 
         gff3Annotation.addFeature(cds1);
         gff3Annotation.addFeature(cds2);
@@ -76,15 +77,15 @@ public class LengthValidationTest {
     public void testCdsIntronValidationSuccessWithPseudo() {
 
         GFF3Feature cds1 = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, "CDS1"));
+                OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
 
         GFF3Feature cds2 = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(),
                 105L,
                 200L,
                 Map.of(
-                        GFF3Attributes.ATTRIBUTE_ID, "CDS1",
-                        GFF3Attributes.PSEUDO, "true"));
+                        GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1"),
+                        GFF3Attributes.PSEUDO, List.of("true")));
 
         gff3Annotation.addFeature(cds1);
         gff3Annotation.addFeature(cds2);
@@ -96,10 +97,10 @@ public class LengthValidationTest {
     public void testCdsIntronValidationFailureSmallIntron() {
 
         GFF3Feature cds1 = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, "CDS1"));
+                OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
 
         GFF3Feature cds2 = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), 102L, 200L, Map.of(GFF3Attributes.ATTRIBUTE_ID, "CDS1"));
+                OntologyTerm.CDS.name(), 102L, 200L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
 
         gff3Annotation.addFeature(cds1);
         gff3Annotation.addFeature(cds2);
@@ -112,7 +113,8 @@ public class LengthValidationTest {
 
     @Test
     public void testIntronValidationForCDSSuccessWithPseudo() {
-        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), 1L, 5L, Map.of(GFF3Attributes.PSEUDO, "pseudo"));
+        feature = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(), 1L, 5L, Map.of(GFF3Attributes.PSEUDO, List.of("pseudo")));
         Assertions.assertDoesNotThrow(() -> lengthValidation.validateIntronLength(feature, 1));
     }
 
@@ -153,14 +155,20 @@ public class LengthValidationTest {
     @Test
     public void testPropetideValidationSuccessForException() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.PROPEPTIDE.name(), 1L, 13L, Map.of(GFF3Attributes.EXCEPTION, "ribosomal slippage"));
+                OntologyTerm.PROPEPTIDE.name(),
+                1L,
+                13L,
+                Map.of(GFF3Attributes.EXCEPTION, List.of("ribosomal slippage")));
         Assertions.assertDoesNotThrow(() -> lengthValidation.validatePropeptideLength(feature, 1));
     }
 
     @Test
     public void testPropetideValidationSuccessForTranslExcept() {
         feature = TestUtils.createGFF3Feature(
-                OntologyTerm.PROPEPTIDE.name(), 1L, 31L, Map.of(GFF3Attributes.TRANSL_EXCEPT, "ribosomal slippage"));
+                OntologyTerm.PROPEPTIDE.name(),
+                1L,
+                31L,
+                Map.of(GFF3Attributes.TRANSL_EXCEPT, List.of("ribosomal slippage")));
         Assertions.assertDoesNotThrow(() -> lengthValidation.validatePropeptideLength(feature, 1));
     }
 

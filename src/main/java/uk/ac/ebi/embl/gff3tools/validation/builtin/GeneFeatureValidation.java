@@ -11,7 +11,6 @@
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import java.util.*;
-import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -25,7 +24,6 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-@Slf4j
 @Gff3Validation(name = "GENE_FEATURE")
 public class GeneFeatureValidation extends Validation {
 
@@ -42,6 +40,12 @@ public class GeneFeatureValidation extends Validation {
 
     private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
 
+    private final Map<String, Map<String, String>> annotationGeneToLocusTag = new HashMap<>();
+    private final Map<String, Map<String, String>> annotationGeneToPseudoGene = new HashMap<>();
+    private final Map<String, Map<String, GFF3Feature>> annotationLocusTagToGeneFeature = new HashMap<>();
+    private final Map<String, Map<String, String>> annotationLocusTagToGene = new HashMap<>();
+    private final Map<String, Map<String, List<String>>> annotationLocusTagToSynonyms = new HashMap<>();
+
     @ValidationMethod(rule = "GENE_ASSOCIATION", type = ValidationType.ANNOTATION, severity = RuleSeverity.WARN)
     public void validateGeneAssociation(GFF3Annotation gff3Annotation, int line) throws ValidationException {
         Map<String, String> geneToLocusTag = new HashMap<>();
@@ -49,8 +53,8 @@ public class GeneFeatureValidation extends Validation {
         for (GFF3Feature feature : gff3Annotation.getFeatures()) {
             if (feature == null || !feature.hasAttribute(GFF3Attributes.GENE)) return;
 
-            String geneName = feature.getAttributeByName(GFF3Attributes.GENE);
-            String locusTag = feature.getAttributeByName(GFF3Attributes.LOCUS_TAG);
+            String geneName = feature.getAttribute(GFF3Attributes.GENE).orElse(null);
+            String locusTag = feature.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
             String existingLocus = geneToLocusTag.get(geneName);
             Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
 
@@ -71,7 +75,8 @@ public class GeneFeatureValidation extends Validation {
             }
             geneToLocusTag.put(geneName, locusTag);
 
-            String pseudoGeneName = feature.getAttributeByName(GFF3Attributes.PSEUDOGENE);
+            String pseudoGeneName =
+                    feature.getAttribute(GFF3Attributes.PSEUDOGENE).orElse(null);
             String existingPseudo = geneToPseudoGene.get(geneName);
             if (existingPseudo != null && !Objects.equals(existingPseudo, pseudoGeneName)) {
                 throw new ValidationException(
@@ -104,7 +109,7 @@ public class GeneFeatureValidation extends Validation {
                 return;
             }
 
-            String locusTag = feature.getAttributeByName(GFF3Attributes.LOCUS_TAG);
+            String locusTag = feature.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
             if (locusTag == null || locusTag.isBlank()) {
                 return;
             }
@@ -126,7 +131,7 @@ public class GeneFeatureValidation extends Validation {
                 return;
             }
 
-            String locusTag = feature.getAttributeByName(GFF3Attributes.LOCUS_TAG);
+            String locusTag = feature.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
             if (locusTag == null || locusTag.isBlank()) {
                 return;
             }
@@ -135,8 +140,9 @@ public class GeneFeatureValidation extends Validation {
                 extractLocusMappings(feature, locusTagToGene, locusTagToSynonyms);
             }
 
-            String currentGene = feature.getAttributeByName(GFF3Attributes.GENE);
-            List<String> currentSynonyms = parseSynonyms(feature.getAttributeByName(GFF3Attributes.GENE_SYNONYM));
+            String currentGene = feature.getAttribute(GFF3Attributes.GENE).orElse(null);
+            List<String> currentSynonyms = parseSynonyms(
+                    feature.getAttribute(GFF3Attributes.GENE_SYNONYM).orElse(null));
 
             if (currentGene != null) {
                 String masterGene = locusTagToGene.get(locusTag);
@@ -162,15 +168,15 @@ public class GeneFeatureValidation extends Validation {
 
     private void extractLocusMappings(
             GFF3Feature feature, Map<String, String> locusTagToGene, Map<String, List<String>> locusTagToSynonyms) {
-        String locusTag = feature.getAttributeByName(GFF3Attributes.LOCUS_TAG);
+        String locusTag = feature.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
         if (locusTag == null) return;
 
-        String gene = feature.getAttributeByName(GFF3Attributes.GENE);
+        String gene = feature.getAttribute(GFF3Attributes.GENE).orElse(null);
         if (gene != null && !gene.isEmpty() && locusTagToGene.isEmpty()) {
             locusTagToGene.put(locusTag, gene);
         }
 
-        String synonymsRaw = feature.getAttributeByName(GFF3Attributes.GENE_SYNONYM);
+        String synonymsRaw = feature.getAttribute(GFF3Attributes.GENE_SYNONYM).orElse(null);
         if (synonymsRaw != null && !synonymsRaw.isEmpty() && locusTagToSynonyms.isEmpty()) {
             List<String> synonyms = Arrays.stream(synonymsRaw.split(","))
                     .map(String::trim)
