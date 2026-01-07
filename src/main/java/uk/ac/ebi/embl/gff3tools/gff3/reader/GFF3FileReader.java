@@ -36,8 +36,6 @@ public class GFF3FileReader implements AutoCloseable {
     static Pattern RESOLUTION_DIRECTIVE = Pattern.compile("^###$");
     static Pattern TRANSLATION_ID_PATTERN = Pattern.compile("^>(?<translationId>.*)");
     static Pattern COMMENT = Pattern.compile("^#.*$");
-    static Pattern GFF3_FEATURE = Pattern.compile(
-            "^(?<accession>(?<accessionId>[^.]+)(?:\\.(?<accessionVersion>\\d+))?)\\t(?<source>.+)\\t(?<name>.+)\\t(?<start>[0-9]+)\\t(?<end>[0-9]+)\\t(?<score>.+)\\t(?<strand>\\+|\\-|\\.|\\?)\\t(?<phase>.+)\\t(?<attributes>.+)?$");
 
     BufferedReader bufferedReader;
     int lineCount;
