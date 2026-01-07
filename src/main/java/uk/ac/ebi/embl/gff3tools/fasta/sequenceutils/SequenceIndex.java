@@ -21,14 +21,21 @@ public final class SequenceIndex {
     public long lastBaseByte; // -1 if empty
     public long endNBasesCount;
     private final List<LineEntry> lines;
+    public long nextHeaderByte; // byte offset of next '>' at line start, or fileSize (EOF)
 
     public SequenceIndex(
-            long firstBaseByte, long startNBasesCount, long lastBaseByte, long endNBasesCount, List<LineEntry> lines) {
+            long firstBaseByte,
+            long startNBasesCount,
+            long lastBaseByte,
+            long endNBasesCount,
+            List<LineEntry> lines,
+            long nextHeader) {
         this.firstBaseByte = firstBaseByte;
         this.startNBasesCount = startNBasesCount;
         this.lastBaseByte = lastBaseByte;
         this.endNBasesCount = endNBasesCount;
         this.lines = new ArrayList<>(lines);
+        this.nextHeaderByte = nextHeader;
     }
 
     public List<LineEntry> linesView() {

@@ -25,16 +25,6 @@ public final class SequenceIndexBuilder {
     private static final byte LF = (byte) '\n';
     private static final byte CR = (byte) '\r';
 
-    public static final class Result {
-        public final SequenceIndex index;
-        public final long nextHeaderByte; // byte offset of next '>' at line start, or fileSize (EOF)
-
-        public Result(SequenceIndex index, long nextHeaderByte) {
-            this.index = index;
-            this.nextHeaderByte = nextHeaderByte;
-        }
-    }
-
     private final FileChannel ch;
     private final long fileSize;
     private final SequenceAlphabet alphabet;
@@ -46,7 +36,7 @@ public final class SequenceIndexBuilder {
     }
 
     /** Build a SequenceIndex starting at 'startPos' (first byte after header line). */
-    public Result buildFrom(long startPos) throws IOException, FastaFileException {
+    public SequenceIndex buildFrom(long startPos) throws IOException, FastaFileException {
         ScanState s = new ScanState(startPos, fileSize);
         ByteBuffer buf = newScanBuffer();
 
@@ -71,8 +61,7 @@ public final class SequenceIndexBuilder {
             endN = countTrailingNs(filtered.get(filtered.size() - 1)); // (4) only last line
         }
 
-        SequenceIndex idx = new SequenceIndex(firstBaseByte, startN, lastBaseByte, endN, filtered);
-        return new Result(idx, s.nextHdr);
+        return new SequenceIndex(firstBaseByte, startN, lastBaseByte, endN, filtered, s.nextHdr);
     }
 
     // =====================================================================

@@ -19,6 +19,7 @@ import uk.ac.ebi.embl.gff3tools.fasta.headerutils.JsonHeaderParser;
 import uk.ac.ebi.embl.gff3tools.fasta.headerutils.ParsedHeader;
 import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.ByteSpan;
 import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceAlphabet;
+import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceIndex;
 import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceIndexBuilder;
 
 public class SequentialFastaFileReader implements AutoCloseable {
@@ -113,7 +114,7 @@ public class SequentialFastaFileReader implements AutoCloseable {
                     char[] characterBuffer, int startingWriteIndexInCharacterBuffer, int maximumNumberOfCharsToRead)
                     throws java.io.IOException {
                 // --- Validate caller’s target window [off .. off + len) ---
-                ValidateTargetWindow(characterBuffer, startingWriteIndexInCharacterBuffer, maximumNumberOfCharsToRead);
+                validateTargetWindow(characterBuffer, startingWriteIndexInCharacterBuffer, maximumNumberOfCharsToRead);
                 if (maximumNumberOfCharsToRead == 0) return 0;
 
                 int out = 0;
@@ -143,16 +144,20 @@ public class SequentialFastaFileReader implements AutoCloseable {
                 return (out == 0) ? -1 : out;
             }
 
-            private void ValidateTargetWindow(
-                    char[] characterBuffer, int startingWriteIndexInCharacterBuffer, int maximumNumberOfCharsToRead)
-                    throws java.io.IOException {
-                if (characterBuffer == null) throw new NullPointerException("characterBuffer");
-                if (startingWriteIndexInCharacterBuffer < 0
-                        || maximumNumberOfCharsToRead < 0
-                        || startingWriteIndexInCharacterBuffer + maximumNumberOfCharsToRead > characterBuffer.length) {
-                    throw new IndexOutOfBoundsException("off=" + startingWriteIndexInCharacterBuffer + " len="
-                            + maximumNumberOfCharsToRead + " bufLen="
-                            + characterBuffer.length);
+            private void validateTargetWindow(char[] buffer, int offset, int length) {
+
+                Objects.requireNonNull(buffer, "buffer");
+
+                if (offset < 0 || length < 0) {
+                    throw new IndexOutOfBoundsException(
+                            "offset and length must be non-negative (offset=" + offset + ", length=" + length + ')');
+                }
+
+                if (offset + length > buffer.length) {
+                    throw new IndexOutOfBoundsException("Requested range exceeds buffer size "
+                            + "(offset=" + offset
+                            + ", length=" + length
+                            + ", bufferLength=" + buffer.length + ')');
                 }
             }
 
@@ -175,20 +180,20 @@ public class SequentialFastaFileReader implements AutoCloseable {
         };
     }
 
-    public List<FastaEntryInternal> readAll() throws FastaFileException, IOException {
+    public List<FastaEntryMetadata> readAll() throws FastaFileException, IOException {
         long position = 0;
-        List<FastaEntryInternal> entries = new ArrayList<>();
+        List<FastaEntryMetadata> entries = new ArrayList<>();
         while (true) {
-            var entry = readNext(position);
-            if (entry.isEmpty()) break;
-            entries.add(entry.get());
-            position = entry.get().getSequenceIndex().lastBaseByte; // read from the end of last sequence
+            Optional<FastaEntryMetadata> fastaEntryMetadata = readNext(position);
+            if (fastaEntryMetadata.isEmpty()) break;
+            entries.add(fastaEntryMetadata.get());
+            position = fastaEntryMetadata.get().getSequenceIndex().lastBaseByte; // read from the end of last sequence
         }
         return entries;
     }
 
     /** Reads the next FASTA entry starting at or after 'from'. */
-    private Optional<FastaEntryInternal> readNext(long from) throws FastaFileException {
+    private Optional<FastaEntryMetadata> readNext(long from) throws FastaFileException {
         try {
             OptionalLong headerPosOpt = seekToNextHeader(from);
             if (headerPosOpt.isEmpty()) return Optional.empty();
@@ -200,16 +205,16 @@ public class SequentialFastaFileReader implements AutoCloseable {
 
             long sequenceStartPos = channel.position(); // first byte after header line is the sequence position
             SequenceIndexBuilder sib = new SequenceIndexBuilder(channel, fileSize, alphabet);
-            SequenceIndexBuilder.Result res = sib.buildFrom(sequenceStartPos);
+            SequenceIndex index = sib.buildFrom(sequenceStartPos);
 
             // Move reader cursor to the sequence start position
             channel.position(sequenceStartPos);
 
-            FastaEntryInternal e = new FastaEntryInternal();
+            FastaEntryMetadata e = new FastaEntryMetadata();
             e.setSubmissionId(ph.getId());
             e.setHeader(ph.getHeader());
             e.setFastaStartByte(headerPos);
-            e.setSequenceIndex(res.index);
+            e.setSequenceIndex(index);
 
             return Optional.of(e);
         } catch (IOException io) {

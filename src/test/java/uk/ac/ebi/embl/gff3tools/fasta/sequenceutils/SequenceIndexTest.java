@@ -37,7 +37,8 @@ public class SequenceIndexTest {
                 /*startNBasesCount*/ startN,
                 /*lastBaseByte*/ 113,
                 /*endNBasesCount*/ endN,
-                lines);
+                lines,
+                114); // random value i put in, no meaning rn
     }
 
     @Test

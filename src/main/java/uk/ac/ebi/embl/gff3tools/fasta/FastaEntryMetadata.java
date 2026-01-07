@@ -17,7 +17,7 @@ import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceIndex;
 
 @Getter
 @Setter
-class FastaEntryInternal {
+class FastaEntryMetadata {
     String submissionId;
     String accessionId;
     FastaHeader header;

@@ -121,7 +121,7 @@ public final class FastaFileService {
         this.fastaEntries.clear();
         this.sequenceIndexes.clear();
         reader = new SequentialFastaFileReader(fastaFile);
-        var readEntries = reader.readAll();
+        List<FastaEntryMetadata> readEntries = reader.readAll();
         for (var entry : readEntries) {
             FastaEntry fastaEntry = new FastaEntry();
             fastaEntry.setSubmissionId(entry.getSubmissionId());

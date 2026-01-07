@@ -66,13 +66,11 @@ public class SequenceIndexBuilderTest {
             SequenceIndexBuilder sib = new SequenceIndexBuilder(ch, fileSize, alpha);
 
             long beforePos = ch.position(); // should remain unchanged
-            SequenceIndexBuilder.Result res = sib.buildFrom(seqStartPos);
+            SequenceIndex idx = sib.buildFrom(seqStartPos);
             long afterPos = ch.position();
 
             // builder must not touch channel.position()
             assertEquals(beforePos, afterPos, "builder must not change channel.position()");
-
-            SequenceIndex idx = res.index;
 
             // Lines: only 3 sequence lines; empties ignored
             List<LineEntry> lines = idx.linesView();
@@ -113,7 +111,7 @@ public class SequenceIndexBuilderTest {
 
             // nextHeaderByte should point to '>' of NEXT header
             long expectedNextHeader = header.length() + l1.length() + l2.length() + l3.length() + empties.length();
-            assertEquals(expectedNextHeader, res.nextHeaderByte);
+            assertEquals(expectedNextHeader, idx.nextHeaderByte);
         }
     }
 
@@ -132,8 +130,7 @@ public class SequenceIndexBuilderTest {
             SequenceIndexBuilder sib =
                     new SequenceIndexBuilder(ch, ch.size(), SequenceAlphabet.defaultNucleotideAlphabet());
 
-            SequenceIndexBuilder.Result res = sib.buildFrom(seqStart);
-            SequenceIndex idx = res.index;
+            SequenceIndex idx = sib.buildFrom(seqStart);
 
             // Two non-empty lines only
             assertEquals(2, idx.linesView().size());
@@ -145,7 +142,7 @@ public class SequenceIndexBuilderTest {
 
             // nextHeader should be at the '>' byte of H2
             long expectedNext = fasta.lastIndexOf(">H2\n"); // ascii index
-            assertEquals(expectedNext, res.nextHeaderByte);
+            assertEquals(expectedNext, idx.nextHeaderByte);
         }
     }
 
@@ -167,11 +164,10 @@ public class SequenceIndexBuilderTest {
                     new SequenceIndexBuilder(ch, ch.size(), SequenceAlphabet.defaultNucleotideAlphabet());
 
             long before = ch.position();
-            SequenceIndexBuilder.Result res = sib.buildFrom(seqStart);
+            SequenceIndex idx = sib.buildFrom(seqStart);
             long after = ch.position();
             assertEquals(before, after, "builder must not move channel position");
 
-            SequenceIndex idx = res.index;
             // three non-empty sequence lines: l1, l2, l3
             assertEquals(3, idx.linesView().size());
 
