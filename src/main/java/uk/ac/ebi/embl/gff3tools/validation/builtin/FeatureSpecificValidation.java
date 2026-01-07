@@ -36,7 +36,7 @@ public class FeatureSpecificValidation extends Validation {
 
     @ValidationMethod(rule = "OPERON_FEATURE", type = ValidationType.FEATURE)
     public void validateOperonFeatures(GFF3Feature feature, int line) throws ValidationException {
-        String operonValue = feature.getAttributeByName(GFF3Attributes.OPERON);
+        String operonValue = feature.getAttribute(GFF3Attributes.OPERON).orElse(null);
         if (operonValue == null || operonValue.isBlank()) {
             return;
         }
@@ -73,8 +73,8 @@ public class FeatureSpecificValidation extends Validation {
         Map<String, List<GFF3Feature>> peptidesByGene = new HashMap<>();
 
         for (GFF3Feature peptide : peptideFeatures) {
-            String locusTag = peptide.getAttributeByName(GFF3Attributes.LOCUS_TAG);
-            String gene = peptide.getAttributeByName(GFF3Attributes.GENE);
+            String locusTag = peptide.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
+            String gene = peptide.getAttribute(GFF3Attributes.GENE).orElse(null);
 
             if (locusTag != null) {
                 peptidesByLocus
@@ -89,8 +89,8 @@ public class FeatureSpecificValidation extends Validation {
         for (GFF3Feature cds : cdsFeatures) {
             List<GFF3Feature> relevantPeptides = new ArrayList<>();
 
-            String cdsLocus = cds.getAttributeByName(GFF3Attributes.LOCUS_TAG);
-            String cdsGene = cds.getAttributeByName(GFF3Attributes.GENE);
+            String cdsLocus = cds.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
+            String cdsGene = cds.getAttribute(GFF3Attributes.GENE).orElse(null);
 
             // Direct lookups instead of scanning entire peptide list
             if (cdsLocus != null && peptidesByLocus.containsKey(cdsLocus)) {
@@ -131,11 +131,11 @@ public class FeatureSpecificValidation extends Validation {
 
     private void checkPseudoQualifier(GFF3Feature cdsFeature, List<GFF3Feature> peptideFeatures, int line)
             throws ValidationException {
-        boolean hasPseudo = cdsFeature.getAttributes().containsKey(GFF3Attributes.PSEUDO);
+        boolean hasPseudo = cdsFeature.hasAttribute(GFF3Attributes.PSEUDO);
 
         if (hasPseudo) {
             for (GFF3Feature peptide : peptideFeatures) {
-                if (!peptide.getAttributes().containsKey(GFF3Attributes.PSEUDO)) {
+                if (!peptide.hasAttribute(GFF3Attributes.PSEUDO)) {
                     throw new ValidationException(
                             line,
                             PSEUDO_ATTRIBUTE_REQUIRED_VALIDATION.formatted(peptide.getName(), cdsFeature.getName()));

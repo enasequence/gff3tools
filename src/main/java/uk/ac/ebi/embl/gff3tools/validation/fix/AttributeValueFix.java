@@ -29,10 +29,11 @@ public class AttributeValueFix {
             description = "Change the attribute value of mod_base. Refer: Modified base abbreviations",
             type = FEATURE)
     public void fixFeature(GFF3Feature feature, int line) {
-        String modBaseValue = feature.getAttributeByName(GFF3Attributes.MOD_BASE);
+        String modBaseValue = feature.getAttribute(GFF3Attributes.MOD_BASE).orElse(null);
         if (modBaseValue != null && modBaseValue.trim().equalsIgnoreCase("d")) {
             log.info("Updating value from  'd' to 'dhu' on {} attribute at line: {}", GFF3Attributes.MOD_BASE, line);
-            feature.setAttribute(GFF3Attributes.MOD_BASE, "dhu");
+            feature.removeAttributeList(GFF3Attributes.MOD_BASE);
+            feature.addAttribute(GFF3Attributes.MOD_BASE, "dhu");
         }
     }
 }

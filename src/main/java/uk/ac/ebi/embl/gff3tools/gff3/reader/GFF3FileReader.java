@@ -36,8 +36,6 @@ public class GFF3FileReader implements AutoCloseable {
     static Pattern RESOLUTION_DIRECTIVE = Pattern.compile("^###$");
     static Pattern TRANSLATION_ID_PATTERN = Pattern.compile("^>(?<translationId>.*)");
     static Pattern COMMENT = Pattern.compile("^#.*$");
-    static Pattern GFF3_FEATURE = Pattern.compile(
-            "^(?<accession>(?<accessionId>[^.]+)(?:\\.(?<accessionVersion>\\d+))?)\\t(?<source>.+)\\t(?<name>.+)\\t(?<start>[0-9]+)\\t(?<end>[0-9]+)\\t(?<score>.+)\\t(?<strand>\\+|\\-|\\.|\\?)\\t(?<phase>.+)\\t(?<attributes>.+)?$");
 
     BufferedReader bufferedReader;
     int lineCount;
@@ -204,7 +202,7 @@ public class GFF3FileReader implements AutoCloseable {
 
         String[] parts = line.split("\t");
         if (parts.length < 9) {
-            return null; // GFF2 features must have at least 9 fields
+            return null; // GFF3 features must have at least 9 fields
         }
         String accession = parts[0];
         String source = parts[1];
@@ -216,7 +214,15 @@ public class GFF3FileReader implements AutoCloseable {
         String phase = parts[7];
         String attributes = parts[8];
 
-        // Add additional checks as necessary
+        Map<String, List<String>> attributesMap = attributesFromString(attributes);
+
+        Optional<String> id = Optional.ofNullable(attributesMap.get("ID"))
+                .filter((l) -> !l.isEmpty())
+                .map((l) -> l.get(0));
+        Optional<String> parentId = Optional.ofNullable(attributesMap.get("Parent"))
+                .filter((l) -> !l.isEmpty())
+                .map((l) -> l.get(0));
+
         if (!accession.isEmpty()
                 && !source.isEmpty()
                 && !name.isEmpty()
@@ -231,27 +237,12 @@ public class GFF3FileReader implements AutoCloseable {
                             accessionParts.length > 1 ? accessionParts[0] : null)
                     .map(Integer::parseInt);
 
-            long start = Long.parseLong(parts[3]);
-            long end = Long.parseLong(parts[4]);
-
-            Map<String, Object> attributesMap = attributesFromString(attributes);
-
-            Optional<String> id = Optional.ofNullable((String) attributesMap.get("ID"));
-            Optional<String> parentId = Optional.ofNullable((String) attributesMap.get("Parent"));
+            long start = Long.parseLong(start_str);
+            long end = Long.parseLong(end_str);
 
             GFF3Feature feature = new GFF3Feature(
-                    id,
-                    parentId,
-                    accessionId,
-                    accessionVersion,
-                    source,
-                    name,
-                    start,
-                    end,
-                    score,
-                    strand,
-                    phase,
-                    attributesMap);
+                    id, parentId, accessionId, accessionVersion, source, name, start, end, score, strand, phase);
+            feature.addAttributes(attributesMap);
 
             validationEngine.validate(feature, lineCount);
             return feature;
@@ -280,8 +271,8 @@ public class GFF3FileReader implements AutoCloseable {
         }
     }
 
-    public Map<String, Object> attributesFromString(String line) {
-        Map<String, Object> attributes = new LinkedHashMap<>();
+    public Map<String, List<String>> attributesFromString(String line) {
+        Map<String, List<String>> attributes = new LinkedHashMap<>();
         String[] parts = line.split(";");
         for (String part : parts) {
             if (part.contains("=")) {

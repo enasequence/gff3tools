@@ -12,10 +12,7 @@ package uk.ac.ebi.embl.gff3tools.validation.fix;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
@@ -43,9 +40,9 @@ class TransformAttributeToNoteFixTest {
 
     @Test
     void movesProductToNote_whenPseudoPresent_andRemovesProduct() {
-        Map<String, Object> attrs = new HashMap<>(Map.of(
-                PRODUCT, "kinase",
-                PSEUDO, "true"));
+        Map<String, List<String>> attrs = new HashMap<>(Map.of(
+                PRODUCT, new ArrayList<>(List.of("kinase")),
+                PSEUDO, new ArrayList<>(List.of("true"))));
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", "gene_parent", attrs);
 
@@ -53,27 +50,29 @@ class TransformAttributeToNoteFixTest {
 
         assertFalse(feature.hasAttribute(PRODUCT));
         assertTrue(feature.hasAttribute(PSEUDO));
-        assertEquals(List.of("kinase"), feature.getAttributeValueList(NOTE));
+        assertEquals("kinase", feature.getAttribute(NOTE).get());
     }
 
     @Test
     void appendsProductToExistingNote_whenPseudogenePresent() {
-        Map<String, Object> attrs = new HashMap<>(Map.of(
-                PRODUCT, "beta-lactamase",
-                PSEUDOGENE, "processed",
-                NOTE, "existing-info"));
+        Map<String, List<String>> attrs = new HashMap<>(Map.of(
+                PRODUCT, new ArrayList<>(List.of("beta-lactamase")),
+                PSEUDOGENE, new ArrayList<>(List.of("processed")),
+                NOTE, new ArrayList<>(List.of("existing-info"))));
 
         GFF3Feature feature = TestUtils.createGFF3Feature("CDS", "mRNA1", attrs);
 
         fixer.fix(feature, 1);
 
         assertFalse(feature.hasAttribute(PRODUCT));
-        assertEquals(List.of("existing-info", "beta-lactamase"), feature.getAttributeValueList(NOTE));
+        assertEquals(
+                List.of("existing-info", "beta-lactamase"),
+                feature.getAttributeList(NOTE).get());
     }
 
     @Test
     void noChange_whenExclusivesAbsent() {
-        Map<String, Object> attrs = new HashMap<>(Map.of(PRODUCT, "helicase"));
+        Map<String, List<String>> attrs = new HashMap<>(Map.of(PRODUCT, List.of("helicase")));
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", "parent", attrs);
 
@@ -85,7 +84,7 @@ class TransformAttributeToNoteFixTest {
 
     @Test
     void noChange_whenProductAbsent_evenIfExclusivePresent() {
-        Map<String, Object> attrs = new HashMap<>(Map.of(PSEUDO, "true"));
+        Map<String, List<String>> attrs = new HashMap<>(Map.of(PSEUDO, List.of("true")));
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", "parent", attrs);
 
@@ -98,9 +97,9 @@ class TransformAttributeToNoteFixTest {
 
     @Test
     void removesEmptyProduct_withoutAppending_whenExclusivePresent() {
-        Map<String, Object> attrs = new HashMap<>(Map.of(
-                PRODUCT, "",
-                PSEUDOGENE, "unitary"));
+        Map<String, List<String>> attrs = new HashMap<>(Map.of(
+                PRODUCT, List.of(),
+                PSEUDOGENE, List.of("unitary")));
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", "parent", attrs);
 
@@ -112,50 +111,25 @@ class TransformAttributeToNoteFixTest {
 
     @Test
     void handlesBothExclusivesPresent_gracefully() {
-        Map<String, Object> attrs = new HashMap<>(Map.of(
-                PRODUCT, "transferase",
-                PSEUDO, "true",
-                PSEUDOGENE, "unknown"));
+        Map<String, List<String>> attrs = new HashMap<>(Map.of(
+                PRODUCT, new ArrayList<>(List.of("transferase")),
+                PSEUDO, new ArrayList<>(List.of("true")),
+                PSEUDOGENE, new ArrayList<>(List.of("unknown"))));
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", "parent", attrs);
 
         fixer.fix(feature, 1);
 
         assertFalse(feature.hasAttribute(PRODUCT));
-        assertEquals(List.of("transferase"), feature.getAttributeValueList(NOTE));
+        assertEquals("transferase", feature.getAttribute(NOTE).get());
     }
 
     @Test
-    void nullOrEmptyAttributes_areIgnoredWithoutExplosion() {
-        GFF3Feature withNullAttributes = new GFF3Feature(
-                Optional.of("gene"),
-                Optional.empty(),
-                "1234",
-                Optional.empty(),
-                ".",
-                "gene",
-                1,
-                10,
-                ".",
-                "+",
-                "",
-                null);
+    void emptyAttributes_areIgnoredWithoutExplosion() {
 
         GFF3Feature withEmptyAttributes = new GFF3Feature(
-                Optional.of("gene"),
-                Optional.empty(),
-                "1234",
-                Optional.empty(),
-                ".",
-                "gene",
-                1,
-                10,
-                ".",
-                "+",
-                "",
-                new HashMap<>());
+                Optional.of("gene"), Optional.empty(), "1234", Optional.empty(), ".", "gene", 1, 10, ".", "+", "");
 
-        assertDoesNotThrow(() -> fixer.fix(withNullAttributes, 1));
         assertDoesNotThrow(() -> fixer.fix(withEmptyAttributes, 1));
     }
 }
