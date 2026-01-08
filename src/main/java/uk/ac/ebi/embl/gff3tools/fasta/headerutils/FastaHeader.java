@@ -10,6 +10,8 @@
  */
 package uk.ac.ebi.embl.gff3tools.fasta.headerutils;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 import uk.ac.ebi.embl.gff3tools.fasta.Topology;
@@ -17,10 +19,25 @@ import uk.ac.ebi.embl.gff3tools.fasta.Topology;
 @Getter
 @Setter
 public class FastaHeader {
+    @JsonProperty("description")
     String description; // mandatory
+
+    @JsonProperty("molecule_type")
+    @JsonAlias({"molecule-type", "molecule type"})
     String moleculeType; // mandatory
+
+    @JsonProperty("topology")
     Topology topology; // mandatory
+
+    @JsonProperty("chromosome_type")
+    @JsonAlias({"chromosome-type"})
     String chromosomeType; // optional (doesnt have to be in the json at all)
+
+    @JsonProperty("chromosome_location")
+    @JsonAlias({"chromosome-location"})
     String chromosomeLocation; // optional
+
+    @JsonProperty("chromosome_name")
+    @JsonAlias({"chromosome-name"})
     String chromosomeName; // optional
 }

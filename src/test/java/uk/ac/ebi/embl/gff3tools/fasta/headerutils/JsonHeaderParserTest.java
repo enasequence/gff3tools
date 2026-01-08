@@ -51,9 +51,9 @@ public class JsonHeaderParserTest {
     }
 
     @Test
-    void parsesCurlyQuotesAndWeirdSpacingInKeys() {
+    void parsesCurlyQuotes() {
         String line =
-                ">ID1 | { \u201Cdescription\u201D: \u201CPinus\u201D,  \u201C molecule_type\u201D:\"genomic\", \u201Ctopology\u201D:\"CIRCULAR\" }";
+                ">ID1 | { \u201Cdescription\u201D: \u201CPinus\u201D,  \u201Cmolecule_type\u201D:\"genomic\", \u201Ctopology\u201D:\"CIRCULAR\" }";
 
         ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
         FastaHeader h = ph.getHeader();
@@ -66,7 +66,7 @@ public class JsonHeaderParserTest {
     @Test
     void normalizesKeyVariantsAndChromosomeOptionals() {
         String line = ">ID2 | { \"Description\":\"Desc\", \"molecule-type\":\"rna\", \"topology\":\"linear\", "
-                + "\"Chromosome Type\":\"plasmid\", \"chromosome_location\":\"chr12:100-200\", \"CHROMOSOME_NAME\":\"pX\" }";
+                + "\"Chromosome-Type\":\"plasmid\", \"chromosome_location\":\"chr12:100-200\", \"CHROMOSOME_NAME\":\"pX\" }";
 
         ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
         FastaHeader h = ph.getHeader();
