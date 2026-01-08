@@ -44,13 +44,10 @@ public class JsonHeaderParser {
             throw new FastaFileException("FASTA header contains a '|', but no JSON object was provided.");
         }
 
-        String normalized = raw.replace('\u201C', '"')
-                .replace('\u201D', '"')
-                .replace('\u00A0', ' ')
-                .trim();
+        String normalised = normaliseRawJsonString(raw);
 
         try {
-            FastaHeader header = MAPPER.readValue(normalized, FastaHeader.class);
+            FastaHeader header = MAPPER.readValue(normalised, FastaHeader.class);
 
             List<String> missing = new ArrayList<>();
             if (header.getDescription() == null) missing.add("description");
@@ -64,7 +61,16 @@ public class JsonHeaderParser {
             return header;
 
         } catch (JsonProcessingException e) {
-            throw new FastaFileException("Malformed FASTA header JSON: " + normalized, e);
+            throw new FastaFileException("Malformed FASTA header JSON: " + normalised, e);
         }
+    }
+
+    private static String normaliseRawJsonString(String raw) {
+        return raw.replace('\u201C', '"')
+                .replace('\u201D', '"')
+                .replace('\u2018', '\'')
+                .replace('\u2019', '\'')
+                .replace('\u00A0', ' ')
+                .trim();
     }
 }
