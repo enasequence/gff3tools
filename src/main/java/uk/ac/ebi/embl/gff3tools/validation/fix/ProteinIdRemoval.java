@@ -10,11 +10,11 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
+import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.PROTEIN_ID;
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
@@ -25,10 +25,10 @@ public class ProteinIdRemoval {
 
     @FixMethod(rule = "PROTEIN_ID_REMOVE", description = "Removes the protein ID from feature", type = FEATURE)
     public void fix(GFF3Feature feature, int line) {
-        String proteinId = feature.getAttributeByName(GFF3Attributes.PROTEIN_ID);
-        if (proteinId != null) {
+        Optional<List<String>> optProteinList = feature.getAttributeList(PROTEIN_ID);
+        if (optProteinList.isPresent() && !optProteinList.get().isEmpty()) {
             log.info("Removing proteinId from feature {} at line {}", feature.getName(), line);
-            feature.removeAttribute(GFF3Attributes.PROTEIN_ID);
+            feature.removeAttributeList(PROTEIN_ID);
         }
     }
 }

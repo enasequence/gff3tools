@@ -10,13 +10,13 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
-import java.util.HashMap;
-import java.util.Map;
+import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.PSEUDOGENE;
+
+import java.util.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 
@@ -33,56 +33,71 @@ public class PseudogeneFixTest {
 
     @Test
     public void testFixFeatureRemovesQuotesFromPseudogene() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PSEUDOGENE, "'processed_pseudogene'");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(PSEUDOGENE, List.of("'processed_pseudogene'"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         pseudogeneFix.fixFeature(feature, 1);
-        Assertions.assertNotNull(feature);
-        Assertions.assertEquals("processed_pseudogene", feature.getAttributeByName(GFF3Attributes.PSEUDOGENE));
+        Optional<List<String>> optValues = feature.getAttributeList(PSEUDOGENE);
+        Assertions.assertTrue(optValues.isPresent());
+        List<String> values = optValues.get();
+        Assertions.assertEquals(1, values.size());
+        Assertions.assertEquals("processed_pseudogene", values.get(0));
     }
 
     @Test
     public void testFixFeatureRemovesQuotesFromPseudogeneAtPrefix() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PSEUDOGENE, "'processed_pseudogene");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(PSEUDOGENE, List.of("'processed_pseudogene"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         pseudogeneFix.fixFeature(feature, 1);
-        Assertions.assertNotNull(feature);
-        Assertions.assertEquals("processed_pseudogene", feature.getAttributeByName(GFF3Attributes.PSEUDOGENE));
+        Optional<List<String>> optValues = feature.getAttributeList(PSEUDOGENE);
+        Assertions.assertTrue(optValues.isPresent());
+        List<String> values = optValues.get();
+        Assertions.assertEquals(1, values.size());
+        Assertions.assertEquals("processed_pseudogene", values.get(0));
     }
 
     @Test
     public void testFixFeatureRemovesQuotesFromPseudogeneAtSuffix() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PSEUDOGENE, "processed_pseudogene'");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(PSEUDOGENE, List.of("processed_pseudogene'"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         pseudogeneFix.fixFeature(feature, 1);
-        Assertions.assertNotNull(feature);
-        Assertions.assertEquals("processed_pseudogene", feature.getAttributeByName(GFF3Attributes.PSEUDOGENE));
+        Optional<List<String>> optValues = feature.getAttributeList(PSEUDOGENE);
+        Assertions.assertTrue(optValues.isPresent());
+        List<String> values = optValues.get();
+        Assertions.assertEquals(1, values.size());
+        Assertions.assertEquals("processed_pseudogene", values.get(0));
     }
 
     @Test
     public void testFixFeatureRemovesMultipleQuotesFromPseudogene() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PSEUDOGENE, "'''''processed_pseudogene'''");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(PSEUDOGENE, List.of("'''''processed_pseudogene'''"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         pseudogeneFix.fixFeature(feature, 1);
-        Assertions.assertNotNull(feature);
-        Assertions.assertEquals("processed_pseudogene", feature.getAttributeByName(GFF3Attributes.PSEUDOGENE));
+        Optional<List<String>> optValues = feature.getAttributeList(PSEUDOGENE);
+        Assertions.assertTrue(optValues.isPresent());
+        List<String> values = optValues.get();
+        Assertions.assertEquals(1, values.size());
+        Assertions.assertEquals("processed_pseudogene", values.get(0));
     }
 
     @Test
     public void testFixFeatureNoQuotesFromPseudogene() {
-        Map<String, Object> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.PSEUDOGENE, "processed_pseudogene");
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(PSEUDOGENE, List.of("processed_pseudogene"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         pseudogeneFix.fixFeature(feature, 1);
-        Assertions.assertNotNull(feature);
-        Assertions.assertEquals("processed_pseudogene", feature.getAttributeByName(GFF3Attributes.PSEUDOGENE));
+        Optional<List<String>> optValues = feature.getAttributeList(PSEUDOGENE);
+        Assertions.assertTrue(optValues.isPresent());
+        List<String> values = optValues.get();
+        Assertions.assertEquals(1, values.size());
+        Assertions.assertEquals("processed_pseudogene", values.get(0));
     }
 }

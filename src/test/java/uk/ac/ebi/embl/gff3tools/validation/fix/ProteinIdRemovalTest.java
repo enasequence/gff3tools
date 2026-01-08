@@ -10,13 +10,16 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
+import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.LOCUS_TAG;
+import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.PROTEIN_ID;
+
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 
@@ -31,24 +34,23 @@ public class ProteinIdRemovalTest {
 
     @Test
     public void testProteinIdRemovalSuccess() {
-        Map<String, Object> a1 = new HashMap<>();
-        a1.put(GFF3Attributes.PROTEIN_ID, "protein1");
-        GFF3Feature f1 = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), a1);
-
+        Map<String, List<String>> attr = new HashMap<>();
+        attr.put(PROTEIN_ID, List.of("protein1"));
+        GFF3Feature f1 = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attr);
         proteinIdRemoval.fix(f1, 1);
-
-        Assertions.assertEquals(0, f1.getAttributes().size());
+        Assertions.assertTrue(f1.getAttribute(PROTEIN_ID).isEmpty());
+        Assertions.assertFalse(f1.getAttribute(PROTEIN_ID).isPresent());
     }
 
     @Test
     public void testProteinIdRemovalWithoutProteinId() {
-        Map<String, Object> a2 = new HashMap<>();
-        a2.put(GFF3Attributes.LOCUS_TAG, "LOCUS_TAG");
+        Map<String, List<String>> attr = new HashMap<>();
+        attr.put(LOCUS_TAG, List.of("LOCUS_TAG"));
 
-        GFF3Feature f1 = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), a2);
+        GFF3Feature f1 = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attr);
 
         proteinIdRemoval.fix(f1, 1);
-
-        Assertions.assertEquals(1, f1.getAttributes().size());
+        Assertions.assertTrue(f1.getAttribute(LOCUS_TAG).isPresent());
+        Assertions.assertFalse(f1.getAttribute(LOCUS_TAG).get().isEmpty());
     }
 }

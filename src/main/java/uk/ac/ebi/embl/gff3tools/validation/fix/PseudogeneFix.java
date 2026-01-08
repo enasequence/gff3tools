@@ -10,10 +10,12 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
+import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.PSEUDOGENE;
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 
+import java.util.ArrayList;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
@@ -27,15 +29,14 @@ public class PseudogeneFix {
             description = "Remove single quotes from Pseudogene value",
             type = FEATURE)
     public void fixFeature(GFF3Feature feature, int line) {
-        if (feature.hasAttribute(GFF3Attributes.PSEUDOGENE)) {
-            String pseudogeneValue = feature.getAttributeByName(GFF3Attributes.PSEUDOGENE);
-            if (pseudogeneValue != null) {
-                String newValue = pseudogeneValue.replaceAll("^'+|'+$", "");
-                if (!pseudogeneValue.equals(newValue)) {
-                    log.info("Removing single quotes from {} value at line {}", GFF3Attributes.PSEUDOGENE, line);
-                    feature.setAttribute(GFF3Attributes.PSEUDOGENE, newValue);
-                }
-            }
+        java.util.Optional<List<String>> optPseudogene = feature.getAttributeList(PSEUDOGENE);
+        if (optPseudogene.isEmpty()) return;
+
+        List<String> updatedValues = new ArrayList<>();
+        for (String pseudogeneValues : optPseudogene.get()) {
+            pseudogeneValues = pseudogeneValues.replaceAll("^'+|'+$", "");
+            updatedValues.add(pseudogeneValues);
         }
+        feature.setAttributeList(PSEUDOGENE, updatedValues);
     }
 }

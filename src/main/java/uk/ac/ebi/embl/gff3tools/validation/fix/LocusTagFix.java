@@ -10,11 +10,11 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
+import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.LOCUS_TAG;
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 
-import java.util.Locale;
+import java.util.*;
 import lombok.extern.slf4j.Slf4j;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
@@ -28,16 +28,13 @@ public class LocusTagFix {
             description = "Update the locus_tag value to upper case",
             type = FEATURE)
     public void fixFeature(GFF3Feature feature, int line) {
-        String locusTag = feature.getAttributeByName(GFF3Attributes.LOCUS_TAG);
-        if (locusTag == null || locusTag.isBlank()) {
-            return;
-        }
+        Optional<List<String>> optLocusTag = feature.getAttributeList(LOCUS_TAG);
+        if (optLocusTag.isEmpty()) return;
 
-        String locusTagUpperCase = locusTag.toUpperCase(Locale.ROOT);
-
-        if (!locusTagUpperCase.equals(locusTag)) {
-            log.info("Updating the {} to upper case at line {}", GFF3Attributes.LOCUS_TAG, line);
-            feature.setAttribute(GFF3Attributes.LOCUS_TAG, locusTagUpperCase);
+        List<String> upperCaseLocusTag = new ArrayList<>();
+        for (String locusTag : optLocusTag.get()) {
+            upperCaseLocusTag.add(locusTag.toUpperCase());
         }
+        feature.setAttributeList(LOCUS_TAG, upperCaseLocusTag);
     }
 }
