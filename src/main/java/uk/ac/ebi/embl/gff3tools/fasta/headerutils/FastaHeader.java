@@ -31,7 +31,7 @@ public class FastaHeader {
 
     @JsonProperty("chromosome_type")
     @JsonAlias({"chromosome-type", "chromosome type", "chromosometype"})
-    String chromosomeType; // optional (doesnt have to be in the json at all)
+    String chromosomeType; // optional (doesn't have to be in the json at all)
 
     @JsonProperty("chromosome_location")
     @JsonAlias({"chromosome-location", "chromosome location", "chromosomelocation"})
