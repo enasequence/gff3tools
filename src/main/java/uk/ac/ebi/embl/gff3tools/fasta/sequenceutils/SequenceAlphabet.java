@@ -12,16 +12,24 @@ package uk.ac.ebi.embl.gff3tools.fasta.sequenceutils;
 
 public final class SequenceAlphabet {
     private final boolean[] allowed = new boolean[128];
+    private final boolean[] specialChars = new boolean[128];
 
-    public SequenceAlphabet(String chars) {
+    public SequenceAlphabet(String chars, String specialChars) {
         for (char c : chars.toCharArray()) if (c < 128) allowed[c] = true;
         allowed['>'] = false;
+
+        for (char c : specialChars.toCharArray()) if (c < 128) this.specialChars[c] = true;
     }
 
     /** Fast ASCII check for is it an allowed char. */
-    public boolean isAllowed(byte b) {
+    public boolean isAllowedBase(byte b) {
         int i = b & 0xFF;
         return i < 128 && allowed[i];
+    }
+
+    public boolean isNonSequenceAllowedChar(byte b) {
+        int i = b & 0xFF;
+        return i < 128 && specialChars[i];
     }
 
     /** Fast ASCII check for 'N' or 'n' without decoding. */
@@ -30,7 +38,7 @@ public final class SequenceAlphabet {
     }
 
     public static SequenceAlphabet defaultNucleotideAlphabet() {
-        return new SequenceAlphabet("ACGTURYSWKMBDHVNacgturyswkmbdhvn-.*");
+        return new SequenceAlphabet("ACGTURYSWKMBDHVNacgturyswkmbdhvn-.*", "\n\r");
     }
 
     public String describeAllowed() {

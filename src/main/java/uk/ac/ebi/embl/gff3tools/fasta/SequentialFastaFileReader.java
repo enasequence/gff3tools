@@ -17,10 +17,7 @@ import java.util.*;
 import uk.ac.ebi.embl.gff3tools.exception.FastaFileException;
 import uk.ac.ebi.embl.gff3tools.fasta.headerutils.JsonHeaderParser;
 import uk.ac.ebi.embl.gff3tools.fasta.headerutils.ParsedHeader;
-import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.ByteSpan;
-import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceAlphabet;
-import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceIndex;
-import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceIndexBuilder;
+import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.*;
 
 public class SequentialFastaFileReader implements AutoCloseable {
 
@@ -28,7 +25,6 @@ public class SequentialFastaFileReader implements AutoCloseable {
     private static final int CHAR_BUF_SIZE = 512 * 1024; // 512 KB
     private static final byte GT = (byte) '>';
     private static final byte LF = (byte) '\n';
-    private static final byte CR = (byte) '\r';
 
     private final FileChannel channel;
     private final long fileSize;
@@ -83,7 +79,7 @@ public class SequentialFastaFileReader implements AutoCloseable {
             buf.flip();
             while (buf.hasRemaining()) {
                 byte b = buf.get();
-                if (b == LF || b == CR) continue;
+                if (alphabet.isNonSequenceAllowedChar(b)) continue;
                 sb.append((char) (b & 0xFF));
             }
             remain -= n;
@@ -135,7 +131,7 @@ public class SequentialFastaFileReader implements AutoCloseable {
                     // Drain bytes + ASCII decode -> writees chars into caller’s window [off .. off+len)
                     while (buf.hasRemaining() && out < maximumNumberOfCharsToRead) {
                         byte b = buf.get();
-                        if (b == LF || b == CR) continue; // skip irrelevant bytes
+                        if (alphabet.isNonSequenceAllowedChar(b)) continue; // skip irrelevant bytes
                         characterBuffer[startingWriteIndexInCharacterBuffer + out] = (char) (b & 0xFF);
                         out++;
                     }

@@ -23,7 +23,6 @@ public final class SequenceIndexBuilder {
 
     private static final byte GT = (byte) '>';
     private static final byte LF = (byte) '\n';
-    private static final byte CR = (byte) '\r';
 
     private final FileChannel ch;
     private final long fileSize;
@@ -57,7 +56,7 @@ public final class SequenceIndexBuilder {
 
         long startN = 0, endN = 0;
         if (!filtered.isEmpty()) {
-            startN = countLeadingNs(filtered.get(0)); // (3) only first line
+            startN = countLeadingNs(firstBaseByte, lastBaseByte); // (3) only first line
             endN = countTrailingNs(filtered.get(filtered.size() - 1)); // (4) only last line
         }
 
@@ -110,10 +109,10 @@ public final class SequenceIndexBuilder {
                 s.nextHdr = abs; // stop window at header byte
                 commitOpenLineIfAny(s); // finalize any in-flight line
                 return true;
-            } else if (b == LF || b == CR) { // end of a displayed sequence line or CR
+            } else if (alphabet.isNonSequenceAllowedChar(b)) { // end of a displayed sequence line or CR
                 commitOpenLineIfAny(s); // only lines with bases are committed
                 continue;
-            } else if (alphabet.isAllowed(b)) {
+            } else if (alphabet.isAllowedBase(b)) {
                 observeBase(abs, s);
             } else {
                 throw new FastaFileException(String.format(
@@ -185,9 +184,9 @@ public final class SequenceIndexBuilder {
     }
 
     /** (3) count 'N'/'n' from the start of the first sequence line only. */
-    private long countLeadingNs(LineEntry line) throws IOException {
-        long remaining = line.lengthBytes();
-        long offset = line.byteStart;
+    private long countLeadingNs(long byteStart, long byteEnd) throws IOException {
+        long remaining = byteEnd - byteStart;
+        long offset = byteStart;
         long count = 0;
 
         ByteBuffer buf = ByteBuffer.allocateDirect(COUNT_BUF_SIZE);
@@ -200,8 +199,9 @@ public final class SequenceIndexBuilder {
             buf.flip();
             for (int i = 0; i < n; i++) {
                 byte b = buf.get();
-                if (alphabet.isNBase(b)) count++;
-                else return count;
+                if (alphabet.isNBase(b)) {
+                    count++;
+                } else if (alphabet.isAllowedBase(b)) return count; // found non-N base
             }
             remaining -= n;
             offset += n;
