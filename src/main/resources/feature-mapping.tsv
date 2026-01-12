@@ -173,7 +173,6 @@ SO:0000141 	terminator	The sequence of DNA located either at the end of the tran
 SO:0001055 	transcriptional_cis_regulatory_region	A regulatory_region that modulates the transcription of a gene or genes.	regulatory	/regulatory_class="transcriptional_cis_regulatory_region"
 SO:0000057 	operator	A regulatory element of an operon to which activators or repressors bind thereby effecting translation of genes in that operon.	regulatory	/regulatory_class="other"	/operon="operator"
 SO:0000344 	splice_enhancer	Region of a transcript that regulates splicing.	regulatory	/regulatory_class="other"	/note="splice_enhancer"
-SO:0000187 	repeat_family	A group of characterized repeat sequences.	repeat_region	/rpt_family="<NAME>"
 SO:0000705 	tandem_repeat	Two or more adjacent copies of a region (of length greater than 1).	repeat_region	/rpt_type="tandem"
 SO:0000314 	direct_repeat	A repeat where the same sequence is repeated in the same direction. Example: GCTGA-followed by-GCTGA.	repeat_region	/rpt_type="direct"
 SO:0000294 	inverted_repeat	The sequence is complementarily repeated on the opposite strand. It is a palindrome, and it may, or may not be hyphenated. Examples: GCTGATCAGC, or GCTGA-----TCAGC.	repeat_region	/rpt_type="inverted"
