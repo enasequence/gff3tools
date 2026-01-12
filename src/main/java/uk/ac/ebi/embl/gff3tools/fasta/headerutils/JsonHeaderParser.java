@@ -27,11 +27,15 @@ public class JsonHeaderParser {
         String rest = headerLine.substring(1);
         int pipe = rest.indexOf('|');
 
+        // parse id
         String idPart = (pipe >= 0 ? rest.substring(0, pipe) : rest).trim();
         String id = idPart.isEmpty() ? "" : idPart.split("\\s+")[0];
+        if (Objects.equals(id, "")) {
+            throw new FastaFileException("FASTA header shoild contain the id, but no id was provided.");
+        }
 
+        // parse header
         FastaHeader header = new FastaHeader();
-
         if (pipe >= 0) {
             header = parseHeaderJson(rest.substring(pipe + 1).trim());
         }

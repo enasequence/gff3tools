@@ -108,15 +108,15 @@ public class JsonHeaderParserTest {
     }
 
     @Test
-    void trimsIdAndHandlesJustChevron() {
+    void trimsIdAndDeclinesJustChevron() {
         ParsedHeader ph1 = assertDoesNotThrow(() -> parser.parse(
                 ">   AF111   | {\"description\":\"x\",\"molecule_type\":\"dna\",\"topology\":\"linear\"}"));
         assertEquals("AF111", ph1.getId());
 
         // No pipe: JSON not required
-        ParsedHeader ph2 = assertDoesNotThrow(() -> parser.parse(">"));
-        assertEquals("", ph2.getId());
-        assertNull(ph2.getHeader().getDescription());
+        FastaFileException e = assertThrows(FastaFileException.class, () -> parser.parse("> "));
+        assertTrue(e.getMessage().contains(" id "));
+        ;
     }
 
     // ---------------------------------------------------------
@@ -146,6 +146,13 @@ public class JsonHeaderParserTest {
         String line = ">ID9 | {\"description\":\"x\"}";
         FastaFileException e = assertThrows(FastaFileException.class, () -> parser.parse(line));
         assertTrue(e.getMessage().contains("missing required"));
+    }
+
+    @Test
+    void missingIdThrows() {
+        String line = "> | {\"description\":\"x\", \"molecule_type\":\"dna\", \"topology\":\"circular\"}";
+        FastaFileException e = assertThrows(FastaFileException.class, () -> parser.parse(line));
+        assertTrue(e.getMessage().contains(" id "));
     }
 
     @Test
