@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.fasta.sequenceutils;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import uk.ac.ebi.embl.gff3tools.exception.FastaFileException;
@@ -56,8 +57,8 @@ public final class SequenceIndexBuilder {
 
         long startN = 0, endN = 0;
         if (!filtered.isEmpty()) {
-            startN = countLeadingNs(firstBaseByte, lastBaseByte); // (3) only first line
-            endN = countTrailingNs(filtered.get(filtered.size() - 1)); // (4) only last line
+            startN = countLeadingNs(firstBaseByte, lastBaseByte); // count continuous Ns from the start
+            endN = countTrailingNs(firstBaseByte, lastBaseByte); // count continuous Ns from the end
         }
 
         return new SequenceIndex(firstBaseByte, startN, lastBaseByte, endN, filtered, s.nextHdr);
@@ -185,7 +186,7 @@ public final class SequenceIndexBuilder {
 
     /** (3) count 'N'/'n' from the start of the first sequence line only. */
     private long countLeadingNs(long byteStart, long byteEnd) throws IOException {
-        long remaining = byteEnd - byteStart;
+        long remaining = byteEnd - byteStart + 1;
         long offset = byteStart;
         long count = 0;
 
@@ -198,7 +199,7 @@ public final class SequenceIndexBuilder {
             if (n <= 0) break;
             buf.flip();
             for (int i = 0; i < n; i++) {
-                byte b = buf.get();
+                byte b = buf.get(i);
                 if (alphabet.isNBase(b)) {
                     count++;
                 } else if (alphabet.isAllowedBase(b)) return count; // found non-N base
@@ -210,26 +211,31 @@ public final class SequenceIndexBuilder {
     }
 
     /** (4) count 'N'/'n' at the tail of the last sequence line only. */
-    private long countTrailingNs(LineEntry line) throws IOException {
-        long remaining = line.lengthBytes();
-        long offset = line.byteStart;
+    private long countTrailingNs(long byteStart, long byteEnd) throws IOException {
+        long remaining = byteEnd - byteStart + 1;
         long trailing = 0;
+        long offset = byteEnd + 1; // the +1 allows correct reading
 
         ByteBuffer buf = ByteBuffer.allocateDirect(COUNT_BUF_SIZE);
+
         while (remaining > 0) {
             buf.clear();
             int want = (int) Math.min(buf.capacity(), remaining);
             buf.limit(want);
+
+            offset -= want;
             int n = ch.read(buf, offset);
+
             if (n <= 0) break;
             buf.flip();
-            for (int i = 0; i < n; i++) {
-                byte b = buf.get();
+            String s = StandardCharsets.US_ASCII.decode(buf).toString();
+            for (int i = n - 1; i > -1; i--) { // read from the back
+                byte b = buf.get(i);
                 if (alphabet.isNBase(b)) trailing++;
-                else trailing = 0;
+                else if (alphabet.isAllowedBase(b)) return trailing; // first non-N base
             }
+
             remaining -= n;
-            offset += n;
         }
         return trailing;
     }

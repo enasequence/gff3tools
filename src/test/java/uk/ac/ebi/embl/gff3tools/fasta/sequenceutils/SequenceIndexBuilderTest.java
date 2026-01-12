@@ -147,6 +147,37 @@ public class SequenceIndexBuilderTest {
     }
 
     @Test
+    void readsOnlyNsCorrectly() throws Exception {
+        String header = ">ID2\n";
+        String l1 = "NNnnnnnNNnnnnNNN\n";
+        String l2 = "nnnnNNNNnnnNNNNnn\n";
+        String next = ">H2\n";
+
+        String fasta = header + l1 + l2 + next;
+        Path p = writeAscii(tempDir, "idx2.fa", fasta);
+
+        try (FileChannel ch = openRead(p)) {
+            long seqStart = header.getBytes(StandardCharsets.US_ASCII).length;
+            SequenceIndexBuilder sib =
+                    new SequenceIndexBuilder(ch, ch.size(), SequenceAlphabet.defaultNucleotideAlphabet());
+
+            SequenceIndex idx = sib.buildFrom(seqStart);
+
+            // Two non-empty lines only
+            assertEquals(2, idx.linesView().size());
+
+            // leading Ns until the end
+            assertEquals(33, idx.startNBasesCount);
+            // trailing Ns until the start
+            assertEquals(33, idx.endNBasesCount);
+
+            // nextHeader should be at the '>' byte of H2
+            long expectedNext = fasta.lastIndexOf(">H2\n"); // ascii index
+            assertEquals(expectedNext, idx.nextHeaderByte);
+        }
+    }
+
+    @Test
     void ignoresEmptyLinesCorrectly() throws Exception {
         String header = ">ID3\n";
         String l1 = "NACG\n"; // leading N = 1

@@ -1,0 +1,5 @@
+>ID2 | {"description":"x", "molecule_type":"dna", "topology":"linear"}
+NNnn
+NnnNNNNnnn
+nnnnNNNNNnnnnn
+NNNNnnnnnNNNNNn
