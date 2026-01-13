@@ -49,19 +49,18 @@ public final class SequenceIndexBuilder {
         }
         commitOpenLineIfAny(s);
 
-        // ------------- filter window & compute metadata -------------
-        List<LineEntry> filtered = filterLinesWithinWindow(s.lines, s.firstBaseByte, s.nextHdr);
-
-        long firstBaseByte = filtered.isEmpty() ? -1 : filtered.get(0).byteStart;
-        long lastBaseByte = filtered.isEmpty() ? -1 : (filtered.get(filtered.size() - 1).byteEndExclusive - 1);
+        // ------------- compute metadata -------------
+        List<LineEntry> lines = s.lines;
+        long firstBaseByte = lines.isEmpty() ? -1 : lines.get(0).byteStart;
+        long lastBaseByte = lines.isEmpty() ? -1 : (lines.get(lines.size() - 1).byteEndExclusive - 1);
 
         long startN = 0, endN = 0;
-        if (!filtered.isEmpty()) {
+        if (!lines.isEmpty()) {
             startN = countLeadingNs(firstBaseByte, lastBaseByte); // count continuous Ns from the start
             endN = countTrailingNs(firstBaseByte, lastBaseByte); // count continuous Ns from the end
         }
 
-        return new SequenceIndex(firstBaseByte, startN, lastBaseByte, endN, filtered, s.nextHdr);
+        return new SequenceIndex(firstBaseByte, startN, lastBaseByte, endN, lines, s.nextHdr);
     }
 
     // =====================================================================
@@ -172,19 +171,7 @@ public final class SequenceIndexBuilder {
     // =                  window filter & edge N counting                  =
     // =====================================================================
 
-    /** (1)+(2) Keep only lines fully inside [firstBaseByte, nextHdr) and already non-empty. */
-    private List<LineEntry> filterLinesWithinWindow(List<LineEntry> raw, long firstBaseByte, long nextHdr) {
-        if (firstBaseByte < 0 || raw.isEmpty()) return List.of();
-        ArrayList<LineEntry> out = new ArrayList<>(raw.size());
-        for (LineEntry L : raw) {
-            if (L.byteStart >= firstBaseByte && L.byteEndExclusive <= nextHdr) {
-                out.add(L);
-            }
-        }
-        return out;
-    }
-
-    /** (3) count 'N'/'n' from the start of the first sequence line only. */
+    /** count 'N'/'n' from the start of the first sequence line only. */
     private long countLeadingNs(long byteStart, long byteEnd) throws IOException {
         long remaining = byteEnd - byteStart + 1;
         long offset = byteStart;
@@ -210,7 +197,7 @@ public final class SequenceIndexBuilder {
         return count;
     }
 
-    /** (4) count 'N'/'n' at the tail of the last sequence line only. */
+    /** count 'N'/'n' at the tail of the last sequence line only. */
     private long countTrailingNs(long byteStart, long byteEnd) throws IOException {
         long remaining = byteEnd - byteStart + 1;
         long trailing = 0;
