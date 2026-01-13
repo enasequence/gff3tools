@@ -27,7 +27,7 @@ import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceIndex;
  */
 @Getter
 @Setter
-public final class FastaReader {
+public final class FastaReader implements AutoCloseable {
 
     public List<FastaEntry> fastaEntries = new ArrayList<>();
 
@@ -35,8 +35,13 @@ public final class FastaReader {
     private File file;
     private SequentialFastaFileReader reader;
 
-    public FastaReader() {
-        this.file = null;
+    public FastaReader(File fastaFile) throws FastaFileException, IOException {
+        this.file = Objects.requireNonNull(fastaFile, "fastaFile");
+        this.reader = new SequentialFastaFileReader(fastaFile);
+        this.sequenceIndexes = new HashMap<>();
+        this.fastaEntries = new ArrayList<>();
+
+        loadEntries();
     }
 
     // ---------------------------- queries ----------------------------
@@ -121,7 +126,19 @@ public final class FastaReader {
         this.fastaEntries.clear();
         this.sequenceIndexes.clear();
         reader = new SequentialFastaFileReader(fastaFile);
+        loadEntries();
+    }
+
+    /**
+     * Performs a one-time scan of the FASTA file to build in-memory sequence indexes.
+     * The cached indexes are later used to translate base ranges into byte spans for efficient random-access reads.
+     *
+     * This method is called once during construction and requires exclusive
+     * ownership of the underlying reader.
+     */
+    private void loadEntries() throws IOException, FastaFileException {
         List<FastaEntryMetadata> readEntries = reader.readAll();
+
         for (var entry : readEntries) {
             FastaEntry fastaEntry = new FastaEntry();
             fastaEntry.setSubmissionId(entry.getSubmissionId());
@@ -129,17 +146,20 @@ public final class FastaReader {
             fastaEntry.setTotalBases(entry.sequenceIndex.totalBases());
             fastaEntry.setLeadingNsCount(entry.sequenceIndex.startNBasesCount);
             fastaEntry.setTrailingNsCount(entry.sequenceIndex.endNBasesCount);
+
             long adjustedBases = entry.sequenceIndex.totalBases()
                     - entry.sequenceIndex.startNBasesCount
                     - entry.sequenceIndex.endNBasesCount;
-            fastaEntry.setTotalBasesWithoutNBases(adjustedBases);
-            fastaEntries.add(fastaEntry);
 
+            fastaEntry.setTotalBasesWithoutNBases(adjustedBases);
+
+            fastaEntries.add(fastaEntry);
             sequenceIndexes.put(entry.getSubmissionId(), entry.sequenceIndex);
         }
     }
 
     /** Close the reader. Safe to call multiple times. */
+    @Override
     public void close() throws IOException {
         if (reader != null) {
             reader.close();
