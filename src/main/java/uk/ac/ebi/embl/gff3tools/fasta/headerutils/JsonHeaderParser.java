@@ -72,7 +72,7 @@ public class JsonHeaderParser {
             return header;
 
         } catch (JsonProcessingException e) {
-            throw new FastaFileException("Malformed FASTA header JSON: " + normalised, e);
+            throw new FastaFileException("Malformed FASTA header JSON: " + normalised + " due to " + e.getMessage(), e);
         }
     }
 
