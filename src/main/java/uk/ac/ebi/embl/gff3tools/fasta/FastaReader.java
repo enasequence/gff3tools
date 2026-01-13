@@ -27,7 +27,7 @@ import uk.ac.ebi.embl.gff3tools.fasta.sequenceutils.SequenceIndex;
  */
 @Getter
 @Setter
-public final class FastaFileService {
+public final class FastaReader {
 
     public List<FastaEntry> fastaEntries = new ArrayList<>();
 
@@ -35,7 +35,7 @@ public final class FastaFileService {
     private File file;
     private SequentialFastaFileReader reader;
 
-    public FastaFileService() {
+    public FastaReader() {
         this.file = null;
     }
 
