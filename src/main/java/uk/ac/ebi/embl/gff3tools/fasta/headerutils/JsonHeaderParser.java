@@ -24,6 +24,12 @@ public class JsonHeaderParser {
     ;
 
     public ParsedHeader parse(String headerLine) throws FastaFileException {
+
+        //char limit according to the spec
+        if (headerLine.length() > 4096) {
+            throw new FastaFileException("FASTA header should contain a maximum of 4096 characters according to the specification.");
+        }
+
         String rest = headerLine.substring(1);
         int pipe = rest.indexOf('|');
 
@@ -31,7 +37,7 @@ public class JsonHeaderParser {
         String idPart = (pipe >= 0 ? rest.substring(0, pipe) : rest).trim();
         String id = idPart.isEmpty() ? "" : idPart.split("\\s+")[0];
         if (Objects.equals(id, "")) {
-            throw new FastaFileException("FASTA header shoild contain the id, but no id was provided.");
+            throw new FastaFileException("FASTA header should contain the id, but no id was provided.");
         }
 
         // parse header
