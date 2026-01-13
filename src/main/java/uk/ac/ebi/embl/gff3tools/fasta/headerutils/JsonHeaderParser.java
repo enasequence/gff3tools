@@ -25,9 +25,10 @@ public class JsonHeaderParser {
 
     public ParsedHeader parse(String headerLine) throws FastaFileException {
 
-        //char limit according to the spec
+        // char limit according to the spec
         if (headerLine.length() > 4096) {
-            throw new FastaFileException("FASTA header should contain a maximum of 4096 characters according to the specification.");
+            throw new FastaFileException(
+                    "FASTA header should contain a maximum of 4096 characters according to the specification.");
         }
 
         String rest = headerLine.substring(1);
