@@ -13,7 +13,6 @@ package uk.ac.ebi.embl.gff3tools.cli;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -57,7 +56,7 @@ public class FeatureComparator {
                 throw new FlatFileComparatorException("File comparison failed:  \n" + noSourceFile + "\n" + actualFile);
             }
             LOG.info("\n\nFeatures are identical for files: \n" + noSourceFile + "\n" + actualFile);
-        }finally {
+        } finally {
             LOG.info("Deleting file: " + noSourceFile);
             Files.deleteIfExists(Path.of(noSourceFile));
         }
