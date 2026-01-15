@@ -79,7 +79,9 @@ public class FeatureComparator {
         options.setIgnoreLine("FT                   /circular_RNA");
 
         // Add the ignore lines from the command line
-        ignoreLines.forEach(line -> options.setIgnoreLine(line));
+        if (ignoreLines != null) {
+            ignoreLines.forEach(line -> options.setIgnoreLine(line));
+        }
 
         return new FlatFileComparator(options);
     }
