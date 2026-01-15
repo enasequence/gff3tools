@@ -14,7 +14,6 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -33,6 +32,7 @@ public class FeatureComparator {
 
     private static final Logger LOG = LoggerFactory.getLogger(FeatureComparator.class);
     private static List<String> ignoreLines;
+
     public static void main(String[] args) {
         try {
 
@@ -51,7 +51,8 @@ public class FeatureComparator {
         }
     }
 
-    public static void compare(String expectedFile, String actualFile, List<String> ignoreLines) throws FlatFileComparatorException, IOException {
+    public static void compare(String expectedFile, String actualFile, List<String> ignoreLines)
+            throws FlatFileComparatorException, IOException {
 
         // A copy of the expected file(remove source feature, source qualifiers and sequence) for Comparision.
         String noSourceFile = createNoSourceFeatureFile(expectedFile);

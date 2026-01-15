@@ -1,14 +1,23 @@
+/*
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package uk.ac.ebi.embl.gff3tools.cli;
 
-import org.junit.jupiter.api.*;
-import uk.ac.ebi.embl.api.validation.helper.FlatFileComparatorException;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.*;
+import uk.ac.ebi.embl.api.validation.helper.FlatFileComparatorException;
 
 class FeatureComparatorTest {
 
@@ -17,7 +26,6 @@ class FeatureComparatorTest {
     private Path ignoreFile;
     private Path expectedFileWithIgnoredLine;
     private Path actualFileWithIgnoredLine;
-
 
     @BeforeEach
     void setup() throws IOException {
@@ -72,7 +80,6 @@ class FeatureComparatorTest {
             writer.write("//");
         }
 
-
         // Optional: ignore file
         ignoreFile = Files.createTempFile("ignore", ".txt");
         try (BufferedWriter writer = Files.newBufferedWriter(ignoreFile)) {
@@ -94,20 +101,15 @@ class FeatureComparatorTest {
     @Test
     void testCompareFilesIdentical() {
         assertDoesNotThrow(() -> FeatureComparator.compare(
-                expectedFile.toString(),
-                actualFile.toString(),
-                List.of() // no extra ignore lines
-        ));
+                expectedFile.toString(), actualFile.toString(), List.of() // no extra ignore lines
+                ));
     }
 
     @Test
     void testCompareFilesWithIgnoreLines() throws IOException {
         List<String> ignoreLines = Files.readAllLines(ignoreFile);
         assertDoesNotThrow(() -> FeatureComparator.compare(
-                actualFileWithIgnoredLine.toString(),
-                actualFileWithIgnoredLine.toString(),
-                ignoreLines
-        ));
+                actualFileWithIgnoredLine.toString(), actualFileWithIgnoredLine.toString(), ignoreLines));
     }
 
     @Test
