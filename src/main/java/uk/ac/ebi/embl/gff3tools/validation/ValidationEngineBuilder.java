@@ -35,16 +35,19 @@ public class ValidationEngineBuilder {
         return new ValidationEngine(validationConfig, validationRegistry);
     }
 
-    public void overrideMethodRules(Map<String, RuleSeverity> map) {
+    public ValidationEngineBuilder overrideMethodRules(Map<String, RuleSeverity> map) {
         this.validationConfig.getRuleOverrides().putAll(map);
+        return this;
     }
 
-    public void overrideMethodFixs(Map<String, Boolean> map) {
+    public ValidationEngineBuilder overrideMethodFixs(Map<String, Boolean> map) {
         this.validationConfig.getFixOverrides().putAll(map);
+        return this;
     }
 
-    public void overrideClassRules(Map<String, Boolean> map) {
+    public ValidationEngineBuilder overrideClassRules(Map<String, Boolean> map) {
         this.validationConfig.getValidatorOverrides().putAll(map);
+        return this;
     }
 
     public void setConnection(Connection connection) {

@@ -57,9 +57,7 @@ public abstract class AbstractCommand implements Runnable {
 
     protected ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides)
             throws UnregisteredValidationRuleException {
-        ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
-        engineBuilder.overrideMethodRules(ruleOverrides);
-        return engineBuilder.build();
+        return new ValidationEngineBuilder().overrideMethodRules(ruleOverrides).build();
     }
 
     @FunctionalInterface
