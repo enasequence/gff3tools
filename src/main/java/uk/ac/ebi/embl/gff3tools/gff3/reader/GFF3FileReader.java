@@ -25,6 +25,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationContext;
 
 public class GFF3FileReader implements AutoCloseable {
 
@@ -245,6 +246,9 @@ public class GFF3FileReader implements AutoCloseable {
             feature.addAttributes(attributesMap);
 
             validationEngine.validate(feature, lineCount);
+            if(feature.getName().equalsIgnoreCase("CDS")){
+                validationEngine.validate(feature, lineCount,new ValidationContext());
+            }
             return feature;
         } else {
             return null;

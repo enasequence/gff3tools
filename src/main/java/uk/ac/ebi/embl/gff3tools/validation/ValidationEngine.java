@@ -41,6 +41,12 @@ public class ValidationEngine {
         executeValidations(target, line);
     }
 
+    public <T> void validate(T target, int line, ValidationContext validationContext) throws ValidationException {
+
+        executeFixs(target, line,validationContext);
+        executeValidations(target, line);
+    }
+
     public <T> void executeValidations(T target, int line) throws ValidationException {
         List<ValidatorDescriptor> validators = validationRegistry.getValidations();
 
@@ -92,6 +98,40 @@ public class ValidationEngine {
                     validator.method().invoke(validator.instance(), target, line);
                 } else if (target instanceof GFF3Annotation && methodAnnotation.type() == ValidationType.ANNOTATION) {
                     validator.method().invoke(validator.instance(), target, line);
+                }
+            } catch (Exception e) {
+                handleRuleException(e, null, methodAnnotation.rule());
+            }
+        }
+    }
+
+
+    public <T> void executeFixs(T target, int line, ValidationContext validationContext) throws ValidationException {
+        List<ValidatorDescriptor> validators = validationRegistry.getFixs();
+
+        for (ValidatorDescriptor validator : validators) {
+
+            int paramCount = validator.method().getParameterCount();
+
+            FixMethod methodAnnotation = validator.method().getAnnotation(FixMethod.class);
+
+            boolean fixEnabled = validationConfig.getFix(methodAnnotation.rule(), methodAnnotation.enabled());
+
+            if (!fixEnabled) continue;
+
+            try {
+                if (target instanceof GFF3Feature && methodAnnotation.type() == ValidationType.FEATURE) {
+                    if(paramCount==2) {
+                        validator.method().invoke(validator.instance(), target, line);
+                    }else {
+                        validator.method().invoke(validator.instance(), target, line, validationContext);
+                    }
+                } else if (target instanceof GFF3Annotation && methodAnnotation.type() == ValidationType.ANNOTATION) {
+                    if(paramCount==2) {
+                        validator.method().invoke(validator.instance(), target, line);
+                    }else {
+                        validator.method().invoke(validator.instance(), target, line, validationContext);
+                    }
                 }
             } catch (Exception e) {
                 handleRuleException(e, null, methodAnnotation.rule());
