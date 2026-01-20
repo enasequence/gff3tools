@@ -667,4 +667,174 @@ public class MainIntegrationTest {
         }
         return path;
     }
+
+    @Test
+    void testEmblToGff3_withOutputSequence_writesNucleotideSequencesToFasta() throws IOException {
+        // Use the test file that has sequence data
+        Path inputFile = Path.of("src/test/resources/fftogff3_rules/reduced/contig-reduced.embl");
+        Path outputGff3 = Files.createTempFile("output", ".gff3");
+        Path outputFasta = Files.createTempFile("output", ".fasta");
+
+        String[] args = new String[] {
+            "conversion",
+            "-f",
+            "embl",
+            "-t",
+            "gff3",
+            "--output-sequence",
+            outputFasta.toString(),
+            inputFile.toString(),
+            outputGff3.toString()
+        };
+
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(errContent));
+
+        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
+            mock.when(() -> Main.main(any())).thenCallRealMethod();
+            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
+            Main.main(args);
+
+            // Verify GFF3 output was created
+            assertTrue(Files.exists(outputGff3), "GFF3 output file should exist");
+            String gff3Content = Files.readString(outputGff3);
+            assertTrue(gff3Content.contains("##gff-version"), "GFF3 should have header");
+
+            // Verify FASTA output contains nucleotide sequence
+            assertTrue(Files.exists(outputFasta), "FASTA output file should exist");
+            String fastaContent = Files.readString(outputFasta);
+            assertFalse(fastaContent.isEmpty(), "FASTA output should not be empty");
+            assertTrue(fastaContent.contains(">"), "FASTA should have header line");
+            // The sequence from the test file contains "tgcctaagcc"
+            assertTrue(
+                    fastaContent.toLowerCase().contains("tgcctaagcc"),
+                    "FASTA should contain the nucleotide sequence from the input file");
+        } finally {
+            Files.deleteIfExists(outputGff3);
+            Files.deleteIfExists(outputFasta);
+            System.setErr(originalErr);
+        }
+    }
+
+    @Test
+    void testEmblToGff3_withoutOutputSequence_discardSequences() throws IOException {
+        // Use the test file that has sequence data
+        Path inputFile = Path.of("src/test/resources/fftogff3_rules/reduced/contig-reduced.embl");
+        Path outputGff3 = Files.createTempFile("output", ".gff3");
+
+        // No --output-sequence option provided
+        String[] args =
+                new String[] {"conversion", "-f", "embl", "-t", "gff3", inputFile.toString(), outputGff3.toString()};
+
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(errContent));
+
+        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
+            mock.when(() -> Main.main(any())).thenCallRealMethod();
+            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
+            Main.main(args);
+
+            // Verify GFF3 output was created
+            assertTrue(Files.exists(outputGff3), "GFF3 output file should exist");
+            String gff3Content = Files.readString(outputGff3);
+            assertTrue(gff3Content.contains("##gff-version"), "GFF3 should have header");
+
+            // Verify no FASTA section in GFF3 output (nucleotide sequences should be discarded)
+            // GFF3 may have ##FASTA for translation sequences, but not nucleotide sequences
+            // The nucleotide sequence "tgcctaagcc" should NOT appear in the GFF3 output
+            assertFalse(
+                    gff3Content.toLowerCase().contains("tgcctaagcc"),
+                    "GFF3 should NOT contain nucleotide sequences when --output-sequence is not provided");
+        } finally {
+            Files.deleteIfExists(outputGff3);
+            System.setErr(originalErr);
+        }
+    }
+
+    @Test
+    void testEmblToGff3_withOutputSequence_shortForm() throws IOException {
+        // Test with -os short form
+        Path inputFile = Path.of("src/test/resources/fftogff3_rules/reduced/contig-reduced.embl");
+        Path outputGff3 = Files.createTempFile("output", ".gff3");
+        Path outputFasta = Files.createTempFile("output", ".fasta");
+
+        String[] args = new String[] {
+            "conversion",
+            "-f",
+            "embl",
+            "-t",
+            "gff3",
+            "-os",
+            outputFasta.toString(),
+            inputFile.toString(),
+            outputGff3.toString()
+        };
+
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(errContent));
+
+        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
+            mock.when(() -> Main.main(any())).thenCallRealMethod();
+            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
+            Main.main(args);
+
+            // Verify FASTA output contains nucleotide sequence
+            assertTrue(Files.exists(outputFasta), "FASTA output file should exist");
+            String fastaContent = Files.readString(outputFasta);
+            assertFalse(fastaContent.isEmpty(), "FASTA output should not be empty with -os option");
+            assertTrue(
+                    fastaContent.toLowerCase().contains("tgcctaagcc"),
+                    "FASTA should contain the nucleotide sequence from the input file");
+        } finally {
+            Files.deleteIfExists(outputGff3);
+            Files.deleteIfExists(outputFasta);
+            System.setErr(originalErr);
+        }
+    }
+
+    @Test
+    void testEmblToGff3_withoutSequenceInInput_fastaOutputEmpty() throws IOException {
+        // Use a test file without sequence data
+        Path inputFile = Path.of("src/test/resources/fftogff3_rules/partial_location_end.embl");
+        Path outputGff3 = Files.createTempFile("output", ".gff3");
+        Path outputFasta = Files.createTempFile("output", ".fasta");
+
+        String[] args = new String[] {
+            "conversion",
+            "-f",
+            "embl",
+            "-t",
+            "gff3",
+            "--output-sequence",
+            outputFasta.toString(),
+            inputFile.toString(),
+            outputGff3.toString()
+        };
+
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(errContent));
+
+        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
+            mock.when(() -> Main.main(any())).thenCallRealMethod();
+            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
+            Main.main(args);
+
+            // Verify GFF3 output was created
+            assertTrue(Files.exists(outputGff3), "GFF3 output file should exist");
+
+            // Verify FASTA output is empty (no sequences in input file)
+            assertTrue(Files.exists(outputFasta), "FASTA output file should exist");
+            String fastaContent = Files.readString(outputFasta);
+            assertTrue(
+                    fastaContent.isEmpty(), "FASTA output should be empty when input file has no nucleotide sequences");
+        } finally {
+            Files.deleteIfExists(outputGff3);
+            Files.deleteIfExists(outputFasta);
+            System.setErr(originalErr);
+        }
+    }
 }

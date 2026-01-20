@@ -238,4 +238,34 @@ class FileConversionCommandTest {
         ConversionFileFormat format = ConversionFileFormat.valueOf("tsv");
         assertEquals(ConversionFileFormat.tsv, format);
     }
+
+    @Test
+    void testOutputSequenceOption_longForm() {
+        FileConversionCommand cmd = new FileConversionCommand();
+        new CommandLine(cmd).parseArgs("--output-sequence", "output.fasta", "input.embl", "output.gff3");
+        assertEquals(Path.of("output.fasta"), cmd.fastaOutputPath);
+    }
+
+    @Test
+    void testOutputSequenceOption_shortForm() {
+        FileConversionCommand cmd = new FileConversionCommand();
+        new CommandLine(cmd).parseArgs("-os", "sequences.fa", "input.embl", "output.gff3");
+        assertEquals(Path.of("sequences.fa"), cmd.fastaOutputPath);
+    }
+
+    @Test
+    void testOutputSequenceOption_notProvided() {
+        FileConversionCommand cmd = new FileConversionCommand();
+        new CommandLine(cmd).parseArgs("input.embl", "output.gff3");
+        assertNull(cmd.fastaOutputPath);
+    }
+
+    @Test
+    void testOutputSequenceOption_withOtherOptions() {
+        FileConversionCommand cmd = new FileConversionCommand();
+        new CommandLine(cmd).parseArgs("-f", "embl", "-t", "gff3", "-os", "seqs.fasta", "input.embl", "output.gff3");
+        assertEquals(Path.of("seqs.fasta"), cmd.fastaOutputPath);
+        assertEquals(ConversionFileFormat.embl, cmd.fromFileType);
+        assertEquals(ConversionFileFormat.gff3, cmd.toFileType);
+    }
 }

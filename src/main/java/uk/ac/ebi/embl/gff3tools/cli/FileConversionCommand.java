@@ -113,14 +113,13 @@ public class FileConversionCommand extends AbstractCommand {
             return new Gff3ToFFConverter(engine, inputFilePath);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
             // FASTA path to write translation sequences
-            return masterFilePath == null
-                    ? new FFToGff3Converter(engine)
-                    : new FFToGff3Converter(engine, masterFilePath);
+            return new FFToGff3Converter(engine, masterFilePath, fastaOutputPath);
         } else if (inputFileType == ConversionFileFormat.tsv && outputFileType == ConversionFileFormat.gff3) {
             // TSV to GFF3 conversion using sequencetools template processing
-            return new TSVToGFF3Converter(engine, inputFilePath);
+            return new TSVToGFF3Converter(engine, inputFilePath, fastaOutputPath);
         } else if (inputFileType == ConversionFileFormat.tsv && outputFileType == ConversionFileFormat.embl) {
             // TSV to EMBL conversion using sequencetools template processing
+            // Sequences are always embedded in EMBL output (no --output-fasta option)
             return new TSVToFFConverter(engine, inputFilePath);
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
