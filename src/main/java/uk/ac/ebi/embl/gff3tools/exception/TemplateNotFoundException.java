@@ -11,24 +11,25 @@
 package uk.ac.ebi.embl.gff3tools.exception;
 
 import java.io.IOException;
-import uk.ac.ebi.embl.gff3tools.cli.CLIExitCode;
 
-public class ReadException extends ExitException {
+/**
+ * Exception thrown when a TSV file references a template ID that cannot be found
+ * in sequencetools' template resources.
+ */
+public class TemplateNotFoundException extends ReadException {
 
-    public ReadException(String msg) {
-        super(msg);
+    public TemplateNotFoundException(String message) {
+        super(message, new IOException(message));
     }
 
-    public ReadException(String msg, IOException cause) {
-        super(msg, cause);
+    public TemplateNotFoundException(String message, Exception cause) {
+        super(message, wrapAsIOException(cause));
     }
 
-    public ReadException(IOException cause) {
-        super("Error reading from input", cause);
-    }
-
-    @Override
-    public CLIExitCode exitCode() {
-        return CLIExitCode.READ_ERROR;
+    private static IOException wrapAsIOException(Exception e) {
+        if (e instanceof IOException) {
+            return (IOException) e;
+        }
+        return new IOException(e);
     }
 }
