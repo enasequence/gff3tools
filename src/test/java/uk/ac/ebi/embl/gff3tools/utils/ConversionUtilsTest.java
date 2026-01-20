@@ -13,6 +13,10 @@ package uk.ac.ebi.embl.gff3tools.utils;
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.api.entry.Entry;
+import uk.ac.ebi.embl.api.entry.EntryFactory;
+import uk.ac.ebi.embl.api.entry.sequence.Sequence;
+import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 
 class ConversionUtilsTest {
 
@@ -133,5 +137,82 @@ class ConversionUtilsTest {
     @Test
     void matchesGlob_tooShortForPrefix() {
         assertFalse(ConversionUtils.matchesWildcardValue("transposon*", "trans"));
+    }
+
+    // --- getEffectiveAccession ---
+
+    @Test
+    void testGetEffectiveAccession_withSequenceAccession() {
+        EntryFactory entryFactory = new EntryFactory();
+        SequenceFactory sequenceFactory = new SequenceFactory();
+
+        Entry entry = entryFactory.createEntry();
+        Sequence sequence = sequenceFactory.createSequence();
+        sequence.setAccession("ABC12345.1");
+        entry.setSequence(sequence);
+        entry.setSubmitterAccession("ENTRY_1");
+
+        // Should prefer sequence accession over submitter accession
+        assertEquals("ABC12345.1", ConversionUtils.getEffectiveAccession(entry));
+    }
+
+    @Test
+    void testGetEffectiveAccession_fallbackToSubmitterAccession() {
+        EntryFactory entryFactory = new EntryFactory();
+        SequenceFactory sequenceFactory = new SequenceFactory();
+
+        Entry entry = entryFactory.createEntry();
+        Sequence sequence = sequenceFactory.createSequence();
+        // No accession set on sequence
+        entry.setSequence(sequence);
+        entry.setSubmitterAccession("ENTRY_1");
+
+        // Should fall back to submitter accession
+        assertEquals("ENTRY_1", ConversionUtils.getEffectiveAccession(entry));
+    }
+
+    @Test
+    void testGetEffectiveAccession_emptySequenceAccession() {
+        EntryFactory entryFactory = new EntryFactory();
+        SequenceFactory sequenceFactory = new SequenceFactory();
+
+        Entry entry = entryFactory.createEntry();
+        Sequence sequence = sequenceFactory.createSequence();
+        sequence.setAccession("");
+        entry.setSequence(sequence);
+        entry.setSubmitterAccession("ENTRY_2");
+
+        // Should fall back to submitter accession when accession is empty
+        assertEquals("ENTRY_2", ConversionUtils.getEffectiveAccession(entry));
+    }
+
+    @Test
+    void testGetEffectiveAccession_nullEntry() {
+        assertNull(ConversionUtils.getEffectiveAccession(null));
+    }
+
+    @Test
+    void testGetEffectiveAccession_nullSequence() {
+        EntryFactory entryFactory = new EntryFactory();
+
+        Entry entry = entryFactory.createEntry();
+        entry.setSubmitterAccession("ENTRY_3");
+        // No sequence set
+
+        // Should fall back to submitter accession
+        assertEquals("ENTRY_3", ConversionUtils.getEffectiveAccession(entry));
+    }
+
+    @Test
+    void testGetEffectiveAccession_noAccessionAvailable() {
+        EntryFactory entryFactory = new EntryFactory();
+        SequenceFactory sequenceFactory = new SequenceFactory();
+
+        Entry entry = entryFactory.createEntry();
+        Sequence sequence = sequenceFactory.createSequence();
+        entry.setSequence(sequence);
+        // No submitter accession set either
+
+        assertNull(ConversionUtils.getEffectiveAccession(entry));
     }
 }

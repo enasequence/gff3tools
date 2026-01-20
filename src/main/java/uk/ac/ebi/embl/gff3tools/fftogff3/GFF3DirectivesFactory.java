@@ -19,6 +19,7 @@ import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
+import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 public class GFF3DirectivesFactory {
@@ -81,8 +82,8 @@ public class GFF3DirectivesFactory {
     public GFF3SequenceRegion createSequenceRegion(Entry entry)
             throws NoSourcePresentException, NoAccessionPresentException {
 
-        String accession =
-                Optional.ofNullable(entry.getSequence().getAccession()).orElseThrow(NoAccessionPresentException::new);
+        String accession = Optional.ofNullable(ConversionUtils.getEffectiveAccession(entry))
+                .orElseThrow(NoAccessionPresentException::new);
         if (accession != null && !accession.isEmpty()) {
             String[] parts = accession.split("[.]");
             String sequenceId = parts[0];
