@@ -661,10 +661,9 @@ java -jar gff3tools.jar conversion --rules TSV_MANDATORY_FIELD=WARN input.tsv ou
 3. Add tests for TSV→EMBL conversion
 
 ### Phase 4: Polish & Extended Features
-1. Add CLI options (project ID, offline mode)
-2. Comprehensive test coverage for all templates
-3. Documentation and examples
-4. Error message improvements
+1. Comprehensive test coverage for all templates
+2. Documentation and examples
+3. Error message improvements
 
 ---
 
