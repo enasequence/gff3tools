@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.fasta.writer.FastaFileWriter;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -28,6 +27,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
+import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
@@ -74,7 +74,7 @@ public class GFF3FileFactory {
 
                 // Write nucleotide sequence to FASTA if writer is provided
                 if (nucleotideFastaWriter != null) {
-                    writeNucleotideSequence(entry, nucleotideFastaWriter);
+                    ConversionUtils.writeNucleotideSequence(entry, nucleotideFastaWriter);
                 }
 
                 if (species == null) {
@@ -119,7 +119,8 @@ public class GFF3FileFactory {
 
         for (Entry entry : entries) {
             if (species == null) {
-                species = directivesFactory.createSpecies(entry, masterEntry);
+                Entry sourceEntry = masterEntry != null ? masterEntry : entry;
+                species = directivesFactory.createSpecies(sourceEntry, (MasterMetadata) null);
             }
             annotations.add(annotationFactory.from(entry));
         }
@@ -166,18 +167,5 @@ public class GFF3FileFactory {
                 .parsingWarnings(gff3FileReader.getValidationEngine().getParsingWarnings())
                 .translationState(translationState)
                 .build();
-    }
-
-    /**
-     * Writes nucleotide sequence from an entry to the FASTA writer.
-     */
-    private void writeNucleotideSequence(Entry entry, BufferedWriter fastaWriter) throws WriteException {
-        if (entry.getSequence() != null && entry.getSequence().getLength() > 0) {
-            try {
-                new FastaFileWriter(entry, fastaWriter).write();
-            } catch (IOException e) {
-                throw new WriteException("Error writing nucleotide sequence to FASTA", e);
-            }
-        }
     }
 }
