@@ -83,10 +83,6 @@ public enum ConversionUtils {
             }
         }
 
-        if (candidates == null || candidates.isEmpty()) {
-            return null;
-        }
-
         return selectBestMatch(candidates, gff3Attributes);
     }
 
@@ -94,9 +90,15 @@ public enum ConversionUtils {
      * Selects the best matching ConversionEntry from candidates based on qualifier matching.
      * Prefers entries with the most matching qualifiers. Falls back to entries with no
      * qualifier requirements if no specific match is found.
+     *
+     * @return the best matching entry, or null if candidates is null or empty
      */
     private static ConversionEntry selectBestMatch(
             List<ConversionEntry> candidates, Map<String, List<String>> gff3Attributes) {
+        if (candidates == null || candidates.isEmpty()) {
+            return null;
+        }
+
         return candidates.stream()
                 .filter(entry -> hasAllRequiredQualifiers(entry, gff3Attributes))
                 .max(Comparator.comparingInt(entry -> entry.getQualifiers().size()))
