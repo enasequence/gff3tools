@@ -21,11 +21,12 @@ import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 
 /**
- * Converts TSV files to EMBL flat file format (features/annotations only, no sequence).
+ * Converts TSV files to EMBL flat file format.
  *
  * <p>This converter uses sequencetools' template processing to read TSV files and convert
  * them to Entry objects, then uses sequencetools' EmblEntryWriter to produce EMBL output.
- * The nucleotide sequence data is excluded from the output.
+ *
+ * <p>Nucleotide sequences are always embedded in the EMBL output if present in the input.
  *
  * <p>The TSV file must contain a template ID line (e.g., "Checklist ERT000002") in the
  * first 10 lines, followed by a header row and data rows.
@@ -55,6 +56,7 @@ public class TSVToFFConverter implements Converter {
         // 1. We need to read the file twice (once for template ID, once for data)
         // 2. TSVEntryReader handles gzip detection internally
         try (TSVEntryReader entryReader = new TSVEntryReader(inputFilePath)) {
+
             LOG.info(
                     "Converting TSV file using template: {}",
                     entryReader.getTemplateInfo().getName());
@@ -64,12 +66,8 @@ public class TSVToFFConverter implements Converter {
             while ((entry = entryReader.read()) != null) {
                 entryCount++;
 
-                // Clear sequence data - we only want features/annotations in output
-                if (entry.getSequence() != null) {
-                    entry.getSequence().setSequence(null);
-                }
-
                 // Use sequencetools' EmblEntryWriter to write the entry
+                // Nucleotide sequences are embedded in the EMBL output if present
                 new EmblEntryWriter(entry).write(writer);
             }
 

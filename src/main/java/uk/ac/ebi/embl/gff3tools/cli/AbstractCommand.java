@@ -68,6 +68,12 @@ public abstract class AbstractCommand implements Runnable {
             description = "Optional master entry file. Accepts MasterEntry JSON (.json) or EMBL flatfile (.embl/.ff).")
     public Path masterFilePath;
 
+    @CommandLine.Option(
+            names = {"--output-sequence", "-os"},
+            description =
+                    "Optional output path for nucleotide sequences in FASTA format (only applicable for GFF3 output)")
+    public Path fastaOutputPath;
+
     @CommandLine.Parameters(
             paramLabel = "[input-file]",
             defaultValue = "",

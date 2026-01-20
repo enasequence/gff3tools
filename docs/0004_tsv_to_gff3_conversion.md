@@ -35,6 +35,8 @@ TSV File → [sequencetools] → Entry ─┤
 | Output formats | GFF3 and EMBL | EMBL output is essentially free since Entry is intermediate |
 | Input formats | Both gzipped and plain TSV | Flexibility for users; gff3tools convention |
 | Validation | gff3tools ValidationEngine | Consistent error reporting across all conversions |
+| Sequence handling (GFF3 output) | **Optional separate file** | For GFF3 output, nucleotide sequences can be extracted to a separate FASTA file via `--output-sequence`; otherwise discarded |
+| Sequence handling (EMBL output) | **Embedded if present** | For EMBL output, nucleotide sequences are always embedded in the output file if present in the input |
 
 ---
 
@@ -462,6 +464,7 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 /**
  * Converts TSV files to EMBL flat file format.
  * Uses sequencetools' EmblEntryWriter for output.
+ * Nucleotide sequences are always embedded in the output if present.
  */
 public class TSVToFFConverter implements Converter {
     private final ValidationEngine validationEngine;
@@ -480,6 +483,7 @@ public class TSVToFFConverter implements Converter {
             Entry entry;
             while ((entry = entryReader.read()) != null) {
                 // Use sequencetools' EmblEntryWriter
+                // Sequences are embedded in the output if present
                 new EmblEntryWriter(entry).write(writer);
             }
         } catch (IOException e) {
@@ -640,6 +644,41 @@ java -jar gff3tools.jar conversion --strict input.tsv output.gff3
 java -jar gff3tools.jar conversion --rules TSV_MANDATORY_FIELD=WARN input.tsv output.gff3
 ```
 
+### 5.4 Sequence Handling
+
+Sequence handling differs based on the output format:
+
+#### GFF3 Output (with `--output-sequence` option)
+
+When converting to GFF3, nucleotide sequences are **not embedded** in the output. Use `--output-sequence` / `-os` to extract sequences to a separate FASTA file.
+
+**Behavior:**
+- If `--output-sequence` is **not provided**: Only the GFF3 annotation file is generated; sequences are discarded
+- If `--output-sequence` is **provided**: Annotations go to the GFF3 file, nucleotide sequences go to the specified FASTA file
+
+```bash
+# TSV → GFF3 only (sequences discarded)
+java -jar gff3tools.jar conversion input.tsv output.gff3
+
+# TSV → GFF3 + separate FASTA file
+java -jar gff3tools.jar conversion input.tsv output.gff3 --output-sequence sequences.fasta
+java -jar gff3tools.jar conversion input.tsv output.gff3 -os sequences.fasta
+
+# EMBL → GFF3 + separate FASTA file
+java -jar gff3tools.jar conversion input.embl output.gff3 -os sequences.fasta
+```
+
+#### EMBL Output (sequences always embedded)
+
+When converting to EMBL format, nucleotide sequences are **always embedded** in the output file if present in the input. No `--output-sequence` option is needed.
+
+```bash
+# TSV → EMBL (sequences embedded if present in TSV)
+java -jar gff3tools.jar conversion input.tsv output.embl
+```
+
+**Note:** The `--output-sequence` option is only applicable when the output format is GFF3.
+
 ---
 
 ## 6. Implementation Plan
@@ -727,6 +766,8 @@ Create test file pairs in appropriate directories:
 | Support TSV→EMBL? | **Yes** - adds minimal complexity since Entry is intermediate representation |
 | How to handle validation? | **Use gff3tools ValidationEngine** - map sequencetools errors to gff3tools severity levels |
 | Input format (gzip/plain)? | **Support both** - auto-detect using gzip magic bytes |
+| Include nucleotide sequence in GFF3 output? | **No (optional separate file)** - GFF3 output contains only annotations; use `--output-sequence` to extract sequences to a separate FASTA file |
+| Include nucleotide sequence in EMBL output? | **Yes (always embedded)** - EMBL output always includes nucleotide sequences if present in the input |
 
 ---
 

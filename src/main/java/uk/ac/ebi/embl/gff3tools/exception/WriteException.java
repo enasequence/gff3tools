@@ -18,6 +18,10 @@ public class WriteException extends ExitException {
         super("Error writing to output", cause);
     }
 
+    public WriteException(String message, IOException cause) {
+        super(message, cause);
+    }
+
     @Override
     public CLIExitCode exitCode() {
         return CLIExitCode.WRITE_ERROR;
