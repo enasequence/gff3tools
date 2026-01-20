@@ -16,7 +16,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.fasta.writer.FastaFileWriter;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -25,6 +24,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
+import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 
 public class GFF3FileFactory {
@@ -64,7 +64,7 @@ public class GFF3FileFactory {
 
                 // Write nucleotide sequence to FASTA if writer is provided
                 if (nucleotideFastaWriter != null) {
-                    writeNucleotideSequence(entry, nucleotideFastaWriter);
+                    ConversionUtils.writeNucleotideSequence(entry, nucleotideFastaWriter);
                 }
 
                 if (species == null) {
@@ -115,18 +115,5 @@ public class GFF3FileFactory {
                 .fastaFilePath(fastaFilePath)
                 .parsingWarnings(engine.getParsingWarnings())
                 .build();
-    }
-
-    /**
-     * Writes nucleotide sequence from an entry to the FASTA writer.
-     */
-    private void writeNucleotideSequence(Entry entry, BufferedWriter fastaWriter) throws WriteException {
-        if (entry.getSequence() != null && entry.getSequence().getLength() > 0) {
-            try {
-                new FastaFileWriter(entry, fastaWriter).write();
-            } catch (IOException e) {
-                throw new WriteException("Error writing nucleotide sequence to FASTA", e);
-            }
-        }
     }
 }
