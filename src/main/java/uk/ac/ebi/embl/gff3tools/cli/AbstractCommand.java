@@ -50,6 +50,12 @@ public abstract class AbstractCommand implements Runnable {
     @CommandLine.Option(names = "-m", description = "Optional master file")
     public Path masterFilePath;
 
+    @CommandLine.Option(
+            names = {"--output-sequence", "-os"},
+            description =
+                    "Optional output path for nucleotide sequences in FASTA format (only applicable for GFF3 output)")
+    public Path fastaOutputPath;
+
     @CommandLine.Parameters(
             paramLabel = "[input-file]",
             defaultValue = "",
