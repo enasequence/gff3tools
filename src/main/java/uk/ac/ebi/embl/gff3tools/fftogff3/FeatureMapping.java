@@ -11,7 +11,6 @@
 package uk.ac.ebi.embl.gff3tools.fftogff3;
 
 import java.util.*;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
@@ -20,8 +19,6 @@ import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 
 public class FeatureMapping {
-
-    static Pattern WILDCARD_TEXT = Pattern.compile("^\\<.+\\>$");
 
     public static String getGFF3FeatureName(Feature ffFeature) throws ValidationException {
         String featureName = ffFeature.getName();
@@ -86,7 +83,9 @@ public class FeatureMapping {
                 String expectedQualifierValue = requiredQualifiers.get(expectedQualifierName);
                 // Tries to find the exact match or finds qualifiers with a wildcard value with the format:
                 //  /qualifier_name=<any text> example: /estimated_length=<length of feature>
-                qualifierMatches = WILDCARD_TEXT.matcher(expectedQualifierValue).matches()
+                qualifierMatches = ConversionUtils.WILDCARD_TEXT
+                                .matcher(expectedQualifierValue)
+                                .matches()
                         || qualifierValue.equalsIgnoreCase(expectedQualifierValue);
                 if (qualifierMatches) {
                     break;

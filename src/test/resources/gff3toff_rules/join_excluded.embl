@@ -23,11 +23,11 @@ FT                   /rpt_type=other
 FT   repeat_region   300..350
 FT                   /gene="matK"
 FT                   /rpt_type=other
-FT   assembly_gap    400..450
+FT   gap             400..450
 FT                   /estimated_length=12
 FT                   /gap_type="within scaffold"
 FT                   /linkage_evidence="paired-ends"
-FT   assembly_gap    500..550
+FT   gap             500..550
 FT                   /estimated_length=12
 FT                   /gap_type="within scaffold"
 FT                   /linkage_evidence="paired-ends"
