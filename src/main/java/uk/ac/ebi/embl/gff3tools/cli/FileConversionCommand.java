@@ -33,6 +33,8 @@ import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToFFConverter;
+import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToGFF3Converter;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
@@ -132,7 +134,16 @@ public class FileConversionCommand extends AbstractCommand {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
             return new Gff3ToFFConverter(engine, inputFilePath);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
-            return new FFToGff3Converter(engine);
+            // FASTA path to write translation sequences
+            return masterFilePath == null
+                    ? new FFToGff3Converter(engine)
+                    : new FFToGff3Converter(engine, masterFilePath);
+        } else if (inputFileType == ConversionFileFormat.tsv && outputFileType == ConversionFileFormat.gff3) {
+            // TSV to GFF3 conversion using sequencetools template processing
+            return new TSVToGFF3Converter(engine, inputFilePath);
+        } else if (inputFileType == ConversionFileFormat.tsv && outputFileType == ConversionFileFormat.embl) {
+            // TSV to EMBL conversion using sequencetools template processing
+            return new TSVToFFConverter(engine, inputFilePath);
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }

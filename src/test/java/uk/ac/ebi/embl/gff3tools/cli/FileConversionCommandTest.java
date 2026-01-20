@@ -255,6 +255,37 @@ class FileConversionCommandTest {
         assertFalse(Files.exists(outputFile), "Output file should not be created when errors occur");
     }
 
+    @Test
+    void testGetFileExtension_simple() {
+        assertEquals("tsv", FileConversionCommand.getFileExtension(Path.of("input.tsv")));
+        assertEquals("gff3", FileConversionCommand.getFileExtension(Path.of("output.gff3")));
+        assertEquals("embl", FileConversionCommand.getFileExtension(Path.of("data.embl")));
+    }
+
+    @Test
+    void testGetFileExtension_gzipped() {
+        // .tsv.gz should be recognized as tsv
+        assertEquals("tsv", FileConversionCommand.getFileExtension(Path.of("input.tsv.gz")));
+    }
+
+    @Test
+    void testGetFileExtension_noExtension() {
+        assertNull(FileConversionCommand.getFileExtension(Path.of("noextension")));
+    }
+
+    @Test
+    void testGetFileExtension_withPath() {
+        assertEquals("tsv", FileConversionCommand.getFileExtension(Path.of("/some/path/to/input.tsv")));
+        assertEquals("tsv", FileConversionCommand.getFileExtension(Path.of("/some/path/to/input.tsv.gz")));
+    }
+
+    @Test
+    void testConversionFileFormat_tsvIncluded() {
+        // Verify tsv is a valid format
+        ConversionFileFormat format = ConversionFileFormat.valueOf("tsv");
+        assertEquals(ConversionFileFormat.tsv, format);
+    }
+
     private int executeConversion(String... args) {
         StringWriter err = new StringWriter();
         StringWriter out = new StringWriter();
