@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.ac.ebi.embl.api.entry.Entry;
 
 public enum ConversionUtils {
     INSTANCE;
@@ -153,6 +154,30 @@ public enum ConversionUtils {
 
     public static OntologyClient getOntologyClient() {
         return INSTANCE.ontologyClient;
+    }
+
+    /**
+     * Gets the effective accession for an Entry, falling back to submitter accession if
+     * the sequence accession is not available.
+     *
+     * <p>This is useful for TSV-based entries where the sequence accession is not set
+     * (assigned after submission), but the submitter accession (ENTRYNUMBER) is available.
+     *
+     * @param entry the Entry to get the accession from
+     * @return the effective accession, or null if neither is available
+     */
+    public static String getEffectiveAccession(Entry entry) {
+        if (entry == null || entry.getSequence() == null) {
+            return entry != null ? entry.getSubmitterAccession() : null;
+        }
+
+        String accession = entry.getSequence().getAccession();
+        if (accession != null && !accession.isEmpty()) {
+            return accession;
+        }
+
+        // Fall back to submitter accession (e.g., ENTRYNUMBER from TSV files)
+        return entry.getSubmitterAccession();
     }
 
     private void addConversionEntry(ConversionEntry conversionEntry) {
