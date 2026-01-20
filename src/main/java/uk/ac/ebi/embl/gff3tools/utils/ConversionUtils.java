@@ -83,7 +83,11 @@ public enum ConversionUtils {
             }
         }
 
-        return selectBestMatch(candidates, gff3Attributes);
+        ConversionEntry result = selectBestMatch(candidates, gff3Attributes);
+        if (result != null) {
+            LOGGER.debug("SOTerm \"%s\" mapped to INSDC feature \"%s\"".formatted(SOTerm, result.getFeature()));
+        }
+        return result;
     }
 
     /**
@@ -115,6 +119,9 @@ public enum ConversionUtils {
     /**
      * Checks if all required qualifiers from the ConversionEntry are present in the GFF3 attributes.
      * Supports wildcard matching for qualifier values (e.g., {@code <length of feature>}).
+     *
+     * <p>Note: This method mirrors {@link uk.ac.ebi.embl.gff3tools.fftogff3.FeatureMapping#hasAllQualifiers}
+     * which performs the same logic for the FF→GFF3 direction using EMBL Feature objects.
      */
     private static boolean hasAllRequiredQualifiers(ConversionEntry entry, Map<String, List<String>> gff3Attributes) {
         Map<String, String> requiredQualifiers = entry.getQualifiers();

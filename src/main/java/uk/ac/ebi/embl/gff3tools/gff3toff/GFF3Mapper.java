@@ -264,6 +264,9 @@ public class GFF3Mapper {
 
     /**
      * Extracts the attributes from a GFF3Feature as a map for use in feature mapping lookup.
+     *
+     * @param gff3Feature the GFF3 feature to extract attributes from
+     * @return a map of attribute names to their values
      */
     private Map<String, List<String>> getAttributesMap(GFF3Feature gff3Feature) {
         Map<String, List<String>> attributesMap = new HashMap<>();

@@ -1,4 +1,7 @@
 ##gff-version 3.1.26
+## Test: Features that should NOT be joined even when they share attributes.
+## Note: The gap features have estimated_length attribute, so they map to INSDC "gap" (not "assembly_gap").
+## See feature-mapping.tsv: gap with /estimated_length -> gap; gap without qualifier -> assembly_gap
 ##sequence-region TEST01.1 1 1000
 TEST01.1	.	gene	1	1000	.	+	.	ID=gene_matK;gene=matK;
 TEST01.1	.	protein_binding_site	1	500	.	+	.	gene=matK;ID=protein_bind;bound_moiety=GAL4
