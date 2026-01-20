@@ -31,4 +31,15 @@ public class ReadException extends ExitException {
     public CLIExitCode exitCode() {
         return CLIExitCode.READ_ERROR;
     }
+
+    /**
+     * Wraps an exception as IOException if it isn't already one.
+     * Useful for subclasses that need to pass non-IOException causes to this class.
+     */
+    protected static IOException wrapAsIOException(Exception e) {
+        if (e instanceof IOException) {
+            return (IOException) e;
+        }
+        return new IOException(e);
+    }
 }

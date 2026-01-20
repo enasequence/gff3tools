@@ -43,11 +43,4 @@ public class TSVParseException extends ReadException {
     public int getLineNumber() {
         return lineNumber;
     }
-
-    private static IOException wrapAsIOException(Exception e) {
-        if (e instanceof IOException) {
-            return (IOException) e;
-        }
-        return new IOException(e);
-    }
 }

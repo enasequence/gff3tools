@@ -11,6 +11,8 @@
 package uk.ac.ebi.embl.gff3tools.utils;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -21,6 +23,8 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
+import uk.ac.ebi.embl.fasta.writer.FastaFileWriter;
+import uk.ac.ebi.embl.gff3tools.exception.WriteException;
 
 public enum ConversionUtils {
     INSTANCE;
@@ -178,6 +182,25 @@ public enum ConversionUtils {
 
         // Fall back to submitter accession (e.g., ENTRYNUMBER from TSV files)
         return entry.getSubmitterAccession();
+    }
+
+    /**
+     * Writes nucleotide sequence from an entry to a FASTA writer.
+     *
+     * <p>This method safely handles entries without sequences (no-op if sequence is null or empty).
+     *
+     * @param entry the Entry containing the sequence to write
+     * @param fastaWriter the writer to write the FASTA output to
+     * @throws WriteException if an I/O error occurs while writing
+     */
+    public static void writeNucleotideSequence(Entry entry, BufferedWriter fastaWriter) throws WriteException {
+        if (entry.getSequence() != null && entry.getSequence().getLength() > 0) {
+            try {
+                new FastaFileWriter(entry, fastaWriter).write();
+            } catch (IOException e) {
+                throw new WriteException("Error writing nucleotide sequence to FASTA", e);
+            }
+        }
     }
 
     private void addConversionEntry(ConversionEntry conversionEntry) {
