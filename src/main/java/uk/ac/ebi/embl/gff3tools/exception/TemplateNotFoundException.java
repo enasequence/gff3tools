@@ -25,11 +25,4 @@ public class TemplateNotFoundException extends ReadException {
     public TemplateNotFoundException(String message, Exception cause) {
         super(message, wrapAsIOException(cause));
     }
-
-    private static IOException wrapAsIOException(Exception e) {
-        if (e instanceof IOException) {
-            return (IOException) e;
-        }
-        return new IOException(e);
-    }
 }
