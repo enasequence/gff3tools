@@ -207,6 +207,9 @@ public class GFF3Mapper {
     }
 
     private String getGeneForFeature(GFF3Feature gff3Feature) {
+        if (gff3Feature == null) {
+            return null;
+        }
         if (gff3Feature.hasAttribute("gene")) {
             return gff3Feature.getAttribute("gene").get();
         } else if (gff3Feature.getParentId().isPresent()) {
