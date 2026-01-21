@@ -67,7 +67,7 @@ public class DanglingParentValidation extends Validation {
 
     private String buildErrorMessage(GFF3Feature feature, String featureId, String parentId) {
         return String.format(
-                "Feature \"%s\" (type: %s) at %s:%d-%d references Parent \"%s\" which is not present in the current annotation block separated by \\\"###\\\" directives",
+                "Feature \"%s\" (type: %s) at %s:%d-%d references Parent \"%s\" which is not present in the current annotation block separated by \"###\" directives",
                 featureId, feature.getName(), feature.accession(), feature.getStart(), feature.getEnd(), parentId);
     }
 }
