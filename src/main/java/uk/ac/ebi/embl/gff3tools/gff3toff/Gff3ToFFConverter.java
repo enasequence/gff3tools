@@ -52,7 +52,12 @@ public class Gff3ToFFConverter implements Converter {
                 warnings.clear();
             });
 
-            if (warningCount > 0) {
+            // Check for collected errors at end of processing
+            int errorCount = validationEngine.getCollectedErrors().size();
+            if (errorCount > 0) {
+                log.info("Conversion completed with %d error(s)".formatted(errorCount));
+                validationEngine.throwIfErrorsCollected();
+            } else if (warningCount > 0) {
                 log.info("The file was converted with %d warnings".formatted(warningCount));
             } else {
                 log.info("Completed conversion");

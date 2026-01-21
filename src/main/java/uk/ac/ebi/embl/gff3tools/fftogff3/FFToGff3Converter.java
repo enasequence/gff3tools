@@ -49,6 +49,9 @@ public class FFToGff3Converter implements Converter {
             GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine, fastaPath);
             GFF3File file = fftogff3.from(entryReader, getMasterEntry(masterFilePath));
             file.writeGFF3String(writer);
+
+            // Check for collected errors at end of processing
+            validationEngine.throwIfErrorsCollected();
         } finally {
             deleteFastaFile(fastaPath);
         }
