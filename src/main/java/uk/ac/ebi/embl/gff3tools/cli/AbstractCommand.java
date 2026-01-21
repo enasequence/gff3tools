@@ -31,6 +31,11 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 public abstract class AbstractCommand implements Runnable {
 
     @CommandLine.Option(
+            names = "--fail-fast",
+            description = "Stop processing on first error instead of collecting all errors")
+    public boolean failFast = false;
+
+    @CommandLine.Option(
             names = "--rules",
             paramLabel = "<key:value,key:value>",
             description = "Specify rules in the format key:value")
@@ -57,7 +62,10 @@ public abstract class AbstractCommand implements Runnable {
 
     protected ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides)
             throws UnregisteredValidationRuleException {
-        return new ValidationEngineBuilder().overrideMethodRules(ruleOverrides).build();
+        return new ValidationEngineBuilder()
+                .overrideMethodRules(ruleOverrides)
+                .failFast(failFast)
+                .build();
     }
 
     @FunctionalInterface
