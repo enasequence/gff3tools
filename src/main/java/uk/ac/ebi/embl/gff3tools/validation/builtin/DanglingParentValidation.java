@@ -67,20 +67,7 @@ public class DanglingParentValidation extends Validation {
 
     private String buildErrorMessage(GFF3Feature feature, String featureId, String parentId) {
         return String.format(
-                "Feature \"%s\" (type: %s) at %s:%d-%d references Parent \"%s\" "
-                        + "which is not present in the current annotation block.%n%n"
-                        + "This typically occurs when:%n"
-                        + "1. The GFF3 file has interleaved features separated by \"###\" directives, where%n"
-                        + "   child features appear in a different block than their parent.%n"
-                        + "2. The parent feature is missing from the file.%n%n"
-                        + "The \"###\" directive signals that all preceding features are complete and their%n"
-                        + "relationships resolved. Features spanning multiple blocks violate this contract.%n%n"
-                        + "Suggestions:%n"
-                        + "- Remove \"###\" directives between related features, or%n"
-                        + "- Restructure the file so all features in a parent-child hierarchy appear in%n"
-                        + "  the same annotation block, or%n"
-                        + "- Use a GFF3 sorting tool to group related features together.%n%n"
-                        + "The /gene qualifier will not be inherited for this feature.",
+                "Feature \"%s\" (type: %s) at %s:%d-%d references Parent \"%s\" which is not present in the current annotation block separated by \\\"###\\\" directives",
                 featureId, feature.getName(), feature.accession(), feature.getStart(), feature.getEnd(), parentId);
     }
 }

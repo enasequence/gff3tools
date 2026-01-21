@@ -104,8 +104,6 @@ class DanglingParentValidationTest {
         assertTrue(message.contains("400"), "Should contain end position");
         assertTrue(message.contains("missing_parent"), "Should contain parent ID");
         assertTrue(message.contains("###"), "Should mention ### directive");
-        assertTrue(message.contains("interleaved"), "Should mention interleaved features");
-        assertTrue(message.contains("/gene qualifier"), "Should mention gene qualifier inheritance");
     }
 
     @Test
