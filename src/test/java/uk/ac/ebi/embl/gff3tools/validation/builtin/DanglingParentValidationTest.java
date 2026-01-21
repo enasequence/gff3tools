@@ -52,6 +52,7 @@ class DanglingParentValidationTest {
 
         // exon references mrna1, but mrna1 is not in this annotation block
         GFF3Feature exon = TestUtils.createGFF3Feature("exon2", "mrna1", "exon", "ACC123", 300, 400);
+
         annotation.addFeature(exon);
 
         // Act & Assert
@@ -89,6 +90,7 @@ class DanglingParentValidationTest {
         // Arrange
         GFF3Annotation annotation = new GFF3Annotation();
         GFF3Feature exon = TestUtils.createGFF3Feature("exon2", "missing_parent", "exon", "Chr1", 300, 400);
+
         annotation.addFeature(exon);
 
         // Act
@@ -104,6 +106,8 @@ class DanglingParentValidationTest {
         assertTrue(message.contains("400"), "Should contain end position");
         assertTrue(message.contains("missing_parent"), "Should contain parent ID");
         assertTrue(message.contains("###"), "Should mention ### directive");
+        assertTrue(message.contains("interleaved"), "Should mention interleaved features");
+        assertTrue(message.contains("/gene qualifier"), "Should mention gene qualifier inheritance");
     }
 
     @Test
