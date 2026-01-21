@@ -169,4 +169,42 @@ class FileConversionCommandTest {
         // (Errors are logged to stderr via the logger, not picocli's err writer,
         // so we check the exit code and file existence instead)
     }
+
+    @Test
+    void conversion_withUnmappedFeature_collectsErrors() throws Exception {
+        // Create a GFF3 file with an unmapped feature (misc_RNA has no INSDC mapping)
+        Path inputFile = tempDir.resolve("unmapped_feature.gff3");
+        Files.writeString(
+                inputFile,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 1000
+                seq1\t.\tgene\t1\t100\t.\t+\t.\tID=gene1
+                seq1\t.\tmisc_RNA\t200\t300\t.\t+\t.\tID=rna1
+                seq1\t.\tgene\t400\t500\t.\t+\t.\tID=gene2
+                """);
+
+        Path outputFile = tempDir.resolve("output.embl");
+
+        // Run conversion (default: collect all errors)
+        String[] args = {"conversion", inputFile.toString(), outputFile.toString()};
+        StringWriter err = new StringWriter();
+        StringWriter out = new StringWriter();
+        CommandLine command = new CommandLine(new Main())
+                .registerConverter(CliRulesOption.class, new RuleConverter())
+                .setExecutionExceptionHandler(new ExecutionExceptionHandler());
+        command.setErr(new PrintWriter(err));
+        command.setOut(new PrintWriter(out));
+
+        int exitCode = command.execute(args);
+
+        // Should fail with VALIDATION_ERROR (20) - not GENERAL (1)
+        assertEquals(
+                CLIExitCode.VALIDATION_ERROR.asInt(),
+                exitCode,
+                "Unmapped feature error should be collected and result in VALIDATION_ERROR exit code");
+
+        // Output file should NOT exist
+        assertFalse(Files.exists(outputFile), "Output file should not be created when errors occur");
+    }
 }

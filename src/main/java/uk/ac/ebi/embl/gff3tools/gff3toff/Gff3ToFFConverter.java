@@ -79,12 +79,18 @@ public class Gff3ToFFConverter implements Converter {
     private void writeEntry(GFF3Mapper mapper, GFF3Annotation annotation, BufferedWriter writer)
             throws WriteException, ValidationException {
         if (annotation != null) {
-            EmblEntryWriter entryWriter = new EmblEntryWriter(mapper.mapGFF3ToEntry(annotation));
-            entryWriter.setShowAcStartLine(false);
             try {
-                entryWriter.write(writer);
-            } catch (IOException e) {
-                throw new WriteException(e);
+                EmblEntryWriter entryWriter = new EmblEntryWriter(mapper.mapGFF3ToEntry(annotation));
+                entryWriter.setShowAcStartLine(false);
+                try {
+                    entryWriter.write(writer);
+                } catch (IOException e) {
+                    throw new WriteException(e);
+                }
+            } catch (ValidationException e) {
+                // Route validation errors through the validation engine for proper handling
+                // (fail-fast vs collect-all-errors mode)
+                validationEngine.handleSyntacticError(e);
             }
         }
     }
