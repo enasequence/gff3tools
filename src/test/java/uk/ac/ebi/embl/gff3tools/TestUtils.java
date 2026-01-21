@@ -197,4 +197,21 @@ public class TestUtils {
     public static String defaultAccession() {
         return DEFAULT_ACCESSION;
     }
+
+    public static GFF3Feature createGFF3Feature(
+            String id, String parentId, String featureName, String seqId, long start, long end) {
+        GFF3Feature feature = new GFF3Feature(
+                id != null ? Optional.of(id) : Optional.empty(),
+                parentId != null ? Optional.of(parentId) : Optional.empty(),
+                seqId,
+                Optional.empty(),
+                ".",
+                featureName,
+                start,
+                end,
+                ".",
+                "+",
+                ".");
+        return feature;
+    }
 }

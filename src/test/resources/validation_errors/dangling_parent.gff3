@@ -1,0 +1,10 @@
+##gff-version 3
+##sequence-region ACC123 1 1000
+ACC123	test	gene	100	500	.	+	.	ID=gene1;gene=TEST_GENE
+ACC123	test	mRNA	100	500	.	+	.	ID=mrna1;Parent=gene1
+ACC123	test	exon	100	200	.	+	.	ID=exon1;Parent=mrna1
+###
+ACC123	test	gene	600	900	.	+	.	ID=gene2;gene=OTHER_GENE
+ACC123	test	mRNA	600	900	.	+	.	ID=mrna2;Parent=gene2
+###
+ACC123	test	exon	300	400	.	+	.	ID=exon2;Parent=mrna1
