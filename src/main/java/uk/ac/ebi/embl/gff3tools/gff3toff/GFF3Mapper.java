@@ -135,7 +135,8 @@ public class GFF3Mapper {
                 return;
             }
             LOGGER.debug("Found GFF3ID: \"%s\" for feature \"%s\"".formatted(gff3Id, gff3FeatureName));
-            ConversionEntry conversionEntry = ConversionUtils.getINSDCFeatureForSOTerm(gff3Id);
+            ConversionEntry conversionEntry =
+                    ConversionUtils.getINSDCFeatureForSOTerm(gff3Id, getAttributesMap(gff3Feature));
             if (conversionEntry != null) {
                 ffFeature = featureFactory.createFeature(conversionEntry.getFeature());
                 CompoundLocation<Location> locations = new Join();
@@ -262,5 +263,19 @@ public class GFF3Mapper {
         } else {
             return qualifierFactory.createQualifier(name, value);
         }
+    }
+
+    /**
+     * Extracts the attributes from a GFF3Feature as a map for use in feature mapping lookup.
+     *
+     * @param gff3Feature the GFF3 feature to extract attributes from
+     * @return a map of attribute names to their values
+     */
+    private Map<String, List<String>> getAttributesMap(GFF3Feature gff3Feature) {
+        Map<String, List<String>> attributesMap = new HashMap<>();
+        for (String key : gff3Feature.getAttributeKeys()) {
+            gff3Feature.getAttributeList(key).ifPresent(values -> attributesMap.put(key, values));
+        }
+        return attributesMap;
     }
 }
