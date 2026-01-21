@@ -12,9 +12,9 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
@@ -33,9 +33,9 @@ class DanglingParentValidationTest {
         // Arrange
         GFF3Annotation annotation = new GFF3Annotation();
 
-        GFF3Feature gene = createFeature("gene1", null, "gene", "ACC123", 100, 500);
-        GFF3Feature mrna = createFeature("mrna1", "gene1", "mRNA", "ACC123", 100, 500);
-        GFF3Feature exon = createFeature("exon1", "mrna1", "exon", "ACC123", 100, 200);
+        GFF3Feature gene = TestUtils.createGFF3Feature("gene1", null, "gene", "ACC123", 100, 500);
+        GFF3Feature mrna = TestUtils.createGFF3Feature("mrna1", "gene1", "mRNA", "ACC123", 100, 500);
+        GFF3Feature exon = TestUtils.createGFF3Feature("exon1", "mrna1", "exon", "ACC123", 100, 200);
 
         annotation.addFeature(gene);
         annotation.addFeature(mrna);
@@ -51,7 +51,7 @@ class DanglingParentValidationTest {
         GFF3Annotation annotation = new GFF3Annotation();
 
         // exon references mrna1, but mrna1 is not in this annotation block
-        GFF3Feature exon = createFeature("exon2", "mrna1", "exon", "ACC123", 300, 400);
+        GFF3Feature exon = TestUtils.createGFF3Feature("exon2", "mrna1", "exon", "ACC123", 300, 400);
         annotation.addFeature(exon);
 
         // Act & Assert
@@ -68,7 +68,7 @@ class DanglingParentValidationTest {
         // Arrange
         GFF3Annotation annotation = new GFF3Annotation();
 
-        GFF3Feature gene = createFeature("gene1", null, "gene", "ACC123", 100, 500);
+        GFF3Feature gene = TestUtils.createGFF3Feature("gene1", null, "gene", "ACC123", 100, 500);
         annotation.addFeature(gene);
 
         // Act & Assert - no exception expected
@@ -88,7 +88,7 @@ class DanglingParentValidationTest {
     void validateAnnotation_errorMessageContainsHelpfulInformation() {
         // Arrange
         GFF3Annotation annotation = new GFF3Annotation();
-        GFF3Feature exon = createFeature("exon2", "missing_parent", "exon", "Chr1", 300, 400);
+        GFF3Feature exon = TestUtils.createGFF3Feature("exon2", "missing_parent", "exon", "Chr1", 300, 400);
         annotation.addFeature(exon);
 
         // Act
@@ -112,7 +112,7 @@ class DanglingParentValidationTest {
         GFF3Annotation annotation = new GFF3Annotation();
 
         // Feature without ID but with dangling parent
-        GFF3Feature exon = createFeature(null, "missing_parent", "exon", "ACC123", 300, 400);
+        GFF3Feature exon = TestUtils.createGFF3Feature(null, "missing_parent", "exon", "ACC123", 300, 400);
         annotation.addFeature(exon);
 
         // Act
@@ -121,20 +121,5 @@ class DanglingParentValidationTest {
 
         // Assert - should show "<no ID>" for feature without ID
         assertTrue(exception.getMessage().contains("<no ID>"));
-    }
-
-    private GFF3Feature createFeature(String id, String parentId, String type, String accession, long start, long end) {
-        return new GFF3Feature(
-                id != null ? Optional.of(id) : Optional.empty(),
-                parentId != null ? Optional.of(parentId) : Optional.empty(),
-                accession,
-                Optional.empty(),
-                "test",
-                type,
-                start,
-                end,
-                ".",
-                "+",
-                ".");
     }
 }
