@@ -28,6 +28,8 @@ import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.exception.FormatSupportException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
+import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToFFConverter;
+import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToGFF3Converter;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
@@ -79,10 +81,14 @@ public class FileConversionCommand extends AbstractCommand {
             return new Gff3ToFFConverter(engine, inputFilePath);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
             // FASTA path to write translation sequences
-            return masterFilePath == null
-                    ? new FFToGff3Converter(engine)
-                    : new FFToGff3Converter(engine, masterFilePath);
-
+            return new FFToGff3Converter(engine, masterFilePath, fastaOutputPath);
+        } else if (inputFileType == ConversionFileFormat.tsv && outputFileType == ConversionFileFormat.gff3) {
+            // TSV to GFF3 conversion using sequencetools template processing
+            return new TSVToGFF3Converter(engine, inputFilePath, fastaOutputPath);
+        } else if (inputFileType == ConversionFileFormat.tsv && outputFileType == ConversionFileFormat.embl) {
+            // TSV to EMBL conversion using sequencetools template processing
+            // Sequences are always embedded in EMBL output (no --output-fasta option)
+            return new TSVToFFConverter(engine, inputFilePath);
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }
@@ -113,6 +119,12 @@ public class FileConversionCommand extends AbstractCommand {
 
     public static String getFileExtension(Path path) {
         String fileName = path.getFileName().toString();
+
+        // Handle double extensions like .tsv.gz
+        if (fileName.endsWith(".tsv.gz")) {
+            return "tsv";
+        }
+
         int lastIndexOfDot = fileName.lastIndexOf('.');
         if (lastIndexOfDot > 0 && lastIndexOfDot < fileName.length() - 1) {
             return fileName.substring(lastIndexOfDot + 1);

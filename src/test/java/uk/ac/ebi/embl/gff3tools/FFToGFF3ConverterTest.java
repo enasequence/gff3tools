@@ -10,8 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -111,6 +110,100 @@ class FFToGFF3ConverterTest {
 
         } catch (Exception e) {
             fail("Error on test case: " + inputFile + " - " + e.getMessage());
+        }
+    }
+
+    @Test
+    void testEmblToGff3_withOutputSequence_extractsNucleotideSequences() throws Exception {
+        // Use contig-reduced.embl which has sequence data
+        Path inputFile = TestUtils.getResourceFile("./fftogff3_rules/reduced/contig-reduced.embl")
+                .toPath();
+        Path outputFasta = Files.createTempFile("nucleotide-output", ".fasta");
+
+        ValidationEngine engine = new ValidationEngineBuilder().build();
+        // Pass fastaOutputPath to enable sequence extraction
+        FFToGff3Converter converter = new FFToGff3Converter(engine, null, outputFasta);
+
+        try (BufferedReader inputReader = Files.newBufferedReader(inputFile);
+                StringWriter gff3Writer = new StringWriter();
+                BufferedWriter bufferedWriter = new BufferedWriter(gff3Writer)) {
+
+            converter.convert(inputReader, bufferedWriter);
+            bufferedWriter.flush();
+
+            // Verify GFF3 output was created
+            String gff3Content = gff3Writer.toString();
+            assertTrue(gff3Content.contains("##gff-version"), "GFF3 should have version header");
+
+            // Verify FASTA output contains nucleotide sequence
+            String fastaContent = Files.readString(outputFasta);
+            assertFalse(fastaContent.isEmpty(), "FASTA output should not be empty");
+            assertTrue(fastaContent.contains(">"), "FASTA should have header line");
+            // The sequence from contig-reduced.embl contains "tgcctaagcc"
+            assertTrue(
+                    fastaContent.toLowerCase().contains("tgcctaagcc"),
+                    "FASTA should contain the nucleotide sequence from the input file");
+
+        } finally {
+            Files.deleteIfExists(outputFasta);
+        }
+    }
+
+    @Test
+    void testEmblToGff3_withoutOutputSequence_discardSequences() throws Exception {
+        // Use contig-reduced.embl which has sequence data
+        Path inputFile = TestUtils.getResourceFile("./fftogff3_rules/reduced/contig-reduced.embl")
+                .toPath();
+
+        ValidationEngine engine = new ValidationEngineBuilder().build();
+        // No fastaOutputPath - sequences should be discarded
+        FFToGff3Converter converter = new FFToGff3Converter(engine, null, null);
+
+        try (BufferedReader inputReader = Files.newBufferedReader(inputFile);
+                StringWriter gff3Writer = new StringWriter();
+                BufferedWriter bufferedWriter = new BufferedWriter(gff3Writer)) {
+
+            converter.convert(inputReader, bufferedWriter);
+            bufferedWriter.flush();
+
+            // Verify GFF3 output was created
+            String gff3Content = gff3Writer.toString();
+            assertTrue(gff3Content.contains("##gff-version"), "GFF3 should have version header");
+
+            // Verify nucleotide sequence is NOT in GFF3 output
+            assertFalse(
+                    gff3Content.toLowerCase().contains("tgcctaagcc"),
+                    "GFF3 should NOT contain nucleotide sequences when fastaOutputPath is null");
+        }
+    }
+
+    @Test
+    void testEmblToGff3_inputWithoutSequence_fastaOutputEmpty() throws Exception {
+        // Use partial_location_end.embl which has no sequence data
+        Path inputFile = TestUtils.getResourceFile("./fftogff3_rules/partial_location_end.embl")
+                .toPath();
+        Path outputFasta = Files.createTempFile("nucleotide-output", ".fasta");
+
+        ValidationEngine engine = new ValidationEngineBuilder().build();
+        FFToGff3Converter converter = new FFToGff3Converter(engine, null, outputFasta);
+
+        try (BufferedReader inputReader = Files.newBufferedReader(inputFile);
+                StringWriter gff3Writer = new StringWriter();
+                BufferedWriter bufferedWriter = new BufferedWriter(gff3Writer)) {
+
+            converter.convert(inputReader, bufferedWriter);
+            bufferedWriter.flush();
+
+            // Verify GFF3 output was created
+            String gff3Content = gff3Writer.toString();
+            assertTrue(gff3Content.contains("##gff-version"), "GFF3 should have version header");
+
+            // Verify FASTA output is empty (input file has no sequences)
+            String fastaContent = Files.readString(outputFasta);
+            assertTrue(fastaContent.isEmpty(), "FASTA output should be empty when input has no sequences");
+
+        } finally {
+            Files.deleteIfExists(outputFasta);
         }
     }
 }

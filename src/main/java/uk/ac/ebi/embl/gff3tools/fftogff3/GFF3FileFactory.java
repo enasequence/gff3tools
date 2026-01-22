@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.fftogff3;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -18,10 +19,12 @@ import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.exception.WriteException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
+import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 
 public class GFF3FileFactory {
@@ -33,15 +36,37 @@ public class GFF3FileFactory {
         this.fastaFilePath = fastaFilePath;
     }
 
-    public GFF3File from(EmblEntryReader entryReader, Entry masterEntry) throws ValidationException, ReadException {
+    public GFF3File from(EmblEntryReader entryReader, Entry masterEntry)
+            throws ValidationException, ReadException, WriteException {
+        return from(entryReader, masterEntry, null);
+    }
+
+    /**
+     * Converts EMBL entries to GFF3, optionally writing nucleotide sequences to a FASTA file.
+     *
+     * @param entryReader the EMBL entry reader
+     * @param masterEntry optional master entry for reduced flatfile conversion
+     * @param nucleotideFastaWriter optional writer for nucleotide sequences; if provided, sequences
+     *     are written as each entry is processed (streaming). Caller is responsible for closing.
+     * @return the GFF3 file
+     */
+    public GFF3File from(EmblEntryReader entryReader, Entry masterEntry, BufferedWriter nucleotideFastaWriter)
+            throws ValidationException, ReadException, WriteException {
         GFF3Header header = new GFF3Header("3.1.26");
         GFF3Species species = null;
         List<GFF3Annotation> annotations = new ArrayList<>();
         GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
         GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(engine, directivesFactory, fastaFilePath);
+
         try {
             while (entryReader.read() != null && entryReader.isEntry()) {
                 Entry entry = entryReader.getEntry();
+
+                // Write nucleotide sequence to FASTA if writer is provided
+                if (nucleotideFastaWriter != null) {
+                    ConversionUtils.writeNucleotideSequence(entry, nucleotideFastaWriter);
+                }
+
                 if (species == null) {
                     species = directivesFactory.createSpecies(entry, masterEntry);
                 }
@@ -49,6 +74,38 @@ public class GFF3FileFactory {
             }
         } catch (IOException e) {
             throw new ReadException(e);
+        } finally {
+            // Close the nucleotide FASTA writer if provided
+            if (nucleotideFastaWriter != null) {
+                try {
+                    nucleotideFastaWriter.close();
+                } catch (IOException e) {
+                    // Best effort cleanup
+                }
+            }
+        }
+
+        return GFF3File.builder()
+                .header(header)
+                .species(species)
+                .annotations(annotations)
+                .fastaFilePath(fastaFilePath)
+                .parsingWarnings(engine.getParsingWarnings())
+                .build();
+    }
+
+    public GFF3File from(List<Entry> entries, Entry masterEntry) throws ValidationException {
+        GFF3Header header = new GFF3Header("3.1.26");
+        GFF3Species species = null;
+        List<GFF3Annotation> annotations = new ArrayList<>();
+        GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
+        GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(engine, directivesFactory, fastaFilePath);
+
+        for (Entry entry : entries) {
+            if (species == null) {
+                species = directivesFactory.createSpecies(entry, masterEntry);
+            }
+            annotations.add(annotationFactory.from(entry));
         }
 
         return GFF3File.builder()
