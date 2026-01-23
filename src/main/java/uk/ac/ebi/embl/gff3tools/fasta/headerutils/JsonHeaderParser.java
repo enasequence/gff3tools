@@ -33,6 +33,10 @@ public class JsonHeaderParser {
 
         String rest = headerLine.substring(1);
         int pipe = rest.indexOf('|');
+        if (pipe == -1) {
+            throw new FastaHeaderParserException(
+                    "FASTA header contains no '|', which it should to separate the id and the json.");
+        }
 
         // parse id
         String idPart = (pipe >= 0 ? rest.substring(0, pipe) : rest).trim();

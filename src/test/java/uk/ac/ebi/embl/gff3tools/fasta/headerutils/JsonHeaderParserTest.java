@@ -79,6 +79,19 @@ public class JsonHeaderParserTest {
     }
 
     @Test
+    void missingJsonIsFine() {
+        String line = ">AF999999.5 some label without json | {} ";
+
+        ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
+        assertEquals("AF999999.5", ph.getId());
+
+        FastaHeader h = ph.getHeader();
+        assertNull(h.getDescription());
+        assertNull(h.getMoleculeType());
+        assertNull(h.getTopology());
+    }
+
+    @Test
     void handlesNbspInJson() {
         String nbsp = "\u00A0";
         String line = ">ID3 | {" + nbsp
@@ -91,19 +104,6 @@ public class JsonHeaderParserTest {
         assertEquals("Alpha Beta", h.getDescription());
         assertEquals("rna", h.getMoleculeType());
         assertEquals("linear", h.getTopology());
-    }
-
-    @Test
-    void missingJsonIsFine_NoPipe() {
-        String line = ">AF999999.5 some label without json";
-
-        ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
-        assertEquals("AF999999.5", ph.getId());
-
-        FastaHeader h = ph.getHeader();
-        assertNull(h.getDescription());
-        assertNull(h.getMoleculeType());
-        assertNull(h.getTopology());
     }
 
     @Test
@@ -133,6 +133,13 @@ public class JsonHeaderParserTest {
         String line = "> | {\"description\":\"x\", \"molecule_type\":\"dna\", \"topology\":\"circular\"}";
         FastaHeaderParserException e = assertThrows(FastaHeaderParserException.class, () -> parser.parse(line));
         assertTrue(e.getMessage().contains(" id "));
+    }
+
+    @Test
+    void missingPipeThrowsError() {
+        String line = ">AF999999.5 some label without json";
+
+        assertThrows(FastaHeaderParserException.class, () -> parser.parse(line));
     }
 
     // ---------------------------------------------------------

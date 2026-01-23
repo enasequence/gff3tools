@@ -17,14 +17,15 @@ import java.util.HashMap;
 import java.util.List;
 import uk.ac.ebi.embl.fastareader.*;
 import uk.ac.ebi.embl.fastareader.exception.FastaFileException;
+import uk.ac.ebi.embl.fastareader.sequenceutils.SequenceAlphabet;
 import uk.ac.ebi.embl.gff3tools.exception.FastaHeaderParserException;
 import uk.ac.ebi.embl.gff3tools.fasta.headerutils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.fasta.headerutils.JsonHeaderParser;
 
 public class EbiFastaReader implements AutoCloseable {
 
-    FastaReader fastaReader;
-    JsonHeaderParser headerParser;
+    private FastaReader fastaReader;
+    private JsonHeaderParser headerParser = new JsonHeaderParser();
 
     HashMap<String, String> submissionIdToAccessionId = new HashMap<>();
     HashMap<String, FastaHeader> accessionIdToFastaHeader = new HashMap<>();
@@ -32,7 +33,7 @@ public class EbiFastaReader implements AutoCloseable {
 
     public EbiFastaReader(File fastaFile, List<String> accessionIds)
             throws FastaHeaderParserException, FastaFileException, IOException {
-        fastaReader = new FastaReader(fastaFile);
+        fastaReader = new FastaReader(fastaFile, SequenceAlphabet.defaultNucleotideAlphabet());
         parseData(accessionIds);
     }
 
@@ -50,18 +51,25 @@ public class EbiFastaReader implements AutoCloseable {
     public String getSequenceSlice(String accessionId, long fromBase, long toBase, SequenceRangeOption option)
             throws FastaFileException {
         var entry = accessionIdToFastaEntry.getOrDefault(accessionId, null);
+        if (entry == null) {
+            throw new FastaFileException("No entry found for accessionId: " + accessionId);
+        }
         return fastaReader.getSequenceSliceString(entry.getFastaReaderId(), fromBase, toBase, option);
     }
 
     public Reader getSequenceSliceReader(String accessionId, long fromBase, long toBase, SequenceRangeOption option)
             throws FastaFileException {
         var entry = accessionIdToFastaEntry.getOrDefault(accessionId, null);
+        if (entry == null) {
+            throw new FastaFileException("No entry found for accessionId: " + accessionId);
+        }
         return fastaReader.getSequenceSliceReader(entry.getFastaReaderId(), fromBase, toBase, option);
     }
 
-    //------------------ close and open new file ------------------
+    // ------------------ close and open new file ------------------
 
-    public void openNewFile(File fastaFile, List<String> accessionIds) throws FastaHeaderParserException, FastaFileException, IOException {
+    public void openNewFile(File fastaFile, List<String> accessionIds)
+            throws FastaHeaderParserException, FastaFileException, IOException {
         clearData();
         fastaReader.openNewFile(fastaFile);
         parseData(accessionIds);
@@ -93,7 +101,7 @@ public class EbiFastaReader implements AutoCloseable {
         }
     }
 
-    private void clearData(){
+    private void clearData() {
         accessionIdToFastaHeader.clear();
         accessionIdToFastaEntry.clear();
         submissionIdToAccessionId.clear();
