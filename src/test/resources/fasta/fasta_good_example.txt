@@ -4,12 +4,12 @@ ACGT
 
 TTNn
 
->ID2 | {"description":"x", "molecule_type":"dna", "topology":"circular"}
+>ID2 | {"description":"x1", "molecule_type":"dna", "topology":"circular"}
 ACGT
 GGGG
 
 
->ID3 | {"description":"x", "molecule_type":"dna", "topology":"circular"}
+>ID3 | {"description":"x2", "molecule_type":"dna", "topology":"circular"}
 aaNACGT
 GGGG
 NNNN

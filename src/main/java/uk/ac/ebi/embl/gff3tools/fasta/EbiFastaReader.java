@@ -48,6 +48,10 @@ public class EbiFastaReader implements AutoCloseable {
         return accessionIdToFastaHeader.getOrDefault(accessionId, null);
     }
 
+    public FastaEntry getFastaEntryByAccessionId(String accessionId) throws FastaHeaderParserException {
+        return accessionIdToFastaEntry.getOrDefault(accessionId, null);
+    }
+
     public String getSequenceSlice(String accessionId, long fromBase, long toBase, SequenceRangeOption option)
             throws FastaFileException {
         var entry = accessionIdToFastaEntry.getOrDefault(accessionId, null);
