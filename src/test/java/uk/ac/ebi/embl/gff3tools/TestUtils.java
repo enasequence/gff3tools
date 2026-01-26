@@ -194,6 +194,25 @@ public class TestUtils {
         return feature;
     }
 
+    public static GFF3Feature createGFF3Feature(
+            String featureName, String seqId, long start, long end, Map<String, List<String>> attributes) {
+
+        GFF3Feature feature = new GFF3Feature(
+                Optional.of(featureName),
+                Optional.empty(),
+                seqId,
+                Optional.empty(),
+                ".",
+                featureName,
+                start,
+                end,
+                ".",
+                "+",
+                "");
+        feature.addAttributes(attributes);
+        return feature;
+    }
+
     public static String defaultAccession() {
         return DEFAULT_ACCESSION;
     }
