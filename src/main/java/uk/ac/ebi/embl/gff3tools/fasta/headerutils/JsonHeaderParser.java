@@ -21,12 +21,12 @@ public class JsonHeaderParser {
     private static final ObjectMapper MAPPER = JsonMapper.builder()
             .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
             .build();
-    ;
+    private static final int MAX_HEADER_LENGTH = 4096;
 
     public ParsedHeader parse(String headerLine) throws FastaHeaderParserException {
 
         // char limit according to the spec
-        if (headerLine.length() > 4096) {
+        if (headerLine.length() > MAX_HEADER_LENGTH) {
             throw new FastaHeaderParserException(
                     "FASTA header should contain a maximum of 4096 characters according to the specification.");
         }

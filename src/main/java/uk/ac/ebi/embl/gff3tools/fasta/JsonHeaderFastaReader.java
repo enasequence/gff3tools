@@ -22,7 +22,7 @@ import uk.ac.ebi.embl.gff3tools.exception.FastaHeaderParserException;
 import uk.ac.ebi.embl.gff3tools.fasta.headerutils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.fasta.headerutils.JsonHeaderParser;
 
-public class EbiFastaReader implements AutoCloseable {
+public class JsonHeaderFastaReader implements AutoCloseable {
 
     private FastaReader fastaReader;
     private JsonHeaderParser headerParser = new JsonHeaderParser();
@@ -31,7 +31,7 @@ public class EbiFastaReader implements AutoCloseable {
     HashMap<String, FastaHeader> accessionIdToFastaHeader = new HashMap<>();
     HashMap<String, FastaEntry> accessionIdToFastaEntry = new HashMap<>();
 
-    public EbiFastaReader(File fastaFile, List<String> accessionIds)
+    public JsonHeaderFastaReader(File fastaFile, List<String> accessionIds)
             throws FastaHeaderParserException, FastaFileException, IOException {
         fastaReader = new FastaReader(fastaFile, SequenceAlphabet.defaultNucleotideAlphabet());
         parseData(accessionIds);
@@ -39,16 +39,16 @@ public class EbiFastaReader implements AutoCloseable {
 
     // --------------- interface ---------------------------
 
-    public String getAcessionIdBySubmissionId(String submissionId)
+    public String getAccessionIdBySubmissionId(String submissionId)
             throws FastaHeaderParserException, FastaFileException {
         return submissionIdToAccessionId.getOrDefault(submissionId, null);
     }
 
-    public FastaHeader getFastaHeaderByAccessionId(String accessionId) throws FastaHeaderParserException {
+    public FastaHeader getFastaHeaderByAccessionId(String accessionId) {
         return accessionIdToFastaHeader.getOrDefault(accessionId, null);
     }
 
-    public FastaEntry getFastaEntryByAccessionId(String accessionId) throws FastaHeaderParserException {
+    public FastaEntry getFastaEntryByAccessionId(String accessionId) {
         return accessionIdToFastaEntry.getOrDefault(accessionId, null);
     }
 

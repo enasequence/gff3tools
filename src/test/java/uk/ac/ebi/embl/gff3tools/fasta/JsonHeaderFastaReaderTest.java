@@ -23,7 +23,7 @@ import uk.ac.ebi.embl.fastareader.exception.FastaFileException;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.FastaHeaderParserException;
 
-public class EbiFastaReaderTest {
+public class JsonHeaderFastaReaderTest {
 
     @Test
     void doesNotTolerateImproperHeaders() throws IOException {
@@ -31,7 +31,7 @@ public class EbiFastaReaderTest {
         File fasta = TestUtils.getResourceFile("./fasta/fasta_improper_header.txt");
         List<String> accessionIds = List.of("acc1");
 
-        assertThrows(FastaHeaderParserException.class, () -> new EbiFastaReader(fasta, accessionIds));
+        assertThrows(FastaHeaderParserException.class, () -> new JsonHeaderFastaReader(fasta, accessionIds));
     }
 
     @Test
@@ -39,7 +39,7 @@ public class EbiFastaReaderTest {
         File fasta = TestUtils.getResourceFile("./fasta/fasta_good_example.txt"); // has 3 entries
         List<String> accessionIds = List.of("acc1", "acc2");
 
-        assertThrows(FastaFileException.class, () -> new EbiFastaReader(fasta, accessionIds));
+        assertThrows(FastaFileException.class, () -> new JsonHeaderFastaReader(fasta, accessionIds));
     }
 
     @Test
@@ -47,7 +47,7 @@ public class EbiFastaReaderTest {
         File fasta = TestUtils.getResourceFile("./fasta/fasta_good_example.txt");
         List<String> accessionIds = List.of("acc1", "acc2", "acc3");
 
-        try (EbiFastaReader service = new EbiFastaReader(fasta, accessionIds)) {
+        try (JsonHeaderFastaReader service = new JsonHeaderFastaReader(fasta, accessionIds)) {
 
             FastaEntry entry1 = service.getFastaEntryByAccessionId("acc1");
             FastaEntry entry2 = service.getFastaEntryByAccessionId("acc2");
@@ -92,7 +92,7 @@ public class EbiFastaReaderTest {
         File fasta = TestUtils.getResourceFile("./fasta/fasta_good_example.txt");
         List<String> accessionIds = List.of("acc1", "acc2", "acc3");
 
-        try (EbiFastaReader service = new EbiFastaReader(fasta, accessionIds)) {
+        try (JsonHeaderFastaReader service = new JsonHeaderFastaReader(fasta, accessionIds)) {
 
             FastaEntry entry1 = service.getFastaEntryByAccessionId("acc1");
             FastaEntry entry2 = service.getFastaEntryByAccessionId("acc2");
