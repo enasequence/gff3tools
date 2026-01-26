@@ -21,6 +21,7 @@ public class ValidationEngineBuilder {
     private final ValidationConfig validationConfig;
     public ValidationRegistry validationRegistry;
     private Connection connection;
+    private boolean failFast = false;
 
     public ValidationEngineBuilder() {
 
@@ -32,7 +33,12 @@ public class ValidationEngineBuilder {
     }
 
     public ValidationEngine build() {
-        return new ValidationEngine(validationConfig, validationRegistry);
+        return new ValidationEngine(validationConfig, validationRegistry, failFast);
+    }
+
+    public ValidationEngineBuilder failFast(boolean failFast) {
+        this.failFast = failFast;
+        return this;
     }
 
     public ValidationEngineBuilder overrideMethodRules(Map<String, RuleSeverity> map) {
