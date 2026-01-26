@@ -64,6 +64,12 @@ public class CdsRnaLocusFix {
             long ce = child.getEnd();
 
             for (GFF3Feature gene : geneFeatures) {
+
+                // Ensure gene and child feature belong to the same sequence/contig
+                if (!Objects.equals(gene.getSeqId(), child.getSeqId())) {
+                    continue;
+                }
+
                 if (gene.getStart() > cs) {
                     break;
                 }
@@ -71,7 +77,7 @@ public class CdsRnaLocusFix {
                     continue;
                 }
                 if (isLocationWithin(cs, ce, gene.getStart(), gene.getEnd())) {
-                    propagateGeneAttributes(gene, child, line);
+                    propagateGeneAttributes(gene, child);
                     break;
                 }
             }
@@ -81,18 +87,13 @@ public class CdsRnaLocusFix {
     // Determine if this is a gene feature
     private boolean isGeneFeature(String soId) {
         return OntologyTerm.GENE.ID.equals(soId)
-                || OntologyTerm.PSEUDOGENE.ID.equals(soId)
-                || OntologyTerm.UNITARY_PSEUDOGENE.ID.equals(soId)
                 || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENE.ID)
                 || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.UNITARY_PSEUDOGENE.ID);
     }
 
     // Determine if this is a NonLocus CDS/tRNA/rRNA feature
     private boolean isNonLocusFeature(String soId) {
-        return OntologyTerm.CDS.ID.equals(soId)
-                || OntologyTerm.TRNA.ID.equals(soId)
-                || OntologyTerm.RRNA.ID.equals(soId)
-                || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.CDS.ID)
+        return ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.CDS.ID)
                 || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.TRNA.ID)
                 || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.RRNA.ID);
     }
@@ -112,7 +113,7 @@ public class CdsRnaLocusFix {
         return childStart >= parentStart && childEnd <= parentEnd;
     }
 
-    private void propagateGeneAttributes(GFF3Feature geneFeature, GFF3Feature childFeature, int line) {
+    private void propagateGeneAttributes(GFF3Feature geneFeature, GFF3Feature childFeature) {
         List<String> locusTagList =
                 geneFeature.getAttributeList(GFF3Attributes.LOCUS_TAG).orElse(new ArrayList<>());
         List<String> geneList =
@@ -125,33 +126,36 @@ public class CdsRnaLocusFix {
             childFeature.setAttributeList(GFF3Attributes.LOCUS_TAG, new ArrayList<>(locusTagList));
 
             log.info(
-                    "Adding {} from gene {} to {} at line {}",
+                    "Adding {} from gene {} to feature {} at [{}:{}]",
                     GFF3Attributes.LOCUS_TAG,
                     geneFeature.getName(),
                     childFeature.getName(),
-                    line);
+                    childFeature.getStart(),
+                    childFeature.getEnd());
         }
         if (!geneSynonymList.isEmpty() && !childFeature.hasAttribute(GFF3Attributes.GENE_SYNONYM)) {
 
             childFeature.setAttributeList(GFF3Attributes.GENE_SYNONYM, new ArrayList<>(geneSynonymList));
 
             log.info(
-                    "Adding {} from gene {} to {} at line {}",
+                    "Adding {} from gene {} to {} at [{}:{}]",
                     GFF3Attributes.GENE_SYNONYM,
                     geneFeature.getName(),
                     childFeature.getName(),
-                    line);
+                    childFeature.getStart(),
+                    childFeature.getEnd());
         }
         if (!geneList.isEmpty() && !childFeature.hasAttribute(GFF3Attributes.GENE)) {
 
             childFeature.setAttributeList(GFF3Attributes.GENE, new ArrayList<>(geneList));
 
             log.info(
-                    "Adding {} from gene {} to {} at line {}",
+                    "Adding {} from gene {} to {} at [{}:{}]",
                     GFF3Attributes.GENE,
                     geneFeature.getName(),
                     childFeature.getName(),
-                    line);
+                    childFeature.getStart(),
+                    childFeature.getEnd());
         }
     }
 }

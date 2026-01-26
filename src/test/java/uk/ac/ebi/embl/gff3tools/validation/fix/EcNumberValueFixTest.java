@@ -80,12 +80,23 @@ public class EcNumberValueFixTest {
     @Test
     public void testEcNumberValueFixWithEcNumberValidWithHyphen() {
         Map<String, List<String>> attributes = new HashMap<>();
-        attributes.put(GFF3Attributes.EC_NUMBER, List.of("1.-.3.-"));
+        attributes.put(GFF3Attributes.EC_NUMBER, List.of("1.2.3.-"));
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         ecNumberValueFix.fixEcNumber(feature, 1);
         Assertions.assertNotNull(feature);
         assertEquals(1, feature.getAttributeKeys().size());
+    }
+
+    @Test
+    public void testEcNumberValueFixWithEcNumberInValidWithHyphen() {
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put(GFF3Attributes.EC_NUMBER, List.of("1.-.3.-"));
+
+        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
+        ecNumberValueFix.fixEcNumber(feature, 1);
+        Assertions.assertNotNull(feature);
+        assertEquals(0, feature.getAttributeKeys().size());
     }
 
     @Test

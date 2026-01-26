@@ -28,10 +28,20 @@ public class EcNumberValueFix {
 
     record ProductEcResult(String product, List<String> ecNumbers) {}
 
-    private static final Pattern PRODUCT_EC_PATTERN =
+    // It is used only to extract EC-like substrings from product attribute values,
+    // which may contain placeholders or partial ECs (e.g. ".-", "ec=1.1.1.-").
+    // Extracted values are later validated using EC_NUMBER_PATTERN.
+    private static final Pattern PRODUCT_EC_EXTRACT_PATTERN =
             Pattern.compile("(?i)\\bEC\\s*[:=]?\\s*(\\d+(?:\\.\\d+|\\.-){2,3})");
 
-    private static final Pattern EC_NUMBER_PATTERN = Pattern.compile("\\d+(?:\\.(?:\\d+|-|n\\d*)){3}");
+    // EC_NUMBER_PATTERN defines the strict, canonical EC number format allowed in the EC_NUMBER attribute.
+    // private static final Pattern EC_NUMBER_VALIDATE_PATTERN = Pattern.compile("\\d+(?:\\.(?:\\d+|-|n\\d*)){3}");
+
+    private static final Pattern EC_NUMBER_VALIDATE_PATTERN =
+            Pattern.compile("^(?:\\d+\\.\\d+\\.\\d+\\.(?:\\d+|-|n\\d*)"
+                    + "|\\d+\\.\\d+\\.(?:-|n\\d*)"
+                    + "|\\d+\\.(?:-|n\\d*)"
+                    + "|(?:-|n\\d*))$");
 
     private static final Set<String> INVALID_EC_VALUES = Set.of("deleted", "-.-.-.-", "-.-.-", "-.-", "-");
 
@@ -117,20 +127,20 @@ public class EcNumberValueFix {
     private ProductEcResult extractEcFromProduct(String product) {
 
         List<String> ecNumbers = new ArrayList<>();
-        Matcher matcher = PRODUCT_EC_PATTERN.matcher(product);
+        Matcher matcher = PRODUCT_EC_EXTRACT_PATTERN.matcher(product);
 
         while (matcher.find()) {
             ecNumbers.add(matcher.group(1));
         }
 
         String cleanedProduct =
-                PRODUCT_EC_PATTERN.matcher(product).replaceAll("").trim();
+                PRODUCT_EC_EXTRACT_PATTERN.matcher(product).replaceAll("").trim();
 
         return new ProductEcResult(cleanedProduct, ecNumbers);
     }
 
     private boolean isValidEc(String ec) {
         return !INVALID_EC_VALUES.contains(ec.toLowerCase())
-                && EC_NUMBER_PATTERN.matcher(ec).matches();
+                && EC_NUMBER_VALIDATE_PATTERN.matcher(ec).matches();
     }
 }
