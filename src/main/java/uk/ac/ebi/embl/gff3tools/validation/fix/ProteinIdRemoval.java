@@ -20,15 +20,18 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 
 @Slf4j
-@Gff3Fix(name = "PROTEIN_ID_REMOVE", description = "Removes the protein ID from feature")
+@Gff3Fix(name = "PROTEIN_ID_REMOVE", description = "Removes the protein ID from feature", enabled = false)
 public class ProteinIdRemoval {
 
-    @FixMethod(rule = "PROTEIN_ID_REMOVE", description = "Removes the protein ID from feature", type = FEATURE)
+    @FixMethod(
+            rule = "PROTEIN_ID_REMOVE",
+            description = "Removes the protein ID from feature",
+            type = FEATURE,
+            enabled = false)
     public void fix(GFF3Feature feature, int line) {
-        Optional<List<String>> optProteinList = feature.getAttributeList(PROTEIN_ID);
-        if (optProteinList.isPresent() && !optProteinList.get().isEmpty()) {
-            log.info("Removing proteinId from feature {} at line {}", feature.getName(), line);
-            feature.removeAttributeList(PROTEIN_ID);
-        }
+        if (feature.getAttributeList(PROTEIN_ID).isEmpty()) return;
+
+        log.info("Removing proteinId from feature {} at line {}", feature.getName(), line);
+        feature.removeAttributeList(PROTEIN_ID);
     }
 }

@@ -1,11 +1,11 @@
 ##gff-version 3.1.26
 ##species https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=54126
 ##sequence-region CAXMMS010000001.1 1 60
-CAXMMS010000001.1	.	CDS	18760	18866	.	-	0	ID=CDS;codon_start=1;locus_tag=STYATE_LOCUS1;note=ID%3ASTYATC00000000001,source%3AGeneMark.hmm3;product=hypothetical protein;transl_table=1;
-CAXMMS010000001.1	.	CDS	18935	19228	.	-	0	ID=CDS;codon_start=1;locus_tag=STYATE_LOCUS1;note=ID%3ASTYATC00000000001,source%3AGeneMark.hmm3;product=hypothetical protein;transl_table=1;
-CAXMMS010000001.1	.	CDS	19307	19517	.	-	0	ID=CDS;codon_start=1;locus_tag=STYATE_LOCUS1;note=ID%3ASTYATC00000000001,source%3AGeneMark.hmm3;product=hypothetical protein;transl_table=1;
-CAXMMS010000001.1	.	CDS	20592	20785	.	-	0	ID=CDS;codon_start=1;locus_tag=STYATE_LOCUS1;note=ID%3ASTYATC00000000001,source%3AGeneMark.hmm3;product=hypothetical protein;transl_table=1;
-CAXMMS010000001.1	.	CDS	22582	22639	.	-	0	ID=CDS;codon_start=1;locus_tag=STYATE_LOCUS1;note=ID%3ASTYATC00000000001,source%3AGeneMark.hmm3;product=hypothetical protein;transl_table=1;
+CAXMMS010000001.1	.	CDS	18760	18866	.	-	0	ID=CDS;codon_start=1;locus_tag=STYATE_LOCUS1;note=ID%3ASTYATC00000000001,source%3AGeneMark.hmm3;product=hypothetical protein;protein_id=CAK7552472.1;transl_table=1;
+CAXMMS010000001.1	.	CDS	18935	19228	.	-	0	ID=CDS;codon_start=1;locus_tag=STYATE_LOCUS1;note=ID%3ASTYATC00000000001,source%3AGeneMark.hmm3;product=hypothetical protein;protein_id=CAK7552472.1;transl_table=1;
+CAXMMS010000001.1	.	CDS	19307	19517	.	-	0	ID=CDS;codon_start=1;locus_tag=STYATE_LOCUS1;note=ID%3ASTYATC00000000001,source%3AGeneMark.hmm3;product=hypothetical protein;protein_id=CAK7552472.1;transl_table=1;
+CAXMMS010000001.1	.	CDS	20592	20785	.	-	0	ID=CDS;codon_start=1;locus_tag=STYATE_LOCUS1;note=ID%3ASTYATC00000000001,source%3AGeneMark.hmm3;product=hypothetical protein;protein_id=CAK7552472.1;transl_table=1;
+CAXMMS010000001.1	.	CDS	22582	22639	.	-	0	ID=CDS;codon_start=1;locus_tag=STYATE_LOCUS1;note=ID%3ASTYATC00000000001,source%3AGeneMark.hmm3;product=hypothetical protein;protein_id=CAK7552472.1;transl_table=1;
 CAXMMS010000001.1	.	intron	18867	18934	.	-	.	ID=intron;locus_tag=STYATE_LOCUS1;note=ID%3ASTYATI00000000001,source%3AGeneMark.hmm3;
 CAXMMS010000001.1	.	intron	19229	19306	.	-	.	ID=intron_1;locus_tag=STYATE_LOCUS1;note=ID%3ASTYATI00000000002,source%3AGeneMark.hmm3;
 CAXMMS010000001.1	.	intron	19518	20591	.	-	.	ID=intron_2;locus_tag=STYATE_LOCUS1;note=ID%3ASTYATI00000000003,source%3AGeneMark.hmm3;

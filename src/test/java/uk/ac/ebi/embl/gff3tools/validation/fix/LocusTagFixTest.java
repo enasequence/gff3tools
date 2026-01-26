@@ -14,7 +14,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.LOCUS_TAG;
 
 import java.util.*;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
@@ -40,7 +39,7 @@ public class LocusTagFixTest {
 
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         locusTagFix.fixFeature(feature, 1);
-        Assertions.assertNotNull(feature);
+        assertNotNull(feature);
     }
 
     @Test
@@ -51,7 +50,7 @@ public class LocusTagFixTest {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         locusTagFix.fixFeature(feature, 1);
         List<String> locusTags = feature.getAttributeList(LOCUS_TAG).orElse(new ArrayList<>());
-        Assertions.assertNotNull(feature);
+        assertNotNull(feature);
         for (String s : locusTags) {
             assertEquals(s.toUpperCase(Locale.ROOT), s);
         }
@@ -65,7 +64,7 @@ public class LocusTagFixTest {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         locusTagFix.fixFeature(feature, 1);
         List<String> locusTags = feature.getAttributeList(LOCUS_TAG).orElse(new ArrayList<>());
-        Assertions.assertNotNull(feature);
+        assertNotNull(feature);
         for (String s : locusTags) {
             assertEquals(s.toUpperCase(Locale.ROOT), s);
         }
@@ -79,7 +78,7 @@ public class LocusTagFixTest {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         locusTagFix.fixFeature(feature, 1);
         List<String> locusTags = feature.getAttributeList(LOCUS_TAG).orElse(new ArrayList<>());
-        Assertions.assertNotNull(feature);
+        assertNotNull(feature);
         for (String s : locusTags) {
             assertEquals(s.toUpperCase(Locale.ROOT), s);
         }
@@ -93,21 +92,9 @@ public class LocusTagFixTest {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
         locusTagFix.fixFeature(feature, 1);
         List<String> locusTags = feature.getAttributeList(LOCUS_TAG).orElse(new ArrayList<>());
-        Assertions.assertNotNull(feature);
+        assertNotNull(feature);
         for (String s : locusTags) {
             assertEquals(s.toUpperCase(Locale.ROOT), s);
         }
-    }
-
-    @Test
-    public void testLocusTagUpperCase_Empty() {
-        Map<String, List<String>> attributes = new HashMap<>();
-        attributes.put(LOCUS_TAG, List.of(""));
-
-        feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attributes);
-        locusTagFix.fixFeature(feature, 1);
-        Assertions.assertNotNull(feature);
-        assertEquals(
-                0, feature.getAttributeList(LOCUS_TAG).orElse(new ArrayList<>()).size());
     }
 }

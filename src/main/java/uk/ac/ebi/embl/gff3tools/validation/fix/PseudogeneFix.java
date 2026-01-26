@@ -13,8 +13,8 @@ package uk.ac.ebi.embl.gff3tools.validation.fix;
 import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.PSEUDOGENE;
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
@@ -29,14 +29,21 @@ public class PseudogeneFix {
             description = "Remove single quotes from Pseudogene value",
             type = FEATURE)
     public void fixFeature(GFF3Feature feature, int line) {
-        java.util.Optional<List<String>> optPseudogene = feature.getAttributeList(PSEUDOGENE);
+        Optional<List<String>> optPseudogene = feature.getAttributeList(PSEUDOGENE);
         if (optPseudogene.isEmpty()) return;
 
-        List<String> updatedValues = new ArrayList<>();
-        for (String pseudogeneValues : optPseudogene.get()) {
-            pseudogeneValues = pseudogeneValues.replaceAll("^'+|'+$", "");
-            updatedValues.add(pseudogeneValues);
+        List<String> original = optPseudogene.get();
+
+        List<String> updatedValues =
+                original.stream().map(v -> v.replaceAll("^'+|'+$", "")).toList();
+
+        if (!original.equals(updatedValues)) {
+            log.debug(
+                    "Normalized PSEUDOGENE attribute. Original={}, Updated={} at line {}",
+                    original,
+                    updatedValues,
+                    line);
+            feature.setAttributeList(PSEUDOGENE, updatedValues);
         }
-        feature.setAttributeList(PSEUDOGENE, updatedValues);
     }
 }

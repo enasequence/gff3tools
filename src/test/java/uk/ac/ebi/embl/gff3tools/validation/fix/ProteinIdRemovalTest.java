@@ -39,7 +39,6 @@ public class ProteinIdRemovalTest {
         GFF3Feature f1 = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attr);
         proteinIdRemoval.fix(f1, 1);
         Assertions.assertTrue(f1.getAttribute(PROTEIN_ID).isEmpty());
-        Assertions.assertFalse(f1.getAttribute(PROTEIN_ID).isPresent());
     }
 
     @Test
@@ -52,5 +51,27 @@ public class ProteinIdRemovalTest {
         proteinIdRemoval.fix(f1, 1);
         Assertions.assertTrue(f1.getAttribute(LOCUS_TAG).isPresent());
         Assertions.assertFalse(f1.getAttribute(LOCUS_TAG).get().isEmpty());
+    }
+
+    @Test
+    public void testProteinIdRemovalMultipleProteinId() {
+        Map<String, List<String>> attr = new HashMap<>();
+        attr.put(PROTEIN_ID, List.of("PROTEIN_1", "PROTEIN_2", "PROTEIN_3", "PROTEIN_4"));
+
+        GFF3Feature f1 = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attr);
+
+        proteinIdRemoval.fix(f1, 1);
+        Assertions.assertTrue(f1.getAttribute(PROTEIN_ID).isEmpty());
+    }
+
+    @Test
+    public void testProteinIdRemovalEmptyProteinId() {
+        Map<String, List<String>> attr = new HashMap<>();
+        attr.put(PROTEIN_ID, List.of("", ""));
+
+        GFF3Feature f1 = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), attr);
+
+        proteinIdRemoval.fix(f1, 1);
+        Assertions.assertTrue(f1.getAttribute(PROTEIN_ID).isEmpty());
     }
 }

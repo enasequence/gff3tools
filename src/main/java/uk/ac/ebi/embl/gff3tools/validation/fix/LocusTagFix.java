@@ -31,10 +31,18 @@ public class LocusTagFix {
         Optional<List<String>> optLocusTag = feature.getAttributeList(LOCUS_TAG);
         if (optLocusTag.isEmpty()) return;
 
-        List<String> upperCaseLocusTag = new ArrayList<>();
-        for (String locusTag : optLocusTag.get()) {
-            upperCaseLocusTag.add(locusTag.toUpperCase());
+        List<String> original = optLocusTag.get();
+
+        List<String> upperCased =
+                original.stream().map(s -> s.toUpperCase(Locale.ROOT)).toList();
+
+        if (!original.equals(upperCased)) {
+            log.debug(
+                    "Normalized LOCUS_TAG attribute to uppercase. Original={}, Updated={} at line {}",
+                    original,
+                    upperCased,
+                    line);
+            feature.setAttributeList(LOCUS_TAG, upperCased);
         }
-        feature.setAttributeList(LOCUS_TAG, upperCaseLocusTag);
     }
 }
