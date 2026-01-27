@@ -25,22 +25,13 @@ public class JsonHeaderParser {
 
     public ParsedHeader parse(String headerLine) throws FastaHeaderParserException {
 
-        // char limit according to the spec
-        if (headerLine.length() > MAX_HEADER_LENGTH) {
-            throw new FastaHeaderParserException(
-                    "FASTA header should contain a maximum of 4096 characters according to the specification.");
-        }
+        validateHeaderLine(headerLine);
 
         String rest = headerLine.substring(1);
         int pipe = rest.indexOf('|');
-        if (pipe == -1) {
-            throw new FastaHeaderParserException(
-                    "FASTA header contains no '|', which it should to separate the id and the json.");
-        }
 
         // parse id
-        String idPart = (pipe >= 0 ? rest.substring(0, pipe) : rest).trim();
-        String id = idPart.isEmpty() ? "" : idPart.split("\\s+")[0];
+        String id = (pipe >= 0 ? rest.substring(0, pipe) : rest).trim();
         if (Objects.equals(id, "")) {
             throw new FastaHeaderParserException("FASTA header should contain the id, but no id was provided.");
         }
@@ -78,5 +69,24 @@ public class JsonHeaderParser {
                 .replace('\u2019', '\'')
                 .replace('\u00A0', ' ')
                 .trim();
+    }
+
+    private static void validateHeaderLine(String headerLine) throws FastaHeaderParserException {
+        if (!headerLine.startsWith(">")) {
+            throw new FastaHeaderParserException(
+                    "FASTA header contains no '>', which it should be at the start of the header line. FASTA header is "
+                            + headerLine);
+        }
+
+        if (headerLine.length() > MAX_HEADER_LENGTH) {
+            throw new FastaHeaderParserException(
+                    "FASTA header should contain a maximum of 4096 characters according to the specification. FASTA header is "
+                            + headerLine);
+        }
+
+        if (!headerLine.contains("|")) {
+            throw new FastaHeaderParserException(
+                    "FASTA header contains no '|', which it should to separate the id and the json. FASTA header is \" + headerLine");
+        }
     }
 }

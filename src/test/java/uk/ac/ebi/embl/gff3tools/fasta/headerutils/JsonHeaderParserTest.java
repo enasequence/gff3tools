@@ -41,15 +41,6 @@ public class JsonHeaderParserTest {
     }
 
     @Test
-    void picksFirstTokenAsIdEvenWithExtraStuff() {
-        String line = ">AF123456.1   extra tokens here   | "
-                + " {\"description\":\"x\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}";
-
-        ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
-        assertEquals("AF123456.1", ph.getId());
-    }
-
-    @Test
     void parsesCurlyQuotes() {
         String line =
                 ">ID1 | { \u201Cdescription\u201D: \u201CPinus\u201D,  \u201Cmolecule_type\u201D:\"genomic\", \u201Ctopology\u201D:\"CIRCULAR\" }";
@@ -83,7 +74,7 @@ public class JsonHeaderParserTest {
         String line = ">AF999999.5 some label without json | {} ";
 
         ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
-        assertEquals("AF999999.5", ph.getId());
+        assertEquals("AF999999.5 some label without json", ph.getId());
 
         FastaHeader h = ph.getHeader();
         assertNull(h.getDescription());
