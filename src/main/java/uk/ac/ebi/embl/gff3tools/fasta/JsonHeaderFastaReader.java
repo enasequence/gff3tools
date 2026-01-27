@@ -13,8 +13,8 @@ package uk.ac.ebi.embl.gff3tools.fasta;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
+
 import uk.ac.ebi.embl.fastareader.*;
 import uk.ac.ebi.embl.fastareader.exception.FastaFileException;
 import uk.ac.ebi.embl.fastareader.sequenceutils.SequenceAlphabet;
@@ -27,57 +27,124 @@ public class JsonHeaderFastaReader implements AutoCloseable {
     private FastaReader fastaReader;
     private JsonHeaderParser headerParser = new JsonHeaderParser();
 
+    //accession-submission id mapping
+    HashMap<String, String> accessionIdToSubmissionId = new HashMap<>();
     HashMap<String, String> submissionIdToAccessionId = new HashMap<>();
-    HashMap<String, FastaHeader> accessionIdToFastaHeader = new HashMap<>();
-    HashMap<String, FastaEntry> accessionIdToFastaEntry = new HashMap<>();
+    //id from reading
+    List<String> orderedSubmissionIds = new ArrayList<>();
+    HashMap<String, FastaHeader> submissionIdToFastaHeader = new HashMap<>();
+    HashMap<String, FastaEntry> submissionIdToFastaEntry = new HashMap<>();
+
+    public JsonHeaderFastaReader(File fastaFile)
+            throws FastaHeaderParserException, FastaFileException, IOException {
+        fastaReader = new FastaReader(fastaFile, SequenceAlphabet.defaultNucleotideAlphabet());
+        parseData();
+    }
 
     public JsonHeaderFastaReader(File fastaFile, List<String> accessionIds)
             throws FastaHeaderParserException, FastaFileException, IOException {
         fastaReader = new FastaReader(fastaFile, SequenceAlphabet.defaultNucleotideAlphabet());
-        parseData(accessionIds);
+        parseData();
+        setAccessionIds(accessionIds);
     }
 
     // --------------- interface ---------------------------
+
+    public void setAccessionIds(List<String> orderedAccessionIds) throws FastaFileException {
+        clearAccessionSubmissionMapping();
+        if (orderedSubmissionIds.size() != orderedAccessionIds.size()) {
+            throw new FastaFileException(
+                    "Number of entries in the actual file does not match number of provided accession IDs");
+        }
+        for (int i = 0; i < orderedSubmissionIds.size(); i++) {
+            var submissionId = orderedSubmissionIds.get(i);
+            var accessionId = orderedAccessionIds.get(i);
+            accessionIdToSubmissionId.put(accessionId, submissionId);
+            submissionIdToAccessionId.put(submissionId, accessionId);
+        }
+    }
+
+    public String getSubmissionIdByAccessionId(String accessionId)
+            throws FastaHeaderParserException, FastaFileException {
+        return accessionIdToSubmissionId.getOrDefault(accessionId, null);
+    }
 
     public String getAccessionIdBySubmissionId(String submissionId)
             throws FastaHeaderParserException, FastaFileException {
         return submissionIdToAccessionId.getOrDefault(submissionId, null);
     }
 
+    public FastaHeader getFastaHeaderBySubmissionId(String submissionId) {
+        return submissionIdToFastaHeader.getOrDefault(submissionId, null);
+    }
+
     public FastaHeader getFastaHeaderByAccessionId(String accessionId) {
-        return accessionIdToFastaHeader.getOrDefault(accessionId, null);
+        var submissionId = accessionIdToSubmissionId.getOrDefault(accessionId, null);
+        if (submissionId == null) return null;
+        return getFastaHeaderBySubmissionId(submissionId);
+    }
+
+    public FastaEntry getFastaEntryBySubmissionId(String submissionId) {
+        return submissionIdToFastaEntry.getOrDefault(submissionId, null);
     }
 
     public FastaEntry getFastaEntryByAccessionId(String accessionId) {
-        return accessionIdToFastaEntry.getOrDefault(accessionId, null);
+        var submissionId = accessionIdToSubmissionId.getOrDefault(accessionId, null);
+        if (submissionId == null) return null;
+        return getFastaEntryBySubmissionId(submissionId);
     }
 
-    public String getSequenceSlice(String accessionId, long fromBase, long toBase, SequenceRangeOption option)
+    public String getSequenceSliceByAccessionId(String accessionId, long fromBase, long toBase, SequenceRangeOption option)
             throws FastaFileException {
-        var entry = accessionIdToFastaEntry.getOrDefault(accessionId, null);
-        if (entry == null) {
+        var submissionId = accessionIdToSubmissionId.getOrDefault(accessionId, null);
+        if (submissionId == null) {
             throw new FastaFileException("No entry found for accessionId: " + accessionId);
+        }
+        return getSequenceSliceBySubmissionId(submissionId, fromBase, toBase, option);
+    }
+
+    public String getSequenceSliceBySubmissionId(String submissionId, long fromBase, long toBase, SequenceRangeOption option)
+            throws FastaFileException {
+        var entry = submissionIdToFastaEntry.getOrDefault(submissionId, null);
+        if (entry == null) {
+            throw new FastaFileException("No entry found for submissionId: " + submissionId);
         }
         return fastaReader.getSequenceSliceString(entry.getFastaReaderId(), fromBase, toBase, option);
     }
 
-    public Reader getSequenceSliceReader(String accessionId, long fromBase, long toBase, SequenceRangeOption option)
+    public Reader getSequenceSliceReaderByAccessionId(String accessionId, long fromBase, long toBase, SequenceRangeOption option)
             throws FastaFileException {
-        var entry = accessionIdToFastaEntry.getOrDefault(accessionId, null);
-        if (entry == null) {
+        var submissionId = accessionIdToSubmissionId.getOrDefault(accessionId, null);
+        if (submissionId == null) {
             throw new FastaFileException("No entry found for accessionId: " + accessionId);
+        }
+        return getSequenceSliceReaderBySubmissionId(submissionId, fromBase, toBase, option);
+    }
+
+    public Reader getSequenceSliceReaderBySubmissionId(String submissionId, long fromBase, long toBase, SequenceRangeOption option)
+            throws FastaFileException {
+        var entry = submissionIdToFastaEntry.getOrDefault(submissionId, null);
+        if (entry == null) {
+            throw new FastaFileException("No entry found for submissionId: " + submissionId);
         }
         return fastaReader.getSequenceSliceReader(entry.getFastaReaderId(), fromBase, toBase, option);
     }
 
     // ------------------ close and open new file ------------------
 
-    public void openNewFile(File fastaFile, List<String> accessionIds)
+    public void openNewFile(File fastaFile)
             throws FastaHeaderParserException, FastaFileException, IOException {
         clearData();
         fastaReader.openNewFile(fastaFile);
-        parseData(accessionIds);
+        parseData();
     }
+
+    public void openNewFile(File fastaFile, List<String> accessionIds)
+            throws FastaHeaderParserException, FastaFileException, IOException {
+        openNewFile(fastaFile);
+        setAccessionIds(accessionIds);
+    }
+
 
     @Override
     public void close() throws Exception {
@@ -87,27 +154,29 @@ public class JsonHeaderFastaReader implements AutoCloseable {
         }
     }
 
-    private void parseData(List<String> accessionIds) throws FastaHeaderParserException, FastaFileException {
-        List<FastaEntry> entries = fastaReader.getFastaEntries();
-        if (entries.size() != accessionIds.size()) {
-            throw new FastaFileException(
-                    "Number of entries in the actual file does not match number of provided accession IDs");
-        }
+    private void parseData() throws FastaHeaderParserException, FastaFileException {
+        var entries = fastaReader.getFastaEntries();
         for (int i = 0; i < entries.size(); i++) {
             var entry = entries.get(i);
-            var accessionId = accessionIds.get(i);
             // parse headers
             var parsedHeader = headerParser.parse(entry.headerLine);
-            accessionIdToFastaHeader.put(accessionId, parsedHeader.getHeader());
+            var submissionId = parsedHeader.getId();
             // for easier access later
-            accessionIdToFastaEntry.put(accessionId, entry);
-            submissionIdToAccessionId.put(parsedHeader.getId(), accessionId);
+            orderedSubmissionIds.add(submissionId);
+            submissionIdToFastaHeader.put(submissionId, parsedHeader.getHeader());
+            submissionIdToFastaEntry.put(submissionId, entry);
         }
     }
 
     private void clearData() {
-        accessionIdToFastaHeader.clear();
-        accessionIdToFastaEntry.clear();
+        orderedSubmissionIds.clear();
+        submissionIdToFastaHeader.clear();
+        submissionIdToFastaEntry.clear();
+        clearAccessionSubmissionMapping();
+    }
+
+    private void clearAccessionSubmissionMapping(){
         submissionIdToAccessionId.clear();
+        accessionIdToSubmissionId.clear();
     }
 }
