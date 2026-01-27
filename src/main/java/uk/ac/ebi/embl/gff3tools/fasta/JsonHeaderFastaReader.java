@@ -128,19 +128,7 @@ public class JsonHeaderFastaReader implements AutoCloseable {
         return fastaReader.getSequenceSliceReader(entry.getFastaReaderId(), fromBase, toBase, option);
     }
 
-    // ------------------ close and open new file ------------------
-
-    public void openNewFile(File fastaFile) throws FastaHeaderParserException, FastaFileException, IOException {
-        clearData();
-        fastaReader.openNewFile(fastaFile);
-        parseData();
-    }
-
-    public void openNewFile(File fastaFile, List<String> accessionIds)
-            throws FastaHeaderParserException, FastaFileException, IOException {
-        openNewFile(fastaFile);
-        setAccessionIds(accessionIds);
-    }
+    // ------------------ close file ------------------
 
     @Override
     public void close() throws Exception {
