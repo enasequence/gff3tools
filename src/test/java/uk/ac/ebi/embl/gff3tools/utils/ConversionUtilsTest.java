@@ -12,6 +12,8 @@ package uk.ac.ebi.embl.gff3tools.utils;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.BufferedWriter;
+import java.io.StringWriter;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.EntryFactory;
@@ -93,5 +95,66 @@ class ConversionUtilsTest {
         // No submitter accession set either
 
         assertNull(ConversionUtils.getEffectiveAccession(entry));
+    }
+
+    @Test
+    void testWriteNucleotideSequence_nullEntry() throws Exception {
+        StringWriter stringWriter = new StringWriter();
+        try (BufferedWriter writer = new BufferedWriter(stringWriter)) {
+            // Should not throw, just no-op
+            ConversionUtils.writeNucleotideSequence(null, writer);
+        }
+        assertEquals("", stringWriter.toString(), "Null entry should produce no output");
+    }
+
+    @Test
+    void testWriteNucleotideSequence_nullSequence() throws Exception {
+        EntryFactory entryFactory = new EntryFactory();
+        Entry entry = entryFactory.createEntry();
+        // No sequence set
+
+        StringWriter stringWriter = new StringWriter();
+        try (BufferedWriter writer = new BufferedWriter(stringWriter)) {
+            ConversionUtils.writeNucleotideSequence(entry, writer);
+        }
+        assertEquals("", stringWriter.toString(), "Entry with null sequence should produce no output");
+    }
+
+    @Test
+    void testWriteNucleotideSequence_emptySequence() throws Exception {
+        EntryFactory entryFactory = new EntryFactory();
+        SequenceFactory sequenceFactory = new SequenceFactory();
+
+        Entry entry = entryFactory.createEntry();
+        Sequence sequence = sequenceFactory.createSequence();
+        // Empty sequence (length 0)
+        entry.setSequence(sequence);
+
+        StringWriter stringWriter = new StringWriter();
+        try (BufferedWriter writer = new BufferedWriter(stringWriter)) {
+            ConversionUtils.writeNucleotideSequence(entry, writer);
+        }
+        assertEquals("", stringWriter.toString(), "Entry with empty sequence should produce no output");
+    }
+
+    @Test
+    void testWriteNucleotideSequence_withSequence() throws Exception {
+        EntryFactory entryFactory = new EntryFactory();
+        SequenceFactory sequenceFactory = new SequenceFactory();
+
+        Entry entry = entryFactory.createEntry();
+        entry.setSubmitterAccession("TEST_ENTRY");
+        Sequence sequence = sequenceFactory.createSequenceByte("ATGCATGCATGC".getBytes());
+        sequence.setAccession("ABC12345");
+        entry.setSequence(sequence);
+
+        StringWriter stringWriter = new StringWriter();
+        try (BufferedWriter writer = new BufferedWriter(stringWriter)) {
+            ConversionUtils.writeNucleotideSequence(entry, writer);
+        }
+
+        String output = stringWriter.toString();
+        assertTrue(output.startsWith(">"), "FASTA output should start with >");
+        assertTrue(output.contains("ATGCATGCATGC"), "FASTA output should contain the sequence");
     }
 }

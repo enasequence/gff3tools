@@ -34,9 +34,9 @@ public class ReadException extends ExitException {
 
     /**
      * Wraps an exception as IOException if it isn't already one.
-     * Useful for subclasses that need to pass non-IOException causes to this class.
+     * Useful for subclasses and other classes that need to pass non-IOException causes to this class.
      */
-    protected static IOException wrapAsIOException(Exception e) {
+    public static IOException wrapAsIOException(Exception e) {
         if (e instanceof IOException) {
             return (IOException) e;
         }

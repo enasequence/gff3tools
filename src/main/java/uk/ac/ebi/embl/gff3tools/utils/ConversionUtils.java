@@ -187,19 +187,20 @@ public enum ConversionUtils {
     /**
      * Writes nucleotide sequence from an entry to a FASTA writer.
      *
-     * <p>This method safely handles entries without sequences (no-op if sequence is null or empty).
+     * <p>This method safely handles null entries and entries without sequences (no-op).
      *
-     * @param entry the Entry containing the sequence to write
+     * @param entry the Entry containing the sequence to write (may be null)
      * @param fastaWriter the writer to write the FASTA output to
      * @throws WriteException if an I/O error occurs while writing
      */
     public static void writeNucleotideSequence(Entry entry, BufferedWriter fastaWriter) throws WriteException {
-        if (entry.getSequence() != null && entry.getSequence().getLength() > 0) {
-            try {
-                new FastaFileWriter(entry, fastaWriter).write();
-            } catch (IOException e) {
-                throw new WriteException("Error writing nucleotide sequence to FASTA", e);
-            }
+        if (entry == null || entry.getSequence() == null || entry.getSequence().getLength() == 0) {
+            return;
+        }
+        try {
+            new FastaFileWriter(entry, fastaWriter).write();
+        } catch (IOException e) {
+            throw new WriteException("Error writing nucleotide sequence to FASTA", e);
         }
     }
 

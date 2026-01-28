@@ -11,10 +11,8 @@
 package uk.ac.ebi.embl.gff3tools.tsvconverter;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.zip.GZIPInputStream;
+import java.util.ArrayList;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -25,54 +23,58 @@ import uk.ac.ebi.embl.template.*;
 
 /**
  * Reads TSV rows and converts each to an Entry object using sequencetools template processing.
- * Supports both gzipped and plain text TSV files.
  *
  * <p>This class wraps sequencetools' template processing infrastructure to provide
  * an iterator-like interface for reading EMBL Entry objects from template-based TSV files.
+ *
+ * <p>The reader accepts a BufferedReader, allowing the caller to handle gzip decompression
+ * if needed (e.g., in FileConversionCommand).
  */
 public class TSVEntryReader implements Closeable {
     private static final Logger LOG = LoggerFactory.getLogger(TSVEntryReader.class);
 
-    private static final int GZIP_MAGIC_BYTE1 = 0x1f;
-    private static final int GZIP_MAGIC_BYTE2 = 0x8b;
     private static final int MAX_LINES_FOR_TEMPLATE_ID = 10;
 
     private final CSVReader csvReader;
     private final TemplateProcessor templateProcessor;
     private final SubmissionOptions options;
     private final TemplateInfo templateInfo;
-    private final InputStream inputStream;
+    private final BufferedReader replayReader;
 
     private int currentLineNumber = 0;
 
     /**
-     * Creates a TSVEntryReader from a file path.
-     * Automatically detects gzipped vs plain text input.
+     * Creates a TSVEntryReader from a BufferedReader.
      *
-     * @param inputPath Path to the TSV file (can be gzipped or plain text)
+     * <p>The reader will scan the first lines to extract the template ID, buffer those lines,
+     * and then continue reading the rest of the TSV data.
+     *
+     * @param reader BufferedReader for the TSV input (caller handles gzip decompression)
      * @throws ReadException if the file cannot be read
      * @throws TemplateNotFoundException if template ID is not found in file or template doesn't exist
      */
-    public TSVEntryReader(Path inputPath) throws ReadException, TemplateNotFoundException {
+    public TSVEntryReader(BufferedReader reader) throws ReadException, TemplateNotFoundException {
         this.options = createDefaultOptions();
 
         try {
-            // 1. Extract template ID (need to read file once for ID)
-            String templateId = extractTemplateId(inputPath);
+            // 1. Extract template ID while buffering initial lines
+            List<String> bufferedLines = new ArrayList<>();
+            String templateId = extractTemplateId(reader, bufferedLines);
             LOG.info("Detected template ID: {}", templateId);
 
             // 2. Load template
             this.templateInfo = loadTemplate(templateId);
             this.templateProcessor = new TemplateProcessor(templateInfo, options);
 
-            // 3. Create input stream (handles gzip detection)
-            this.inputStream = createInputStream(inputPath);
-            this.csvReader = new CSVReader(inputStream, templateInfo.getTokens(), 0);
+            // 3. Create CSVReader with a BufferedReader that replays buffered lines first
+            this.replayReader = createReplayReader(bufferedLines, reader);
+            this.csvReader = new CSVReader(replayReader, templateInfo.getTokens(), 0);
 
         } catch (TemplateNotFoundException e) {
             throw e;
         } catch (Exception e) {
-            throw new ReadException("Failed to initialize TSV reader: " + e.getMessage(), wrapAsIOException(e));
+            throw new ReadException(
+                    "Failed to initialize TSV reader: " + e.getMessage(), ReadException.wrapAsIOException(e));
         }
     }
 
@@ -112,7 +114,7 @@ public class TSVEntryReader implements Closeable {
         } catch (TemplateUserError e) {
             throw new TSVParseException(e.getMessage(), currentLineNumber, e);
         } catch (Exception e) {
-            throw new ReadException("Error reading TSV row: " + e.getMessage(), wrapAsIOException(e));
+            throw new ReadException("Error reading TSV row: " + e.getMessage(), ReadException.wrapAsIOException(e));
         }
     }
 
@@ -132,63 +134,82 @@ public class TSVEntryReader implements Closeable {
 
     @Override
     public void close() throws IOException {
-        if (inputStream != null) {
-            inputStream.close();
+        // Close the replay reader which wraps the original BufferedReader
+        if (replayReader != null) {
+            replayReader.close();
         }
     }
 
     /**
-     * Detects if file is gzipped and creates appropriate InputStream.
+     * Extracts template ID from the first lines of the TSV.
+     * Buffers lines read so they can be replayed for the CSVReader.
      */
-    private InputStream createInputStream(Path path) throws IOException {
-        InputStream fis = Files.newInputStream(path);
-        BufferedInputStream bis = new BufferedInputStream(fis);
+    private String extractTemplateId(BufferedReader reader, List<String> bufferedLines)
+            throws IOException, TemplateNotFoundException {
 
-        if (isGzipped(bis)) {
-            LOG.debug("Detected gzipped TSV file");
-            return new GZIPInputStream(bis);
-        }
+        for (int i = 0; i < MAX_LINES_FOR_TEMPLATE_ID; i++) {
+            String line = reader.readLine();
+            if (line == null) {
+                break;
+            }
+            bufferedLines.add(line);
 
-        LOG.debug("Detected plain text TSV file");
-        return bis;
-    }
-
-    /**
-     * Checks if the stream starts with gzip magic bytes.
-     */
-    private boolean isGzipped(BufferedInputStream bis) throws IOException {
-        bis.mark(2);
-        int byte1 = bis.read();
-        int byte2 = bis.read();
-        bis.reset();
-
-        return (byte1 == GZIP_MAGIC_BYTE1 && byte2 == GZIP_MAGIC_BYTE2);
-    }
-
-    /**
-     * Extracts template ID from TSV file header.
-     * Scans the first 10 lines looking for a checklist ID pattern.
-     */
-    private String extractTemplateId(Path path) throws IOException, TemplateNotFoundException {
-        try (InputStream is = createInputStream(path);
-                BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
-
-            for (int i = 0; i < MAX_LINES_FOR_TEMPLATE_ID; i++) {
-                String line = reader.readLine();
-                if (line == null) {
-                    break;
-                }
-
-                String templateId = CSVReader.getChecklistIdFromIdLine(line);
-                if (templateId != null) {
-                    return templateId;
-                }
+            String templateId = CSVReader.getChecklistIdFromIdLine(line);
+            if (templateId != null) {
+                return templateId;
             }
         }
 
         throw new TemplateNotFoundException("No template ID found in TSV file header. "
-                + "Expected a line like 'Checklist ERT000002' or '#template_accession ERT000002' " + "in the first "
-                + MAX_LINES_FOR_TEMPLATE_ID + " lines.");
+                + "Expected a line like 'Checklist ERT000002' or '#template_accession ERT000002' "
+                + "in the first " + MAX_LINES_FOR_TEMPLATE_ID + " lines.");
+    }
+
+    /**
+     * Creates a BufferedReader that first replays buffered lines, then continues from the original reader.
+     */
+    private BufferedReader createReplayReader(List<String> bufferedLines, BufferedReader continuation) {
+        // Build string from buffered lines
+        StringBuilder sb = new StringBuilder();
+        for (String line : bufferedLines) {
+            sb.append(line).append("\n");
+        }
+
+        // Create a reader that combines buffered content with continuation
+        Reader combinedReader = new SequenceReader(new StringReader(sb.toString()), continuation);
+        return new BufferedReader(combinedReader);
+    }
+
+    /**
+     * A Reader that reads from two Readers in sequence.
+     */
+    private static class SequenceReader extends Reader {
+        private final Reader first;
+        private final Reader second;
+        private boolean firstExhausted = false;
+
+        SequenceReader(Reader first, Reader second) {
+            this.first = first;
+            this.second = second;
+        }
+
+        @Override
+        public int read(char[] cbuf, int off, int len) throws IOException {
+            if (!firstExhausted) {
+                int result = first.read(cbuf, off, len);
+                if (result != -1) {
+                    return result;
+                }
+                firstExhausted = true;
+            }
+            return second.read(cbuf, off, len);
+        }
+
+        @Override
+        public void close() throws IOException {
+            first.close();
+            second.close();
+        }
     }
 
     /**
@@ -196,6 +217,7 @@ public class TSVEntryReader implements Closeable {
      */
     private TemplateInfo loadTemplate(String templateId) throws TemplateNotFoundException {
         try {
+            // Use TemplateProcessor to get the template XML, then parse with TemplateLoader
             TemplateProcessor processor = new TemplateProcessor();
             String templateXml = processor.getTemplate(templateId);
 
@@ -238,15 +260,5 @@ public class TSVEntryReader implements Closeable {
         options.isWebinCLI = false;
         options.isFixMode = true;
         return options;
-    }
-
-    /**
-     * Wraps an exception as IOException if it isn't already one.
-     */
-    private IOException wrapAsIOException(Exception e) {
-        if (e instanceof IOException) {
-            return (IOException) e;
-        }
-        return new IOException(e);
     }
 }
