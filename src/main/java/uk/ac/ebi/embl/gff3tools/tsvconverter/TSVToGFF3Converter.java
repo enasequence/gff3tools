@@ -43,7 +43,6 @@ public class TSVToGFF3Converter implements Converter {
     private static final Logger LOG = LoggerFactory.getLogger(TSVToGFF3Converter.class);
 
     private final ValidationEngine validationEngine;
-    private final Path inputFilePath;
     // Optional output path for FASTA sequences; if null, sequences are discarded
     private final Path fastaOutputPath;
 
@@ -51,22 +50,19 @@ public class TSVToGFF3Converter implements Converter {
      * Creates a new TSV to GFF3 converter.
      *
      * @param validationEngine the validation engine to use
-     * @param inputFilePath path to the input TSV file (needed to detect template ID)
      */
-    public TSVToGFF3Converter(ValidationEngine validationEngine, Path inputFilePath) {
-        this(validationEngine, inputFilePath, null);
+    public TSVToGFF3Converter(ValidationEngine validationEngine) {
+        this(validationEngine, null);
     }
 
     /**
      * Creates a new TSV to GFF3 converter.
      *
      * @param validationEngine the validation engine to use
-     * @param inputFilePath path to the input TSV file (needed to detect template ID)
      * @param fastaOutputPath optional output path for FASTA sequences; if null, sequences are discarded
      */
-    public TSVToGFF3Converter(ValidationEngine validationEngine, Path inputFilePath, Path fastaOutputPath) {
+    public TSVToGFF3Converter(ValidationEngine validationEngine, Path fastaOutputPath) {
         this.validationEngine = validationEngine;
-        this.inputFilePath = inputFilePath;
         this.fastaOutputPath = fastaOutputPath;
     }
 
@@ -86,11 +82,10 @@ public class TSVToGFF3Converter implements Converter {
             GFF3AnnotationFactory annotationFactory =
                     new GFF3AnnotationFactory(validationEngine, directivesFactory, translationFastaPath);
 
-            // Note: We use inputFilePath rather than the reader because:
-            // 1. We need to read the file twice (once for template ID, once for data)
-            // 2. TSVEntryReader handles gzip detection internally
-            try (TSVEntryReader entryReader = new TSVEntryReader(inputFilePath);
-                    BufferedWriter nucleotideFastaWriter = createNucleotideFastaWriter()) {
+            // Create FASTA writer first (outside try-with-resources) to ensure TSVEntryReader
+            // is not left unclosed if FASTA writer creation fails
+            BufferedWriter nucleotideFastaWriter = createNucleotideFastaWriter();
+            try (TSVEntryReader entryReader = new TSVEntryReader(reader)) {
                 LOG.info(
                         "Converting TSV file using template: {}",
                         entryReader.getTemplateInfo().getName());
@@ -120,6 +115,14 @@ public class TSVToGFF3Converter implements Converter {
                 throw e;
             } catch (IOException e) {
                 throw new ReadException("Error reading TSV file", e);
+            } finally {
+                if (nucleotideFastaWriter != null) {
+                    try {
+                        nucleotideFastaWriter.close();
+                    } catch (IOException e) {
+                        LOG.warn("Failed to close nucleotide FASTA writer", e);
+                    }
+                }
             }
 
             GFF3File file = GFF3File.builder()
@@ -155,12 +158,14 @@ public class TSVToGFF3Converter implements Converter {
 
     /**
      * Creates a temporary FASTA file for storing translation sequences.
+     *
+     * @throws WriteException if the temp file cannot be created
      */
-    private Path createTempFastaPath() {
+    private Path createTempFastaPath() throws WriteException {
         try {
             return Files.createTempFile("gff3-translation-tsv", ".fasta");
-        } catch (Exception e) {
-            throw new RuntimeException("Unable to create temp fasta file.", e);
+        } catch (IOException e) {
+            throw new WriteException("Unable to create temp fasta file", e);
         }
     }
 

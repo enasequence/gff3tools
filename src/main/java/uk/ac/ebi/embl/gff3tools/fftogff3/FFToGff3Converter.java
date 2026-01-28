@@ -24,76 +24,115 @@ import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 
 public class FFToGff3Converter implements Converter {
-    // MasterFile will be used when converting reduced flatfile to GFF3
-    private final Path masterFilePath;
-    // Optional output path for FASTA sequences; if null, sequences are discarded
-    private final Path fastaOutputPath;
-    private final ValidationEngine validationEngine;
+    // MasterFile will be used when converting reduced flatfile tto GFF3
+    Path masterFilePath = null;
+    Path nucleotideSequenceOutputPath = null;
+    ValidationEngine validationEngine;
 
     public FFToGff3Converter(ValidationEngine validationEngine) {
-        this(validationEngine, null, null);
+        this.validationEngine = validationEngine;
     }
 
+    // Constructor to be used only by the processing pipeline which converts reduced flatfile
     public FFToGff3Converter(ValidationEngine validationEngine, Path masterFilePath) {
-        this(validationEngine, masterFilePath, null);
-    }
-
-    /**
-     * Creates a new EMBL to GFF3 converter.
-     *
-     * @param validationEngine the validation engine to use
-     * @param masterFilePath optional master file path for reduced flatfile conversion
-     * @param fastaOutputPath optional output path for FASTA sequences; if null, sequences are discarded
-     */
-    public FFToGff3Converter(ValidationEngine validationEngine, Path masterFilePath, Path fastaOutputPath) {
         this.validationEngine = validationEngine;
         this.masterFilePath = masterFilePath;
-        this.fastaOutputPath = fastaOutputPath;
+    }
+
+    // Constructor with nucleotide sequence output path
+    public FFToGff3Converter(
+            ValidationEngine validationEngine, Path masterFilePath, Path nucleotideSequenceOutputPath) {
+        this.validationEngine = validationEngine;
+        this.masterFilePath = masterFilePath;
+        this.nucleotideSequenceOutputPath = nucleotideSequenceOutputPath;
     }
 
     public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException {
 
-        // Translation sequences go to a temp file (used internally for GFF3 output)
-        Path translationFastaPath = createTempFastaPath();
-
+        Path fastaPath = getFastaPath();
+        BufferedWriter nucleotideWriter = null;
         try {
-            // Read sequences only if we need to write them to FASTA output
-            boolean readSequences = (fastaOutputPath != null);
-            EmblEntryReader entryReader = new EmblEntryReader(
-                    reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions(readSequences));
+            EmblEntryReader entryReader =
+                    new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
-            // Process entries with optional FASTA writing (streaming, one entry at a time)
-            GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine, translationFastaPath);
-            GFF3File file = fftogff3.from(entryReader, getMasterEntry(masterFilePath), createNucleotideFastaWriter());
+            GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine, fastaPath);
+            GFF3File file;
+
+            // If we need to write nucleotide sequences, we must read entries into memory
+            if (nucleotideSequenceOutputPath != null) {
+                nucleotideWriter = Files.newBufferedWriter(nucleotideSequenceOutputPath);
+
+                // Collect all entries
+                java.util.List<Entry> entries = new java.util.ArrayList<>();
+                try {
+                    while (entryReader.read() != null && entryReader.isEntry()) {
+                        entries.add(entryReader.getEntry());
+                    }
+                } catch (IOException e) {
+                    throw new ReadException(e);
+                }
+
+                // Write nucleotide sequences
+                writeNucleotideSequences(entries, nucleotideWriter);
+
+                // Create GFF3File from collected entries
+                file = fftogff3.from(entries, getMasterEntry(masterFilePath));
+            } else {
+                // Normal path - stream processing without collecting entries
+                file = fftogff3.from(entryReader, getMasterEntry(masterFilePath));
+            }
+
             file.writeGFF3String(writer);
 
             // Check for collected errors at end of processing
             validationEngine.throwIfErrorsCollected();
-        } finally {
-            deleteFastaFile(translationFastaPath);
-        }
-    }
-
-    /**
-     * Creates a BufferedWriter for nucleotide FASTA output if fastaOutputPath is set.
-     *
-     * @return BufferedWriter for FASTA output, or null if no FASTA output path was specified
-     */
-    private BufferedWriter createNucleotideFastaWriter() throws WriteException {
-        if (fastaOutputPath == null) {
-            return null;
-        }
-        try {
-            return Files.newBufferedWriter(fastaOutputPath);
         } catch (IOException e) {
-            throw new WriteException("Error creating FASTA output file: " + fastaOutputPath, e);
+            throw new WriteException("Error writing nucleotide sequences", e);
+        } finally {
+            if (nucleotideWriter != null) {
+                try {
+                    nucleotideWriter.close();
+                } catch (IOException ignored) {
+                }
+            }
+            deleteFastaFile(fastaPath);
         }
     }
 
-    private ReaderOptions getReaderOptions(boolean readSequences) {
+    private void writeNucleotideSequences(java.util.List<Entry> entries, BufferedWriter writer) throws IOException {
+        for (Entry entry : entries) {
+            if (entry.getSequence() != null && entry.getSequence().getLength() > 0) {
+                // Write FASTA header
+                String accession = entry.getPrimaryAccession();
+                if (accession == null && entry.getSubmitterAccession() != null) {
+                    accession = entry.getSubmitterAccession();
+                }
+                if (accession == null) {
+                    accession = "sequence";
+                }
+
+                writer.write(">");
+                writer.write(accession);
+                writer.newLine();
+
+                // Write sequence in 60-character lines
+                byte[] seqBytes = entry.getSequence().getSequenceByte();
+                if (seqBytes != null && seqBytes.length > 0) {
+                    String seq = new String(seqBytes);
+                    for (int i = 0; i < seq.length(); i += 60) {
+                        writer.write(seq.substring(i, Math.min(i + 60, seq.length())));
+                        writer.newLine();
+                    }
+                }
+            }
+        }
+    }
+
+    private ReaderOptions getReaderOptions() {
         ReaderOptions readerOptions = new ReaderOptions();
-        readerOptions.setIgnoreSequence(!readSequences);
+        // Only ignore sequences if we don't need to output them
+        readerOptions.setIgnoreSequence(nucleotideSequenceOutputPath == null);
         return readerOptions;
     }
 
@@ -104,7 +143,7 @@ public class FFToGff3Converter implements Converter {
         try (BufferedReader inputReader = Files.newBufferedReader(masterFilePath)) {
             Entry masterEntry = null;
             EmblEntryReader entryReader = new EmblEntryReader(
-                    inputReader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions(false));
+                    inputReader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
             while (entryReader.read() != null && entryReader.isEntry()) {
                 masterEntry = entryReader.getEntry();
             }
@@ -115,9 +154,9 @@ public class FFToGff3Converter implements Converter {
     }
 
     /**
-     * Creates a temporary FASTA file in the system temp directory.
+     * Create  FASTA in the  system temp directory.
      */
-    private Path createTempFastaPath() {
+    private Path getFastaPath() {
         try {
             return Files.createTempFile("gff3-translation", ".fasta");
         } catch (Exception e) {
@@ -126,13 +165,13 @@ public class FFToGff3Converter implements Converter {
     }
 
     /**
-     * Deletes the temporary FASTA file.
+     * Delete FASTA file in the  system temp directory.
      */
     private void deleteFastaFile(Path fastaPath) {
         try {
             Files.deleteIfExists(fastaPath);
         } catch (Exception e) {
-            // Log warning but don't fail - temp file cleanup is best effort
+            throw new RuntimeException("Unable to create temp fasta file.", e);
         }
     }
 }
