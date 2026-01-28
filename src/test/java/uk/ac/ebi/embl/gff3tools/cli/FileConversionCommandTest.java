@@ -210,26 +210,47 @@ class FileConversionCommandTest {
 
     @Test
     void testGetFileExtension_simple() {
-        assertEquals("tsv", FileConversionCommand.getFileExtension(Path.of("input.tsv")));
-        assertEquals("gff3", FileConversionCommand.getFileExtension(Path.of("output.gff3")));
-        assertEquals("embl", FileConversionCommand.getFileExtension(Path.of("data.embl")));
+        assertEquals(
+                "tsv",
+                FileConversionCommand.getFileExtension(Path.of("input.tsv")).orElse(null));
+        assertEquals(
+                "gff3",
+                FileConversionCommand.getFileExtension(Path.of("output.gff3")).orElse(null));
+        assertEquals(
+                "embl",
+                FileConversionCommand.getFileExtension(Path.of("data.embl")).orElse(null));
     }
 
     @Test
     void testGetFileExtension_gzipped() {
-        // .tsv.gz should be recognized as tsv
-        assertEquals("tsv", FileConversionCommand.getFileExtension(Path.of("input.tsv.gz")));
+        // All gzipped formats should be recognized
+        assertEquals(
+                "tsv",
+                FileConversionCommand.getFileExtension(Path.of("input.tsv.gz")).orElse(null));
+        assertEquals(
+                "embl",
+                FileConversionCommand.getFileExtension(Path.of("input.embl.gz")).orElse(null));
+        assertEquals(
+                "gff3",
+                FileConversionCommand.getFileExtension(Path.of("input.gff3.gz")).orElse(null));
     }
 
     @Test
     void testGetFileExtension_noExtension() {
-        assertNull(FileConversionCommand.getFileExtension(Path.of("noextension")));
+        assertNull(
+                FileConversionCommand.getFileExtension(Path.of("noextension")).orElse(null));
     }
 
     @Test
     void testGetFileExtension_withPath() {
-        assertEquals("tsv", FileConversionCommand.getFileExtension(Path.of("/some/path/to/input.tsv")));
-        assertEquals("tsv", FileConversionCommand.getFileExtension(Path.of("/some/path/to/input.tsv.gz")));
+        assertEquals(
+                "tsv",
+                FileConversionCommand.getFileExtension(Path.of("/some/path/to/input.tsv"))
+                        .orElse(null));
+        assertEquals(
+                "tsv",
+                FileConversionCommand.getFileExtension(Path.of("/some/path/to/input.tsv.gz"))
+                        .orElse(null));
     }
 
     @Test
