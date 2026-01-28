@@ -30,8 +30,17 @@ class FileConversionCommandTest {
 
     @Test
     void testGetFileExtension_gzipped() {
-        // .tsv.gz should be recognized as tsv
+        // All gzipped formats should be recognized
         assertEquals("tsv", FileConversionCommand.getFileExtension(Path.of("input.tsv.gz")));
+        assertEquals("embl", FileConversionCommand.getFileExtension(Path.of("input.embl.gz")));
+        assertEquals("gff3", FileConversionCommand.getFileExtension(Path.of("input.gff3.gz")));
+    }
+
+    @Test
+    void testGetFileExtension_otherCompressionFormats() {
+        // bz2 and xz should also be handled
+        assertEquals("tsv", FileConversionCommand.getFileExtension(Path.of("input.tsv.bz2")));
+        assertEquals("embl", FileConversionCommand.getFileExtension(Path.of("input.embl.xz")));
     }
 
     @Test
