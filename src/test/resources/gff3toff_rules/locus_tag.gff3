@@ -1,5 +1,5 @@
 ##gff-version 3.1.26
 ##sequence-region TEST01.1 1 822
-TEST01.1	.	ncRNA_gene	1	822	.	+	.	ID=ncRNA_gene_matK;gene=matK;locus_tag=test;old_locus_tag=test1,test2,test3,test2,test3
-TEST01.1	.	mRNA	1	822	.	+	.	ID=mRNA_matK;Parent=ncRNA_gene_matK;locus_tag=test1;old_locus_tag=test11,test21,test31
-TEST01.1	.	mRNA	1000	8220	.	+	.	ID=mRNA_matK_1;Parent=ncRNA_gene_matK;locus_tag=different-locus;
+TEST01.1	.	ncRNA_gene	1	822	.	+	.	ID=ncRNA_gene_matK;gene=matK;locus_tag=TEST;old_locus_tag=test1,test2,test3,test2,test3
+TEST01.1	.	mRNA	1	822	.	+	.	ID=mRNA_matK;Parent=ncRNA_gene_matK;locus_tag=TEST1;old_locus_tag=test11,test21,test31
+TEST01.1	.	mRNA	1000	8220	.	+	.	ID=mRNA_matK_1;Parent=ncRNA_gene_matK;locus_tag=DIFFERENT-LOCUS;

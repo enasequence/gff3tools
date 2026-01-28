@@ -155,11 +155,18 @@ public class GFF3Feature {
      * @param values the list of values for the named attribute
      */
     public void setAttributeList(String key, List<String> values) {
-        values.removeIf(s -> s == null || s.trim().isBlank()); // remove empty bits
-        if (values.isEmpty()) {
+        if (values == null) {
+            attributes.remove(key);
+            return;
+        }
+
+        List<String> filtered =
+                values.stream().filter(s -> s != null && !s.trim().isBlank()).toList();
+
+        if (filtered.isEmpty()) {
             attributes.remove(key);
         } else {
-            attributes.put(key, values);
+            attributes.put(key, new ArrayList<>(filtered));
         }
     }
 
