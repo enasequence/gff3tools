@@ -11,18 +11,18 @@ FH
 FT   source          1..822
 FT   gene            1..822
 FT                   /gene="matK"
-FT                   /locus_tag="test"
+FT                   /locus_tag="TEST"
 FT                   /old_locus_tag="test1"
 FT                   /old_locus_tag="test2"
 FT                   /old_locus_tag="test3"
 FT   mRNA            1..822
 FT                   /gene="matK"
-FT                   /locus_tag="test1"
+FT                   /locus_tag="TEST1"
 FT                   /old_locus_tag="test11"
 FT                   /old_locus_tag="test21"
 FT                   /old_locus_tag="test31"
 FT   mRNA            1000..8220
 FT                   /gene="matK"
-FT                   /locus_tag="different-locus"
+FT                   /locus_tag="DIFFERENT-LOCUS"
 XX
 //
