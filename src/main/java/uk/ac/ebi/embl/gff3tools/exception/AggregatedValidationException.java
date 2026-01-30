@@ -26,10 +26,20 @@ public class AggregatedValidationException extends ValidationException {
         this.errors = List.copyOf(errors);
     }
 
-    // REVIEW: Consider including a summary of error types or first few error messages
-    // in the formatted message to provide more context without needing to iterate getErrors()
     private static String formatMessage(List<ValidationException> errors) {
-        return "Conversion completed with %d error(s)".formatted(errors.size());
+        if (errors.isEmpty()) {
+            return "No errors";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("Processing completed with %d error(s):".formatted(errors.size()));
+        int maxToShow = Math.min(3, errors.size());
+        for (int i = 0; i < maxToShow; i++) {
+            sb.append("\n  - ").append(errors.get(i).getMessage());
+        }
+        if (errors.size() > maxToShow) {
+            sb.append("\n  ... and %d more".formatted(errors.size() - maxToShow));
+        }
+        return sb.toString();
     }
 
     public List<ValidationException> getErrors() {

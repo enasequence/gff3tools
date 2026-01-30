@@ -21,17 +21,14 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 public class ValidationEngine {
-    // REVIEW: Consider making this private static final for consistency with Java conventions
-    private static Logger LOG = LoggerFactory.getLogger(ValidationEngine.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ValidationEngine.class);
 
     private final List<ValidationException> parsingWarnings;
     private final List<ValidationException> collectedErrors;
     private final boolean failFast;
 
-    // REVIEW: These fields are public but appear to only be used internally. Consider making them private
-    // or package-private to improve encapsulation
-    public ValidationConfig validationConfig;
-    public ValidationRegistry validationRegistry;
+    private final ValidationConfig validationConfig;
+    private final ValidationRegistry validationRegistry;
 
     ValidationEngine(ValidationConfig validationConfig, ValidationRegistry validationRegistry, boolean failFast) {
         this.parsingWarnings = new java.util.ArrayList<>();
@@ -42,12 +39,11 @@ public class ValidationEngine {
     }
 
     /**
-     * Executes validations and fixes for the passed GFF3Feature ans GFF3Annotation
+     * Executes validations and fixes for the passed GFF3Feature and GFF3Annotation
      */
-    // REVIEW: Typo in javadoc - "ans" should be "and"
     public <T> void validate(T target, int line) throws ValidationException {
 
-        executeFixs(target, line);
+        executeFixes(target, line);
         executeValidations(target, line);
     }
 
@@ -86,8 +82,7 @@ public class ValidationEngine {
         }
     }
 
-    // REVIEW: Method name typo - should be "executeFixes" not "executeFixs"
-    public <T> void executeFixs(T target, int line) throws ValidationException {
+    public <T> void executeFixes(T target, int line) throws ValidationException {
         List<ValidatorDescriptor> validators = validationRegistry.getFixs();
 
         for (ValidatorDescriptor validator : validators) {

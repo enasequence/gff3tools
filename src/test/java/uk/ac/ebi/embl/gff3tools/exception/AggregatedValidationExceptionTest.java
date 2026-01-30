@@ -50,12 +50,35 @@ class AggregatedValidationExceptionTest {
     }
 
     @Test
-    void getMessage_containsErrorCount() {
+    void getMessage_containsErrorCountAndDetails() {
         List<ValidationException> errors =
                 List.of(new ValidationException("RULE1", 1, "error 1"), new ValidationException("RULE2", 2, "error 2"));
         AggregatedValidationException exception = new AggregatedValidationException(errors);
 
-        assertTrue(exception.getMessage().contains("2 error(s)"));
+        String message = exception.getMessage();
+        assertTrue(message.contains("2 error(s)"));
+        assertTrue(message.contains("error 1"));
+        assertTrue(message.contains("error 2"));
+    }
+
+    @Test
+    void getMessage_truncatesWhenManyErrors() {
+        List<ValidationException> errors = List.of(
+                new ValidationException("RULE1", 1, "error 1"),
+                new ValidationException("RULE2", 2, "error 2"),
+                new ValidationException("RULE3", 3, "error 3"),
+                new ValidationException("RULE4", 4, "error 4"),
+                new ValidationException("RULE5", 5, "error 5"));
+        AggregatedValidationException exception = new AggregatedValidationException(errors);
+
+        String message = exception.getMessage();
+        assertTrue(message.contains("5 error(s)"));
+        assertTrue(message.contains("error 1"));
+        assertTrue(message.contains("error 2"));
+        assertTrue(message.contains("error 3"));
+        assertFalse(message.contains("error 4"));
+        assertFalse(message.contains("error 5"));
+        assertTrue(message.contains("and 2 more"));
     }
 
     @Test
