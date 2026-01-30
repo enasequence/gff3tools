@@ -14,7 +14,7 @@ import java.util.Optional;
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 
 @Slf4j
-@Gff3Fix(name = "GAP_ESTIMATED_LENGTH", description = "Set estimated_length for a gap feature")
+@Gff3Fix(name = "GAP_ESTIMATED_LENGTH", description = "Set estimated_length for a gap or assembly_gap feature")
 public class GapEstimatedLengthFix {
 
     private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
