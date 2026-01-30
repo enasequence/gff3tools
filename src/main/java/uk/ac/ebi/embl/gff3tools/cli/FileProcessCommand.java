@@ -10,29 +10,23 @@
  */
 package uk.ac.ebi.embl.gff3tools.cli;
 
-import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.CLIException;
-import uk.ac.ebi.embl.gff3tools.exception.UnregisteredValidationRuleException;
-import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
-import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
-import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 @CommandLine.Command(name = "process", description = "Performs the file processing of gff3 & fasta files")
 @Slf4j
-public class FileProcessCommand implements Runnable {
+public class FileProcessCommand extends AbstractCommand {
 
     @CommandLine.Option(
-            names = "--rules",
-            paramLabel = "<key:value,key:value>",
-            description = "Specify rules in the format key:value")
-    private CliRulesOption rules;
+            names = "-accessions",
+            description = "Comma-separated list of accessions (e.g. ACC1,ACC2)",
+            split = ",",
+            required = true)
+    private List<String> accessions;
 
     @CommandLine.Option(names = "-gff3", description = "Gff3 input file", required = true)
     private Path gff3InputFile;
@@ -40,40 +34,31 @@ public class FileProcessCommand implements Runnable {
     @CommandLine.Option(names = "-fasta", description = "Fasta input file", required = true)
     private Path fastaInputFile;
 
-    @CommandLine.Option(names = "-analysisId", description = "Analysis Id")
-    private String analysisId;
-
     @CommandLine.Option(names = "-o", description = "Processed output file", required = true)
     private Path outputFilePath;
 
     @Override
     public void run() {
-        Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
-
         try {
-            ValidationEngine engine = initValidationEngine(ruleOverrides);
             validateFile(gff3InputFile, ConversionFileFormat.gff3.name());
             validateFile(fastaInputFile, ConversionFileFormat.fasta.name());
-            // TODO: process gff3 + fasta files
-
+            validateOutputFile(outputFilePath);
+            validateAccessions();
+            // TODO: process gff3 + fasta files + initialize validation engine from rules
+        } catch (CLIException e) {
+            throw new RuntimeException(e);
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
+            throw new RuntimeException("Unexpected error", e);
         }
-    }
-
-    protected Map<String, RuleSeverity> getRuleOverrides() {
-        return Optional.ofNullable(rules).map(CliRulesOption::rules).orElse(new HashMap<>());
-    }
-
-    protected ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides)
-            throws UnregisteredValidationRuleException {
-        return new ValidationEngineBuilder().overrideMethodRules(ruleOverrides).build();
     }
 
     protected void validateFile(Path filePath, String fileExtension) throws CLIException {
-        if (filePath == null) {
-            throw new CLIException("Missing " + fileExtension + " input file");
+
+        // First checks the file exist or not
+        if (!Files.exists(filePath)) {
+            throw new CLIException("File does not exist: " + filePath);
         }
+
         String actualExtension = getFileExtension(filePath)
                 .orElseThrow(() -> new CLIException("File has no extension: " + filePath.getFileName()));
 
@@ -81,22 +66,33 @@ public class FileProcessCommand implements Runnable {
             throw new CLIException("Invalid %s file: %s".formatted(fileExtension, filePath.getFileName()));
         }
 
-        if (!Files.exists(filePath)) {
-            throw new CLIException("File does not exist: " + filePath);
-        }
         if (!Files.isReadable(filePath)) {
             throw new CLIException("File is not readable: " + filePath);
         }
     }
 
-    protected static Optional<String> getFileExtension(Path path) {
-        String name = path.getFileName().toString();
+    protected void validateOutputFile(Path filePath) throws CLIException {
 
-        if (name.endsWith(".gz")) {
-            name = name.substring(0, name.length() - 3);
+        String fileExtension = getFileExtension(filePath)
+                .orElseThrow(() -> new CLIException("File has no extension: " + filePath.getFileName()));
+
+        if (!fileExtension.equalsIgnoreCase(ConversionFileFormat.gff3.name())) {
+            throw new CLIException("Invalid output file format %s, Expected gff3".formatted(fileExtension));
         }
 
-        int dot = name.lastIndexOf('.');
-        return (dot > 0 && dot < name.length() - 1) ? Optional.of(name.substring(dot + 1)) : Optional.empty();
+        Path parent = filePath.getParent();
+        if (parent != null && !Files.exists(parent)) {
+            throw new CLIException("Output directory does not exist: " + parent);
+        }
+
+        if (Files.exists(filePath) && !Files.isWritable(filePath)) {
+            throw new CLIException("Output file is not writable: " + filePath);
+        }
+    }
+
+    protected void validateAccessions() throws CLIException {
+        if (accessions.stream().anyMatch(String::isBlank)) {
+            throw new CLIException("Accessions must not be blank");
+        }
     }
 }

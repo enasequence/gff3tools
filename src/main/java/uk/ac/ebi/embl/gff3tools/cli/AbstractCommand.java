@@ -79,4 +79,15 @@ public abstract class AbstractCommand implements Runnable {
             return newStdPipe.apply();
         }
     }
+
+    protected static Optional<String> getFileExtension(Path path) {
+        String name = path.getFileName().toString();
+
+        if (name.endsWith(".gz")) {
+            name = name.substring(0, name.length() - 3);
+        }
+
+        int dot = name.lastIndexOf('.');
+        return (dot > 0 && dot < name.length() - 1) ? Optional.of(name.substring(dot + 1)) : Optional.empty();
+    }
 }
