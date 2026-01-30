@@ -11,7 +11,6 @@ SO:0000195 	coding_exon	An exon whereby at least one base is part of a codon (he
 SO:0000198 	noncoding_exon	An exon that does not contain any codons	exon	/note="noncoding_exon"
 SO:0000200 	five_prime_coding_exon	The 5' most coding exon.	exon	/note="five_prime_coding_exon"
 SO:0000004	interior_coding_exon	A coding exon that is not the most 3-prime or the most 5-prime in a given transcript.	exon	/note="interior_coding_exon"
-SO:0000730	gap	Agap in the sequence of known length. The unknown bases are filled in with N's.	gap	/estimated_length=<length of feature>
 SO:0000043	processed_pseudogene	Apseudogene created via retrotranposition of the mRNA of a functional protein-coding parent gene followed by accumulation of deleterious mutations lacking introns and promoters, often including a polyA tail.	gene	/pseudogene="processed"
 SO:0001760	non_processed_pseudogene	A pseudogene that arose from a means other than retrotransposition. A pseudogene created via genomic duplication of a functional protein-coding parent gene followed by accumulation of deleterious mutations.	gene	/pseudogene="unprocessed"
 SO:0001759	unitary_pseudogene	A pseudogene, deactivated from original state by mutation, fixed in a population,where the ortholog in a reference species such as mouse remains functional.	gene	/pseudogene="unitary"
@@ -221,5 +220,6 @@ SO:0001019 	copy_number_variation	A variation that increases or decreases the co
 SO:0000205 	three_prime_UTR	A region at the 3' end of a mature transcript (following the stop codon) that is not translated into a protein.	3'UTR
 SO:0000204 	five_prime_UTR	A region at the 5' end of a mature transcript (preceding the initiation codon) that is not translated into a protein.	5'UTR
 SO:0002072	sequence_comparison	A position or feature where two sequences have been compared.	misc_feature	/note="sequence_comparison"
-SO:0000730	gap	A gap in the sequence of known length. The unknown bases are filled in with N&apos;s	assembly_gap
+SO:0000730	gap	A gap in the sequence of known length. The unknown bases are filled in with N's assembly_gap	/estimated_length=<length of feature>	/gap_type=<type of gap>
+SO:0000730  gap	A gap in the sequence of known length. The unknown bases are filled in with N's.    gap	/estimated_length=<length of feature>
 SO:0000704	gene	A region (or regions) that includes all of the sequence elements necessary to encode a functional transcript. A gene may include regulatory regions, transcribed regions and/or other functional sequence regions.	gene
