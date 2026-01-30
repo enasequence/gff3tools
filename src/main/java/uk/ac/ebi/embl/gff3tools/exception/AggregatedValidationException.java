@@ -26,6 +26,8 @@ public class AggregatedValidationException extends ValidationException {
         this.errors = List.copyOf(errors);
     }
 
+    // REVIEW: Consider including a summary of error types or first few error messages
+    // in the formatted message to provide more context without needing to iterate getErrors()
     private static String formatMessage(List<ValidationException> errors) {
         return "Conversion completed with %d error(s)".formatted(errors.size());
     }

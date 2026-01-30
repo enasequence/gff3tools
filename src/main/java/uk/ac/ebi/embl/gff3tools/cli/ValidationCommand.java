@@ -50,8 +50,7 @@ public class ValidationCommand extends AbstractCommand {
                         () -> new BufferedReader(new InputStreamReader(System.in)),
                         inputFilePath);
                 GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, inputReader, inputFilePath)) {
-            ;
-
+            // REVIEW: Stray semicolon - remove this
             gff3Reader.readHeader();
             gff3Reader.read(annotation -> {
                 List<ValidationException> warnings = validationEngine.getParsingWarnings();
