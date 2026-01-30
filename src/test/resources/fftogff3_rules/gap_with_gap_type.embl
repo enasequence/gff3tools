@@ -9,7 +9,8 @@ XX
 FH   Key             Location/Qualifiers
 FH
 FT   source          1..5742
-FT   gap             935..1034
-FT                   /estimated_length=100
+FT   assembly_gap    10..100
+FT                   /estimated_length=91
+FT                   /gap_type="unknown"
 XX
 //
