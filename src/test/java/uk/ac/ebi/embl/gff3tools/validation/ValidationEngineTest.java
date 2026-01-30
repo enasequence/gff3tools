@@ -42,10 +42,8 @@ public class ValidationEngineTest {
     @BeforeEach
     void setup() {
         MockitoAnnotations.openMocks(this);
-        // REVIEW: Consider adding a comment explaining why fail-fast=true is used here,
-        // since the default behavior changed to fail-fast=false
-        engine = new ValidationEngine(
-                validationConfig, validationRegistry, true); // Default to fail-fast for existing tests
+        // Use fail-fast=true to preserve original test behavior (default changed to false)
+        engine = new ValidationEngine(validationConfig, validationRegistry, true);
     }
 
     @Test
@@ -225,7 +223,7 @@ public class ValidationEngineTest {
         try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
             mocked.when(() -> validationRegistry.getFixs()).thenReturn(descriptors);
 
-            engine.executeFixs(new GFF3Annotation(), 5);
+            engine.executeFixes(new GFF3Annotation(), 5);
 
             verify(instance, times(1)).fix(any(), eq(5));
         }

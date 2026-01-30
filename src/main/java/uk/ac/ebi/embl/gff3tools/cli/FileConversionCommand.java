@@ -55,8 +55,6 @@ public class FileConversionCommand extends AbstractCommand {
             // Write to a temp file first to ensure atomic output: if conversion fails,
             // no partial/corrupt output file is created. Only on success do we move the
             // temp file to the final destination.
-            // REVIEW: Good pattern for atomic file writes. Consider extracting temp file
-            // creation/cleanup to a utility class if this pattern is used elsewhere.
             if (writingToFile) {
                 tempFile = Files.createTempFile(
                         outputFilePath.getParent() != null ? outputFilePath.getParent() : Path.of("."),
