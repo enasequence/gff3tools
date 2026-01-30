@@ -92,31 +92,19 @@ public class FileConversionCommand extends AbstractCommand {
             throws CLIException {
         if (fileFormat == null) {
             if (!filePath.toString().isEmpty()) {
-                String fileExtension = getFileExtension(filePath);
-                if (fileExtension != null) {
-                    try {
-                        fileFormat = ConversionFileFormat.valueOf(fileExtension);
-                    } catch (IllegalArgumentException e) {
-                        throw new CLIException("Unrecognized file format: " + fileExtension + " use the " + cliOption
-                                + " option to specify the format manually or update the file extension");
-                    }
-                } else {
-                    throw new CLIException("No file extension present, use the " + cliOption
-                            + " option to specify the format manually or set the file extension");
+                String fileExtension = getFileExtension(filePath)
+                        .orElseThrow(() -> new CLIException("No file extension present, use the " + cliOption
+                                + " option to specify the format manually or set the file extension"));
+                try {
+                    fileFormat = ConversionFileFormat.valueOf(fileExtension);
+                } catch (IllegalArgumentException e) {
+                    throw new CLIException("Unrecognized file format: " + fileExtension + " use the " + cliOption
+                            + " option to specify the format manually or update the file extension");
                 }
             } else {
                 throw new CLIException("When streaming " + cliOption + " must be specified");
             }
         }
         return fileFormat;
-    }
-
-    public static String getFileExtension(Path path) {
-        String fileName = path.getFileName().toString();
-        int lastIndexOfDot = fileName.lastIndexOf('.');
-        if (lastIndexOfDot > 0 && lastIndexOfDot < fileName.length() - 1) {
-            return fileName.substring(lastIndexOfDot + 1);
-        }
-        return null; // No extension found
     }
 }
