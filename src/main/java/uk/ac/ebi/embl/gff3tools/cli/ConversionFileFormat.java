@@ -12,5 +12,6 @@ package uk.ac.ebi.embl.gff3tools.cli;
 
 public enum ConversionFileFormat {
     embl,
-    gff3
+    gff3,
+    fasta
 }
