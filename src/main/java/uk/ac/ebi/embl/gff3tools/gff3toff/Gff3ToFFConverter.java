@@ -52,7 +52,12 @@ public class Gff3ToFFConverter implements Converter {
                 warnings.clear();
             });
 
-            if (warningCount > 0) {
+            // Check for collected errors at end of processing
+            int errorCount = validationEngine.getCollectedErrors().size();
+            if (errorCount > 0) {
+                log.info("Conversion completed with %d error(s)".formatted(errorCount));
+                validationEngine.throwIfErrorsCollected();
+            } else if (warningCount > 0) {
                 log.info("The file was converted with %d warnings".formatted(warningCount));
             } else {
                 log.info("Completed conversion");
@@ -74,12 +79,16 @@ public class Gff3ToFFConverter implements Converter {
     private void writeEntry(GFF3Mapper mapper, GFF3Annotation annotation, BufferedWriter writer)
             throws WriteException, ValidationException {
         if (annotation != null) {
-            EmblEntryWriter entryWriter = new EmblEntryWriter(mapper.mapGFF3ToEntry(annotation));
-            entryWriter.setShowAcStartLine(false);
             try {
+                EmblEntryWriter entryWriter = new EmblEntryWriter(mapper.mapGFF3ToEntry(annotation));
+                entryWriter.setShowAcStartLine(false);
                 entryWriter.write(writer);
             } catch (IOException e) {
                 throw new WriteException(e);
+            } catch (ValidationException e) {
+                // Route validation errors through the validation engine for proper handling
+                // (fail-fast vs collect-all-errors mode)
+                validationEngine.handleSyntacticError(e);
             }
         }
     }

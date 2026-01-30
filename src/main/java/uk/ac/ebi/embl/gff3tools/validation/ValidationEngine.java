@@ -14,30 +14,36 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.ac.ebi.embl.gff3tools.exception.AggregatedValidationException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 public class ValidationEngine {
-    private static Logger LOG = LoggerFactory.getLogger(ValidationEngine.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ValidationEngine.class);
 
     private final List<ValidationException> parsingWarnings;
-    public ValidationConfig validationConfig;
-    public ValidationRegistry validationRegistry;
+    private final List<ValidationException> collectedErrors;
+    private final boolean failFast;
 
-    ValidationEngine(ValidationConfig validationConfig, ValidationRegistry validationRegistry) {
+    private final ValidationConfig validationConfig;
+    private final ValidationRegistry validationRegistry;
+
+    ValidationEngine(ValidationConfig validationConfig, ValidationRegistry validationRegistry, boolean failFast) {
         this.parsingWarnings = new java.util.ArrayList<>();
+        this.collectedErrors = new java.util.ArrayList<>();
+        this.failFast = failFast;
         this.validationConfig = validationConfig;
         this.validationRegistry = validationRegistry;
     }
 
     /**
-     * Executes validations and fixes for the passed GFF3Feature ans GFF3Annotation
+     * Executes validations and fixes for the passed GFF3Feature and GFF3Annotation
      */
     public <T> void validate(T target, int line) throws ValidationException {
 
-        executeFixs(target, line);
+        executeFixes(target, line);
         executeValidations(target, line);
     }
 
@@ -76,7 +82,7 @@ public class ValidationEngine {
         }
     }
 
-    public <T> void executeFixs(T target, int line) throws ValidationException {
+    public <T> void executeFixes(T target, int line) throws ValidationException {
         List<ValidatorDescriptor> validators = validationRegistry.getFixs();
 
         for (ValidatorDescriptor validator : validators) {
@@ -100,7 +106,9 @@ public class ValidationEngine {
     }
 
     public void handleSyntacticError(ValidationException exception) throws ValidationException {
-        String rule = exception.getValidationRule().toString();
+        String rule = exception.getValidationRule() != null
+                ? exception.getValidationRule().toString()
+                : "SYNTAX_ERROR";
         RuleSeverity severity = validationConfig.getSeverity(rule, RuleSeverity.ERROR);
         switch (severity) {
             case OFF -> {}
@@ -109,13 +117,36 @@ public class ValidationEngine {
                 LOG.warn(exception.getMessage());
             }
             case ERROR -> {
-                throw exception;
+                if (failFast) {
+                    throw exception;
+                } else {
+                    collectedErrors.add(exception);
+                    LOG.error(exception.getMessage());
+                }
             }
         }
     }
 
     public List<ValidationException> getParsingWarnings() {
         return parsingWarnings;
+    }
+
+    public List<ValidationException> getCollectedErrors() {
+        return collectedErrors;
+    }
+
+    public boolean hasCollectedErrors() {
+        return !collectedErrors.isEmpty();
+    }
+
+    /**
+     * Throws an AggregatedValidationException if any errors were collected during processing.
+     * This should be called at the end of processing when fail-fast mode is disabled.
+     */
+    public void throwIfErrorsCollected() throws AggregatedValidationException {
+        if (!collectedErrors.isEmpty()) {
+            throw new AggregatedValidationException(collectedErrors);
+        }
     }
 
     private void handleRuleException(Exception e, RuleSeverity severity, String rule) throws ValidationException {
@@ -127,12 +158,22 @@ public class ValidationEngine {
             if (severity == RuleSeverity.WARN) {
                 parsingWarnings.add(new ValidationException(rule, ve.getMessage()));
             } else if (severity == RuleSeverity.ERROR) {
-                throw new ValidationException(rule, ve.getLine(), ve.getMessage());
+                ValidationException validationException = new ValidationException(rule, ve.getLine(), ve.getMessage());
+                handleError(validationException);
             } else {
-                throw ve;
+                handleError(ve);
             }
         } else {
             throw new RuntimeException(cause);
+        }
+    }
+
+    private void handleError(ValidationException ve) throws ValidationException {
+        if (failFast) {
+            throw ve;
+        } else {
+            collectedErrors.add(ve);
+            LOG.error(ve.getMessage());
         }
     }
 }

@@ -37,6 +37,14 @@ public class GFF3FileReaderTest {
         return builder.build();
     }
 
+    /**
+     * Returns a validation engine configured with fail-fast mode enabled.
+     * Use this for tests that expect exceptions to be thrown immediately on error.
+     */
+    ValidationEngine getValidationEngineFailFast() {
+        return getValidationEngineBuilder().failFast(true).build();
+    }
+
     ValidationEngineBuilder getValidationEngineBuilder() {
         ValidationEngineBuilder builder = new ValidationEngineBuilder();
 
@@ -68,7 +76,7 @@ public class GFF3FileReaderTest {
     @Test
     void testMissingHeader() throws Exception {
         File testFile = TestUtils.getResourceFile("validation_errors/empty_file.gff3");
-        ValidationEngine validationEngine = getValidationEngine();
+        ValidationEngine validationEngine = getValidationEngineFailFast();
 
         try (FileReader filerReader = new FileReader(testFile);
                 BufferedReader reader = new BufferedReader(filerReader);
@@ -95,7 +103,7 @@ public class GFF3FileReaderTest {
     @Test
     void testInvalidRecord() throws Exception {
         File testFile = TestUtils.getResourceFile("validation_errors/invalid_record.gff3");
-        ValidationEngine validationEngine = getValidationEngine();
+        ValidationEngine validationEngine = getValidationEngineFailFast();
 
         try (FileReader filerReader = new FileReader(testFile);
                 BufferedReader reader = new BufferedReader(filerReader);
@@ -116,7 +124,7 @@ public class GFF3FileReaderTest {
     @Test
     void testUndefinedSeqIdException() throws Exception {
         File testFile = TestUtils.getResourceFile("validation_errors/undefined_seq_id.gff3");
-        ValidationEngine validationEngine = getValidationEngine();
+        ValidationEngine validationEngine = getValidationEngineFailFast();
 
         try (FileReader filerReader = new FileReader(testFile);
                 BufferedReader reader = new BufferedReader(filerReader);
@@ -228,7 +236,7 @@ public class GFF3FileReaderTest {
                 + "seq1\tsource\tgene\t100\t200\t.\t+\t.\tID=feata2\n"
                 + "seq2\tsource\tgene\t1\t100\t.\t+\t.\tID=featb2\n";
 
-        ValidationEngine validationEngine = getValidationEngine();
+        ValidationEngine validationEngine = getValidationEngineFailFast();
         Files.writeString(Path.of("input.gff3"), gff3Content, Charset.defaultCharset());
         try (GFF3FileReader gff3Reader =
                 new GFF3FileReader(validationEngine, new StringReader(gff3Content), Path.of("input.gff3"))) {
