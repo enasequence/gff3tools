@@ -1,5 +1,18 @@
+/*
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
+import static org.mockito.Mockito.*;
+
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -10,11 +23,6 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
-
-import java.util.Optional;
-
-
-import static org.mockito.Mockito.*;
 
 class GapEstimatedLengthFixTest {
 
@@ -39,13 +47,11 @@ class GapEstimatedLengthFixTest {
         when(feature.getName()).thenReturn(featureName);
         when(feature.hasAttribute(GFF3Attributes.ESTIMATED_LENGTH)).thenReturn(false);
         when(feature.getLength()).thenReturn(150L);
-        when(ontologyClient.findTermByNameOrSynonym(featureName))
-                .thenReturn(Optional.of(OntologyTerm.GAP.ID));
+        when(ontologyClient.findTermByNameOrSynonym(featureName)).thenReturn(Optional.of(OntologyTerm.GAP.ID));
 
         fix.fixFeature(feature, 12);
 
-        verify(feature)
-                .addAttribute(GFF3Attributes.ESTIMATED_LENGTH, "150");
+        verify(feature).addAttribute(GFF3Attributes.ESTIMATED_LENGTH, "150");
     }
 
     @Test
@@ -54,13 +60,11 @@ class GapEstimatedLengthFixTest {
 
         when(feature.getName()).thenReturn("gap");
         when(feature.hasAttribute(GFF3Attributes.ESTIMATED_LENGTH)).thenReturn(true);
-        when(ontologyClient.findTermByNameOrSynonym("gap"))
-                .thenReturn(Optional.of(OntologyTerm.GAP.ID));
+        when(ontologyClient.findTermByNameOrSynonym("gap")).thenReturn(Optional.of(OntologyTerm.GAP.ID));
 
         fix.fixFeature(feature, 5);
 
-        verify(feature, never())
-                .addAttribute(eq(GFF3Attributes.ESTIMATED_LENGTH), anyString());
+        verify(feature, never()).addAttribute(eq(GFF3Attributes.ESTIMATED_LENGTH), anyString());
     }
 
     @Test
@@ -68,13 +72,11 @@ class GapEstimatedLengthFixTest {
         GFF3Feature feature = mock(GFF3Feature.class);
 
         when(feature.getName()).thenReturn("exon");
-        when(ontologyClient.findTermByNameOrSynonym("exon"))
-                .thenReturn(Optional.of("SO:0000147"));
+        when(ontologyClient.findTermByNameOrSynonym("exon")).thenReturn(Optional.of("SO:0000147"));
 
         fix.fixFeature(feature, 3);
 
-        verify(feature, never())
-                .addAttribute(eq(GFF3Attributes.ESTIMATED_LENGTH), anyString());
+        verify(feature, never()).addAttribute(eq(GFF3Attributes.ESTIMATED_LENGTH), anyString());
     }
 
     @Test
@@ -82,12 +84,10 @@ class GapEstimatedLengthFixTest {
         GFF3Feature feature = mock(GFF3Feature.class);
 
         when(feature.getName()).thenReturn("gap");
-        when(ontologyClient.findTermByNameOrSynonym("gap"))
-                .thenReturn(Optional.empty());
+        when(ontologyClient.findTermByNameOrSynonym("gap")).thenReturn(Optional.empty());
 
         fix.fixFeature(feature, 1);
 
-        verify(feature, never())
-                .addAttribute(anyString(), anyString());
+        verify(feature, never()).addAttribute(anyString(), anyString());
     }
 }
