@@ -1,5 +1,5 @@
 /*
- * Copyright 2025-2026 EMBL - European Bioinformatics Institute
+ * Copyright 2025 EMBL - European Bioinformatics Institute
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
  * file except in compliance with the License. You may obtain a copy of the License at
  * http://www.apache.org/licenses/LICENSE-2.0
@@ -73,7 +73,8 @@ public class TSVEntryReader implements Closeable {
         } catch (TemplateNotFoundException e) {
             throw e;
         } catch (Exception e) {
-            throw new ReadException("Failed to initialize TSV reader: " + e.getMessage(), ReadException.wrapAsIOException(e));
+            throw new ReadException(
+                    "Failed to initialize TSV reader: " + e.getMessage(), ReadException.wrapAsIOException(e));
         }
     }
 
@@ -260,5 +261,4 @@ public class TSVEntryReader implements Closeable {
         options.isFixMode = true;
         return options;
     }
-
 }

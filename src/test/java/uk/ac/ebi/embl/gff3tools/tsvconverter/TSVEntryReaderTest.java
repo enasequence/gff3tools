@@ -1,5 +1,5 @@
 /*
- * Copyright 2025-2026 EMBL - European Bioinformatics Institute
+ * Copyright 2025 EMBL - European Bioinformatics Institute
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
  * file except in compliance with the License. You may obtain a copy of the License at
  * http://www.apache.org/licenses/LICENSE-2.0
@@ -40,8 +40,8 @@ class TSVEntryReaderTest {
     @Test
     void testTemplateNotFound() {
         // Create a TSV content with missing template ID line
-        String tsvContent = "Organism\tSedimentation coefficient\tENV_SAMPLE\tSequence\n"
-                + "Escherichia coli\t16S\tno\tATGC\n";
+        String tsvContent =
+                "Organism\tSedimentation coefficient\tENV_SAMPLE\tSequence\n" + "Escherichia coli\t16S\tno\tATGC\n";
 
         assertThrows(TemplateNotFoundException.class, () -> {
             try (BufferedReader reader = new BufferedReader(new StringReader(tsvContent))) {
@@ -152,7 +152,8 @@ class TSVEntryReaderTest {
 
             TSVParseException exception = assertThrows(TSVParseException.class, tsvReader::read);
             assertTrue(exception.getLineNumber() > 0, "Line number should be tracked");
-            assertTrue(exception.getMessage().contains("Line " + exception.getLineNumber()),
+            assertTrue(
+                    exception.getMessage().contains("Line " + exception.getLineNumber()),
                     "Message should contain line number");
         }
     }
