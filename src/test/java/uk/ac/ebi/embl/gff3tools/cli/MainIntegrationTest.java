@@ -53,7 +53,7 @@ public class MainIntegrationTest {
 
     @Test
     void testReadExceptionExitCode() {
-        String[] args = new String[] {"conversion", "-f", "embl", "-t", "gff3", "non_existent_input.embl"}; //
+        String[] args = new String[] {"conversion", "-f", "embl", "-t", "gff3", "non_existent_input.embl"};
         PrintStream originalErr = System.err;
         ByteArrayOutputStream errContent = new ByteArrayOutputStream();
         System.setErr(new PrintStream(errContent));
