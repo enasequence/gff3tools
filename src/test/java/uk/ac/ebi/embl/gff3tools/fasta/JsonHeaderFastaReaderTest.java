@@ -11,7 +11,6 @@
 package uk.ac.ebi.embl.gff3tools.fasta;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,6 +31,17 @@ public class JsonHeaderFastaReaderTest {
         List<String> accessionIds = List.of("acc1");
 
         assertThrows(FastaHeaderParserException.class, () -> new JsonHeaderFastaReader(fasta, accessionIds));
+    }
+
+    @Test
+    void throwsWhenThereAreMultipleIdenticalSubmissionIds() throws IOException {
+        File fasta = TestUtils.getResourceFile("./fasta/fasta_duplicate_submission_id.txt"); // has 3 entries
+
+        FastaFileException ex = assertThrows(FastaFileException.class, () -> new JsonHeaderFastaReader(fasta));
+
+        assertTrue(
+                ex.getMessage().contains("Duplicate submission ID detected: ID1"),
+                "Expected duplicate submission ID to be ID1 but was: " + ex.getMessage());
     }
 
     @Test

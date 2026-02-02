@@ -24,15 +24,15 @@ import uk.ac.ebi.embl.gff3tools.fasta.headerutils.JsonHeaderParser;
 public class JsonHeaderFastaReader implements AutoCloseable {
 
     private FastaReader fastaReader;
-    private JsonHeaderParser headerParser = new JsonHeaderParser();
+    private final JsonHeaderParser headerParser = new JsonHeaderParser();
 
     // accession-submission id mapping
-    HashMap<String, String> accessionIdToSubmissionId = new HashMap<>();
-    HashMap<String, String> submissionIdToAccessionId = new HashMap<>();
+    private final HashMap<String, String> accessionIdToSubmissionId = new HashMap<>();
+    private final HashMap<String, String> submissionIdToAccessionId = new HashMap<>();
     // id from reading
-    List<String> orderedSubmissionIds = new ArrayList<>();
-    HashMap<String, FastaHeader> submissionIdToFastaHeader = new HashMap<>();
-    HashMap<String, FastaEntry> submissionIdToFastaEntry = new HashMap<>();
+    private final List<String> orderedSubmissionIds = new ArrayList<>();
+    private final HashMap<String, FastaHeader> submissionIdToFastaHeader = new HashMap<>();
+    private final HashMap<String, FastaEntry> submissionIdToFastaEntry = new HashMap<>();
 
     public JsonHeaderFastaReader(File fastaFile) throws FastaHeaderParserException, FastaFileException, IOException {
         fastaReader = new FastaReader(fastaFile, SequenceAlphabet.defaultNucleotideAlphabet());
@@ -62,39 +62,37 @@ public class JsonHeaderFastaReader implements AutoCloseable {
         }
     }
 
-    public String getSubmissionIdByAccessionId(String accessionId)
-            throws FastaHeaderParserException, FastaFileException {
-        return accessionIdToSubmissionId.getOrDefault(accessionId, null);
+    public String getSubmissionIdByAccessionId(String accessionId) {
+        return accessionIdToSubmissionId.get(accessionId);
     }
 
-    public String getAccessionIdBySubmissionId(String submissionId)
-            throws FastaHeaderParserException, FastaFileException {
-        return submissionIdToAccessionId.getOrDefault(submissionId, null);
+    public String getAccessionIdBySubmissionId(String submissionId) {
+        return submissionIdToAccessionId.get(submissionId);
     }
 
     public FastaHeader getFastaHeaderBySubmissionId(String submissionId) {
-        return submissionIdToFastaHeader.getOrDefault(submissionId, null);
+        return submissionIdToFastaHeader.get(submissionId);
     }
 
     public FastaHeader getFastaHeaderByAccessionId(String accessionId) {
-        var submissionId = accessionIdToSubmissionId.getOrDefault(accessionId, null);
+        var submissionId = accessionIdToSubmissionId.get(accessionId);
         if (submissionId == null) return null;
         return getFastaHeaderBySubmissionId(submissionId);
     }
 
     public FastaEntry getFastaEntryBySubmissionId(String submissionId) {
-        return submissionIdToFastaEntry.getOrDefault(submissionId, null);
+        return submissionIdToFastaEntry.get(submissionId);
     }
 
     public FastaEntry getFastaEntryByAccessionId(String accessionId) {
-        var submissionId = accessionIdToSubmissionId.getOrDefault(accessionId, null);
+        var submissionId = accessionIdToSubmissionId.get(accessionId);
         if (submissionId == null) return null;
         return getFastaEntryBySubmissionId(submissionId);
     }
 
     public String getSequenceSliceByAccessionId(
             String accessionId, long fromBase, long toBase, SequenceRangeOption option) throws FastaFileException {
-        var submissionId = accessionIdToSubmissionId.getOrDefault(accessionId, null);
+        var submissionId = accessionIdToSubmissionId.get(accessionId);
         if (submissionId == null) {
             throw new FastaFileException("No entry found for accessionId: " + accessionId);
         }
@@ -103,7 +101,7 @@ public class JsonHeaderFastaReader implements AutoCloseable {
 
     public String getSequenceSliceBySubmissionId(
             String submissionId, long fromBase, long toBase, SequenceRangeOption option) throws FastaFileException {
-        var entry = submissionIdToFastaEntry.getOrDefault(submissionId, null);
+        var entry = submissionIdToFastaEntry.get(submissionId);
         if (entry == null) {
             throw new FastaFileException("No entry found for submissionId: " + submissionId);
         }
@@ -112,7 +110,7 @@ public class JsonHeaderFastaReader implements AutoCloseable {
 
     public Reader getSequenceSliceReaderByAccessionId(
             String accessionId, long fromBase, long toBase, SequenceRangeOption option) throws FastaFileException {
-        var submissionId = accessionIdToSubmissionId.getOrDefault(accessionId, null);
+        var submissionId = accessionIdToSubmissionId.get(accessionId);
         if (submissionId == null) {
             throw new FastaFileException("No entry found for accessionId: " + accessionId);
         }
@@ -121,7 +119,7 @@ public class JsonHeaderFastaReader implements AutoCloseable {
 
     public Reader getSequenceSliceReaderBySubmissionId(
             String submissionId, long fromBase, long toBase, SequenceRangeOption option) throws FastaFileException {
-        var entry = submissionIdToFastaEntry.getOrDefault(submissionId, null);
+        var entry = submissionIdToFastaEntry.get(submissionId);
         if (entry == null) {
             throw new FastaFileException("No entry found for submissionId: " + submissionId);
         }
@@ -145,6 +143,10 @@ public class JsonHeaderFastaReader implements AutoCloseable {
             // parse headers
             var parsedHeader = headerParser.parse(entry.headerLine);
             var submissionId = parsedHeader.getId();
+            // check for duplicate submission ID
+            if (submissionIdToFastaEntry.containsKey(submissionId)) {
+                throw new FastaFileException("Duplicate submission ID detected: " + submissionId);
+            }
             // for easier access later
             orderedSubmissionIds.add(submissionId);
             submissionIdToFastaHeader.put(submissionId, parsedHeader.getHeader());

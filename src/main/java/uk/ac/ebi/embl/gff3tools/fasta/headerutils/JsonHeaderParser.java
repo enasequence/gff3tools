@@ -86,7 +86,8 @@ public class JsonHeaderParser {
 
         if (!headerLine.contains("|")) {
             throw new FastaHeaderParserException(
-                    "FASTA header contains no '|', which it should to separate the id and the json. FASTA header is \" + headerLine");
+                    "FASTA header contains no '|', which it should to separate the id and the json. FASTA header is "
+                            + headerLine);
         }
     }
 }
