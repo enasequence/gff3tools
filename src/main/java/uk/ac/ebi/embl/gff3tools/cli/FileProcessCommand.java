@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.cli;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 
+// REVIEW: Good - clean command structure with help built in
 @CommandLine.Command(
         name = "process",
         description = "Performs file processing operations on GFF3 files",
@@ -22,6 +23,7 @@ public class FileProcessCommand extends AbstractCommand {
 
     @Override
     public void run() {
+        // REVIEW: Good UX - shows help when parent command called without subcommand
         // Parent command does nothing - Picocli shows help if no sub-command specified
         CommandLine.usage(this, System.out);
     }

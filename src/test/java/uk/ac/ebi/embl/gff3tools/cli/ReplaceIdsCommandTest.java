@@ -78,6 +78,7 @@ public class ReplaceIdsCommandTest {
 
     @Test
     public void testPreservesFastaSection() throws IOException {
+        // REVIEW: Good test - verifies FASTA headers are NOT replaced (as per spec)
         Path tempInput = Files.createTempFile("input", ".gff3");
         Path tempOutput = Files.createTempFile("output", ".gff3");
 
@@ -101,6 +102,8 @@ public class ReplaceIdsCommandTest {
         assertTrue(output.contains("##FASTA"));
         assertTrue(output.contains(">gene1"));
         assertTrue(output.contains("ATGCATGC"));
+        // REVIEW: Edge case - what if FASTA header is ">BN000065.1"?
+        // Consider: adding a test for that scenario
         // FASTA header should NOT be replaced
         assertFalse(output.contains(">ACC123"));
 

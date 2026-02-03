@@ -66,6 +66,7 @@ public class ReplaceIdsCommand extends AbstractCommand {
     @Override
     public void run() {
         try {
+            // REVIEW: Good - trimming whitespace as documented in README
             // Trim whitespace from accessions
             List<String> trimmedAccessions =
                     accessions.stream().map(String::trim).toList();
@@ -77,6 +78,7 @@ public class ReplaceIdsCommand extends AbstractCommand {
             boolean writingToStdout = outputFilePath == null || outputFilePath.isEmpty();
 
             if (writingToStdout) {
+                // REVIEW: Good - consistent with CountRegionsCommand
                 // Suppress info logs when writing to stdout
                 LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
                 ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
@@ -89,6 +91,8 @@ public class ReplaceIdsCommand extends AbstractCommand {
             performReplacement(replacementMap, writingToStdout);
 
         } catch (CLIException e) {
+            // REVIEW: Both catch blocks do the same thing - could be simplified
+            // Consider: catch (CLIException | ValidationException e) { throw new RuntimeException(...); }
             throw new RuntimeException(e.getMessage(), e);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
@@ -104,11 +108,15 @@ public class ReplaceIdsCommand extends AbstractCommand {
     }
 
     private Map<String, String> buildReplacementMap(List<String> newAccessions) throws Exception {
+        // REVIEW: Good - using LinkedHashMap to preserve insertion order
         Map<String, String> replacementMap = new LinkedHashMap<>();
         List<String> originalAccessions = new ArrayList<>();
         boolean headerFound = false;
         int lineNumber = 0;
 
+        // REVIEW: Performance concern - reading file twice (once here, once in performReplacement)
+        // Consider: combining into single pass or buffering content if files are small
+        // For large files this is fine, but might be inefficient for many small files
         // First pass: collect sequence regions in order
         try (BufferedReader reader = getPipe(
                 Files::newBufferedReader, () -> new BufferedReader(new InputStreamReader(System.in)), inputFilePath)) {
@@ -159,12 +167,15 @@ public class ReplaceIdsCommand extends AbstractCommand {
             }
         }
 
+        // REVIEW: Good error message - clearly states expected vs provided counts
         // Validate count matches
         if (originalAccessions.size() != newAccessions.size()) {
             throw new CLIException("Accession count mismatch: file has " + originalAccessions.size()
                     + " sequence regions but " + newAccessions.size() + " accessions were provided");
         }
 
+        // REVIEW: Potential issue - what if there are duplicate sequence-region IDs in the file?
+        // Consider: checking for duplicates and warning/erroring if found
         // Build replacement map
         for (int i = 0; i < originalAccessions.size(); i++) {
             replacementMap.put(originalAccessions.get(i), newAccessions.get(i));
@@ -227,12 +238,16 @@ public class ReplaceIdsCommand extends AbstractCommand {
                     }
                 }
 
+                // REVIEW: Good optimization - split only on first tab to preserve the rest of the line
                 // Replace in feature lines (column 1 is seqid)
                 if (FEATURE_LINE.matcher(line).matches() && line.contains("\t")) {
                     String[] parts = line.split("\t", 2);
                     if (parts.length >= 2) {
                         String seqid = parts[0];
 
+                        // REVIEW: Edge case - what if seqid contains whitespace or is empty?
+                        // The GFF3 spec doesn't allow this, but malformed files might have it
+                        // Consider: adding validation or trimming seqid
                         // Check if this seqid needs replacement
                         String newAccession = replacementMap.get(seqid);
                         if (newAccession != null) {

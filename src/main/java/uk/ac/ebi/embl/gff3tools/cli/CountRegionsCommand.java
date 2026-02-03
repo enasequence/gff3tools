@@ -41,6 +41,7 @@ public class CountRegionsCommand extends AbstractCommand {
     @Override
     public void run() {
         try {
+            // REVIEW: Good practice suppressing logs to keep stdout clean for piping
             // Suppress info logs when writing count to stdout to avoid contaminating output
             // Note: This command always writes to stdout (no output file option)
             LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
@@ -53,6 +54,8 @@ public class CountRegionsCommand extends AbstractCommand {
             System.out.println(count);
 
         } catch (Exception e) {
+            // REVIEW: Catching generic Exception - consider being more specific
+            // Consider: catching ValidationException separately for better error messages
             throw new RuntimeException(e.getMessage(), e);
         }
     }
@@ -62,6 +65,7 @@ public class CountRegionsCommand extends AbstractCommand {
         boolean headerFound = false;
         int lineNumber = 0;
 
+        // REVIEW: Good use of try-with-resources for proper resource cleanup
         try (BufferedReader reader = getPipe(
                 Files::newBufferedReader, () -> new BufferedReader(new InputStreamReader(System.in)), inputFilePath)) {
 
@@ -74,6 +78,8 @@ public class CountRegionsCommand extends AbstractCommand {
                     continue;
                 }
 
+                // REVIEW: Minor - consider using FASTA_DIRECTIVE pattern for consistency
+                // Consider: if (FASTA_DIRECTIVE.matcher(line).matches()) to match ReplaceIdsCommand
                 // Check for FASTA section - stop counting after this
                 if (line.startsWith("##FASTA")) {
                     break;

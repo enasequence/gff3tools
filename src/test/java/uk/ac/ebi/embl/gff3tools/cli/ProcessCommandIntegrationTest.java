@@ -292,6 +292,7 @@ public class ProcessCommandIntegrationTest {
 
     @Test
     void testMismatchedCountTooFewAccessions() throws IOException {
+        // REVIEW: Good test coverage for requirement R7
         // Test R7: Exit with error when fewer accessions than sequence regions
         Path inputFile = Files.createTempFile("test", ".gff3");
         Files.writeString(
@@ -320,6 +321,7 @@ public class ProcessCommandIntegrationTest {
             // Should exit with USAGE error (code 2)
             mock.verify(() -> Main.exit(CLIExitCode.USAGE.asInt()));
 
+            // REVIEW: Good - verifying error message content, not just exit code
             // Should show expected vs provided counts
             String errorOutput = errContent.toString(StandardCharsets.UTF_8);
             assertTrue(errorOutput.contains("3"), "Error should mention expected count of 3");
@@ -615,6 +617,8 @@ public class ProcessCommandIntegrationTest {
 
     @Test
     void testManySequenceRegions() throws IOException {
+        // REVIEW: Good performance test, but no timing assertions
+        // Consider: adding timing checks or moving to ProcessCommandPerformanceTest
         // Test with 100 sequence regions to verify performance
         StringBuilder gff3Content = new StringBuilder("##gff-version 3\n");
         StringBuilder accessions = new StringBuilder();
