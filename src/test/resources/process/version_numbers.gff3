@@ -1,0 +1,7 @@
+##gff-version 3
+##sequence-region ACC001.1 1 5000
+##sequence-region ACC002.23 1 3000
+##sequence-region ACC003 1 2000
+ACC001.1	ENA	gene	100	500	.	+	.	ID=gene1
+ACC002.23	ENA	gene	200	600	.	-	.	ID=gene2
+ACC003	ENA	gene	300	700	.	+	.	ID=gene3

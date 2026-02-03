@@ -67,7 +67,7 @@ public abstract class AbstractCommand implements Runnable {
 
     protected <T> T getPipe(NewPipeFunction<T> newFilePipe, Function0<T> newStdPipe, Path filePath)
             throws ExitException {
-        if (!filePath.toString().isEmpty()) {
+        if (filePath != null && !filePath.toString().isEmpty()) {
             try {
                 return newFilePipe.apply(filePath, StandardCharsets.UTF_8);
             } catch (NoSuchFileException e) {

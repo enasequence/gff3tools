@@ -1,0 +1,9 @@
+##gff-version 3
+##sequence-region SEQ001 1 10000
+SEQ001	ENA	gene	1000	2000	.	+	.	ID=gene1
+SEQ001	ENA	CDS	1000	2000	.	+	0	ID=cds1;Parent=gene1
+##FASTA
+>cds1
+ATGCATGCATGCATGC
+>SEQ001
+GGGGCCCCAAAAGGGGCCCCAAAA

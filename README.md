@@ -45,6 +45,143 @@ The tool supports unix pipes, input and output using std-in and std-out.
 
 ```cat OZ026791.gff3 | java -jar gff3tools-1.0-all.jar conversion -f gff3 -t embl > OZ026791.embl```
 
+### Process Command
+
+The `process` command provides utilities for working with GFF3 files, including counting sequence regions and replacing sequence region identifiers.
+
+#### Count Sequence Regions
+
+Count the number of `##sequence-region` directives in a GFF3 file. This is useful to determine how many accessions you need before running `replace-ids`.
+
+**Syntax:**
+```bash
+java -jar gff3tools-1.0-all.jar process count-regions [input-file]
+```
+
+**Examples:**
+
+Count regions in a file:
+```bash
+$ java -jar gff3tools-1.0-all.jar process count-regions sample.gff3
+3
+```
+
+Count regions from stdin:
+```bash
+$ cat sample.gff3 | java -jar gff3tools-1.0-all.jar process count-regions
+3
+```
+
+**Output:** A single integer representing the number of sequence regions found.
+
+---
+
+#### Replace Sequence Region IDs
+
+Replace all sequence region identifiers throughout a GFF3 file with externally provided accessions. This updates:
+- `##sequence-region` directives
+- The seqid column (column 1) of all feature lines
+
+The FASTA section (if present) is preserved unchanged.
+
+**Syntax:**
+```bash
+java -jar gff3tools-1.0-all.jar process replace-ids --accessions ACC1,ACC2,... [-o <output-file>] [input-file]
+```
+
+**Required:**
+- `--accessions`: Comma-separated list of accessions (count must match number of sequence regions)
+
+**Optional:**
+- `-o, --output <output-file>`: Output GFF3 file (default: stdout)
+- `[input-file]`: Input GFF3 file (default: stdin)
+
+**Examples:**
+
+Replace IDs in a file:
+```bash
+$ java -jar gff3tools-1.0-all.jar process replace-ids \
+    --accessions ACC001,ACC002,ACC003 \
+    -o output.gff3 \
+    input.gff3
+```
+
+Use stdin/stdout for Unix pipes:
+```bash
+$ cat input.gff3 | java -jar gff3tools-1.0-all.jar process replace-ids \
+    --accessions ACC001,ACC002,ACC003 \
+    > output.gff3
+```
+
+Complete workflow - count then replace:
+```bash
+# Step 1: Count regions to know how many accessions you need
+$ COUNT=$(java -jar gff3tools-1.0-all.jar process count-regions sample.gff3)
+$ echo "Found $COUNT sequence regions"
+Found 3 sequence regions
+
+# Step 2: Replace with the correct number of accessions
+$ java -jar gff3tools-1.0-all.jar process replace-ids \
+    --accessions NEW001,NEW002,NEW003 \
+    -o updated.gff3 \
+    sample.gff3
+```
+
+**Accession Mapping:**
+Accessions are mapped sequentially in the order they appear in the file:
+- 1st `##sequence-region` directive → 1st provided accession
+- 2nd `##sequence-region` directive → 2nd provided accession
+- And so on...
+
+**Version Number Handling:**
+Original sequence regions may include version numbers (e.g., `BN000065.1`). The replacement accessions should be provided without version numbers and will replace the full original identifier including any version suffix.
+
+**Example Transformation:**
+
+Input (`sample.gff3`):
+```gff3
+##gff-version 3
+##sequence-region BN000065.1 1 5000
+##sequence-region BN000066.2 1 3000
+BN000065.1  ENA  gene  100  500  .  +  .  ID=gene1
+BN000066.2  ENA  gene  200  600  .  -  .  ID=gene2
+##FASTA
+>gene1
+ATGCATGC
+```
+
+After: `replace-ids --accessions ACC123,ACC456`
+```gff3
+##gff-version 3
+##sequence-region ACC123 1 5000
+##sequence-region ACC456 1 3000
+ACC123  ENA  gene  100  500  .  +  .  ID=gene1
+ACC456  ENA  gene  200  600  .  -  .  ID=gene2
+##FASTA
+>gene1
+ATGCATGC
+```
+
+**Error Handling:**
+The tool will exit with an error if:
+- The number of provided accessions doesn't match the number of sequence regions
+- Any accession is empty or consists only of whitespace
+- The input file is not valid GFF3 format
+
+**Whitespace:** Leading and trailing whitespace around accessions is automatically trimmed:
+```bash
+# These are equivalent:
+--accessions ACC1,ACC2,ACC3
+--accessions "ACC1, ACC2, ACC3"
+--accessions " ACC1 , ACC2 , ACC3 "
+```
+
+**Exit Codes:**
+- `0`: Success
+- `2` (USAGE): Incorrect arguments or accession count mismatch
+- `20` (VALIDATION_ERROR): Invalid GFF3 format
+- Other codes: See [Exit Codes](#exit-codes) section
+
 ### Defaults & Conventions
 
 - The tool currently supports `.embl` and `.gff3` as valid input and output formats. These formats are automatically recognised if the file extension is correct.

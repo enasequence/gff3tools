@@ -1,6 +1,6 @@
 {
   "specsDir": "./docs/",
-  "testCommand": null,
+  "testCommand": "./gradlew build",
   "contextFiles": [
     "README.md"
   ],
