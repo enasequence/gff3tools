@@ -71,4 +71,6 @@ public class GFF3Attributes {
     public static final String UNKNOWN = "unknown";
     public static final String EXCEPTION = "exception";
     public static final String PARTIAL = "partial";
+    public static final String RPT_TYPE = "rpt_type";
+    public static final String RPT_FAMILY = "rpt_family";
 }
