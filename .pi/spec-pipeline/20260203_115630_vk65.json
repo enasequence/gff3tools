@@ -1,9 +1,9 @@
 {
   "id": "20260203_115630_vk65",
   "description": "We weant to replace the ids of a GFF3 file, with accessions that are provided from an external source. This ids may be provided to the tool as a cli argument, but we also need to know how many we need to provide. Help define this problem",
-  "stage": "implementation",
+  "stage": "completed",
   "createdAt": "2026-02-03T11:56:30.548Z",
-  "updatedAt": "2026-02-03T15:36:49.425Z",
+  "updatedAt": "2026-02-03T15:37:27.445Z",
   "discovery": {
     "skipped": false,
     "currentRound": 5,
@@ -100,8 +100,7 @@
     "56e3dd5891a4fa07feb732415f8d8fb51721e8f2"
   ],
   "pipelineBranch": "spec-pipeline/20260203_115630_vk65",
-  "currentReviewTier": "cheap",
-  "cheapCyclesCompleted": 5,
+  "cheapCyclesCompleted": 0,
   "expensiveCyclesCompleted": 0,
-  "implementerCompletedForPhase": true
+  "implementerCompletedForPhase": false
 }
