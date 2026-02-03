@@ -46,10 +46,6 @@ public class AggregatedValidationException extends ValidationException {
         return errors;
     }
 
-    public int getErrorCount() {
-        return errors.size();
-    }
-
     @Override
     public CLIExitCode exitCode() {
         return CLIExitCode.VALIDATION_ERROR;

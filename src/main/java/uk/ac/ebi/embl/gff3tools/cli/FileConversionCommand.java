@@ -55,11 +55,10 @@ public class FileConversionCommand extends AbstractCommand {
             // Write to a temp file first to ensure atomic output: if conversion fails,
             // no partial/corrupt output file is created. Only on success do we move the
             // temp file to the final destination.
+            // Temp files are created in the system temp directory (controlled via -Djava.io.tmpdir)
+            // for better control in pipeline environments.
             if (writingToFile) {
-                tempFile = Files.createTempFile(
-                        outputFilePath.getParent() != null ? outputFilePath.getParent() : Path.of("."),
-                        "gff3tools-",
-                        ".tmp");
+                tempFile = Files.createTempFile("gff3tools-", ".tmp");
             }
 
             final Path effectiveOutputPath = writingToFile ? tempFile : null;
@@ -77,9 +76,10 @@ public class FileConversionCommand extends AbstractCommand {
                 converter.convert(inputReader, outputWriter);
             }
 
-            // Conversion succeeded - move temp file to final destination
+            // Conversion succeeded - move temp file to final destination atomically
             if (writingToFile && tempFile != null) {
-                Files.move(tempFile, outputFilePath, StandardCopyOption.REPLACE_EXISTING);
+                Files.move(
+                        tempFile, outputFilePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
                 tempFile = null; // Mark as successfully moved
             }
         } catch (Exception e) {

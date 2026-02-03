@@ -46,7 +46,7 @@ class AggregatedValidationExceptionTest {
                 new ValidationException("RULE3", 3, "error 3"));
         AggregatedValidationException exception = new AggregatedValidationException(errors);
 
-        assertEquals(3, exception.getErrorCount());
+        assertEquals(3, exception.getErrors().size());
     }
 
     @Test

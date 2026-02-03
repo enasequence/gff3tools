@@ -338,7 +338,7 @@ public class ValidationEngineTest {
         AggregatedValidationException thrown =
                 assertThrows(AggregatedValidationException.class, () -> engineCollect.throwIfErrorsCollected());
 
-        assertEquals(2, thrown.getErrorCount());
+        assertEquals(2, thrown.getErrors().size());
     }
 
     @Test
