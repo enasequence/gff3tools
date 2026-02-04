@@ -19,10 +19,8 @@ FT                   /gene="matK"
 FT                   /bound_moiety="GAL4"
 FT   repeat_region   200..250
 FT                   /gene="matK"
-FT                   /rpt_type=other
 FT   repeat_region   300..350
 FT                   /gene="matK"
-FT                   /rpt_type=other
 FT   assembly_gap    400..450
 FT                   /estimated_length=12
 FT                   /gap_type="within scaffold"
