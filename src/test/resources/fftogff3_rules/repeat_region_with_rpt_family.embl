@@ -1,0 +1,20 @@
+ID   TEST01; XXX; XXX; XXX; XXX; XXX; XXX.
+XX
+AC   TEST01;
+XX
+CC   Test repeat_region with rpt_family qualifier (ENA-6776).
+CC   CRISPR repeat from ERZ28775487.
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..9461
+FT                   /mol_type="genomic DNA"
+FT   repeat_region   7432..8126
+FT                   /rpt_family="CRISPR"
+FT                   /rpt_type=direct
+FT                   /rpt_unit_seq="GTTATAGTTTCCATTGCTTCCCATATATGCTATAAC"
+FT                   /note="CRISPR with 11 repeat units"
+XX
+//

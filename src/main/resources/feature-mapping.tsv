@@ -172,7 +172,6 @@ SO:0000141 	terminator	The sequence of DNA located either at the end of the tran
 SO:0001055 	transcriptional_cis_regulatory_region	A regulatory_region that modulates the transcription of a gene or genes.	regulatory	/regulatory_class="transcriptional_cis_regulatory_region"
 SO:0000057 	operator	A regulatory element of an operon to which activators or repressors bind thereby effecting translation of genes in that operon.	regulatory	/regulatory_class="other"	/operon="operator"
 SO:0000344 	splice_enhancer	Region of a transcript that regulates splicing.	regulatory	/regulatory_class="other"	/note="splice_enhancer"
-SO:0000187 	repeat_family	A group of characterized repeat sequences.	repeat_region	/rpt_family="<NAME>"
 SO:0000705 	tandem_repeat	Two or more adjacent copies of a region (of length greater than 1).	repeat_region	/rpt_type="tandem"
 SO:0000314 	direct_repeat	A repeat where the same sequence is repeated in the same direction. Example: GCTGA-followed by-GCTGA.	repeat_region	/rpt_type="direct"
 SO:0000294 	inverted_repeat	The sequence is complementarily repeated on the opposite strand. It is a palindrome, and it may, or may not be hyphenated. Examples: GCTGATCAGC, or GCTGA-----TCAGC.	repeat_region	/rpt_type="inverted"
@@ -189,7 +188,7 @@ SO:0001485	Y_prime_element	AY' element is a repeat region (SO:0000657) located a
 SO:0000005 	satellite_DNA	The many tandem repeats (identical or related) of a short basic repeating unit; many have a base composition or other property different from the genome average that allows them to be separated from the bulk (main band) genomic DNA.	repeat_region	/satellite="satellite:<NAME>"
 SO:0000289 	microsatellite	A repeat_region containing repeat_units of 2 to 10 bp repeated in tandem.	repeat_region	/satellite="microsatellite:<NAME>"
 SO:0000643 	minisatellite	A repeat region containing tandemly repeated sequences having a unit length of 10 to 40 bp	repeat_region	/satellite="minisatellite:<NAME>"
-SO:0000657 	repeat_region	A region of sequence containing one or more repeat units.	repeat_region	/rpt_type="other"
+SO:0000657 	repeat_region	A region of sequence containing one or more repeat units.	repeat_region
 SO:0000296 	origin_of_replication	A region of nucleic acid from which replication initiates; includes sequences that are recognized by replication proteins, the site from which the first separation of complementary strands occurs, and specific replication start sites.	rep_origin
 SO:0000252 	rRNA	RNA that comprises part of a ribosome, and that can provide both structural scaffolding and catalytic activity.	rRNA
 SO:0000650 	small_subunit_rRNA	Ribosomal RNA transcript that structures the small subunit of the ribosome.	rRNA	/product="SSU rRNA"

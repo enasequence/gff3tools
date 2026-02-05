@@ -1,0 +1,15 @@
+ID   TEST01; XXX; XXX; XXX; XXX; XXX; XXX.
+XX
+AC   TEST01;
+XX
+CC   Test repeat_region without qualifiers (ENA-6816).
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..9461
+FT                   /mol_type="genomic DNA"
+FT   repeat_region   100..500
+XX
+//
