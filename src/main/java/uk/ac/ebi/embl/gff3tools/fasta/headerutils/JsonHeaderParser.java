@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import java.util.*;
+import java.util.stream.Collectors;
 import uk.ac.ebi.embl.gff3tools.exception.FastaHeaderParserException;
 
 public class JsonHeaderParser {
@@ -32,6 +33,7 @@ public class JsonHeaderParser {
 
         // parse id
         String id = (pipe >= 0 ? rest.substring(0, pipe) : rest).trim();
+        String asciiId = replaceNonAsciiWithQuestionMark(id);
         if (Objects.equals(id, "")) {
             throw new FastaHeaderParserException("FASTA header should contain the id, but no id was provided.");
         }
@@ -42,7 +44,7 @@ public class JsonHeaderParser {
             header = parseHeaderJson(rest.substring(pipe + 1).trim());
         }
 
-        return new ParsedHeader(id, header);
+        return new ParsedHeader(asciiId, header);
     }
 
     private static FastaHeader parseHeaderJson(String raw) throws FastaHeaderParserException {
@@ -51,15 +53,25 @@ public class JsonHeaderParser {
         }
 
         String normalised = normaliseRawJsonString(raw);
+        String normalisedAscii = replaceNonAsciiWithQuestionMark(normalised);
 
         try {
-            FastaHeader header = MAPPER.readValue(normalised, FastaHeader.class);
+            FastaHeader header = MAPPER.readValue(normalisedAscii, FastaHeader.class);
             return header;
 
         } catch (JsonProcessingException e) {
             throw new FastaHeaderParserException(
-                    "Malformed FASTA header JSON: " + normalised + " due to " + e.getMessage(), e);
+                    "Malformed FASTA header JSON: " + normalisedAscii + " due to " + e.getMessage(), e);
         }
+    }
+
+    /* replace non-ascii char with one char '?' per unicode mark */
+    public static String replaceNonAsciiWithQuestionMark(String s) {
+        if (s == null) return null;
+
+        return s.codePoints()
+                .mapToObj(cp -> (cp <= 0x7F) ? String.valueOf((char) cp) : "?")
+                .collect(Collectors.joining());
     }
 
     private static String normaliseRawJsonString(String raw) {
