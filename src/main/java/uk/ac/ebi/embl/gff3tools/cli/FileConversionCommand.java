@@ -18,6 +18,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -46,29 +47,60 @@ public class FileConversionCommand extends AbstractCommand {
     public void run() {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
 
-        try (BufferedReader inputReader = getPipe(
-                        Files::newBufferedReader,
-                        () -> new BufferedReader(new InputStreamReader(System.in)),
-                        inputFilePath);
-                BufferedWriter outputWriter = getPipe(
-                        Files::newBufferedWriter,
-                        () -> {
-                            // Set the log level to ERROR while writing the file to an output stream to
-                            // ignore INFO,
-                            // WARN logs
-                            LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
-                            ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
-                            return new BufferedWriter(new OutputStreamWriter(System.out));
-                        },
-                        outputFilePath)) {
-            fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
-            toFileType = validateFileType(toFileType, outputFilePath, "-t");
-            ValidationEngine engine = initValidationEngine(ruleOverrides);
-            Converter converter = getConverter(engine, fromFileType, toFileType);
-            converter.convert(inputReader, outputWriter);
+        // Determine if we're writing to a file or stdout
+        boolean writingToFile = !outputFilePath.toString().isEmpty();
+        Path tempFile = null;
+
+        try {
+            // Write to a temp file first to ensure atomic output: if conversion fails,
+            // no partial/corrupt output file is created. Only on success do we move the
+            // temp file to the final destination.
+            // Temp files are created in the system temp directory (controlled via -Djava.io.tmpdir)
+            // for better control in pipeline environments.
+            if (writingToFile) {
+                tempFile = Files.createTempFile("gff3tools-", ".tmp");
+            }
+
+            final Path effectiveOutputPath = writingToFile ? tempFile : null;
+
+            try (BufferedReader inputReader = getPipe(
+                            Files::newBufferedReader,
+                            () -> new BufferedReader(new InputStreamReader(System.in)),
+                            inputFilePath);
+                    BufferedWriter outputWriter =
+                            writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
+                fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
+                toFileType = validateFileType(toFileType, outputFilePath, "-t");
+                ValidationEngine engine = initValidationEngine(ruleOverrides);
+                Converter converter = getConverter(engine, fromFileType, toFileType);
+                converter.convert(inputReader, outputWriter);
+            }
+
+            // Conversion succeeded - move temp file to final destination atomically
+            if (writingToFile && tempFile != null) {
+                Files.move(
+                        tempFile, outputFilePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                tempFile = null; // Mark as successfully moved
+            }
         } catch (Exception e) {
+            // Clean up temp file on error
+            if (tempFile != null) {
+                try {
+                    Files.deleteIfExists(tempFile);
+                } catch (Exception deleteEx) {
+                    log.warn("Failed to delete temporary file: {}", tempFile);
+                }
+            }
             throw new RuntimeException(e.getMessage(), e);
         }
+    }
+
+    private BufferedWriter createStdoutWriter() {
+        // Set the log level to ERROR while writing the file to an output stream to
+        // ignore INFO, WARN logs
+        LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
+        ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
+        return new BufferedWriter(new OutputStreamWriter(System.out));
     }
 
     private Converter getConverter(

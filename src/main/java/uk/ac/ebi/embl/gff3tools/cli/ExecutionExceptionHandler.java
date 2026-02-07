@@ -25,10 +25,25 @@ public class ExecutionExceptionHandler implements IExecutionExceptionHandler {
     @Override
     public int handleExecutionException(Exception e, CommandLine commandLine, ParseResult parseResult)
             throws Exception {
-        if (e.getCause() instanceof ExitException) {
+        // Find ExitException in the cause chain (may be nested multiple levels deep)
+        ExitException exitException = findExitException(e);
+        if (exitException != null) {
             LOG.error(e.getMessage());
-            return ((ExitException) e.getCause()).exitCode().asInt();
+            return exitException.exitCode().asInt();
         }
         throw e;
+    }
+
+    /**
+     * Recursively searches the exception cause chain for an ExitException.
+     */
+    private ExitException findExitException(Throwable e) {
+        if (e == null) {
+            return null;
+        }
+        if (e instanceof ExitException) {
+            return (ExitException) e;
+        }
+        return findExitException(e.getCause());
     }
 }

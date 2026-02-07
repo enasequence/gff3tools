@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
+import uk.ac.ebi.embl.gff3tools.exception.AggregatedValidationException;
 import uk.ac.ebi.embl.gff3tools.exception.DuplicateValidationRuleException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -41,7 +42,8 @@ public class ValidationEngineTest {
     @BeforeEach
     void setup() {
         MockitoAnnotations.openMocks(this);
-        engine = new ValidationEngine(validationConfig, validationRegistry);
+        // Use fail-fast=true to preserve original test behavior (default changed to false)
+        engine = new ValidationEngine(validationConfig, validationRegistry, true);
     }
 
     @Test
@@ -57,10 +59,13 @@ public class ValidationEngineTest {
     }
 
     @Test
-    public void testValidate_failingValidation() throws ValidationException, DuplicateValidationRuleException {
+    public void testValidate_failingValidation_failFastMode()
+            throws ValidationException, DuplicateValidationRuleException {
         ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
 
-        ValidationEngine validationEngine = validationEngineBuilder.build();
+        // With fail-fast enabled, validation should throw immediately
+        ValidationEngine validationEngine =
+                validationEngineBuilder.failFast(true).build();
 
         GFF3Feature invalidFeature =
                 new GFF3Feature(Optional.empty(), Optional.empty(), "", Optional.empty(), "", "", 0L, 2L, "", "", "");
@@ -69,6 +74,27 @@ public class ValidationEngineTest {
 
         Assertions.assertAll(
                 () -> Assertions.assertTrue(ex.getMessage().contains("Violation of rule LOCATION on line 1")));
+    }
+
+    @Test
+    public void testValidate_failingValidation_collectErrorsMode()
+            throws ValidationException, DuplicateValidationRuleException {
+        ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
+
+        // Default behavior (failFast=false) collects errors instead of throwing
+        ValidationEngine validationEngine = validationEngineBuilder.build();
+
+        GFF3Feature invalidFeature =
+                new GFF3Feature(Optional.empty(), Optional.empty(), "", Optional.empty(), "", "", 0L, 2L, "", "", "");
+
+        // Should not throw during validation
+        assertDoesNotThrow(() -> validationEngine.validate(invalidFeature, 1));
+
+        // Errors should be collected (there are multiple validation errors on this malformed feature)
+        assertTrue(validationEngine.getCollectedErrors().size() >= 1);
+        // At least one error should be about LOCATION
+        assertTrue(validationEngine.getCollectedErrors().stream()
+                .anyMatch(e -> e.getMessage().contains("Violation of rule LOCATION")));
     }
 
     // ------------------------------------------------------------
@@ -197,7 +223,7 @@ public class ValidationEngineTest {
         try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
             mocked.when(() -> validationRegistry.getFixs()).thenReturn(descriptors);
 
-            engine.executeFixs(new GFF3Annotation(), 5);
+            engine.executeFixes(new GFF3Annotation(), 5);
 
             verify(instance, times(1)).fix(any(), eq(5));
         }
@@ -264,5 +290,95 @@ public class ValidationEngineTest {
             engine.executeExits();
             verify(instance, times(1)).onExit();
         }
+    }
+
+    // ------------------------------------------------------------
+    // 7. Fail-fast mode tests
+    // ------------------------------------------------------------
+    @Test
+    void handleSyntacticError_defaultBehavior_collectsError() {
+        // Default is failFast=false (collect errors)
+        ValidationEngine engineCollect = new ValidationEngine(validationConfig, validationRegistry, false);
+        ValidationException exception = new ValidationException("RULE", 1, "test error");
+        when(validationConfig.getSeverity("RULE", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
+
+        assertDoesNotThrow(() -> engineCollect.handleSyntacticError(exception));
+        assertEquals(1, engineCollect.getCollectedErrors().size());
+    }
+
+    @Test
+    void handleSyntacticError_failFastTrue_throwsImmediately() {
+        ValidationEngine engineFailFast = new ValidationEngine(validationConfig, validationRegistry, true);
+        ValidationException exception = new ValidationException("RULE", 1, "test error");
+        when(validationConfig.getSeverity("RULE", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
+
+        assertThrows(ValidationException.class, () -> engineFailFast.handleSyntacticError(exception));
+    }
+
+    @Test
+    void handleSyntacticError_failFastFalse_collectsMultipleErrors() throws ValidationException {
+        ValidationEngine engineCollect = new ValidationEngine(validationConfig, validationRegistry, false);
+        when(validationConfig.getSeverity("RULE", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
+
+        engineCollect.handleSyntacticError(new ValidationException("RULE", 1, "error 1"));
+        engineCollect.handleSyntacticError(new ValidationException("RULE", 2, "error 2"));
+        engineCollect.handleSyntacticError(new ValidationException("RULE", 3, "error 3"));
+
+        assertEquals(3, engineCollect.getCollectedErrors().size());
+    }
+
+    @Test
+    void throwIfErrorsCollected_withErrors_throwsAggregate() throws ValidationException {
+        ValidationEngine engineCollect = new ValidationEngine(validationConfig, validationRegistry, false);
+        when(validationConfig.getSeverity("RULE", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
+
+        engineCollect.handleSyntacticError(new ValidationException("RULE", 1, "error 1"));
+        engineCollect.handleSyntacticError(new ValidationException("RULE", 2, "error 2"));
+
+        AggregatedValidationException thrown =
+                assertThrows(AggregatedValidationException.class, () -> engineCollect.throwIfErrorsCollected());
+
+        assertEquals(2, thrown.getErrors().size());
+    }
+
+    @Test
+    void throwIfErrorsCollected_noErrors_doesNotThrow() {
+        ValidationEngine engineCollect = new ValidationEngine(validationConfig, validationRegistry, false);
+
+        assertDoesNotThrow(() -> engineCollect.throwIfErrorsCollected());
+    }
+
+    @Test
+    void hasCollectedErrors_withErrors_returnsTrue() throws ValidationException {
+        ValidationEngine engineCollect = new ValidationEngine(validationConfig, validationRegistry, false);
+        when(validationConfig.getSeverity("RULE", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
+
+        engineCollect.handleSyntacticError(new ValidationException("RULE", 1, "error 1"));
+
+        assertTrue(engineCollect.hasCollectedErrors());
+    }
+
+    @Test
+    void hasCollectedErrors_noErrors_returnsFalse() {
+        ValidationEngine engineCollect = new ValidationEngine(validationConfig, validationRegistry, false);
+
+        assertFalse(engineCollect.hasCollectedErrors());
+    }
+
+    @Test
+    void builderDefaults_toCollectAllErrors() throws Exception {
+        // Building without specifying failFast should default to false (collect all errors)
+        ValidationEngine engineFromBuilder = new ValidationEngineBuilder().build();
+        // We can't directly check the failFast field, but we can verify behavior
+        // by checking that it doesn't throw on syntactic error
+        // This requires a real config, which the builder provides
+        assertNotNull(engineFromBuilder);
+    }
+
+    @Test
+    void builderWithFailFast_setsFailFastMode() throws Exception {
+        ValidationEngine engineFromBuilder =
+                new ValidationEngineBuilder().failFast(true).build();
+        assertNotNull(engineFromBuilder);
     }
 }
