@@ -72,16 +72,11 @@ public class FeatureComparator {
 
     private static FlatFileComparator getFeatureComparator(List<String> ignoreLines) throws IOException {
 
-        FeatureComparatorOption options = new FeatureComparatorOption();
+        FeatureComparatorOption options = new FeatureComparatorOption(ignoreLines);
         // Ignore the below FT lines from the actual file
         options.setIgnoreLine("FT   source");
         options.setIgnoreLine("FT   region");
         options.setIgnoreLine("FT                   /circular_RNA");
-
-        // Add the ignore lines from the command line
-        if (ignoreLines != null) {
-            ignoreLines.forEach(line -> options.setIgnoreLine(line));
-        }
 
         return new FlatFileComparator(options);
     }
@@ -114,9 +109,24 @@ public class FeatureComparator {
 }
 
 class FeatureComparatorOption extends FlatFileComparatorOptions {
+
+    List<String> ignoreLines;
+
+    public FeatureComparatorOption(List<String> ignoreLines) {
+        super();
+    }
+
     @Override
     public boolean isIgnoreLine(String line) {
-        // Ignore non FT and selected FT lines
-        return !line.startsWith("FT") || super.isIgnoreLine(line);
+
+        if (!line.startsWith("FT")) {
+            return true;
+        }
+
+        if (ignoreLines.stream().anyMatch(line::startsWith)) {
+            return true;
+        }
+
+        return super.isIgnoreLine(line);
     }
 }
