@@ -223,15 +223,23 @@ public class GFF3Feature {
         }
     }
 
+    public void setFivePrimePartial() {
+        addAttribute(GFF3Attributes.PARTIAL, "start");
+    }
+
+    public void setThreePrimePartial() {
+        addAttribute(GFF3Attributes.PARTIAL, "end");
+    }
+
     public boolean isFivePrimePartial() {
-        return getAttribute(GFF3Attributes.PARTIAL)
-                .map((v) -> v.equalsIgnoreCase("start"))
+        return getAttributeList(GFF3Attributes.PARTIAL)
+                .map(list -> list.stream().anyMatch("start"::equalsIgnoreCase))
                 .orElse(false);
     }
 
     public boolean isThreePrimePartial() {
-        return getAttribute(GFF3Attributes.PARTIAL)
-                .map((v) -> v.equalsIgnoreCase("end"))
+        return getAttributeList(GFF3Attributes.PARTIAL)
+                .map(list -> list.stream().anyMatch("end"::equalsIgnoreCase))
                 .orElse(false);
     }
 }
