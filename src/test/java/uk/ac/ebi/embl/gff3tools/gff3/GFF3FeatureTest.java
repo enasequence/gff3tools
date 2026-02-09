@@ -84,4 +84,18 @@ public class GFF3FeatureTest {
         assertFalse(feature.isFivePrimePartial());
         assertTrue(feature.isThreePrimePartial());
     }
+
+    @Test
+    public void testGFF3FeatureTestSettingPartiality() {
+        Map<String, List<String>> attributes = new HashMap<>();
+        GFF3Feature feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), attributes);
+        assertFalse(feature.isFivePrimePartial());
+        assertFalse(feature.isThreePrimePartial());
+
+        feature.setFivePrimePartial();
+        feature.setThreePrimePartial();
+
+        assertTrue(feature.isFivePrimePartial());
+        assertTrue(feature.isThreePrimePartial());
+    }
 }
