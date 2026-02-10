@@ -1,0 +1,19 @@
+ID   ACC123; SV 1; linear; genomic DNA; STD; PLN; 1000 BP.
+XX
+AC   ACC123;
+XX
+DE   Test bare mobile_element_type values (LINE, SINE)
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..1000
+FT                   /organism="Arabidopsis thaliana"
+FT                   /mol_type="genomic DNA"
+FT   mobile_element  100..500
+FT                   /mobile_element_type="LINE"
+FT   mobile_element  complement(600..900)
+FT                   /mobile_element_type="SINE"
+XX
+//
