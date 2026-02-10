@@ -93,6 +93,7 @@ remotes {
 
 test {
     useJUnitPlatform()
+    maxHeapSize = "1g"
 }
 
 

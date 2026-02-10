@@ -110,7 +110,7 @@ public class ValidationRegistry {
     private List<ClassInfo> getValidationList() {
         ClassInfoList validationList = new ClassInfoList();
         try (ScanResult scan =
-                new ClassGraph().enableClassInfo().enableAllInfo().scan()) {
+                new ClassGraph().enableClassInfo().enableAnnotationInfo().scan()) {
 
             //  collect @ValidationClass annotated classes
             validationList.addAll(scan.getClassesWithAnnotation(Gff3Validation.class.getName())
