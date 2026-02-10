@@ -1,0 +1,5 @@
+##gff-version 3.1.26
+##sequence-region TEST01.1 1 10000
+TEST01.1	.	transposable_element	100	500	.	+	.	ID=transposable_element;mobile_element_type=transposon%3AMutator_TIR
+TEST01.1	.	mobile_genetic_element	600	900	.	+	.	ID=mobile_genetic_element;mobile_element_type=other%3Ahelitron
+TEST01.1	.	retrotransposon	1000	1500	.	+	.	ID=retrotransposon;mobile_element_type=retrotransposon%3Acopia

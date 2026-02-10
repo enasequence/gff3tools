@@ -81,12 +81,8 @@ public class FeatureMapping {
                 // When qualifier value is not found the value is considered "true"
                 String qualifierValue = featureQualifier.getValue() == null ? "true" : featureQualifier.getValue();
                 String expectedQualifierValue = requiredQualifiers.get(expectedQualifierName);
-                // Tries to find the exact match or finds qualifiers with a wildcard value with the format:
-                //  /qualifier_name=<any text> example: /estimated_length=<length of feature>
-                qualifierMatches = ConversionUtils.WILDCARD_TEXT
-                                .matcher(expectedQualifierValue)
-                                .matches()
-                        || qualifierValue.equalsIgnoreCase(expectedQualifierValue);
+                // Matches exact values or values with embedded wildcards like "transposon:<NAME>"
+                qualifierMatches = ConversionUtils.matchesWildcardValue(expectedQualifierValue, qualifierValue);
                 if (qualifierMatches) {
                     break;
                 }

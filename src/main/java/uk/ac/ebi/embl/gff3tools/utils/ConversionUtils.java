@@ -33,8 +33,49 @@ public enum ConversionUtils {
     private OntologyClient ontologyClient = null;
     private static final Logger LOGGER = LoggerFactory.getLogger(ConversionUtils.class);
 
-    // Pattern to match wildcard qualifier values like <length of feature>
-    public static final Pattern WILDCARD_TEXT = Pattern.compile("^\\<.+\\>$");
+    // Pattern to detect wildcard placeholders like <NAME> or <length of feature> anywhere in a value
+    public static final Pattern WILDCARD_TEXT = Pattern.compile("<[^>]+>");
+
+    /**
+     * Checks whether an actual qualifier value matches an expected value that may contain
+     * wildcard placeholders (e.g., {@code <NAME>}, {@code <length of feature>}).
+     *
+     * <p>Uses string prefix/suffix matching instead of regex for performance, since this is
+     * called per qualifier per feature (potentially millions of times for large files).
+     *
+     * <p>Examples:
+     * <ul>
+     *   <li>{@code "transposon:<NAME>"} matches {@code "transposon:Mutator_TIR"}</li>
+     *   <li>{@code "<length of feature>"} matches {@code "91"} (any value)</li>
+     *   <li>{@code "other:<NAME>"} matches {@code "other:helitron"}</li>
+     * </ul>
+     *
+     * @param expectedValue the expected value from the mapping TSV, possibly with wildcards
+     * @param actualValue the actual qualifier value from the feature
+     * @return true if the actual value matches the expected value (with wildcard expansion)
+     */
+    public static boolean matchesWildcardValue(String expectedValue, String actualValue) {
+        if (!WILDCARD_TEXT.matcher(expectedValue).find()) {
+            return actualValue.equalsIgnoreCase(expectedValue);
+        }
+
+        // Extract the literal prefix before the first wildcard
+        int wildcardStart = expectedValue.indexOf('<');
+        String prefix = expectedValue.substring(0, wildcardStart);
+
+        // Extract the literal suffix after the last wildcard
+        int wildcardEnd = expectedValue.lastIndexOf('>');
+        String suffix = expectedValue.substring(wildcardEnd + 1);
+
+        // The actual value must be at least as long as the literal parts combined,
+        // plus at least one character for the wildcard
+        if (actualValue.length() < prefix.length() + suffix.length() + 1) {
+            return false;
+        }
+
+        return actualValue.toLowerCase().startsWith(prefix.toLowerCase())
+                && actualValue.toLowerCase().endsWith(suffix.toLowerCase());
+    }
 
     private ConversionUtils() {
         this.ontologyClient = OntologyClient.getInstance();
@@ -135,14 +176,9 @@ public enum ConversionUtils {
                 return false;
             }
 
-            // Check if any actual value matches
-            boolean matches = actualValues.stream().anyMatch(actualValue -> {
-                // Wildcard match: <any text> pattern
-                if (WILDCARD_TEXT.matcher(expectedValue).matches()) {
-                    return true;
-                }
-                return actualValue.equalsIgnoreCase(expectedValue);
-            });
+            // Check if any actual value matches (supports embedded wildcards like "transposon:<NAME>")
+            boolean matches =
+                    actualValues.stream().anyMatch(actualValue -> matchesWildcardValue(expectedValue, actualValue));
 
             if (!matches) {
                 return false;
