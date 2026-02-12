@@ -109,15 +109,15 @@ public class JsonHeaderFastaReaderTest {
             // From the sample file above:
             assertEquals(2, entry1.leadingNsCount, "ID1 leading Ns");
             assertEquals(2, entry1.trailingNsCount, "ID1 trailing Ns");
-            assertEquals(4, entry1.totalNBasesCount, "ID1 total Ns");
+            assertEquals(4, entry1.baseCount.get('N'), "ID1 total Ns");
 
             assertEquals(0, entry2.leadingNsCount, "ID2 leading Ns");
             assertEquals(0, entry2.trailingNsCount, "ID2 trailing Ns");
-            assertEquals(0, entry2.totalNBasesCount, "ID2 total Ns");
+            assertEquals(0, entry2.baseCount.get('N'), "ID2 total Ns");
 
             assertEquals(0, entry3.leadingNsCount, "ID3 leading Ns");
             assertEquals(5, entry3.trailingNsCount, "ID3 trailing Ns");
-            assertEquals(13, entry3.totalNBasesCount, "ID3 total Ns");
+            assertEquals(13, entry3.baseCount.get('N'), "ID3 total Ns");
 
             String sequence1 = service.getSequenceSliceBySubmissionId(
                     "ID1", 1, entry1.totalBases, SequenceRangeOption.WHOLE_SEQUENCE);
@@ -154,15 +154,15 @@ public class JsonHeaderFastaReaderTest {
             // From the sample file above:
             assertEquals(2, entry1.leadingNsCount, "ID1 leading Ns");
             assertEquals(2, entry1.trailingNsCount, "ID1 trailing Ns");
-            assertEquals(4, entry1.totalNBasesCount, "ID1 total Ns");
+            assertEquals(4, entry1.baseCount.get('N'), "ID1 total Ns");
 
             assertEquals(0, entry2.leadingNsCount, "ID2 leading Ns");
             assertEquals(0, entry2.trailingNsCount, "ID2 trailing Ns");
-            assertEquals(0, entry2.totalNBasesCount, "ID2 total Ns");
+            assertEquals(0, entry2.baseCount.get('N'), "ID2 total Ns");
 
             assertEquals(0, entry3.leadingNsCount, "ID3 leading Ns");
             assertEquals(5, entry3.trailingNsCount, "ID3 trailing Ns");
-            assertEquals(13, entry3.totalNBasesCount, "ID3 total Ns");
+            assertEquals(13, entry3.baseCount.get('N'), "ID3 total Ns");
 
             String sequence1 = service.getSequenceSliceByAccessionId(
                     "acc1", 1, entry1.totalBases, SequenceRangeOption.WHOLE_SEQUENCE);
@@ -198,15 +198,15 @@ public class JsonHeaderFastaReaderTest {
             // From the sample file above:
             assertEquals(2, entry1.leadingNsCount, "ID1 leading Ns");
             assertEquals(2, entry1.trailingNsCount, "ID1 trailing Ns");
-            assertEquals(4, entry1.totalNBasesCount, "ID1 total Ns");
+            assertEquals(4, entry1.baseCount.get('N'), "ID1 total Ns");
 
             assertEquals(0, entry2.leadingNsCount, "ID2 leading Ns");
             assertEquals(0, entry2.trailingNsCount, "ID2 trailing Ns");
-            assertEquals(0, entry2.totalNBasesCount, "ID2 total Ns");
+            assertEquals(0, entry2.baseCount.get('N'), "ID2 total Ns");
 
             assertEquals(0, entry3.leadingNsCount, "ID3 leading Ns");
             assertEquals(5, entry3.trailingNsCount, "ID3 trailing Ns");
-            assertEquals(13, entry3.totalNBasesCount, "ID3 total Ns");
+            assertEquals(13, entry3.baseCount.get('N'), "ID3 total Ns");
 
             // stream whole sequence with the reader
             String streamedSequence;
@@ -277,15 +277,15 @@ public class JsonHeaderFastaReaderTest {
             // From the sample file above:
             assertEquals(2, entry1.leadingNsCount, "ID1 leading Ns");
             assertEquals(2, entry1.trailingNsCount, "ID1 trailing Ns");
-            assertEquals(4, entry1.totalNBasesCount, "ID1 total Ns");
+            assertEquals(4, entry1.baseCount.get('N'), "ID1 total Ns");
 
             assertEquals(0, entry2.leadingNsCount, "ID2 leading Ns");
             assertEquals(0, entry2.trailingNsCount, "ID2 trailing Ns");
-            assertEquals(0, entry2.totalNBasesCount, "ID2 total Ns");
+            assertEquals(0, entry2.baseCount.get('N'), "ID2 total Ns");
 
             assertEquals(0, entry3.leadingNsCount, "ID3 leading Ns");
             assertEquals(5, entry3.trailingNsCount, "ID3 trailing Ns");
-            assertEquals(13, entry3.totalNBasesCount, "ID3 total Ns");
+            assertEquals(13, entry3.baseCount.get('N'), "ID3 total Ns");
 
             // stream whole sequence with the reader
             String streamedSequence;
