@@ -888,7 +888,8 @@ public class TranslatorTest {
         String sequence = reader.getSequenceSliceString(0L, 4798, 5460).toLowerCase(Locale.ROOT);
 
         TranslationResult result = translator.translate(sequence.getBytes());
-        Translator.TranslationComparison comparison = translator.equalsTranslation(expectedTranslation, result.getConceptualTranslation());
+        Translator.TranslationComparison comparison =
+                translator.equalsTranslation(expectedTranslation, result.getConceptualTranslation());
         assertTrue(comparison.matches());
     }
 

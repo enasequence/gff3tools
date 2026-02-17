@@ -49,7 +49,6 @@ public class Translator {
     @Getter
     private GFF3Feature feature;
 
-
     // The purpose of 'exception' is to relaxes several validations.
     // This will be used in the future to support more flexible translation.
     @Getter
@@ -96,7 +95,6 @@ public class Translator {
     @Getter
     private final Set<String> fixes = new HashSet<>();
 
-
     /**
      * Creates a new Translator with the specified translation table and GFF3 feature.
      * If the feature has a "pseudo" or "pseudogene" attribute, the translator is set to non-translating mode.
@@ -106,7 +104,7 @@ public class Translator {
      */
     public Translator(GFF3Feature feature) throws TranslationException {
 
-        //TODO: Get translation table from taxon.
+        // TODO: Get translation table from taxon.
         int translationTable = feature.getAttribute("transl_table")
                 .map(Integer::parseInt)
                 .orElse(TranslationTable.DEFAULT_TRANSLATION_TABLE);
@@ -137,7 +135,7 @@ public class Translator {
     private void setPeptideFeature() {
         OntologyClient client = ConversionUtils.getOntologyClient();
         Optional<String> soIdOpt = client.findTermByNameOrSynonym(feature.getName());
-        peptideFeature =  soIdOpt.isPresent() && client.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.PROPEPTIDE.ID);
+        peptideFeature = soIdOpt.isPresent() && client.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.PROPEPTIDE.ID);
     }
 
     /**
@@ -155,10 +153,7 @@ public class Translator {
                 feature.getAttributeList(GFF3Attributes.TRANSL_EXCEPT).orElse(List.of());
         for (String translExceptValue : translExceptValues) {
             TranslExceptAttribute attribute = new TranslExceptAttribute(translExceptValue);
-            addPositionException(
-                    attribute.getStartPosition(),
-                    attribute.getEndPosition(),
-                    attribute.getAminoAcid());
+            addPositionException(attribute.getStartPosition(), attribute.getEndPosition(), attribute.getAminoAcid());
         }
     }
 
@@ -325,7 +320,6 @@ public class Translator {
         }
     }
 
-
     private Codon translateCodonAt(String codonStr, int index, TranslationResult translationResult)
             throws TranslationException {
         int position = index + 1;
@@ -372,8 +366,8 @@ public class Translator {
     private boolean validateSequenceBases(byte[] sequence, TranslationResult result) {
         for (byte b : sequence) {
             char c = Character.toLowerCase((char) b);
-            if (c != 'a' && c != 't' && c != 'c' && c != 'g' && c != 'r' && c != 'y' && c != 'm' && c != 'k'
-                    && c != 's' && c != 'w' && c != 'h' && c != 'b' && c != 'v' && c != 'd' && c != 'n') {
+            if (c != 'a' && c != 't' && c != 'c' && c != 'g' && c != 'r' && c != 'y' && c != 'm' && c != 'k' && c != 's'
+                    && c != 'w' && c != 'h' && c != 'b' && c != 'v' && c != 'd' && c != 'n') {
                 result.addError("Invalid base character in sequence");
                 return false;
             }
@@ -690,9 +684,6 @@ public class Translator {
     }
 
     public record TranslationComparison(boolean matches, int xMismatchCount) {}
-
-
-
 
     public static byte[] reverseComplement(byte[] seq) {
 
