@@ -207,7 +207,7 @@ public class GFF3AnnotationFactory {
             String translationKey = TranslationWriter.getTranslationKey(sequenceRegion.accession(), featureId.get());
             List<String> translation = baseAttributes.get("translation");
             TranslationWriter.writeTranslation(fastaWriter, translationKey, translation.get(0));
-            baseAttributes.remove("translation");
+            // baseAttributes.remove("translation");
         }
     }
 
