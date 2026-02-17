@@ -634,7 +634,7 @@ public class Translator {
 
     private boolean validateStartCodon(TranslationResult translationResult) throws TranslationException {
         if (!fivePrimePartial && !exception && !peptideFeature) {
-            if (translationResult.getCodons().get(0).getAminoAcid() != 'M' && !fivePrimePartial) {
+            if (translationResult.getCodons().get(0).getAminoAcid() != 'M') {
                 if (nonTranslating) {
                     return false;
                 } else {
