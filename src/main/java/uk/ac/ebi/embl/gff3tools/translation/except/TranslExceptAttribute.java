@@ -34,8 +34,8 @@ public class TranslExceptAttribute {
     // Pattern to parse position: either "start..end" or just "start"
     private static final Pattern POSITION_PATTERN = Pattern.compile("^\\s*(\\d+)(?:\\s*\\.\\.\\s*(\\d+))?\\s*$");
 
-    private final Long startPosition;
-    private final Long endPosition;
+    private final Integer startPosition;
+    private final Integer endPosition;
     private final Character aminoAcid;
 
     /**
@@ -62,9 +62,9 @@ public class TranslExceptAttribute {
                 throw new TranslationException("Invalid position in transl_except: " + positionStr);
             }
 
-            this.startPosition = Long.parseLong(posMatcher.group(1));
+            this.startPosition = Integer.parseInt(posMatcher.group(1));
             String endGroup = posMatcher.group(2);
-            this.endPosition = endGroup != null ? Long.parseLong(endGroup) : startPosition;
+            this.endPosition = endGroup != null ? Integer.parseInt(endGroup) : startPosition;
 
             // Parse amino acid (group 2)
             this.aminoAcid = AminoAcidExcept.toSingleLetter(matcher.group(2));

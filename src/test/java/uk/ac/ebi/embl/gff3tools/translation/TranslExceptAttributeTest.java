@@ -22,16 +22,16 @@ public class TranslExceptAttributeTest {
     @Test
     public void testBasicFormat() throws TranslationException {
         TranslExceptAttribute attr = new TranslExceptAttribute("(pos:213..215,aa:Trp)");
-        assertEquals(Long.valueOf(213), attr.getStartPosition());
-        assertEquals(Long.valueOf(215), attr.getEndPosition());
+        assertEquals(Integer.valueOf(213), attr.getStartPosition());
+        assertEquals(Integer.valueOf(215), attr.getEndPosition());
         assertEquals(Character.valueOf('W'), attr.getAminoAcid());
     }
 
     @Test
     public void testSinglePosition() throws TranslationException {
         TranslExceptAttribute attr = new TranslExceptAttribute("(pos:1,aa:Met)");
-        assertEquals(Long.valueOf(1), attr.getStartPosition());
-        assertEquals(Long.valueOf(1), attr.getEndPosition()); // end equals start for single position
+        assertEquals(Integer.valueOf(1), attr.getStartPosition());
+        assertEquals(Integer.valueOf(1), attr.getEndPosition()); // end equals start for single position
         assertEquals(Character.valueOf('M'), attr.getAminoAcid());
     }
 
@@ -40,24 +40,24 @@ public class TranslExceptAttributeTest {
     @Test
     public void testFlexibleWhitespace() throws TranslationException {
         TranslExceptAttribute attr = new TranslExceptAttribute("( pos : 213..215 , aa : Trp )");
-        assertEquals(Long.valueOf(213), attr.getStartPosition());
-        assertEquals(Long.valueOf(215), attr.getEndPosition());
+        assertEquals(Integer.valueOf(213), attr.getStartPosition());
+        assertEquals(Integer.valueOf(215), attr.getEndPosition());
         assertEquals(Character.valueOf('W'), attr.getAminoAcid());
     }
 
     @Test
     public void testLeadingTrailingWhitespace() throws TranslationException {
         TranslExceptAttribute attr = new TranslExceptAttribute("  (pos:1..3,aa:Met)  ");
-        assertEquals(Long.valueOf(1), attr.getStartPosition());
-        assertEquals(Long.valueOf(3), attr.getEndPosition());
+        assertEquals(Integer.valueOf(1), attr.getStartPosition());
+        assertEquals(Integer.valueOf(3), attr.getEndPosition());
         assertEquals(Character.valueOf('M'), attr.getAminoAcid());
     }
 
     @Test
     public void testWhitespaceInPositionRange() throws TranslationException {
         TranslExceptAttribute attr = new TranslExceptAttribute("(pos:213 .. 215,aa:Trp)");
-        assertEquals(Long.valueOf(213), attr.getStartPosition());
-        assertEquals(Long.valueOf(215), attr.getEndPosition());
+        assertEquals(Integer.valueOf(213), attr.getStartPosition());
+        assertEquals(Integer.valueOf(215), attr.getEndPosition());
         assertEquals(Character.valueOf('W'), attr.getAminoAcid());
     }
 
@@ -78,7 +78,7 @@ public class TranslExceptAttributeTest {
     @Test
     public void testUppercaseKeywords() throws TranslationException {
         TranslExceptAttribute attr = new TranslExceptAttribute("(POS:1..3,AA:Met)");
-        assertEquals(Long.valueOf(1), attr.getStartPosition());
+        assertEquals(Integer.valueOf(1), attr.getStartPosition());
         assertEquals(Character.valueOf('M'), attr.getAminoAcid());
     }
 
@@ -271,15 +271,15 @@ public class TranslExceptAttributeTest {
     @Test
     public void testLargePositionValues() throws TranslationException {
         TranslExceptAttribute attr = new TranslExceptAttribute("(pos:1000000..1000002,aa:Met)");
-        assertEquals(Long.valueOf(1000000), attr.getStartPosition());
-        assertEquals(Long.valueOf(1000002), attr.getEndPosition());
+        assertEquals(Integer.valueOf(1000000), attr.getStartPosition());
+        assertEquals(Integer.valueOf(1000002), attr.getEndPosition());
     }
 
     @Test
     public void testPositionRangeOneBase() throws TranslationException {
         // Range where start equals end
         TranslExceptAttribute attr = new TranslExceptAttribute("(pos:5..5,aa:Trp)");
-        assertEquals(Long.valueOf(5), attr.getStartPosition());
-        assertEquals(Long.valueOf(5), attr.getEndPosition());
+        assertEquals(Integer.valueOf(5), attr.getStartPosition());
+        assertEquals(Integer.valueOf(5), attr.getEndPosition());
     }
 }

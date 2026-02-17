@@ -14,7 +14,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Vector;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
@@ -41,7 +40,7 @@ public class TranslationResult implements Serializable {
     private boolean fixedDegenerateStartCodon = false;
 
     @Setter(AccessLevel.PROTECTED)
-    private Vector<Codon> codons;
+    private List<Codon> codons;
 
     @Setter(AccessLevel.PROTECTED)
     private String trailingBases;
@@ -53,7 +52,6 @@ public class TranslationResult implements Serializable {
     private int translationLength;
 
     @Getter(AccessLevel.NONE)
-    @Setter
     private int baseCount;
 
     private final List<String> errors = new ArrayList<>();

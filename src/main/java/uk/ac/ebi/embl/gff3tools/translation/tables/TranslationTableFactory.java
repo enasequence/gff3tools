@@ -59,14 +59,6 @@ public class TranslationTableFactory {
     }
 
     /**
-     * @deprecated Use {@link #getTranslationTable(Integer)} instead.
-     */
-    @Deprecated
-    public TranslationTable createTranslationTable(Integer number) {
-        return getTranslationTable(number);
-    }
-
-    /**
      * Initializes all translation tables from descriptors.
      */
     private void initializeTables() {

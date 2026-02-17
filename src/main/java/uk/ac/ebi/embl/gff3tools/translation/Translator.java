@@ -46,7 +46,7 @@ public class Translator {
     private boolean isComplement = false;
 
     @Getter
-    public GFF3Feature feature;
+    private GFF3Feature feature;
 
     @Getter
     @Setter
@@ -102,7 +102,6 @@ public class Translator {
      * Creates a new Translator with the specified translation table and GFF3 feature.
      * If the feature has a "pseudo" or "pseudogene" attribute, the translator is set to non-translating mode.
      *
-     * @param translationTable the NCBI translation table number (1-33)
      * @param feature the GFF3 feature associated with this translation
      * @throws TranslationException if the translation table is invalid
      */
@@ -138,7 +137,7 @@ public class Translator {
     private boolean isPeptideFeature() {
         OntologyClient client = new OntologyClient();
         Optional<String> soIdOpt = client.findTermByNameOrSynonym(feature.getName());
-        return client.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.PROPEPTIDE.ID);
+        return soIdOpt.isPresent() && client.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.PROPEPTIDE.ID);
     }
 
     /**
@@ -157,8 +156,8 @@ public class Translator {
         for (String translExceptValue : translExceptValues) {
             TranslExceptAttribute attribute = new TranslExceptAttribute(translExceptValue);
             addPositionException(
-                    attribute.getStartPosition().intValue(),
-                    attribute.getEndPosition().intValue(),
+                    attribute.getStartPosition(),
+                    attribute.getEndPosition(),
                     attribute.getAminoAcid());
         }
     }
@@ -251,7 +250,7 @@ public class Translator {
             validateCodons(sequence.length, translationResult);
             translateCodons(sequence, translationResult);
 
-            if (translationResult.getCodons().size() == 0) {
+            if (translationResult.getCodons().isEmpty()) {
                 if (exception) {
                     translationResult.setConceptualTranslationCodons(0);
                     return translationResult;
@@ -296,11 +295,8 @@ public class Translator {
     }
 
     private String extendCodon(String codon) {
-        int bases = codon.length();
-        for (int i = 0; i < 3 - bases; ++i) {
-            codon = codon + "n";
-        }
-        return codon;
+        // Adds 'n' when codon length is < 3
+        return (codon + "nnn").substring(0, 3);
     }
 
     private Character getPositionExceptionAminoAcid(int position) {
@@ -356,7 +352,7 @@ public class Translator {
     private void translateCodons(byte[] sequence, TranslationResult translationResult) throws TranslationException {
         int countX = 0;
         int bases = sequence.length;
-        Vector<Codon> codons = new Vector<>(bases / 3);
+        List<Codon> codons = new ArrayList<>(bases / 3);
 
         // Complete codons
         int i = codonStart - 1;
@@ -514,7 +510,7 @@ public class Translator {
     private void validateTranslation(TranslationResult translationResult) throws TranslationException {
         int trailingStopCodons = 0;
         int internalStopCodons = 0;
-        Vector<Codon> codons = translationResult.getCodons();
+        List<Codon> codons = translationResult.getCodons();
         int i = codons.size();
 
         // Count trailing stop codons
@@ -692,26 +688,7 @@ public class Translator {
         return new TranslationComparison(xMismatch == 0, xMismatch);
     }
 
-    /**
-     * Result of comparing expected and conceptual translations.
-     */
-    public static class TranslationComparison {
-        private final boolean matches;
-        private final int xMismatchCount;
-
-        public TranslationComparison(boolean matches, int xMismatchCount) {
-            this.matches = matches;
-            this.xMismatchCount = xMismatchCount;
-        }
-
-        public boolean isMatches() {
-            return matches;
-        }
-
-        public int getXMismatchCount() {
-            return xMismatchCount;
-        }
-    }
+    public record TranslationComparison(boolean matches, int xMismatchCount) {}
 
     private static final byte[] COMPLEMENT = new byte[128];
 

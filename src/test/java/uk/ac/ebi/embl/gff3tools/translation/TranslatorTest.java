@@ -255,8 +255,8 @@ public class TranslatorTest {
         // Single position format (pos:1,aa:Met) - used for partial codons
         // This tests that the parsing works; single position (1..1) covers partial codon
         TranslExceptAttribute attr = new TranslExceptAttribute("(pos:1,aa:Met)");
-        assertEquals(Long.valueOf(1), attr.getStartPosition());
-        assertEquals(Long.valueOf(1), attr.getEndPosition()); // end equals start for single position
+        assertEquals(Integer.valueOf(1), attr.getStartPosition());
+        assertEquals(Integer.valueOf(1), attr.getEndPosition()); // end equals start for single position
         assertEquals(Character.valueOf('M'), attr.getAminoAcid());
     }
 
@@ -743,15 +743,15 @@ public class TranslatorTest {
     public void testEqualsTranslationMatch() throws TranslationException {
         Translator translator = createTranslator(11);
         Translator.TranslationComparison comparison = translator.equalsTranslation("MK", "MK");
-        assertTrue(comparison.isMatches());
-        assertEquals(0, comparison.getXMismatchCount());
+        assertTrue(comparison.matches());
+        assertEquals(0, comparison.xMismatchCount());
     }
 
     @Test
     public void testEqualsTranslationMismatch() throws TranslationException {
         Translator translator = createTranslator(11);
         Translator.TranslationComparison comparison = translator.equalsTranslation("MK", "ML");
-        assertFalse(comparison.isMatches());
+        assertFalse(comparison.matches());
     }
 
     @Test
@@ -761,8 +761,8 @@ public class TranslatorTest {
         // X is a mismatch marker, so xMismatchCount should be 1 but exact match should be false
         Translator.TranslationComparison comparison = translator.equalsTranslation("MX", "MK");
         // The comparison considers X as "any" so it's a match with xMismatch > 0
-        assertFalse(comparison.isMatches()); // Not an exact match because of X
-        assertEquals(1, comparison.getXMismatchCount());
+        assertFalse(comparison.matches()); // Not an exact match because of X
+        assertEquals(1, comparison.xMismatchCount());
     }
 
     // ========== Edge Cases ==========
