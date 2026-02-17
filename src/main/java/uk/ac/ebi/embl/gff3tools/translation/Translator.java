@@ -49,6 +49,9 @@ public class Translator {
     @Getter
     private GFF3Feature feature;
 
+
+    // The purpose of 'exception' is to relaxes several validations.
+    // This will be used in the future to support more flexible translation.
     @Getter
     @Setter
     private boolean exception = false;
@@ -93,11 +96,6 @@ public class Translator {
     @Getter
     private final Set<String> fixes = new HashSet<>();
 
-    private static class PositionExceptionData {
-        Character aminoAcid;
-        Integer beginPosition;
-        Integer endPosition;
-    }
 
     /**
      * Creates a new Translator with the specified translation table and GFF3 feature.
@@ -739,5 +737,11 @@ public class Translator {
             rc[len - 1 - i] = COMPLEMENT[seq[i]];
         }
         return rc;
+    }
+
+    private static class PositionExceptionData {
+        Character aminoAcid;
+        Integer beginPosition;
+        Integer endPosition;
     }
 }
