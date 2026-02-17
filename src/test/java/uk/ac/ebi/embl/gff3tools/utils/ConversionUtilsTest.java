@@ -16,6 +16,8 @@ import org.junit.jupiter.api.Test;
 
 class ConversionUtilsTest {
 
+    // --- Exact matching (no wildcards) ---
+
     @Test
     void matchesWildcardValue_exactMatch() {
         assertTrue(ConversionUtils.matchesWildcardValue("snoRNA", "snoRNA"));
@@ -31,59 +33,105 @@ class ConversionUtilsTest {
         assertFalse(ConversionUtils.matchesWildcardValue("snoRNA", "miRNA"));
     }
 
+    // --- Named wildcard <NAME> (1+ characters) ---
+
     @Test
     void matchesWildcardValue_fullWildcard() {
-        // Pattern like <length of feature> matches any value
+        // Pattern like <length of feature> matches any non-empty value
         assertTrue(ConversionUtils.matchesWildcardValue("<length of feature>", "91"));
         assertTrue(ConversionUtils.matchesWildcardValue("<length of feature>", "12345"));
         assertTrue(ConversionUtils.matchesWildcardValue("<NAME>", "anything"));
     }
 
     @Test
-    void matchesWildcardValue_embeddedWildcardTransposon() {
-        assertTrue(ConversionUtils.matchesWildcardValue("transposon:<NAME>", "transposon:Mutator_TIR"));
-        assertTrue(ConversionUtils.matchesWildcardValue("transposon:<NAME>", "transposon:Ac"));
+    void matchesWildcardValue_fullWildcardRequiresAtLeastOneChar() {
+        assertFalse(ConversionUtils.matchesWildcardValue("<NAME>", ""));
     }
 
     @Test
-    void matchesWildcardValue_embeddedWildcardOther() {
-        assertTrue(ConversionUtils.matchesWildcardValue("other:<NAME>", "other:helitron"));
+    void matchesWildcardValue_namedWildcardWithPrefix() {
+        assertTrue(ConversionUtils.matchesWildcardValue("prefix:<NAME>", "prefix:value"));
     }
 
     @Test
-    void matchesWildcardValue_embeddedWildcardRetrotransposon() {
-        assertTrue(ConversionUtils.matchesWildcardValue("retrotransposon:<NAME>", "retrotransposon:copia"));
+    void matchesWildcardValue_namedWildcardWithPrefixRequiresContent() {
+        // Named wildcard must match at least one character
+        assertFalse(ConversionUtils.matchesWildcardValue("prefix:<NAME>", "prefix:"));
     }
 
     @Test
-    void matchesWildcardValue_embeddedWildcardSINE() {
-        assertTrue(ConversionUtils.matchesWildcardValue("SINE:<NAME>", "SINE:Alu"));
+    void matchesWildcardValue_namedWildcardWrongPrefix() {
+        assertFalse(ConversionUtils.matchesWildcardValue("prefix:<NAME>", "other:value"));
     }
 
     @Test
-    void matchesWildcardValue_embeddedWildcardLINE() {
-        assertTrue(ConversionUtils.matchesWildcardValue("LINE:<NAME>", "LINE:L1"));
+    void matchesWildcardValue_namedWildcardCaseInsensitivePrefix() {
+        assertTrue(ConversionUtils.matchesWildcardValue("PREFIX:<NAME>", "prefix:something"));
+    }
+
+    // --- Glob wildcard * (0+ characters) ---
+
+    @Test
+    void matchesGlob_barePrefix() {
+        // "transposon*" matches the bare type with zero chars after the prefix
+        assertTrue(ConversionUtils.matchesWildcardValue("transposon*", "transposon"));
     }
 
     @Test
-    void matchesWildcardValue_embeddedWildcardInsertionSequence() {
-        assertTrue(ConversionUtils.matchesWildcardValue("insertion sequence:<NAME>", "insertion sequence:IS1"));
+    void matchesGlob_prefixWithColonAndName() {
+        assertTrue(ConversionUtils.matchesWildcardValue("transposon*", "transposon:Mutator_TIR"));
+        assertTrue(ConversionUtils.matchesWildcardValue("transposon*", "transposon:Ac"));
     }
 
     @Test
-    void matchesWildcardValue_embeddedWildcardWrongPrefix() {
-        assertFalse(ConversionUtils.matchesWildcardValue("transposon:<NAME>", "retrotransposon:copia"));
-        assertFalse(ConversionUtils.matchesWildcardValue("other:<NAME>", "transposon:Mutator_TIR"));
+    void matchesGlob_prefixWithColonOnly() {
+        assertTrue(ConversionUtils.matchesWildcardValue("transposon*", "transposon:"));
     }
 
     @Test
-    void matchesWildcardValue_embeddedWildcardPrefixOnly() {
-        // Wildcard must match at least one character
-        assertFalse(ConversionUtils.matchesWildcardValue("transposon:<NAME>", "transposon:"));
+    void matchesGlob_wrongPrefix() {
+        assertFalse(ConversionUtils.matchesWildcardValue("transposon*", "retrotransposon:copia"));
+        assertFalse(ConversionUtils.matchesWildcardValue("other*", "transposon:Mutator_TIR"));
     }
 
     @Test
-    void matchesWildcardValue_embeddedWildcardCaseInsensitivePrefix() {
-        assertTrue(ConversionUtils.matchesWildcardValue("MITE:<NAME>", "mite:something"));
+    void matchesGlob_caseInsensitivePrefix() {
+        assertTrue(ConversionUtils.matchesWildcardValue("MITE*", "mite:something"));
+        assertTrue(ConversionUtils.matchesWildcardValue("MITE*", "mite"));
+    }
+
+    @Test
+    void matchesGlob_otherTypes() {
+        assertTrue(ConversionUtils.matchesWildcardValue("other*", "other:helitron"));
+        assertTrue(ConversionUtils.matchesWildcardValue("other*", "other"));
+        assertTrue(ConversionUtils.matchesWildcardValue("retrotransposon*", "retrotransposon:copia"));
+        assertTrue(ConversionUtils.matchesWildcardValue("retrotransposon*", "retrotransposon"));
+        assertTrue(ConversionUtils.matchesWildcardValue("SINE*", "SINE:Alu"));
+        assertTrue(ConversionUtils.matchesWildcardValue("SINE*", "SINE"));
+        assertTrue(ConversionUtils.matchesWildcardValue("LINE*", "LINE:L1"));
+        assertTrue(ConversionUtils.matchesWildcardValue("LINE*", "LINE"));
+        assertTrue(ConversionUtils.matchesWildcardValue("insertion sequence*", "insertion sequence:IS1"));
+        assertTrue(ConversionUtils.matchesWildcardValue("insertion sequence*", "insertion sequence"));
+    }
+
+    @Test
+    void matchesGlob_satellite() {
+        assertTrue(ConversionUtils.matchesWildcardValue("satellite*", "satellite:ALR_"));
+        assertTrue(ConversionUtils.matchesWildcardValue("satellite*", "satellite"));
+        assertTrue(ConversionUtils.matchesWildcardValue("microsatellite*", "microsatellite:GT"));
+        assertTrue(ConversionUtils.matchesWildcardValue("microsatellite*", "microsatellite"));
+        assertTrue(ConversionUtils.matchesWildcardValue("minisatellite*", "minisatellite:VNTR"));
+        assertTrue(ConversionUtils.matchesWildcardValue("minisatellite*", "minisatellite"));
+    }
+
+    @Test
+    void matchesGlob_standaloneStarMatchesAnything() {
+        assertTrue(ConversionUtils.matchesWildcardValue("*", "anything"));
+        assertTrue(ConversionUtils.matchesWildcardValue("*", ""));
+    }
+
+    @Test
+    void matchesGlob_tooShortForPrefix() {
+        assertFalse(ConversionUtils.matchesWildcardValue("transposon*", "trans"));
     }
 }

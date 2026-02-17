@@ -81,7 +81,7 @@ public class FeatureMapping {
                 // When qualifier value is not found the value is considered "true"
                 String qualifierValue = featureQualifier.getValue() == null ? "true" : featureQualifier.getValue();
                 String expectedQualifierValue = requiredQualifiers.get(expectedQualifierName);
-                // Matches exact values or values with embedded wildcards like "transposon:<NAME>"
+                // Matches exact values or values with wildcards like "transposon*" or "<NAME>"
                 qualifierMatches = ConversionUtils.matchesWildcardValue(expectedQualifierValue, qualifierValue);
                 if (qualifierMatches) {
                     break;
