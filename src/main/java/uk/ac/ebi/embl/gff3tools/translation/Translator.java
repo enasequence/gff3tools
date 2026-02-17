@@ -107,8 +107,9 @@ public class Translator {
     public Translator(GFF3Feature feature) throws TranslationException {
 
         //TODO: Get translation table from taxon.
-        int translationTable = Integer.parseInt(
-                feature.getAttribute("transl_table").orElse(TranslationTable.DEFAULT_TRANSLATION_TABLE));
+        int translationTable = feature.getAttribute("transl_table")
+                .map(Integer::parseInt)
+                .orElse(TranslationTable.DEFAULT_TRANSLATION_TABLE);
 
         this.codonTranslator = new CodonTranslator(translationTable);
         this.feature = feature;
@@ -130,13 +131,13 @@ public class Translator {
         // Parse codon attributes and add codon exceptions
         handleCodonExceptAttributes(feature);
 
-        peptideFeature = isPeptideFeature();
+        setPeptideFeature();
     }
 
-    private boolean isPeptideFeature() {
+    private void setPeptideFeature() {
         OntologyClient client = ConversionUtils.getOntologyClient();
         Optional<String> soIdOpt = client.findTermByNameOrSynonym(feature.getName());
-        return soIdOpt.isPresent() && client.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.PROPEPTIDE.ID);
+        peptideFeature =  soIdOpt.isPresent() && client.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.PROPEPTIDE.ID);
     }
 
     /**
@@ -690,10 +691,12 @@ public class Translator {
 
     public record TranslationComparison(boolean matches, int xMismatchCount) {}
 
-    private static final byte[] COMPLEMENT = new byte[128];
 
-    static {
-        // Lowercase
+
+
+    public static byte[] reverseComplement(byte[] seq) {
+
+        final byte[] COMPLEMENT = new byte[128];
         COMPLEMENT['a'] = 't';
         COMPLEMENT['t'] = 'a';
         COMPLEMENT['u'] = 'a';
@@ -711,26 +714,6 @@ public class Translator {
         COMPLEMENT['v'] = 'b';
         COMPLEMENT['n'] = 'n';
 
-        // Uppercase
-        COMPLEMENT['A'] = 't';
-        COMPLEMENT['T'] = 'a';
-        COMPLEMENT['U'] = 'a';
-        COMPLEMENT['C'] = 'g';
-        COMPLEMENT['G'] = 'c';
-        COMPLEMENT['R'] = 'y';
-        COMPLEMENT['Y'] = 'r';
-        COMPLEMENT['S'] = 's';
-        COMPLEMENT['W'] = 'w';
-        COMPLEMENT['K'] = 'm';
-        COMPLEMENT['M'] = 'k';
-        COMPLEMENT['B'] = 'v';
-        COMPLEMENT['D'] = 'h';
-        COMPLEMENT['H'] = 'd';
-        COMPLEMENT['V'] = 'b';
-        COMPLEMENT['N'] = 'n';
-    }
-
-    public static byte[] reverseComplement(byte[] seq) {
         int len = seq.length;
         byte[] rc = new byte[len];
 
