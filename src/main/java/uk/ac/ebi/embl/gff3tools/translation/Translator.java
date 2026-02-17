@@ -247,7 +247,7 @@ public class Translator {
 
         try {
             validateCodonStart(sequence.length, translationResult);
-            sequence = validateTranslationExceptions(sequence);
+            sequence = processTranslationExceptions(sequence);
             validateCodons(sequence.length, translationResult);
             translateCodons(sequence, translationResult);
 
@@ -418,7 +418,7 @@ public class Translator {
         }
     }
 
-    private byte[] validateTranslationExceptions(byte[] sequence) throws TranslationException {
+    private byte[] processTranslationExceptions(byte[] sequence) throws TranslationException {
         int sequenceLength = sequence.length;
 
         for (PositionExceptionData exception : positionExceptionMap.values()) {
