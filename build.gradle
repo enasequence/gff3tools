@@ -75,7 +75,6 @@ dependencies {
     implementation 'org.slf4j:slf4j-api:2.0.9'
     implementation 'net.sourceforge.owlapi:owlapi-apibinding:5.1.20'
     implementation 'net.sourceforge.owlapi:owlapi-distribution:5.1.20'
-    implementation 'uk.ac.ebi.ena:gff3validations:1.0.0.SNAPSHOT'
     implementation("io.github.classgraph:classgraph:4.8.181")
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'

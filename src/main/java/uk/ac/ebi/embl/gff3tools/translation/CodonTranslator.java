@@ -164,6 +164,9 @@ public class CodonTranslator {
         return false;
     }
 
+    // All base characters (a, t, c, g and IUPAC ambiguity codes r, y, m, k, s, w, h, b, v, d, n)
+    // are guaranteed to be present in AMBIGUOUS_BASE_MAP. Input sequences are validated by
+    // Translator.validateSequenceBases before reaching this method.
     private List<String> expandToUnambiguousCodons(String codonString) {
         List<String> result = new ArrayList<>();
         List<Character> bases1 = AMBIGUOUS_BASE_MAP.get(codonString.charAt(0));

@@ -18,6 +18,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.translation.except.CodonExceptAttribute;
 import uk.ac.ebi.embl.gff3tools.translation.except.TranslExceptAttribute;
 import uk.ac.ebi.embl.gff3tools.translation.tables.TranslationTable;
+import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 
@@ -135,7 +136,7 @@ public class Translator {
     }
 
     private boolean isPeptideFeature() {
-        OntologyClient client = new OntologyClient();
+        OntologyClient client = ConversionUtils.getOntologyClient();
         Optional<String> soIdOpt = client.findTermByNameOrSynonym(feature.getName());
         return soIdOpt.isPresent() && client.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.PROPEPTIDE.ID);
     }
@@ -285,7 +286,7 @@ public class Translator {
     private boolean validateSequenceBases(byte[] sequence, TranslationResult result) {
         for (byte b : sequence) {
             char c = Character.toLowerCase((char) b);
-            if (c != 'a' && c != 't' && c != 'c' && c != 'g' && c != 'u' && c != 'r' && c != 'y' && c != 'm' && c != 'k'
+            if (c != 'a' && c != 't' && c != 'c' && c != 'g' && c != 'r' && c != 'y' && c != 'm' && c != 'k'
                     && c != 's' && c != 'w' && c != 'h' && c != 'b' && c != 'v' && c != 'd' && c != 'n') {
                 result.addError("Invalid base character in sequence");
                 return false;

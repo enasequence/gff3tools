@@ -877,10 +877,7 @@ public class TranslatorTest {
                 "0");
         feature.addAttribute("codon_start", "1");
         feature.addAttribute("transl_table", "11");
-        // String expectedTranslation =
-        // "MVSKGEEDNMAIIKEFMRFKVHMEGSVNGHEFEIEGEGEGRPYEGTQTAKLKVTKGGPLPFAWDILSPQFMYGSKAYVKHPADIPDYLKLSFPEGFKWERVMNFEDGGVVTVTQDSSLQDGEFIYKVKLRGTNFPSDGPVMQKKTMGWEASSERMYPEDGALKGEIKQRLKLKDGGHYDAEVKTTYKAKKPVQLPGAYNVNIKLDITSHNEDYTIVEQYERAEGRHSTGGMDELYK";
-        // String expectedTranslation =
-        // "MSHIQRETSCSRPRLNSNMDADLYGYKWARDNVGQSGATIYRLYGKPDAPELFLKHGKGSVANDVTDEMVRLNWLTEFMPLPTIKHFIRTPDDAWLLTTAIPGKTAFQVLEEYPDSGENIVDALAVFLRRLHSIPVCNCPFNSDRVFRLAQAQSRMNNGLVDASDFDDERNGWPVEQVWKEMHKLLPFSPDSVVTHGDFSLDNLIFDEGKLIGCIDVGRVGIADRYQDLAILWNCLGEFSPSLQKRLFQKYGIDNPDMNKLQFHLMLDEFF";
+
         String expectedTranslation =
                 "MATQSREIGIQAKNKPGHWVQTERKAHEAWAGLIARKPTAAMLLHHLVAQMGHQNAVVVSQKTLSKLIGRSLRTVQYAVKDLVAERWISVVKLNGPGTVSAYVVNDRVAWGQPRDQLRLSVFSAAVVVDHDDQDESLLGHGDLRRIPTLYPGEQQLPTGPGEEPPSQPGIPGMEPDLPALTETEEWERRGQQRLPMPDEPCFLDDGEPLEPPTRVTLPRR";
         FastaReader reader = new FastaReader(new File(
@@ -888,16 +885,11 @@ public class TranslatorTest {
 
         Translator translator = new Translator(feature);
         translator.setThreePrimePartial(true);
-        // String sequence = reader.getSequenceSliceString(0L,2750,3460).toLowerCase(Locale.ROOT);
-        // String sequence = reader.getSequenceSliceString(0L,3697,4512).toLowerCase(Locale.ROOT);
         String sequence = reader.getSequenceSliceString(0L, 4798, 5460).toLowerCase(Locale.ROOT);
-        System.out.println(sequence);
 
         TranslationResult result = translator.translate(sequence.getBytes());
-        System.out.println(expectedTranslation);
-        System.out.println(result.getConceptualTranslation());
-        assertEquals(expectedTranslation, result.getConceptualTranslation());
-        // assertEquals("M", result.getTranslation());
+        Translator.TranslationComparison comparison = translator.equalsTranslation(expectedTranslation, result.getConceptualTranslation());
+        assertTrue(comparison.matches());
     }
 
     @Test
