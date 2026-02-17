@@ -280,74 +280,6 @@ public class Translator {
         return translationResult;
     }
 
-    // TODO: Remove this if this validation is done in FASTA reader
-    private boolean validateSequenceBases(byte[] sequence, TranslationResult result) {
-        for (byte b : sequence) {
-            char c = Character.toLowerCase((char) b);
-            if (c != 'a' && c != 't' && c != 'c' && c != 'g' && c != 'r' && c != 'y' && c != 'm' && c != 'k'
-                    && c != 's' && c != 'w' && c != 'h' && c != 'b' && c != 'v' && c != 'd' && c != 'n') {
-                result.addError("Invalid base character in sequence");
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private String extendCodon(String codon) {
-        // Adds 'n' when codon length is < 3
-        return (codon + "nnn").substring(0, 3);
-    }
-
-    private Character getPositionExceptionAminoAcid(int position) {
-        PositionExceptionData translationException = positionExceptionMap.get(position);
-        if (translationException != null) {
-            return translationException.aminoAcid;
-        }
-        return null;
-    }
-
-    private Codon translateStartCodon(String codonStr, int position, TranslationResult translationResult)
-            throws TranslationException {
-        char translatedAminoAcid = codonTranslator.translateStartCodon(codonStr);
-        Character exceptionAminoAcid = getPositionExceptionAminoAcid(position);
-        boolean isTranslationException = exceptionAminoAcid != null;
-
-        char aminoAcid;
-        if (isTranslationException) {
-            aminoAcid = exceptionAminoAcid;
-        } else if (fixDegenerateStartCodon
-                && !fivePrimePartial
-                && translatedAminoAcid != 'M'
-                && codonTranslator.isDegenerateStartCodon(codonStr)) {
-            aminoAcid = 'M';
-            isTranslationException = true;
-            translationResult.setFixedDegenerateStartCodon(true);
-        } else {
-            aminoAcid = translatedAminoAcid;
-        }
-
-        return new Codon(codonStr, position, aminoAcid, isTranslationException);
-    }
-
-    private Codon translateOtherCodon(String codonStr, int position) throws TranslationException {
-        char translatedAminoAcid = codonTranslator.translateOtherCodon(codonStr);
-        Character exceptionAminoAcid = getPositionExceptionAminoAcid(position);
-        boolean isTranslationException = exceptionAminoAcid != null;
-
-        char aminoAcid = isTranslationException ? exceptionAminoAcid : translatedAminoAcid;
-
-        return new Codon(codonStr, position, aminoAcid, isTranslationException);
-    }
-
-    private Codon translateCodonAt(String codonStr, int index, TranslationResult translationResult)
-            throws TranslationException {
-        int position = index + 1;
-        boolean isStartCodon = (index == codonStart - 1) && !fivePrimePartial;
-        return isStartCodon
-                ? translateStartCodon(codonStr, position, translationResult)
-                : translateOtherCodon(codonStr, position);
-    }
-
     private void translateCodons(byte[] sequence, TranslationResult translationResult) throws TranslationException {
         int countX = 0;
         int bases = sequence.length;
@@ -390,6 +322,75 @@ public class Translator {
         } else {
             translationResult.setTrailingBases("");
         }
+    }
+
+
+    private Codon translateCodonAt(String codonStr, int index, TranslationResult translationResult)
+            throws TranslationException {
+        int position = index + 1;
+        boolean isStartCodon = (index == codonStart - 1) && !fivePrimePartial;
+        return isStartCodon
+                ? translateStartCodon(codonStr, position, translationResult)
+                : translateOtherCodon(codonStr, position);
+    }
+
+    private Codon translateStartCodon(String codonStr, int position, TranslationResult translationResult)
+            throws TranslationException {
+        char translatedAminoAcid = codonTranslator.translateStartCodon(codonStr);
+        Character exceptionAminoAcid = getPositionExceptionAminoAcid(position);
+        boolean isTranslationException = exceptionAminoAcid != null;
+
+        char aminoAcid;
+        if (isTranslationException) {
+            aminoAcid = exceptionAminoAcid;
+        } else if (fixDegenerateStartCodon
+                && !fivePrimePartial
+                && translatedAminoAcid != 'M'
+                && codonTranslator.isDegenerateStartCodon(codonStr)) {
+            aminoAcid = 'M';
+            isTranslationException = true;
+            translationResult.setFixedDegenerateStartCodon(true);
+        } else {
+            aminoAcid = translatedAminoAcid;
+        }
+
+        return new Codon(codonStr, position, aminoAcid, isTranslationException);
+    }
+
+    private Codon translateOtherCodon(String codonStr, int position) throws TranslationException {
+        char translatedAminoAcid = codonTranslator.translateOtherCodon(codonStr);
+        Character exceptionAminoAcid = getPositionExceptionAminoAcid(position);
+        boolean isTranslationException = exceptionAminoAcid != null;
+
+        char aminoAcid = isTranslationException ? exceptionAminoAcid : translatedAminoAcid;
+
+        return new Codon(codonStr, position, aminoAcid, isTranslationException);
+    }
+
+    // Extra validation though done in FASTA reader
+    private boolean validateSequenceBases(byte[] sequence, TranslationResult result) {
+        for (byte b : sequence) {
+            char c = Character.toLowerCase((char) b);
+            if (c != 'a' && c != 't' && c != 'c' && c != 'g' && c != 'r' && c != 'y' && c != 'm' && c != 'k'
+                    && c != 's' && c != 'w' && c != 'h' && c != 'b' && c != 'v' && c != 'd' && c != 'n') {
+                result.addError("Invalid base character in sequence");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private String extendCodon(String codon) {
+        // Adds 'n' when codon length is < 3
+        return (codon + "nnn").substring(0, 3);
+    }
+
+    private Character getPositionExceptionAminoAcid(int position) {
+        PositionExceptionData translationException = positionExceptionMap.get(position);
+        if (translationException != null) {
+            return translationException.aminoAcid;
+        }
+        return null;
     }
 
     private void validateCodonStart(int bases, TranslationResult translationResult) throws TranslationException {
