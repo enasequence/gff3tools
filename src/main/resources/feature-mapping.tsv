@@ -138,6 +138,7 @@ SO:0000483 	nc_primary_transcript	A primary transcript that is never translated 
 SO:0000645 	antisense_primary_transcript	The reverse complement of the primary transcript.	prim_transcript
 SO:0000209 	rRNA_primary_transcript	A primary transcript encoding a ribosomal RNA.	prim_transcript
 SO:0000325 	rRNA_large_subunit_primary_transcript	A primary transcript encoding a large ribosomal subunit RNA	prim_transcript
+SO:0002393 	precursor_RNA	Any RNA species that is not yet the mature RNA product; may include ncRNA, rRNA, tRNA, 5' untranslated region (5'UTR), coding sequences (CDS, exon), intervening sequences (intron) and 3' untranslated region (3'UTR).	precursor_RNA
 SO:0005850	primer_binding_site	Non-covalentprimer binding site for initiation of replication, transcription, or reverse transcription.	primer_bind
 SO:0001062	propeptide	Partof a peptide chain which is cleaved off during the formation of the mature protein.	propeptide
 SO:0000410 	protein_binding_site	A binding site that, in the molecule, interacts selectively and non-covalently with polypeptide molecules.	protein_bind	/bound_moiety="<NAME>"
