@@ -14,33 +14,28 @@ import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import uk.ac.ebi.embl.api.entry.location.CompoundLocation;
-import uk.ac.ebi.embl.api.entry.location.Location;
-import uk.ac.ebi.embl.api.entry.qualifier.AminoAcid;
-import uk.ac.ebi.embl.api.entry.qualifier.AnticodonQualifier;
-import uk.ac.ebi.embl.api.entry.qualifier.TranslExceptQualifier;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.translation.TranslationException;
+import uk.ac.ebi.embl.gff3tools.translation.except.AminoAcidExcept;
+import uk.ac.ebi.embl.gff3tools.translation.except.AntiCodonAttribute;
+import uk.ac.ebi.embl.gff3tools.translation.except.TranslExceptAttribute;
 import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
-import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
-@Gff3Validation(name = "ANTI_CODON")
-public class AntiCodonValidation extends Validation {
+@Gff3Validation(name = "ATTRIBUTES_LOCATION")
+public class AttributesLocationValidation extends Validation {
 
-    private static final String INVALID_FORMAT = "Invalid %s format \"%s\"";
-    private static final String INVALID_AMINO_ACID = "%s contains an invalid amino acid at location %s";
-    private static final String INVALID_AMINO_ACID_VALUE =
-            "Invalid amino acid \"%s\" at location %s..%s. Expected \"%s\"";
+    private static final String INVALID_AMINO_ACID = "%s contains an invalid amino acid \"%s\" at location %s..%s";
     private static final String INVALID_LOCATION_RANGE = "%s location %s..%s is outside feature range %s..%s";
     private static final String INVALID_LOCATION_VALUE =
             "Invalid %s location: start must be > 0 and less than end at %s..%s";
     private static final String INVALID_LOCATION_SPAN = "%s location span must be \"%s\" at location %s";
 
-    @ValidationMethod(rule = "ANTI_CODON_ATTRIBUTE", type = ValidationType.ANNOTATION)
+    @ValidationMethod(rule = "ANTI_CODON_LOCATION", type = ValidationType.ANNOTATION)
     public void validateAntiCodon(GFF3Annotation gff3Annotation, int line) throws ValidationException {
         Map<String, List<GFF3Feature>> grouped = gff3Annotation.getFeatures().stream()
                 .filter(f -> f.hasAttribute(ANTI_CODON))
@@ -49,7 +44,7 @@ public class AntiCodonValidation extends Validation {
         validateCodonAttribute(grouped, ANTI_CODON, line);
     }
 
-    @ValidationMethod(rule = "TRANSL_EXCEPT_ATTRIBUTE", type = ValidationType.ANNOTATION)
+    @ValidationMethod(rule = "TRANSL_EXCEPT_LOCATION", type = ValidationType.ANNOTATION)
     public void validateTranslExcept(GFF3Annotation gff3Annotation, int line) throws ValidationException {
         Map<String, List<GFF3Feature>> grouped = gff3Annotation.getFeatures().stream()
                 .filter(f -> f.hasAttribute(TRANSL_EXCEPT))
@@ -60,9 +55,6 @@ public class AntiCodonValidation extends Validation {
 
     private void validateCodonAttribute(Map<String, List<GFF3Feature>> groupedFeatures, String attribute, int line)
             throws ValidationException {
-        AminoAcid aminoAcid;
-        CompoundLocation<Location> location;
-
         try {
             for (Map.Entry<String, List<GFF3Feature>> entry : groupedFeatures.entrySet()) {
 
@@ -89,34 +81,30 @@ public class AntiCodonValidation extends Validation {
                         .orElseThrow(); // as it is already guarded on the fragment list level
 
                 for (String value : values) {
+                    String aminoAcidCode;
+                    long start;
+                    long end;
 
                     if (attribute.equalsIgnoreCase(ANTI_CODON)) {
-                        AnticodonQualifier q = new AnticodonQualifier(value);
-                        aminoAcid = q.getAminoAcid();
-                        location = q.getLocations();
+                        AntiCodonAttribute a = new AntiCodonAttribute(value);
+                        aminoAcidCode = a.getAminoAcidCode();
+                        start = a.getStartPosition();
+                        end = a.getEndPosition();
                     } else if (attribute.equalsIgnoreCase(TRANSL_EXCEPT)) {
-                        TranslExceptQualifier q = new TranslExceptQualifier(value);
-                        aminoAcid = q.getAminoAcid();
-                        location = q.getLocations();
+                        TranslExceptAttribute t = new TranslExceptAttribute(value);
+                        aminoAcidCode = t.getAminoAcidCode();
+                        start = t.getStartPosition();
+                        end = t.getEndPosition();
                     } else {
                         return;
                     }
 
-                    if (aminoAcid == null) {
-                        throw new ValidationException(line, INVALID_AMINO_ACID.formatted(attribute, fullStart));
+                    if (!AminoAcidExcept.isValidAminoAcid(aminoAcidCode)) {
+                        throw new ValidationException(
+                                line, INVALID_AMINO_ACID.formatted(attribute, aminoAcidCode, fullStart, fullEnd));
                     }
 
-                    Long startObj = location.getMinPosition();
-                    Long endObj = location.getMaxPosition();
-
-                    // Defensive guard: qualifier parsing may produce a null location
-                    if (startObj == null || endObj == null) {
-                        throw new ValidationException(line, INVALID_FORMAT.formatted(attribute, value));
-                    }
-
-                    long start = startObj;
-                    long end = endObj;
-                    long length = location.getLength();
+                    long length = Math.max(end - start + 1, 0);
 
                     // Logical defensive check
                     if (start <= 0 || end <= 0 || start > end) {
@@ -134,57 +122,13 @@ public class AntiCodonValidation extends Validation {
 
                     // Length must be 3 unless transl_except TERM
                     if (length != 3
-                            && !(attribute.equalsIgnoreCase(TRANSL_EXCEPT)
-                                    && TERM_AMINO_ACID.equals(aminoAcid.getAbbreviation()))) {
+                            && !(attribute.equalsIgnoreCase(TRANSL_EXCEPT) && TERM_AMINO_ACID.equals(aminoAcidCode))) {
                         throw new ValidationException(line, INVALID_LOCATION_SPAN.formatted(attribute, 3, fullStart));
                     }
                 }
             }
-
-        } catch (uk.ac.ebi.embl.api.validation.ValidationException e) {
-            throw new ValidationException(line, INVALID_FORMAT.formatted(attribute, e.getMessage()));
-        }
-    }
-
-    @ValidationMethod(rule = "AMINO_ACID_MISMATCH", type = ValidationType.FEATURE, severity = RuleSeverity.WARN)
-    public void validateAminoAcidMismatch(GFF3Feature feature, int line) throws ValidationException {
-        String value = null;
-        String attribute = null;
-
-        if (feature.hasAttribute(ANTI_CODON)) {
-            value = feature.getAttribute(ANTI_CODON).orElse(null);
-            attribute = ANTI_CODON;
-        } else if (feature.hasAttribute(TRANSL_EXCEPT)) {
-            value = feature.getAttribute(TRANSL_EXCEPT).orElse(null);
-            attribute = TRANSL_EXCEPT;
-        }
-
-        if (value == null) return;
-
-        try {
-            AminoAcid aminoAcid;
-            String aminoAcidString;
-
-            if (attribute.equals(ANTI_CODON)) {
-                AnticodonQualifier q = new AnticodonQualifier(value);
-                aminoAcid = q.getAminoAcid();
-                aminoAcidString = q.getAminoAcidString();
-            } else {
-                TranslExceptQualifier q = new TranslExceptQualifier(value);
-                aminoAcid = q.getAminoAcid();
-                aminoAcidString = q.getAminoAcidString();
-            }
-
-            if (aminoAcid != null
-                    && aminoAcid.getAbbreviation() != null
-                    && !aminoAcid.getAbbreviation().equals(aminoAcidString)) {
-                throw new ValidationException(
-                        line,
-                        INVALID_AMINO_ACID_VALUE.formatted(
-                                aminoAcidString, feature.getStart(), feature.getEnd(), aminoAcid.getAbbreviation()));
-            }
-        } catch (uk.ac.ebi.embl.api.validation.ValidationException e) {
-            throw new ValidationException(line, INVALID_FORMAT.formatted(attribute, e.getMessage()));
+        } catch (TranslationException e) {
+            throw new ValidationException(line, e.getMessage());
         }
     }
 }

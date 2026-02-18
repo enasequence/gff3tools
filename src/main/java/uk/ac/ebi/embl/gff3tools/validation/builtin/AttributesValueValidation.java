@@ -54,9 +54,6 @@ public class AttributesValueValidation extends Validation {
                     "^(23S ribosomal RNA)$",
                     "^(28S ribosomal RNA)$"));
 
-    public static final Set<String> PSEUDO_GENE_VALUES =
-            new HashSet<>(Arrays.asList(PROCESSED, UNPROCESSED, UNITARY, ALLELIC, UNKNOWN));
-
     private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
 
     @ValidationMethod(rule = "RNA_PRODUCT_ATTRIBUTE_VALUE", type = ValidationType.FEATURE)
