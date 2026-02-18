@@ -140,7 +140,7 @@ public class JsonHeaderFastaReader implements AutoCloseable {
         accessionIdToSubmissionId.clear();
     }
 
-    private String resolveId(IdType type, String id) throws FastaFileException {
+    private String resolveId(IdType type, String id) {
         switch (type) {
             case ACCESSIONID:
                 return Objects.requireNonNull(
