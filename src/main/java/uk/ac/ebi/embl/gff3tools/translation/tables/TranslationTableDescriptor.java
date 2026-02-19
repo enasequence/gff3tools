@@ -15,9 +15,11 @@ import lombok.Getter;
 /**
  * NCBI genetic code table descriptors.
  * Contains all NCBI translation tables (1-33) with their amino acid and start codon definitions.
+ *
+ * Note: Tables 7, 8, 17-20 were removed by NCBI
  */
 @Getter
-public enum TranslationTableDescriptor {
+enum TranslationTableDescriptor {
     STANDARD(
             1,
             "The Standard Code",

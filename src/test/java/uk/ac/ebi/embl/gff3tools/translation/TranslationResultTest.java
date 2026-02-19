@@ -12,15 +12,17 @@ package uk.ac.ebi.embl.gff3tools.translation;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.Vector;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class TranslationResultTest {
 
     @Test
     public void testGetTranslation() {
         TranslationResult result = new TranslationResult();
-        Vector<Codon> codons = new Vector<>();
+        List<Codon> codons = new ArrayList<>();
 
         Codon codon1 = new Codon("atg", 1, 'M', false);
         codons.add(codon1);
@@ -51,7 +53,7 @@ public class TranslationResultTest {
     @Test
     public void testTrailingBases() {
         TranslationResult result = new TranslationResult();
-        Vector<Codon> codons = new Vector<>();
+        List<Codon> codons = new ArrayList<>();
 
         Codon codon = new Codon("atg", 1, 'M', false);
         codons.add(codon);

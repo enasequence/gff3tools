@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.translation;
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.exception.TranslationException;
 import uk.ac.ebi.embl.gff3tools.translation.except.TranslExceptAttribute;
 
 public class TranslExceptAttributeTest {

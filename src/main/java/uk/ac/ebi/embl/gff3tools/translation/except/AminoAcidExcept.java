@@ -11,7 +11,8 @@
 package uk.ac.ebi.embl.gff3tools.translation.except;
 
 import java.util.Map;
-import uk.ac.ebi.embl.gff3tools.translation.TranslationException;
+
+import uk.ac.ebi.embl.gff3tools.exception.TranslationException;
 
 /**
  * Utility class for amino acid that is to be mapped when present in transl_except attribute.

@@ -11,8 +11,10 @@
 package uk.ac.ebi.embl.gff3tools.translation;
 
 import java.util.*;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
+import uk.ac.ebi.embl.gff3tools.exception.TranslationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.translation.except.CodonExceptAttribute;
@@ -24,10 +26,12 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 
 /**
  * Translates DNA/RNA sequences to amino acid sequences with full validation.
- * The bases are encoded using lower case single letter JCBN abbreviations
+ * The bases are encoded using upper case single letter JCBN abbreviations
  * and the amino acids are encoded using upper case single letter JCBN abbreviations.
  *
  */
+@Getter
+@Setter(AccessLevel.PROTECTED)
 public class Translator {
 
     private final CodonTranslator codonTranslator;
@@ -35,64 +39,41 @@ public class Translator {
     // Map of exception amino acid for a specific position
     private final Map<Integer, PositionExceptionData> positionExceptionMap = new HashMap<>();
 
-    @Getter
-    @Setter
     private int codonStart = 1;
 
-    @Getter
-    @Setter
     private boolean nonTranslating = false; // feature has /pseudo
 
-    @Getter
     private boolean isComplement = false;
 
-    @Getter
     private GFF3Feature feature;
 
     // The purpose of 'exception' is to relaxes several validations.
     // This will be used in the future to support more flexible translation.
-    @Getter
-    @Setter
     private boolean exception = false;
 
-    @Getter
-    @Setter
     private boolean threePrimePartial = false; // 3' partial
 
-    @Getter
-    @Setter
     private boolean fivePrimePartial = false; // 5' partial
 
-    @Getter
-    @Setter
     private boolean peptideFeature = false;
 
     // Fix options
-    @Setter
     private boolean fixDegenerateStartCodon = false;
 
-    @Setter
     private boolean fixNoStartCodonMake5Partial = false;
 
-    @Setter
     private boolean fixCodonStartNotOneMake5Partial = false;
 
-    @Setter
     private boolean fixNoStopCodonMake3Partial = false;
 
-    @Setter
     private boolean fixValidStopCodonRemove3Partial = false;
 
-    @Setter
     private boolean fixNonMultipleOfThreeMake3And5Partial = false;
 
-    @Setter
     private boolean fixInternalStopCodonMakePseudo = false;
 
-    @Setter
     private boolean fixDeleteTrailingBasesAfterStopCodon = false;
 
-    @Getter
     private final Set<String> fixes = new HashSet<>();
 
     /**
@@ -210,7 +191,7 @@ public class Translator {
      * Adds a codon exception where a specific codon always translates to a specific amino acid.
      * Used for /codon qualifiers.
      *
-     * @param codon the codon (lowercase, e.g., "tga")
+     * @param codon the codon (uppercase, e.g., "TGA")
      * @param aminoAcid the amino acid to use
      */
     public void addCodonException(String codon, Character aminoAcid) {
@@ -250,7 +231,7 @@ public class Translator {
                     translationResult.setConceptualTranslationCodons(0);
                     return translationResult;
                 } else {
-                    TranslationException.throwError("No translation produced");
+                    throw new TranslationException("No translation produced");
                 }
             }
 
@@ -295,7 +276,7 @@ public class Translator {
 
         // Check if more than 50% unknown amino acids
         if (countX > (codons.size() / 2)) {
-            TranslationException.throwError("Translation has more than 50% unknown amino acids (X)");
+            throw new TranslationException("Translation has more than 50% unknown amino acids (X)");
         }
 
         // Handle trailing bases
@@ -365,9 +346,9 @@ public class Translator {
     // Extra validation though done in FASTA reader
     private boolean validateSequenceBases(byte[] sequence, TranslationResult result) {
         for (byte b : sequence) {
-            char c = Character.toLowerCase((char) b);
-            if (c != 'a' && c != 't' && c != 'c' && c != 'g' && c != 'r' && c != 'y' && c != 'm' && c != 'k' && c != 's'
-                    && c != 'w' && c != 'h' && c != 'b' && c != 'v' && c != 'd' && c != 'n') {
+            char c = (char) b;
+            if (c != 'A' && c != 'T' && c != 'C' && c != 'G' && c != 'R' && c != 'Y' && c != 'M' && c != 'K' && c != 'S'
+                    && c != 'W' && c != 'H' && c != 'B' && c != 'V' && c != 'D' && c != 'N') {
                 result.addError("Invalid base character in sequence");
                 return false;
             }
@@ -376,8 +357,8 @@ public class Translator {
     }
 
     private String extendCodon(String codon) {
-        // Adds 'n' when codon length is < 3
-        return (codon + "nnn").substring(0, 3);
+        // Adds 'N' when codon length is < 3
+        return (codon + "NNN").substring(0, 3);
     }
 
     private Character getPositionExceptionAminoAcid(int position) {
@@ -390,7 +371,7 @@ public class Translator {
 
     private void validateCodonStart(int bases, TranslationResult translationResult) throws TranslationException {
         if (codonStart < 1 || codonStart > 3) {
-            TranslationException.throwError("Invalid codon start: " + codonStart + ". Must be 1, 2, or 3");
+            throw new TranslationException("Invalid codon start: " + codonStart + ". Must be 1, 2, or 3");
         }
 
         if (codonStart != 1) {
@@ -400,14 +381,14 @@ public class Translator {
                     translationResult.setFixedFivePrimePartial(true);
                     fixes.add("fixCodonStartNotOneMake5Partial");
                 } else {
-                    TranslationException.throwError("Codon start is " + codonStart + " but feature is not 5' partial");
+                    throw new TranslationException("Codon start is " + codonStart + " but feature is not 5' partial");
                 }
             }
         }
 
         if (bases < 3) {
             if (codonStart != 1) {
-                TranslationException.throwError("Sequence too short for translation with current codon start");
+                throw new TranslationException("Sequence too short for translation with current codon start");
             }
         }
     }
@@ -431,13 +412,13 @@ public class Translator {
 
     private void validateExceptionBounds(int beginPos, int endPos, int sequenceLength) throws TranslationException {
         if (beginPos < codonStart) {
-            TranslationException.throwError("Translation exception outside frame on the 5' end");
+            throw new TranslationException("Translation exception outside frame on the 5' end");
         }
         if (beginPos > sequenceLength || endPos > sequenceLength) {
-            TranslationException.throwError("Translation exception outside frame on the 3' end");
+            throw new TranslationException("Translation exception outside frame on the 3' end");
         }
         if (endPos < beginPos) {
-            TranslationException.throwError("Invalid translation exception range");
+            throw new TranslationException("Invalid translation exception range");
         }
     }
 
@@ -448,7 +429,7 @@ public class Translator {
         boolean isPartialStopAtEnd = (aminoAcid == '*') && (endPos == sequenceLength) && (span == 0 || span == 1);
 
         if (!isFullCodon && !isPartialStopAtEnd) {
-            TranslationException.throwError(
+            throw new TranslationException(
                     "Translation exception must span 3 bases or be a partial stop codon at 3' end");
         }
     }
@@ -456,7 +437,7 @@ public class Translator {
     private void validateExceptionInReadingFrame(int beginPos) throws TranslationException {
         int frame = (beginPos % 3 == 0) ? 3 : beginPos % 3;
         if (frame != codonStart) {
-            TranslationException.throwError("Translation exception at position " + beginPos + " is in frame " + frame
+            throw new TranslationException("Translation exception at position " + beginPos + " is in frame " + frame
                     + " but codon start is " + codonStart);
         }
     }
@@ -470,7 +451,7 @@ public class Translator {
         if (missingBases > 0 && endPos == sequence.length) {
             byte[] extended = Arrays.copyOf(sequence, sequence.length + missingBases);
             for (int i = 0; i < missingBases; i++) {
-                extended[sequence.length + i] = 'n';
+                extended[sequence.length + i] = 'N';
             }
             return extended;
         }
@@ -481,7 +462,7 @@ public class Translator {
         if (bases < 3) {
             translationResult.setTranslationBaseCount(bases);
             if (!fivePrimePartial && !threePrimePartial) {
-                TranslationException.throwError("CDS feature with less than 3 bases must be 3' or 5' partial");
+                throw new TranslationException("CDS feature with less than 3 bases must be 3' or 5' partial");
             }
         } else if ((bases - codonStart + 1) % 3 != 0) {
             int length = bases - codonStart + 1;
@@ -495,7 +476,7 @@ public class Translator {
                     translationResult.setFixedFivePrimePartial(true);
                     fixes.add("fixNonMultipleOfThreeMake3And5Partial");
                 } else {
-                    TranslationException.throwError(
+                    throw new TranslationException(
                             "CDS feature length must be a multiple of 3. Consider 5' or 3' partial location");
                 }
             }
@@ -549,7 +530,7 @@ public class Translator {
         if (!(translationResult.getCodons().size() == 1
                 && translationResult.getTrailingBases().length() == 0
                 && fivePrimePartial)) {
-            TranslationException.throwError(
+            throw new TranslationException(
                     "CDS feature can have a single stop codon only if it has 3 bases and is 5' partial");
         }
     }
@@ -561,7 +542,7 @@ public class Translator {
                 if (nonTranslating) {
                     return false;
                 } else {
-                    TranslationException.throwError("More than one stop codon at the 3' end");
+                    throw new TranslationException("More than one stop codon at the 3' end");
                 }
             }
 
@@ -574,7 +555,7 @@ public class Translator {
                         threePrimePartial = false;
                         fixes.add("fixValidStopCodonRemove3Partial");
                     } else {
-                        TranslationException.throwError(
+                        throw new TranslationException(
                                 "Stop codon found at 3' partial end. Consider removing 3' partial location");
                     }
                 }
@@ -589,7 +570,7 @@ public class Translator {
                         translationResult.setFixedThreePrimePartial(true);
                         fixes.add("fixNoStopCodonMake3Partial");
                     } else {
-                        TranslationException.throwError("No stop codon at the 3' end");
+                        throw new TranslationException("No stop codon at the 3' end");
                     }
                 }
             }
@@ -599,7 +580,7 @@ public class Translator {
                     return false;
                 } else {
                     if (!fixDeleteTrailingBasesAfterStopCodon) {
-                        TranslationException.throwError("A partial codon appears after the stop codon");
+                        throw new TranslationException("A partial codon appears after the stop codon");
                     }
                 }
             }
@@ -619,7 +600,7 @@ public class Translator {
                     fixes.add("fixInternalStopCodonMakePseudo");
                     return false;
                 } else {
-                    TranslationException.throwError("The protein translation contains internal stop codons");
+                    throw new TranslationException("The protein translation contains internal stop codons");
                 }
             }
         }
@@ -637,7 +618,7 @@ public class Translator {
                         fivePrimePartial = true;
                         fixes.add("fixNoStartCodonMake5Partial");
                     } else {
-                        TranslationException.throwError("The protein translation does not start with methionine");
+                        throw new TranslationException("The protein translation does not start with methionine");
                     }
                 }
             }
@@ -688,22 +669,22 @@ public class Translator {
     public static byte[] reverseComplement(byte[] seq) {
 
         final byte[] COMPLEMENT = new byte[128];
-        COMPLEMENT['a'] = 't';
-        COMPLEMENT['t'] = 'a';
-        COMPLEMENT['u'] = 'a';
-        COMPLEMENT['c'] = 'g';
-        COMPLEMENT['g'] = 'c';
-        COMPLEMENT['r'] = 'y';
-        COMPLEMENT['y'] = 'r';
-        COMPLEMENT['s'] = 's';
-        COMPLEMENT['w'] = 'w';
-        COMPLEMENT['k'] = 'm';
-        COMPLEMENT['m'] = 'k';
-        COMPLEMENT['b'] = 'v';
-        COMPLEMENT['d'] = 'h';
-        COMPLEMENT['h'] = 'd';
-        COMPLEMENT['v'] = 'b';
-        COMPLEMENT['n'] = 'n';
+        COMPLEMENT['A'] = 'T';
+        COMPLEMENT['T'] = 'A';
+        COMPLEMENT['U'] = 'A';
+        COMPLEMENT['C'] = 'G';
+        COMPLEMENT['G'] = 'C';
+        COMPLEMENT['R'] = 'Y';
+        COMPLEMENT['Y'] = 'R';
+        COMPLEMENT['S'] = 'S';
+        COMPLEMENT['W'] = 'W';
+        COMPLEMENT['K'] = 'M';
+        COMPLEMENT['M'] = 'K';
+        COMPLEMENT['B'] = 'V';
+        COMPLEMENT['D'] = 'H';
+        COMPLEMENT['H'] = 'D';
+        COMPLEMENT['V'] = 'B';
+        COMPLEMENT['N'] = 'N';
 
         int len = seq.length;
         byte[] rc = new byte[len];

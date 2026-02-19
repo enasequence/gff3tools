@@ -8,14 +8,11 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.translation;
+package uk.ac.ebi.embl.gff3tools.translation.tables;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.gff3tools.translation.tables.TranslationTable;
-import uk.ac.ebi.embl.gff3tools.translation.tables.TranslationTableDescriptor;
-import uk.ac.ebi.embl.gff3tools.translation.tables.TranslationTableFactory;
 
 public class TranslationTableFactoryTest {
 
@@ -53,12 +50,12 @@ public class TranslationTableFactoryTest {
         assertEquals("The Standard Code", table.getName());
 
         // Test some standard codons
-        assertEquals(Character.valueOf('M'), table.getStartCodonMap().get("atg"));
-        assertEquals(Character.valueOf('*'), table.getOtherCodonMap().get("taa"));
-        assertEquals(Character.valueOf('*'), table.getOtherCodonMap().get("tag"));
-        assertEquals(Character.valueOf('*'), table.getOtherCodonMap().get("tga"));
-        assertEquals(Character.valueOf('K'), table.getOtherCodonMap().get("aaa"));
-        assertEquals(Character.valueOf('F'), table.getOtherCodonMap().get("ttt"));
+        assertEquals(Character.valueOf('M'), table.getStartCodonMap().get("ATG"));
+        assertEquals(Character.valueOf('*'), table.getOtherCodonMap().get("TAA"));
+        assertEquals(Character.valueOf('*'), table.getOtherCodonMap().get("TAG"));
+        assertEquals(Character.valueOf('*'), table.getOtherCodonMap().get("TGA"));
+        assertEquals(Character.valueOf('K'), table.getOtherCodonMap().get("AAA"));
+        assertEquals(Character.valueOf('F'), table.getOtherCodonMap().get("TTT"));
     }
 
     @Test
@@ -76,7 +73,7 @@ public class TranslationTableFactoryTest {
         assertEquals("The Vertebrate Mitochondrial Code", table.getName());
 
         // TGA codes for W in vertebrate mitochondria, not stop
-        assertEquals(Character.valueOf('W'), table.getOtherCodonMap().get("tga"));
+        assertEquals(Character.valueOf('W'), table.getOtherCodonMap().get("TGA"));
     }
 
     @Test

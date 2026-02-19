@@ -23,42 +23,28 @@ import lombok.Setter;
  * and any validation messages.
  */
 @Getter
-public class TranslationResult implements Serializable {
+@Setter(AccessLevel.PROTECTED)
+public class TranslationResult {
 
-    private static final long serialVersionUID = 1L;
-
-    @Setter(AccessLevel.PROTECTED)
     private boolean fixedFivePrimePartial = false;
 
-    @Setter(AccessLevel.PROTECTED)
     private boolean fixedThreePrimePartial = false;
 
-    @Setter
     private boolean fixedPseudo = false;
 
-    @Setter
     private boolean fixedDegenerateStartCodon = false;
 
-    @Setter(AccessLevel.PROTECTED)
     private List<Codon> codons;
 
-    @Setter(AccessLevel.PROTECTED)
     private String trailingBases;
 
-    @Setter(AccessLevel.PROTECTED)
     private int conceptualTranslationCodons = 0;
 
-    @Setter
     private int translationLength;
 
-    @Getter(AccessLevel.NONE)
     private int baseCount;
 
     private final List<String> errors = new ArrayList<>();
-
-    public int getBaseCount() {
-        return baseCount;
-    }
 
     /**
      * Returns the DNA/RNA sequence (codons + trailing bases).

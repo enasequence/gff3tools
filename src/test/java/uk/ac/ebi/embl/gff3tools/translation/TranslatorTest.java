@@ -19,6 +19,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.fastareader.FastaReader;
 import uk.ac.ebi.embl.fastareader.exception.FastaFileException;
+import uk.ac.ebi.embl.gff3tools.exception.TranslationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.translation.except.TranslExceptAttribute;
 
@@ -75,7 +76,7 @@ public class TranslatorTest {
     @Test
     public void testBasicTranslation() throws TranslationException {
         Translator translator = createTranslator(11);
-        TranslationResult result = translator.translate("atgaaatag".getBytes());
+        TranslationResult result = translator.translate("ATGAAATAG".getBytes());
         assertTrue(result.isValid());
         assertEquals("MK", result.getConceptualTranslation());
         assertEquals("MK*", result.getTranslation());
@@ -92,7 +93,7 @@ public class TranslatorTest {
     public void testNonTranslating() throws TranslationException {
         Translator translator = createTranslator(11);
         translator.setNonTranslating(true);
-        TranslationResult result = translator.translate("atgaaatag".getBytes());
+        TranslationResult result = translator.translate("ATGAAATAG".getBytes());
         assertEquals(0, result.getConceptualTranslationCodons());
     }
 
@@ -105,7 +106,7 @@ public class TranslatorTest {
         translator.setFivePrimePartial(true);
         translator.setThreePrimePartial(true);
         // 10 bases: skip 1, translate 9 bases = 3 codons (no stop codon for 3' partial)
-        TranslationResult result = translator.translate("aatgaaaggg".getBytes());
+        TranslationResult result = translator.translate("AATGAAAGGG".getBytes());
         assertTrue(result.isValid(), "Result should be valid: " + result.getErrors());
     }
 
@@ -116,7 +117,7 @@ public class TranslatorTest {
         translator.setFivePrimePartial(true);
         translator.setThreePrimePartial(true);
         // 11 bases: skip 2, translate 9 bases = 3 codons (no stop codon for 3' partial)
-        TranslationResult result = translator.translate("aaatgaaaggg".getBytes());
+        TranslationResult result = translator.translate("AAATGAAAGGG".getBytes());
         assertTrue(result.isValid(), "Result should be valid: " + result.getErrors());
     }
 
@@ -124,7 +125,7 @@ public class TranslatorTest {
     public void testInvalidCodonStart() throws TranslationException {
         Translator translator = createTranslator(11);
         translator.setCodonStart(4); // Invalid
-        TranslationResult result = translator.translate("atgaaatag".getBytes());
+        TranslationResult result = translator.translate("ATGAAATAG".getBytes());
         assertTrue(result.hasErrors());
     }
 
@@ -135,7 +136,7 @@ public class TranslatorTest {
         Translator translator = createTranslator(11);
         translator.setFivePrimePartial(true);
         // Without start codon
-        TranslationResult result = translator.translate("aaaaaatag".getBytes());
+        TranslationResult result = translator.translate("AAAAAATAG".getBytes());
         assertTrue(result.isValid());
         assertEquals("KK", result.getConceptualTranslation());
     }
@@ -145,7 +146,7 @@ public class TranslatorTest {
         Translator translator = createTranslator(11);
         translator.setThreePrimePartial(true);
         // Without stop codon
-        TranslationResult result = translator.translate("atgaaa".getBytes());
+        TranslationResult result = translator.translate("ATGAAA".getBytes());
         assertTrue(result.isValid());
         assertEquals("MK", result.getConceptualTranslation());
     }
@@ -155,7 +156,7 @@ public class TranslatorTest {
         Translator translator = createTranslator(11);
         translator.setCodonStart(1);
         translator.setThreePrimePartial(true);
-        TranslationResult result = translator.translate("atggctgaagccgaaacccatcctcctatcggtgaatc".getBytes());
+        TranslationResult result = translator.translate("ATGGCTGAAGCCGAAACCCATCCTCCTATCGGTGAATC".getBytes());
         assertTrue(result.isValid());
         assertEquals("MAEAETHPPIGES", result.getConceptualTranslation());
     }
@@ -164,7 +165,7 @@ public class TranslatorTest {
     public void testShortSequenceFivePrimePartial() throws TranslationException {
         Translator translator = createTranslator(11);
         translator.setThreePrimePartial(true);
-        TranslationResult result = translator.translate("at".getBytes());
+        TranslationResult result = translator.translate("AT".getBytes());
         assertTrue(result.isValid());
         assertEquals("M", result.getConceptualTranslation());
     }
@@ -179,7 +180,7 @@ public class TranslatorTest {
 
         Translator translator = new Translator(feature);
         // ATG AAA AGT AAA TAG = M K S K *
-        TranslationResult result = translator.translate("atgaaaagtaaatag".getBytes());
+        TranslationResult result = translator.translate("ATGAAAAGTAAATAG".getBytes());
         assertTrue(result.isValid());
         assertEquals("MKSK", result.getConceptualTranslation());
 
@@ -187,7 +188,7 @@ public class TranslatorTest {
         feature.addAttribute("transl_except", "(pos:7..9,aa:Trp)");
         Translator translatorWithException = new Translator(feature);
         // ATG AAA AGT AAA TAG = M K W K *
-        TranslationResult resultWithExp = translatorWithException.translate("atgaaaagtaaatag".getBytes());
+        TranslationResult resultWithExp = translatorWithException.translate("ATGAAAAGTAAATAG".getBytes());
         assertTrue(resultWithExp.isValid());
         assertEquals("MKWK", resultWithExp.getConceptualTranslation());
     }
@@ -202,7 +203,7 @@ public class TranslatorTest {
 
         Translator translator = new Translator(feature);
         // ATG TGA AAA TAG = M U K *
-        TranslationResult result = translator.translate("atgtgaaaatag".getBytes());
+        TranslationResult result = translator.translate("ATGTGAAAATAG".getBytes());
         assertTrue(result.isValid());
         assertEquals("MUK", result.getConceptualTranslation());
     }
@@ -217,7 +218,7 @@ public class TranslatorTest {
 
         Translator translator = new Translator(feature);
         // ATG TGA TGA AAA TAG = M U W K *
-        TranslationResult result = translator.translate("atgtgatgaaaatag".getBytes());
+        TranslationResult result = translator.translate("ATGTGATGAAAATAG".getBytes());
         assertTrue(result.isValid());
         assertEquals("MUWK", result.getConceptualTranslation());
     }
@@ -231,7 +232,7 @@ public class TranslatorTest {
 
         Translator translator = new Translator(feature);
         // ATG AAA = M * (AAA becomes stop)
-        TranslationResult result = translator.translate("atgaaa".getBytes());
+        TranslationResult result = translator.translate("ATGAAA".getBytes());
         assertTrue(result.isValid());
         assertEquals("M", result.getConceptualTranslation());
     }
@@ -245,7 +246,7 @@ public class TranslatorTest {
 
         Translator translator = new Translator(feature);
         // ATG TAG AAA TAG = M O K *
-        TranslationResult result = translator.translate("atgtagaaatag".getBytes());
+        TranslationResult result = translator.translate("ATGTAGAAATAG".getBytes());
         assertTrue(result.isValid());
         assertEquals("MOK", result.getConceptualTranslation());
     }
@@ -269,7 +270,7 @@ public class TranslatorTest {
 
         Translator translator = new Translator(feature);
         // ATG TGA AAA TAG = M W K * (TGA at 4-6 -> W)
-        TranslationResult result = translator.translate("atgtgaaaatag".getBytes());
+        TranslationResult result = translator.translate("ATGTGAAAATAG".getBytes());
         assertTrue(result.isValid());
         assertEquals("MWK", result.getConceptualTranslation());
     }
@@ -283,7 +284,7 @@ public class TranslatorTest {
 
         Translator translator = new Translator(feature);
         // ATG AAA = M * (AAA at 4-6 becomes stop)
-        TranslationResult result = translator.translate("atgaaa".getBytes());
+        TranslationResult result = translator.translate("ATGAAA".getBytes());
         assertTrue(result.isValid());
         assertEquals("M", result.getConceptualTranslation());
     }
@@ -297,7 +298,7 @@ public class TranslatorTest {
 
         Translator translator = new Translator(feature);
         // ATG TGA AAA TAG = M U K *
-        TranslationResult result = translator.translate("atgtgaaaatag".getBytes());
+        TranslationResult result = translator.translate("ATGTGAAAATAG".getBytes());
         assertTrue(result.isValid());
         assertEquals("MUK", result.getConceptualTranslation());
     }
@@ -312,7 +313,7 @@ public class TranslatorTest {
         Translator translator = new Translator(feature);
         translator.setThreePrimePartial(true);
         // ATG AAA = M X (AAA at 4-6 becomes X)
-        TranslationResult result = translator.translate("atgaaa".getBytes());
+        TranslationResult result = translator.translate("ATGAAA".getBytes());
         assertTrue(result.isValid());
         assertEquals("MX", result.getConceptualTranslation());
     }
@@ -346,7 +347,7 @@ public class TranslatorTest {
 
         // Test without codon exception
         Translator translator = new Translator(feature);
-        TranslationResult result = translator.translate("atgaaaaaatga".getBytes());
+        TranslationResult result = translator.translate("ATGAAAAAATGA".getBytes());
         assertTrue(result.isValid());
         assertEquals("MKK", result.getConceptualTranslation());
 
@@ -355,7 +356,7 @@ public class TranslatorTest {
         feature.addAttribute("codon", "(seq:\"aaa\",aa:Trp)");
         Translator translatorWithExp = new Translator(feature);
         // ATG AAA AAA TGA = M W W (all ATGs become W)
-        TranslationResult resultWithExp = translatorWithExp.translate("atgaaaaaatga".getBytes());
+        TranslationResult resultWithExp = translatorWithExp.translate("ATGAAAAAATGA".getBytes());
         assertTrue(resultWithExp.isValid());
         assertEquals("MWW", resultWithExp.getConceptualTranslation());
     }
@@ -370,7 +371,7 @@ public class TranslatorTest {
         Translator translator = new Translator(feature);
         translator.setThreePrimePartial(true);
         // ATG TGA AAA = M U K
-        TranslationResult result = translator.translate("atgtgaaaa".getBytes());
+        TranslationResult result = translator.translate("ATGTGAAAA".getBytes());
         assertTrue(result.isValid());
         assertEquals("MUK", result.getConceptualTranslation());
     }
@@ -386,7 +387,7 @@ public class TranslatorTest {
         Translator translator = new Translator(feature);
         translator.setThreePrimePartial(true);
         // ATG TGA TAG = M W O (TGA->W, TAG->O)
-        TranslationResult result = translator.translate("atgtgatag".getBytes());
+        TranslationResult result = translator.translate("ATGTGATAG".getBytes());
         assertTrue(result.isValid());
         assertEquals("MWO", result.getConceptualTranslation());
     }
@@ -400,7 +401,7 @@ public class TranslatorTest {
 
         Translator translator = new Translator(feature);
         translator.setThreePrimePartial(true);
-        TranslationResult result = translator.translate("atgtga".getBytes());
+        TranslationResult result = translator.translate("ATGTGA".getBytes());
         assertTrue(result.isValid());
         assertEquals("MW", result.getConceptualTranslation());
     }
@@ -414,7 +415,7 @@ public class TranslatorTest {
 
         Translator translator = new Translator(feature);
         translator.setThreePrimePartial(true);
-        TranslationResult result = translator.translate("atgtga".getBytes());
+        TranslationResult result = translator.translate("ATGTGA".getBytes());
         assertTrue(result.isValid());
         assertEquals("MW", result.getConceptualTranslation());
     }
@@ -445,7 +446,7 @@ public class TranslatorTest {
         translator.setCodonStart(1);
         translator.setThreePrimePartial(true);
         translator.addPositionException(1, 3, 'M');
-        TranslationResult result = translator.translate("nnn".getBytes());
+        TranslationResult result = translator.translate("NNN".getBytes());
         assertTrue(result.isValid());
         assertEquals("M", result.getConceptualTranslation());
     }
@@ -455,8 +456,8 @@ public class TranslatorTest {
         Translator translator = createTranslator(1);
         translator.setThreePrimePartial(true);
         // TGA normally is stop, make it tryptophan
-        translator.addCodonException("tga", 'W');
-        TranslationResult result = translator.translate("atgtga".getBytes());
+        translator.addCodonException("TGA", 'W');
+        TranslationResult result = translator.translate("ATGTGA".getBytes());
         assertTrue(result.isValid());
         assertEquals("MW", result.getConceptualTranslation());
     }
@@ -468,7 +469,7 @@ public class TranslatorTest {
         // ATG AAA TGA AAA TAG = positions 1-3, 4-6, 7-9, 10-12, 13-15
         // TGA at position 7-9 should be translated as W instead of stop
         translator.addPositionException(7, 9, 'W');
-        TranslationResult result = translator.translate("atgaaatgaaaatag".getBytes());
+        TranslationResult result = translator.translate("ATGAAATGAAAATAG".getBytes());
         assertTrue(result.isValid());
         assertEquals("MKWK", result.getConceptualTranslation());
     }
@@ -479,7 +480,7 @@ public class TranslatorTest {
         Translator translator = createTranslator(1);
         // ATG TGA AAA TAG = TGA at position 4-6 should be U (selenocysteine)
         translator.addPositionException(4, 6, 'U');
-        TranslationResult result = translator.translate("atgtgaaaatag".getBytes());
+        TranslationResult result = translator.translate("ATGTGAAAATAG".getBytes());
         assertTrue(result.isValid());
         assertEquals("MUK", result.getConceptualTranslation());
     }
@@ -492,7 +493,7 @@ public class TranslatorTest {
         // First TGA (4-6) -> U, Second TGA (7-9) -> W
         translator.addPositionException(4, 6, 'U');
         translator.addPositionException(7, 9, 'W');
-        TranslationResult result = translator.translate("atgtgatgaaaatag".getBytes());
+        TranslationResult result = translator.translate("ATGTGATGAAAATAG".getBytes());
         assertTrue(result.isValid());
         assertEquals("MUWK", result.getConceptualTranslation());
     }
@@ -504,7 +505,7 @@ public class TranslatorTest {
         translator.setThreePrimePartial(true);
         // Force first codon to be M even though it's NNN
         translator.addPositionException(1, 3, 'M');
-        TranslationResult result = translator.translate("nnnaaa".getBytes());
+        TranslationResult result = translator.translate("NNNAAA".getBytes());
         assertTrue(result.isValid());
         assertEquals("MK", result.getConceptualTranslation());
     }
@@ -516,7 +517,7 @@ public class TranslatorTest {
         // ATG AAA TA - partial stop codon at end
         // Position 7-8 is "ta", add exception for stop at this position
         translator.addPositionException(7, 8, '*');
-        TranslationResult result = translator.translate("atgaaata".getBytes());
+        TranslationResult result = translator.translate("ATGAAATA".getBytes());
         assertTrue(result.isValid());
         assertEquals("MK", result.getConceptualTranslation());
     }
@@ -530,7 +531,7 @@ public class TranslatorTest {
         // Sequence: A ATG TGA AAA TAG (skip first base)
         // TGA at position 5-7 (relative to sequence start) -> W
         translator.addPositionException(5, 7, 'W');
-        TranslationResult result = translator.translate("aatgtgaaaatag".getBytes());
+        TranslationResult result = translator.translate("AATGTGAAAATAG".getBytes());
         assertTrue(result.isValid());
         assertEquals("MWK", result.getConceptualTranslation());
     }
@@ -541,7 +542,7 @@ public class TranslatorTest {
         Translator translator = createTranslator(1);
         // Make AAA at position 4-6 translate to stop (no threePrimePartial needed)
         translator.addPositionException(4, 6, '*');
-        TranslationResult result = translator.translate("atgaaa".getBytes());
+        TranslationResult result = translator.translate("ATGAAA".getBytes());
         assertTrue(result.isValid());
         assertEquals("M", result.getConceptualTranslation());
         assertEquals("M*", result.getTranslation());
@@ -553,14 +554,14 @@ public class TranslatorTest {
     public void testNoStartCodon() throws TranslationException {
         Translator translator = createTranslator(11);
         // Sequence doesn't start with ATG
-        TranslationResult result = translator.translate("gggaaatag".getBytes());
+        TranslationResult result = translator.translate("GGGAAATAG".getBytes());
         assertTrue(result.hasErrors());
     }
 
     @Test
     public void testNoStopCodon() throws TranslationException {
         Translator translator = createTranslator(11);
-        TranslationResult result = translator.translate("atgaaa".getBytes());
+        TranslationResult result = translator.translate("ATGAAA".getBytes());
         assertTrue(result.hasErrors());
     }
 
@@ -568,7 +569,7 @@ public class TranslatorTest {
     public void testInternalStopCodon() throws TranslationException {
         Translator translator = createTranslator(11);
         // ATG TAA AAA TAG = M * K *
-        TranslationResult result = translator.translate("atgtaaaaatag".getBytes());
+        TranslationResult result = translator.translate("ATGTAAAAATAG".getBytes());
         assertTrue(result.hasErrors());
     }
 
@@ -576,7 +577,7 @@ public class TranslatorTest {
     public void testMultipleTrailingStopCodons() throws TranslationException {
         Translator translator = createTranslator(11);
         // ATG AAA TAG TAG = M K * *
-        TranslationResult result = translator.translate("atgaaatagtag".getBytes());
+        TranslationResult result = translator.translate("ATGAAATAGTAG".getBytes());
         assertTrue(result.hasErrors());
     }
 
@@ -586,7 +587,7 @@ public class TranslatorTest {
     public void testFixNoStartCodonMake5Partial() throws TranslationException {
         Translator translator = createTranslator(11);
         translator.setFixNoStartCodonMake5Partial(true);
-        TranslationResult result = translator.translate("gggaaatag".getBytes());
+        TranslationResult result = translator.translate("GGGAAATAG".getBytes());
         assertTrue(result.isValid());
         assertTrue(result.isFixedFivePrimePartial());
     }
@@ -595,7 +596,7 @@ public class TranslatorTest {
     public void testFixNoStopCodonMake3Partial() throws TranslationException {
         Translator translator = createTranslator(11);
         translator.setFixNoStopCodonMake3Partial(true);
-        TranslationResult result = translator.translate("atgaaa".getBytes());
+        TranslationResult result = translator.translate("ATGAAA".getBytes());
         assertTrue(result.isValid());
         assertTrue(result.isFixedThreePrimePartial());
     }
@@ -604,7 +605,7 @@ public class TranslatorTest {
     public void testFixInternalStopCodonMakePseudo() throws TranslationException {
         Translator translator = createTranslator(11);
         translator.setFixInternalStopCodonMakePseudo(true);
-        TranslationResult result = translator.translate("atgtaaaaatag".getBytes());
+        TranslationResult result = translator.translate("ATGTAAAAATAG".getBytes());
         assertTrue(result.isValid());
         assertTrue(result.isFixedPseudo());
     }
@@ -613,7 +614,7 @@ public class TranslatorTest {
     public void testFixNonMultipleOfThree() throws TranslationException {
         Translator translator = createTranslator(11);
         translator.setFixNonMultipleOfThreeMake3And5Partial(true);
-        TranslationResult result = translator.translate("atgaaaa".getBytes()); // 7 bases
+        TranslationResult result = translator.translate("ATGAAAA".getBytes()); // 7 bases
         assertTrue(result.isValid());
         assertTrue(result.isFixedFivePrimePartial());
         assertTrue(result.isFixedThreePrimePartial());
@@ -628,7 +629,7 @@ public class TranslatorTest {
 
         assertFalse(translator.getFeature().isFivePrimePartial());
         // Skip first base, translate remaining 9 bases = 3 codons
-        TranslationResult result = translator.translate("aatgaaaggg".getBytes());
+        TranslationResult result = translator.translate("AATGAAAGGG".getBytes());
         assertTrue(result.isValid());
         assertTrue(translator.isFivePrimePartial());
         assertTrue(translator.getFixes().contains("fixCodonStartNotOneMake5Partial"));
@@ -640,7 +641,7 @@ public class TranslatorTest {
         Translator translator = createTranslator(11);
         translator.setThreePrimePartial(true); // marked as 3' partial but has stop codon
         translator.setFixValidStopCodonRemove3Partial(true);
-        TranslationResult result = translator.translate("atgaaatag".getBytes());
+        TranslationResult result = translator.translate("ATGAAATAG".getBytes());
         assertTrue(result.isValid());
         assertTrue(result.isFixedThreePrimePartial());
         assertFalse(translator.isThreePrimePartial()); // should be removed
@@ -655,7 +656,7 @@ public class TranslatorTest {
         // RTG where R = A or G expands to ATG (start -> M) and GTG (not start -> V)
         // Without fix: would translate to X (ambiguous)
         // With fix: recognizes it could be a start codon and forces M
-        TranslationResult result = translator.translate("rtgaaatag".getBytes());
+        TranslationResult result = translator.translate("RTGAAATAG".getBytes());
         assertTrue(result.isValid());
         assertEquals("MK", result.getConceptualTranslation());
         assertTrue(result.isFixedDegenerateStartCodon());
@@ -670,10 +671,10 @@ public class TranslatorTest {
         // Need this fix because threePrimePartial + stop codon would otherwise error
         translator.setFixValidStopCodonRemove3Partial(true);
         // ATG AAA TAG AA - has 2 trailing bases after stop codon (not a complete codon)
-        TranslationResult result = translator.translate("atgaaatagaa".getBytes());
+        TranslationResult result = translator.translate("ATGAAATAGAA".getBytes());
         assertTrue(result.isValid());
         assertEquals("MK", result.getConceptualTranslation());
-        assertEquals("aa", result.getTrailingBases());
+        assertEquals("AA", result.getTrailingBases());
     }
 
     @Test
@@ -682,7 +683,7 @@ public class TranslatorTest {
         translator.enableAllFixes();
 
         // Sequence with internal stop, no proper start, no proper stop
-        TranslationResult result = translator.translate("gggtagaaa".getBytes());
+        TranslationResult result = translator.translate("GGGTAGAAA".getBytes());
         assertTrue(result.isValid());
     }
 
@@ -693,7 +694,7 @@ public class TranslatorTest {
         Translator translator = createTranslator(2); // Vertebrate mitochondrial
         translator.setThreePrimePartial(true);
         // TGA is W in vertebrate mitochondria
-        TranslationResult result = translator.translate("atgtga".getBytes());
+        TranslationResult result = translator.translate("ATGTGA".getBytes());
         assertTrue(result.isValid());
         assertEquals("MW", result.getConceptualTranslation());
     }
@@ -702,7 +703,7 @@ public class TranslatorTest {
     public void testYeastMitochondrial() throws TranslationException {
         Translator translator = createTranslator(3); // Yeast mitochondrial
         translator.setThreePrimePartial(true);
-        TranslationResult result = translator.translate("atgaaa".getBytes());
+        TranslationResult result = translator.translate("ATGAAA".getBytes());
         assertTrue(result.isValid());
     }
 
@@ -713,7 +714,7 @@ public class TranslatorTest {
         Translator translator = createTranslator(11);
         translator.setThreePrimePartial(true);
         // R = A or G
-        TranslationResult result = translator.translate("atgrrr".getBytes());
+        TranslationResult result = translator.translate("ATGRRR".getBytes());
         assertTrue(result.isValid());
     }
 
@@ -722,7 +723,7 @@ public class TranslatorTest {
         Translator translator = createTranslator(11);
         translator.setThreePrimePartial(true);
         // Y = C or T
-        TranslationResult result = translator.translate("atgyyy".getBytes());
+        TranslationResult result = translator.translate("ATGYYY".getBytes());
         assertTrue(result.isValid());
     }
 
@@ -731,7 +732,7 @@ public class TranslatorTest {
         Translator translator = createTranslator(11);
         translator.setThreePrimePartial(true);
         // N = any base
-        TranslationResult result = translator.translate("atgnnn".getBytes());
+        TranslationResult result = translator.translate("ATGNNN".getBytes());
         assertTrue(result.isValid());
         // NNN -> X (unknown amino acid)
         assertTrue(result.getConceptualTranslation().contains("X"));
@@ -780,7 +781,7 @@ public class TranslatorTest {
     public void testSingleStopCodonFivePartial() throws TranslationException {
         Translator translator = createTranslator(11);
         translator.setFivePrimePartial(true);
-        TranslationResult result = translator.translate("tag".getBytes());
+        TranslationResult result = translator.translate("TAG".getBytes());
         assertTrue(result.isValid());
         assertEquals(0, result.getConceptualTranslationCodons());
     }
@@ -789,11 +790,11 @@ public class TranslatorTest {
     public void testLongSequence() throws TranslationException {
         Translator translator = createTranslator(11);
         // Generate a long valid CDS
-        StringBuilder sb = new StringBuilder("atg");
+        StringBuilder sb = new StringBuilder("ATG");
         for (int i = 0; i < 100; i++) {
-            sb.append("aaa"); // Lysine codons
+            sb.append("AAA"); // Lysine codons
         }
-        sb.append("tag"); // Stop codon
+        sb.append("TAG"); // Stop codon
 
         TranslationResult result = translator.translate(sb.toString().getBytes());
         assertTrue(result.isValid());
@@ -805,7 +806,7 @@ public class TranslatorTest {
         Translator translator = createTranslator(11);
         translator.setPeptideFeature(true);
         // Peptide features don't require stop codons
-        TranslationResult result = translator.translate("atgaaa".getBytes());
+        TranslationResult result = translator.translate("ATGAAA".getBytes());
         assertTrue(result.isValid());
     }
 
@@ -813,7 +814,7 @@ public class TranslatorTest {
     public void testInvalidBase() throws TranslationException {
         Translator translator = createTranslator(11);
         // 'z' is not a valid base
-        TranslationResult result = translator.translate("atgzaatag".getBytes());
+        TranslationResult result = translator.translate("ATGZAATAG".getBytes());
         assertTrue(result.hasErrors());
     }
 
@@ -822,7 +823,7 @@ public class TranslatorTest {
     @Test
     public void testTranslationWithInternalStopCodons() throws TranslationException {
         // Sequence with internal stop codons - requires exception flag
-        String sequence = "nacgtaaaacccggttaaccggtcacaagtgcatcgatcgnn";
+        String sequence = "NACGTAAAACCCGGTTAACCGGTCACAAGTGCATCGATCGNN";
         Translator translator = createTranslator(1);
         translator.setFivePrimePartial(true);
         translator.setThreePrimePartial(true);
@@ -833,7 +834,7 @@ public class TranslatorTest {
 
     @Test
     public void testTranslationWithoutStopCodon() throws TranslationException {
-        String sequence = "cgtaaaacccggttaaccggtcacaagtgcatcgatcgn";
+        String sequence = "CGTAAAACCCGGTTAACCGGTCACAAGTGCATCGATCGN";
         Translator translator = createTranslator(1);
         translator.setFivePrimePartial(true);
         translator.setThreePrimePartial(true);
@@ -847,7 +848,7 @@ public class TranslatorTest {
         translator.setFivePrimePartial(true);
         translator.setThreePrimePartial(true);
         // NNN translates to X (unknown) - Translator rejects sequences with >50% X
-        TranslationResult result = translator.translate("nnn".getBytes());
+        TranslationResult result = translator.translate("NNN".getBytes());
         assertTrue(result.hasErrors(), "Sequence with 100% unknown amino acids should fail validation");
     }
 
@@ -856,7 +857,7 @@ public class TranslatorTest {
         Translator translator = createTranslator(1);
         translator.setThreePrimePartial(true);
         // Only complete codons are translated, trailing "aa" is ignored
-        TranslationResult result = translator.translate("atgaa".getBytes());
+        TranslationResult result = translator.translate("ATGAA".getBytes());
         assertEquals("M", result.getTranslation());
     }
 
@@ -885,7 +886,7 @@ public class TranslatorTest {
 
         Translator translator = new Translator(feature);
         translator.setThreePrimePartial(true);
-        String sequence = reader.getSequenceSliceString(0L, 4798, 5460).toLowerCase(Locale.ROOT);
+        String sequence = reader.getSequenceSliceString(0L, 4798, 5460).toUpperCase(Locale.ROOT);
 
         TranslationResult result = translator.translate(sequence.getBytes());
         Translator.TranslationComparison comparison =
@@ -921,8 +922,8 @@ public class TranslatorTest {
                 "MKRIGLERCFLSTSYRSTRFPSTALPRLTAERRSTFFTPDPKPRGGGCPANTPRVLYPPPHPGVRRAVKRLLPRNIRRRSRNARFTALRAGRRSSRKLHTLAGRLTPPSRGRGARPGG";
         Translator translator = new Translator(feature);
         translator.setThreePrimePartial(true);
-        // String sequence = reader.getSequenceSliceString(0L,999,1979).toLowerCase(Locale.ROOT);
-        String sequence = reader.getSequenceSliceString(0L, 480, 836).toLowerCase(Locale.ROOT);
+        // String sequence = reader.getSequenceSliceString(0L,999,1979).toUpperCase(Locale.ROOT);
+        String sequence = reader.getSequenceSliceString(0L, 480, 836).toUpperCase(Locale.ROOT);
         System.out.println(sequence);
 
         TranslationResult result = translator.translate(sequence.getBytes());

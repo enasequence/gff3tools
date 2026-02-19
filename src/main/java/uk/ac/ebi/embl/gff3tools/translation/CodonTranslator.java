@@ -15,11 +15,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.Getter;
+import uk.ac.ebi.embl.gff3tools.exception.TranslationException;
 import uk.ac.ebi.embl.gff3tools.translation.tables.TranslationTable;
 import uk.ac.ebi.embl.gff3tools.translation.tables.TranslationTableFactory;
 
 /**
- * Translates a codon to an amino acid. The bases are encoded using lower case single letter
+ * Translates a codon to an amino acid. The bases are encoded using upper case single letter
  * JCBN abbreviations and the amino acids are encoded using upper case single letter JCBN abbreviations.
  */
 public class CodonTranslator {
@@ -35,40 +36,40 @@ public class CodonTranslator {
 
     static {
         // Standard bases
-        addAmbiguousBase('a', 'a');
-        addAmbiguousBase('t', 't');
-        addAmbiguousBase('c', 'c');
-        addAmbiguousBase('g', 'g');
+        addAmbiguousBase('A', 'A');
+        addAmbiguousBase('T', 'T');
+        addAmbiguousBase('C', 'C');
+        addAmbiguousBase('G', 'G');
 
         // IUPAC ambiguous bases
-        addAmbiguousBase('r', 'g'); // R = puRine (A or G)
-        addAmbiguousBase('r', 'a');
-        addAmbiguousBase('y', 't'); // Y = pYrimidine (C or T)
-        addAmbiguousBase('y', 'c');
-        addAmbiguousBase('m', 'a'); // M = aMino (A or C)
-        addAmbiguousBase('m', 'c');
-        addAmbiguousBase('k', 'g'); // K = Keto (G or T)
-        addAmbiguousBase('k', 't');
-        addAmbiguousBase('s', 'g'); // S = Strong (G or C)
-        addAmbiguousBase('s', 'c');
-        addAmbiguousBase('w', 'a'); // W = Weak (A or T)
-        addAmbiguousBase('w', 't');
-        addAmbiguousBase('h', 'a'); // H = not G (A, C, or T)
-        addAmbiguousBase('h', 'c');
-        addAmbiguousBase('h', 't');
-        addAmbiguousBase('b', 'g'); // B = not A (G, T, or C)
-        addAmbiguousBase('b', 't');
-        addAmbiguousBase('b', 'c');
-        addAmbiguousBase('v', 'g'); // V = not T (G, C, or A)
-        addAmbiguousBase('v', 'c');
-        addAmbiguousBase('v', 'a');
-        addAmbiguousBase('d', 'g'); // D = not C (G, A, or T)
-        addAmbiguousBase('d', 'a');
-        addAmbiguousBase('d', 't');
-        addAmbiguousBase('n', 'g'); // N = aNy (G, A, T, or C)
-        addAmbiguousBase('n', 'a');
-        addAmbiguousBase('n', 't');
-        addAmbiguousBase('n', 'c');
+        addAmbiguousBase('R', 'G'); // R = puRine (A or G)
+        addAmbiguousBase('R', 'A');
+        addAmbiguousBase('Y', 'T'); // Y = pYrimidine (C or T)
+        addAmbiguousBase('Y', 'C');
+        addAmbiguousBase('M', 'A'); // M = aMino (A or C)
+        addAmbiguousBase('M', 'C');
+        addAmbiguousBase('K', 'G'); // K = Keto (G or T)
+        addAmbiguousBase('K', 'T');
+        addAmbiguousBase('S', 'G'); // S = Strong (G or C)
+        addAmbiguousBase('S', 'C');
+        addAmbiguousBase('W', 'A'); // W = Weak (A or T)
+        addAmbiguousBase('W', 'T');
+        addAmbiguousBase('H', 'A'); // H = not G (A, C, or T)
+        addAmbiguousBase('H', 'C');
+        addAmbiguousBase('H', 'T');
+        addAmbiguousBase('B', 'G'); // B = not A (G, T, or C)
+        addAmbiguousBase('B', 'T');
+        addAmbiguousBase('B', 'C');
+        addAmbiguousBase('V', 'G'); // V = not T (G, C, or A)
+        addAmbiguousBase('V', 'C');
+        addAmbiguousBase('V', 'A');
+        addAmbiguousBase('D', 'G'); // D = not C (G, A, or T)
+        addAmbiguousBase('D', 'A');
+        addAmbiguousBase('D', 'T');
+        addAmbiguousBase('N', 'G'); // N = aNy (G, A, T, or C)
+        addAmbiguousBase('N', 'A');
+        addAmbiguousBase('N', 'T');
+        addAmbiguousBase('N', 'C');
 
         // Ambiguous amino acids: maps each amino acid to its ambiguous group
         // B = Aspartic acid (D) or Asparagine (N)
@@ -91,15 +92,15 @@ public class CodonTranslator {
         }
     }
 
-    public CodonTranslator(Integer translationTable) throws TranslationException {
+    public CodonTranslator(int translationTable) throws TranslationException {
         this.translationTable = TranslationTableFactory.getInstance().getTranslationTable(translationTable);
         if (this.translationTable == null) {
-            TranslationException.throwError("Invalid translation table");
+            throw new TranslationException("Invalid translation table");
         }
     }
 
     public void addCodonException(String codon, Character aminoAcid) {
-        codonExceptionMap.put(codon.toLowerCase(), aminoAcid);
+        codonExceptionMap.put(codon.toUpperCase(), aminoAcid);
     }
 
     public char translateStartCodon(String codonString) throws TranslationException {
@@ -115,20 +116,17 @@ public class CodonTranslator {
         Character aminoAcid = null;
 
         for (String expandedCodon : expandedCodons) {
-            Character newAminoAcid = codonExceptionMap.get(expandedCodon);
-            if (newAminoAcid == null) {
-                newAminoAcid = codonMap.get(expandedCodon);
-            }
 
+            Character newAminoAcid = codonExceptionMap.getOrDefault(expandedCodon, codonMap.get(expandedCodon));
             if (newAminoAcid == null) {
-                TranslationException.throwError("Unable to translate codon: " + codonString);
+                throw new TranslationException("Unable to translate codon: " + codonString);
             }
 
             aminoAcid = reconcileAminoAcids(aminoAcid, newAminoAcid);
         }
 
         if (aminoAcid == null) {
-            TranslationException.throwError("Unable to translate codon: " + codonString);
+            throw new TranslationException("Unable to translate codon: " + codonString);
         }
 
         return aminoAcid;
@@ -155,7 +153,7 @@ public class CodonTranslator {
                 newAminoAcid = codonMap.get(expandedCodon);
             }
             if (newAminoAcid == null) {
-                TranslationException.throwError("Unable to translate codon: " + codonString);
+                throw new TranslationException("Unable to translate codon: " + codonString);
             }
             if (newAminoAcid.equals(aminoAcid)) {
                 return true;
@@ -164,7 +162,7 @@ public class CodonTranslator {
         return false;
     }
 
-    // All base characters (a, t, c, g and IUPAC ambiguity codes r, y, m, k, s, w, h, b, v, d, n)
+    // All base characters (A, T, C, G and IUPAC ambiguity codes R, Y, M, K, S, W, H, B, V, D, N)
     // are guaranteed to be present in AMBIGUOUS_BASE_MAP. Input sequences are validated by
     // Translator.validateSequenceBases before reaching this method.
     private List<String> expandToUnambiguousCodons(String codonString) {
@@ -187,18 +185,14 @@ public class CodonTranslator {
         return result;
     }
 
-    private Character reconcileAminoAcids(Character existing, Character newAA) {
-        if (existing == null) {
-            return newAA;
-        }
-        if (existing.equals(newAA)) {
-            return existing;
-        }
-        Character ambiguousExisting = AMBIGUOUS_AMINO_ACID_MAP.get(existing);
-        Character ambiguousNew = AMBIGUOUS_AMINO_ACID_MAP.get(newAA);
-        if (ambiguousExisting != null && ambiguousExisting.equals(ambiguousNew)) {
-            return ambiguousExisting;
-        }
-        return 'X'; // Unknown amino acid
+    private Character reconcileAminoAcids(Character existing, Character incoming) {
+        if (existing == null) return incoming;
+        if (existing.equals(incoming)) return existing;
+
+        char unknown = 'X'; // Unknown amino acid
+        char ambiguousExisting = AMBIGUOUS_AMINO_ACID_MAP.getOrDefault(existing, unknown);
+        char ambiguousNew = AMBIGUOUS_AMINO_ACID_MAP.getOrDefault(incoming, unknown);
+
+        return (ambiguousExisting == ambiguousNew) ? ambiguousExisting : unknown;
     }
 }

@@ -8,14 +8,12 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.translation;
+package uk.ac.ebi.embl.gff3tools.exception;
 
 /**
  * Exception thrown when translation fails due to invalid sequence or configuration.
  */
-public class TranslationException extends Exception {
-
-    private static final long serialVersionUID = 1L;
+public class TranslationException extends ValidationException {
 
     public TranslationException(String message) {
         super(message);
@@ -23,12 +21,5 @@ public class TranslationException extends Exception {
 
     public TranslationException(String message, Throwable cause) {
         super(message, cause);
-    }
-
-    /**
-     * Throws a TranslationException with the given message.
-     */
-    public static void throwError(String message) throws TranslationException {
-        throw new TranslationException(message);
     }
 }

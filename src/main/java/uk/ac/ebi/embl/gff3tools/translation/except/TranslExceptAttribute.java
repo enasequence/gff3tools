@@ -13,7 +13,7 @@ package uk.ac.ebi.embl.gff3tools.translation.except;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.Getter;
-import uk.ac.ebi.embl.gff3tools.translation.TranslationException;
+import uk.ac.ebi.embl.gff3tools.exception.TranslationException;
 
 /**
  * Parses and represents a transl_except attribute value.

@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.exception.TranslationException;
 
 public class CodonTranslatorTest {
 
@@ -26,45 +27,45 @@ public class CodonTranslatorTest {
 
     @Test
     public void testTranslateStartCodonATG() throws TranslationException {
-        assertEquals('M', translator.translateStartCodon("atg"));
+        assertEquals('M', translator.translateStartCodon("ATG"));
     }
 
     @Test
     public void testTranslateStartCodonTTG() throws TranslationException {
         // TTG is a start codon in standard code
-        assertEquals('M', translator.translateStartCodon("ttg"));
+        assertEquals('M', translator.translateStartCodon("TTG"));
     }
 
     @Test
     public void testTranslateStopCodons() throws TranslationException {
-        assertEquals('*', translator.translateOtherCodon("taa"));
-        assertEquals('*', translator.translateOtherCodon("tag"));
-        assertEquals('*', translator.translateOtherCodon("tga"));
+        assertEquals('*', translator.translateOtherCodon("TAA"));
+        assertEquals('*', translator.translateOtherCodon("TAG"));
+        assertEquals('*', translator.translateOtherCodon("TGA"));
     }
 
     @Test
     public void testTranslateLysine() throws TranslationException {
-        assertEquals('K', translator.translateOtherCodon("aaa"));
-        assertEquals('K', translator.translateOtherCodon("aag"));
+        assertEquals('K', translator.translateOtherCodon("AAA"));
+        assertEquals('K', translator.translateOtherCodon("AAG"));
     }
 
     @Test
     public void testTranslatePhenylalanine() throws TranslationException {
-        assertEquals('F', translator.translateOtherCodon("ttt"));
-        assertEquals('F', translator.translateOtherCodon("ttc"));
+        assertEquals('F', translator.translateOtherCodon("TTT"));
+        assertEquals('F', translator.translateOtherCodon("TTC"));
     }
 
     @Test
     public void testAmbiguousBaseN() throws TranslationException {
         // NNN expands to 64 codons, no consensus -> X
-        assertEquals('X', translator.translateOtherCodon("nnn"));
+        assertEquals('X', translator.translateOtherCodon("NNN"));
     }
 
     @Test
     public void testAmbiguousBaseR() throws TranslationException {
         // R = A or G
         // RAR -> AAA=K, AAG=K, GAA=E, GAG=E -> X (no consensus)
-        char aminoAcid = translator.translateOtherCodon("rar");
+        char aminoAcid = translator.translateOtherCodon("RAR");
         assertNotNull(aminoAcid);
     }
 
@@ -72,31 +73,31 @@ public class CodonTranslatorTest {
     public void testAmbiguousBaseY() throws TranslationException {
         // Y = C or T
         // TTY -> TTC=F, TTT=F -> F (consensus)
-        assertEquals('F', translator.translateOtherCodon("tty"));
+        assertEquals('F', translator.translateOtherCodon("TTY"));
     }
 
     @Test
     public void testCodonException() throws TranslationException {
-        translator.addCodonException("tga", 'W');
-        assertEquals('W', translator.translateOtherCodon("tga"));
+        translator.addCodonException("TGA", 'W');
+        assertEquals('W', translator.translateOtherCodon("TGA"));
     }
 
     @Test
     public void testIsDegenerateStartCodon() throws TranslationException {
         // CTG can be a start codon in some contexts
-        assertTrue(translator.isDegenerateStartCodon("ctg"));
+        assertTrue(translator.isDegenerateStartCodon("CTG"));
     }
 
     @Test
     public void testIsDegenerateStopCodon() throws TranslationException {
         // TRA where R=A|G covers TAA (stop) and TGA (stop)
-        assertTrue(translator.isDegenerateStopCodon("tra"));
+        assertTrue(translator.isDegenerateStopCodon("TRA"));
     }
 
     @Test
     public void testIsAmbiguous() {
-        assertFalse(translator.isAmbiguous("atg"));
-        assertTrue(translator.isAmbiguous("atn"));
+        assertFalse(translator.isAmbiguous("ATG"));
+        assertTrue(translator.isAmbiguous("ATN"));
     }
 
     @Test
@@ -104,7 +105,7 @@ public class CodonTranslatorTest {
         // Vertebrate mitochondrial code (table 2)
         CodonTranslator mitoTranslator = new CodonTranslator(2);
         // TGA is W in vertebrate mitochondrial, not stop
-        assertEquals('W', mitoTranslator.translateOtherCodon("tga"));
+        assertEquals('W', mitoTranslator.translateOtherCodon("TGA"));
     }
 
     @Test

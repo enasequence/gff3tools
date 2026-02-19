@@ -13,7 +13,7 @@ package uk.ac.ebi.embl.gff3tools.translation.except;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.Getter;
-import uk.ac.ebi.embl.gff3tools.translation.TranslationException;
+import uk.ac.ebi.embl.gff3tools.exception.TranslationException;
 
 /**
  * Parses and represents a codon attribute value.
@@ -51,7 +51,7 @@ public class CodonExceptAttribute {
         }
 
         // Parse codon sequence (group 1)
-        this.codon = matcher.group(1).toLowerCase();
+        this.codon = matcher.group(1).toUpperCase();
 
         if (this.codon.length() != 3) {
             throw new TranslationException("Codon must be exactly 3 bases: " + this.codon);

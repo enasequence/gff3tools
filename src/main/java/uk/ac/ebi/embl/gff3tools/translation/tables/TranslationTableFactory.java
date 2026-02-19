@@ -52,10 +52,7 @@ public class TranslationTableFactory {
      * @return the TranslationTable, or null if the translationTableNumber is invalid
      */
     public TranslationTable getTranslationTable(Integer translationTableNumber) {
-        if (translationTableNumber == null) {
-            return null;
-        }
-        return translationTables.get(translationTableNumber);
+        return translationTableNumber == null ? null : translationTables.get(translationTableNumber);
     }
 
     /**
@@ -75,7 +72,7 @@ public class TranslationTableFactory {
         Map<String, Character> otherCodonMap = new HashMap<>();
         char[] codon = new char[3];
         int i = 0;
-        char[] bases = {'t', 'c', 'a', 'g'};
+        char[] bases = {'T', 'C', 'A', 'G'};
 
         for (char base1 : bases) {
             codon[0] = base1;

@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.translation;
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.exception.TranslationException;
 import uk.ac.ebi.embl.gff3tools.translation.except.CodonExceptAttribute;
 
 public class CodonExceptAttributeTest {
@@ -22,21 +23,21 @@ public class CodonExceptAttributeTest {
     @Test
     public void testBasicFormatQuoted() throws TranslationException {
         CodonExceptAttribute attr = new CodonExceptAttribute("(seq:\"tga\",aa:Trp)");
-        assertEquals("tga", attr.getCodon());
+        assertEquals("TGA", attr.getCodon());
         assertEquals(Character.valueOf('W'), attr.getAminoAcid());
     }
 
     @Test
     public void testBasicFormatUnquoted() throws TranslationException {
         CodonExceptAttribute attr = new CodonExceptAttribute("(seq:tga,aa:Trp)");
-        assertEquals("tga", attr.getCodon());
+        assertEquals("TGA", attr.getCodon());
         assertEquals(Character.valueOf('W'), attr.getAminoAcid());
     }
 
     @Test
     public void testUppercaseCodonNormalized() throws TranslationException {
         CodonExceptAttribute attr = new CodonExceptAttribute("(seq:TGA,aa:Trp)");
-        assertEquals("tga", attr.getCodon()); // Should be normalized to lowercase
+        assertEquals("TGA", attr.getCodon()); // Should be normalized to uppercase
     }
 
     // ========== Flexible Whitespace Tests ==========
@@ -44,14 +45,14 @@ public class CodonExceptAttributeTest {
     @Test
     public void testFlexibleWhitespace() throws TranslationException {
         CodonExceptAttribute attr = new CodonExceptAttribute("( seq : \"tga\" , aa : Trp )");
-        assertEquals("tga", attr.getCodon());
+        assertEquals("TGA", attr.getCodon());
         assertEquals(Character.valueOf('W'), attr.getAminoAcid());
     }
 
     @Test
     public void testLeadingTrailingWhitespace() throws TranslationException {
         CodonExceptAttribute attr = new CodonExceptAttribute("  (seq:\"aga\",aa:Arg)  ");
-        assertEquals("aga", attr.getCodon());
+        assertEquals("AGA", attr.getCodon());
         assertEquals(Character.valueOf('R'), attr.getAminoAcid());
     }
 
