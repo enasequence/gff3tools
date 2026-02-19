@@ -10,7 +10,6 @@
  */
 package uk.ac.ebi.embl.gff3tools.translation;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

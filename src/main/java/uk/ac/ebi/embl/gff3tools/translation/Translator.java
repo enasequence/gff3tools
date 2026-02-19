@@ -19,7 +19,6 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.translation.except.CodonExceptAttribute;
 import uk.ac.ebi.embl.gff3tools.translation.except.TranslExceptAttribute;
-import uk.ac.ebi.embl.gff3tools.translation.tables.TranslationTable;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -33,6 +32,8 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 @Getter
 @Setter(AccessLevel.PROTECTED)
 public class Translator {
+
+    public static final Integer DEFAULT_TRANSLATION_TABLE = 11;
 
     private final CodonTranslator codonTranslator;
 
@@ -86,9 +87,8 @@ public class Translator {
     public Translator(GFF3Feature feature) throws TranslationException {
 
         // TODO: Get translation table from taxon.
-        int translationTable = feature.getAttribute("transl_table")
-                .map(Integer::parseInt)
-                .orElse(TranslationTable.DEFAULT_TRANSLATION_TABLE);
+        int translationTable =
+                feature.getAttribute("transl_table").map(Integer::parseInt).orElse(DEFAULT_TRANSLATION_TABLE);
 
         this.codonTranslator = new CodonTranslator(translationTable);
         this.feature = feature;

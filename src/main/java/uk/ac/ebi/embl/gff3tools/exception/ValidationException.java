@@ -38,8 +38,8 @@ public class ValidationException extends ExitException {
         this.line = line;
     }
 
-    public ValidationException( String message, Throwable cause) {
-        super("Violation of rule failed: %s".formatted( message));
+    public ValidationException(String message, Throwable cause) {
+        super("Violation of rule failed: %s".formatted(message));
         this.line = line;
     }
 

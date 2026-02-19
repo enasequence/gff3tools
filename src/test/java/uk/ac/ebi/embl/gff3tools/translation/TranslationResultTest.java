@@ -12,10 +12,9 @@ package uk.ac.ebi.embl.gff3tools.translation;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.Test;
 
 public class TranslationResultTest {
 

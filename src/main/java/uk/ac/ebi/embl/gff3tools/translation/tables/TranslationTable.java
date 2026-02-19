@@ -23,7 +23,6 @@ import lombok.Getter;
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class TranslationTable {
 
-    public static final Integer DEFAULT_TRANSLATION_TABLE = 11;
     /** Translation table number. */
     private final Integer number;
 

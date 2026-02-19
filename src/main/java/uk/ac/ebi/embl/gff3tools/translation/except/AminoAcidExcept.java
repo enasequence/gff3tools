@@ -11,7 +11,6 @@
 package uk.ac.ebi.embl.gff3tools.translation.except;
 
 import java.util.Map;
-
 import uk.ac.ebi.embl.gff3tools.exception.TranslationException;
 
 /**
