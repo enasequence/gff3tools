@@ -666,8 +666,8 @@ public class Translator {
 
     public record TranslationComparison(boolean matches, int xMismatchCount) {}
 
-
     private static final byte[] COMPLEMENT = new byte[128];
+
     static {
         COMPLEMENT['A'] = 'T';
         COMPLEMENT['T'] = 'A';
