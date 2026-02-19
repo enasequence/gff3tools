@@ -134,4 +134,8 @@ public class TranslationResult implements Serializable {
     public boolean isValid() {
         return !hasErrors();
     }
+
+    public String getErrorMessages() {
+        return String.join("\n", errors);
+    }
 }
