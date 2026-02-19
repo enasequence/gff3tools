@@ -77,6 +77,9 @@ public class Translator {
 
     private final Set<String> fixes = new HashSet<>();
 
+    private static final char STOP_CODON = '*';
+    private static final char START_CODON = 'M';
+
     /**
      * Creates a new Translator with the specified translation table and GFF3 feature.
      * If the feature has a "pseudo" or "pseudogene" attribute, the translator is set to non-translating mode.
@@ -321,9 +324,9 @@ public class Translator {
             aminoAcid = exceptionAminoAcid;
         } else if (fixDegenerateStartCodon
                 && !fivePrimePartial
-                && translatedAminoAcid != 'M'
+                && translatedAminoAcid != START_CODON
                 && codonTranslator.isDegenerateStartCodon(codonStr)) {
-            aminoAcid = 'M';
+            aminoAcid = START_CODON;
             isTranslationException = true;
             translationResult.setFixedDegenerateStartCodon(true);
         } else {
@@ -494,7 +497,7 @@ public class Translator {
         int i = codons.size();
 
         // Count trailing stop codons
-        while (i > 0 && codons.get(i - 1).getAminoAcid() == '*') {
+        while (i > 0 && codons.get(i - 1).getAminoAcid() == STOP_CODON) {
             --i;
             ++trailingStopCodons;
         }
@@ -508,7 +511,7 @@ public class Translator {
         } else {
             // Count internal stop codons
             while (i > 0) {
-                if (codons.get(i - 1).getAminoAcid() == '*') {
+                if (codons.get(i - 1).getAminoAcid() == STOP_CODON) {
                     ++internalStopCodons;
                 }
                 --i;
@@ -613,7 +616,7 @@ public class Translator {
 
     private boolean validateStartCodon(TranslationResult translationResult) throws TranslationException {
         if (!fivePrimePartial && !exception && !peptideFeature) {
-            if (translationResult.getCodons().get(0).getAminoAcid() != 'M') {
+            if (translationResult.getCodons().get(0).getAminoAcid() != START_CODON) {
                 if (nonTranslating) {
                     return false;
                 } else {
