@@ -194,7 +194,7 @@ public class Translator {
      * @param codon the codon (uppercase, e.g., "TGA")
      * @param aminoAcid the amino acid to use
      */
-    public void addCodonException(String codon, Character aminoAcid) {
+    void addCodonException(String codon, Character aminoAcid) {
         codonTranslator.addCodonException(codon, aminoAcid);
     }
 
@@ -347,10 +347,14 @@ public class Translator {
     private boolean validateSequenceBases(byte[] sequence, TranslationResult result) {
         for (byte b : sequence) {
             char c = (char) b;
-            if (c != 'A' && c != 'T' && c != 'C' && c != 'G' && c != 'R' && c != 'Y' && c != 'M' && c != 'K' && c != 'S'
-                    && c != 'W' && c != 'H' && c != 'B' && c != 'V' && c != 'D' && c != 'N') {
-                result.addError("Invalid base character in sequence");
-                return false;
+            switch (c) {
+                case 'A', 'T', 'C', 'G', 'R', 'Y', 'M', 'K', 'S', 'W', 'H', 'B', 'V', 'D', 'N' -> {
+                    continue;
+                }
+                default -> {
+                    result.addError("Invalid base character in sequence");
+                    return false;
+                }
             }
         }
         return true;
