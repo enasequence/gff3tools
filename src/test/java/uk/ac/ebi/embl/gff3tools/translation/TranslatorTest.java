@@ -924,11 +924,8 @@ public class TranslatorTest {
         translator.setThreePrimePartial(true);
         // String sequence = reader.getSequenceSliceString(0L,999,1979).toUpperCase(Locale.ROOT);
         String sequence = reader.getSequenceSliceString(0L, 480, 836).toUpperCase(Locale.ROOT);
-        System.out.println(sequence);
 
         TranslationResult result = translator.translate(sequence.getBytes());
-        System.out.println(expectedTranslation);
-        System.out.println(result.getConceptualTranslation());
         assertEquals(expectedTranslation, result.getConceptualTranslation());
         // assertEquals("M", result.getTranslation());
     }

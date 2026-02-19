@@ -666,9 +666,9 @@ public class Translator {
 
     public record TranslationComparison(boolean matches, int xMismatchCount) {}
 
-    public static byte[] reverseComplement(byte[] seq) {
 
-        final byte[] COMPLEMENT = new byte[128];
+    private static final byte[] COMPLEMENT = new byte[128];
+    static {
         COMPLEMENT['A'] = 'T';
         COMPLEMENT['T'] = 'A';
         COMPLEMENT['U'] = 'A';
@@ -685,6 +685,9 @@ public class Translator {
         COMPLEMENT['H'] = 'D';
         COMPLEMENT['V'] = 'B';
         COMPLEMENT['N'] = 'N';
+    }
+
+    public static byte[] reverseComplement(byte[] seq) {
 
         int len = seq.length;
         byte[] rc = new byte[len];
