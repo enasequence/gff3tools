@@ -1,13 +1,11 @@
 package uk.ac.ebi.embl.gff3tools.sequence.wrappers;
 
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
-import uk.ac.ebi.embl.gff3tools.fasta.IdType;
-import uk.ac.ebi.embl.gff3tools.fasta.JsonHeaderFastaReader;
-import uk.ac.ebi.embl.gff3tools.fasta.headerutils.FastaHeader;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.IdType;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.JsonHeaderFastaReader;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.headerutils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.sequence.RecordIdType;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
-import uk.ac.ebi.embl.gff3tools.sequence.SubmissionSequenceReader;
-import uk.ac.ebi.embl.gff3tools.sequence.SubmissionType;
 
 import java.io.File;
 import java.io.Reader;
@@ -25,10 +23,7 @@ public final class FastaSubmissionReader implements SubmissionSequenceReader {
 
     @Override
     public List<String> orderedRecordIds(RecordIdType idType) {
-        // JsonHeaderFastaReader currently stores orderedSubmissionIds internally but doesn't expose it.
-        // You should add a method there: List<String> getOrderedSubmissionIds()
-        // Then for ACCESSION_ID, you map those via submissionIdToAccessionId if set.
-        throw new UnsupportedOperationException("Expose ordered ids in JsonHeaderFastaReader and implement this.");
+        return delegate.getOrderedSubmissionIds();
     }
 
     @Override

@@ -8,7 +8,7 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.fasta;
+package uk.ac.ebi.embl.gff3tools.sequence.fasta;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,8 +18,8 @@ import uk.ac.ebi.embl.fastareader.*;
 import uk.ac.ebi.embl.fastareader.exception.FastaFileException;
 import uk.ac.ebi.embl.fastareader.sequenceutils.SequenceAlphabet;
 import uk.ac.ebi.embl.gff3tools.exception.FastaHeaderParserException;
-import uk.ac.ebi.embl.gff3tools.fasta.headerutils.FastaHeader;
-import uk.ac.ebi.embl.gff3tools.fasta.headerutils.JsonHeaderParser;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.headerutils.FastaHeader;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.headerutils.JsonHeaderParser;
 
 public class JsonHeaderFastaReader implements AutoCloseable {
 
@@ -60,6 +60,10 @@ public class JsonHeaderFastaReader implements AutoCloseable {
             accessionIdToSubmissionId.put(accessionId, submissionId);
             submissionIdToAccessionId.put(submissionId, accessionId);
         }
+    }
+
+    public List<String> getOrderedSubmissionIds() {
+        return Collections.unmodifiableList(orderedSubmissionIds);
     }
 
     public FastaHeader getFastaHeader(IdType type, String id) {

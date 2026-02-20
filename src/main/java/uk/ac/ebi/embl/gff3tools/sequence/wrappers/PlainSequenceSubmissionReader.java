@@ -2,11 +2,9 @@ package uk.ac.ebi.embl.gff3tools.sequence.wrappers;
 
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.fastareader.SequenceReader;
-import uk.ac.ebi.embl.gff3tools.fasta.headerutils.FastaHeader;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.headerutils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.sequence.RecordIdType;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
-import uk.ac.ebi.embl.gff3tools.sequence.SubmissionSequenceReader;
-import uk.ac.ebi.embl.gff3tools.sequence.SubmissionType;
 
 import java.io.File;
 import java.io.Reader;
