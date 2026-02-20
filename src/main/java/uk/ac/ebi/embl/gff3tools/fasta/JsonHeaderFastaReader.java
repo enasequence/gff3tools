@@ -62,12 +62,12 @@ public class JsonHeaderFastaReader implements AutoCloseable {
         }
     }
 
-    public FastaHeader getFastaHeader(IdType type, String id) throws FastaFileException {
+    public FastaHeader getFastaHeader(IdType type, String id) {
         var resolvedId = resolveId(type, id);
         return submissionIdToFastaHeader.get(resolvedId);
     }
 
-    public FastaEntry getFastaEntry(IdType type, String id) throws FastaFileException {
+    public FastaEntry getFastaEntry(IdType type, String id) {
         var resolvedId = resolveId(type, id);
         return submissionIdToFastaEntry.get(resolvedId);
     }
