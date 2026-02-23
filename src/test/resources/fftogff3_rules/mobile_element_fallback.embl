@@ -1,0 +1,16 @@
+ID   TEST02; XXX; XXX; XXX; XXX; XXX; XXX.
+XX
+AC   TEST02;
+XX
+CC   Test mobile_element with unrecognized type falling back to mobile_genetic_element.
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..5000
+FT                   /mol_type="genomic DNA"
+FT   mobile_element  100..500
+FT                   /mobile_element_type="unknown_type:foo"
+XX
+//
