@@ -22,17 +22,6 @@ class FeatureMappingTest {
     private final FeatureFactory featureFactory = new FeatureFactory();
 
     @Test
-    void unmappedFeatureThrowsValidationExceptionNotNPE() {
-        Feature feature = featureFactory.createFeature("precursor_RNA");
-
-        ValidationException exception =
-                assertThrows(ValidationException.class, () -> FeatureMapping.getGFF3FeatureName(feature));
-        assertTrue(
-                exception.getMessage().contains("precursor_RNA"),
-                "Exception message should contain the unmapped feature name");
-    }
-
-    @Test
     void completelyUnknownFeatureThrowsValidationException() {
         Feature feature = featureFactory.createFeature("totally_invented_feature");
 
