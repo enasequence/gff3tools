@@ -1,9 +1,9 @@
 package uk.ac.ebi.embl.gff3tools.sequence;
 
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.headerutils.FastaHeader;
-import uk.ac.ebi.embl.gff3tools.sequence.wrappers.FastaSubmissionReader;
-import uk.ac.ebi.embl.gff3tools.sequence.wrappers.PlainSequenceSubmissionReader;
-import uk.ac.ebi.embl.gff3tools.sequence.wrappers.SubmissionSequenceReader;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.headerutils.FastaHeader;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.FastaSubmissionReader;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.PlainSequenceSubmissionReader;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionSequenceReader;
 
 import java.io.File;
 

@@ -1,0 +1,186 @@
+/*
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+package uk.ac.ebi.embl.gff3tools.sequence.readers.headerutils;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.exception.FastaHeaderParserException;
+
+public class JsonHeaderParserTest {
+
+    private final JsonHeaderParser parser = new JsonHeaderParser();
+
+    // ---------------------------------------------------------
+    // VALID CASES
+    // ---------------------------------------------------------
+
+    @Test
+    void parsesStandardHeaderWithJson() {
+        String line =
+                ">AF123456.1 | { \"description\":\"Pinus sativa\", \"molecule_type\":\"genomic\", \"topology\":\"circular\" }";
+
+        ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
+        assertEquals("AF123456.1", ph.getId());
+
+        FastaHeader h = ph.getHeader();
+        assertEquals("Pinus sativa", h.getDescription());
+        assertEquals("genomic", h.getMoleculeType());
+        assertEquals("circular", h.getTopology());
+        assertEquals(null, h.getChromosomeType());
+        assertEquals(null, h.getChromosomeLocation());
+        assertEquals(null, h.getChromosomeName());
+    }
+
+    @Test
+    void parsesUnicodeHeaderWithJsonWithQuestionMarks() {
+        String line =
+                ">AF123456.1\uD83D\uDE2D | { \"description\":\"Pinus sativa తెలుగు\", \"molecule_type\":\"genomicΦ\", \"topology\":\"circular \uD83D\uDC40\" }";
+
+        ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
+        assertEquals("AF123456.1?", ph.getId());
+
+        FastaHeader h = ph.getHeader();
+        assertEquals("Pinus sativa ??????", h.getDescription());
+        assertEquals("genomic?", h.getMoleculeType());
+        assertEquals("circular ?", h.getTopology());
+        assertEquals(null, h.getChromosomeType());
+        assertEquals(null, h.getChromosomeLocation());
+        assertEquals(null, h.getChromosomeName());
+    }
+
+    @Test
+    void parsesCurlyQuotes() {
+        String line =
+                ">ID1 | { \u201Cdescription\u201D: \u201CPinus\u201D,  \u201Cmolecule_type\u201D:\"genomic\", \u201Ctopology\u201D:\"CIRCULAR\" }";
+
+        ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
+        FastaHeader h = ph.getHeader();
+
+        assertEquals("Pinus", h.getDescription());
+        assertEquals("genomic", h.getMoleculeType());
+        assertEquals("CIRCULAR", h.getTopology());
+    }
+
+    @Test
+    void normalizesKeyVariantsAndChromosomeOptionals() {
+        String line = ">ID2 | { \"Description\":\"Desc\", \"molecule-type\":\"rna\", \"topology\":\"linear\", "
+                + "\"Chromosome-Type\":\"plasmid\", \"chromosome_location\":\"chr12:100-200\", \"CHROMOSOME_NAME\":\"pX\" }";
+
+        ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
+        FastaHeader h = ph.getHeader();
+
+        assertEquals("Desc", h.getDescription());
+        assertEquals("rna", h.getMoleculeType());
+        assertEquals("linear", h.getTopology());
+        assertEquals("plasmid", h.getChromosomeType());
+        assertEquals("chr12:100-200", h.getChromosomeLocation());
+        assertEquals("pX", h.getChromosomeName());
+    }
+
+    @Test
+    void missingJsonIsFine() {
+        String line = ">AF999999.5 some label without json | {} ";
+
+        ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
+        assertEquals("AF999999.5 some label without json", ph.getId());
+
+        FastaHeader h = ph.getHeader();
+        assertNull(h.getDescription());
+        assertNull(h.getMoleculeType());
+        assertNull(h.getTopology());
+    }
+
+    @Test
+    void handlesNbspInJson() {
+        String nbsp = "\u00A0";
+        String line = ">ID3 | {" + nbsp
+                + "\"description\"" + nbsp + ":" + nbsp + "\"Alpha" + nbsp + "Beta\"" + ","
+                + "\"molecule_type\":\"rna\", \"topology\":\"linear\"}";
+
+        ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
+        FastaHeader h = ph.getHeader();
+
+        assertEquals("Alpha Beta", h.getDescription());
+        assertEquals("rna", h.getMoleculeType());
+        assertEquals("linear", h.getTopology());
+    }
+
+    @Test
+    void trimsIdAndDeclinesJustChevron() {
+        ParsedHeader ph1 = assertDoesNotThrow(() -> parser.parse(
+                ">   AF111   | {\"description\":\"x\",\"molecule_type\":\"dna\",\"topology\":\"linear\"}"));
+        assertEquals("AF111", ph1.getId());
+
+        // No pipe: JSON not required
+        FastaHeaderParserException e = assertThrows(FastaHeaderParserException.class, () -> parser.parse("> "));
+        assertTrue(e.getMessage().contains(" id "));
+        ;
+    }
+
+    // ---------------------------------------------------------
+    // INVALID CASES — MUST THROW FASTAFIleException
+    // ---------------------------------------------------------
+
+    @Test
+    void noJsonAfterPipeThrows() {
+        String line = ">ID5 |   ";
+        assertThrows(FastaHeaderParserException.class, () -> parser.parse(line));
+    }
+
+    @Test
+    void missingIdThrows() {
+        String line = "> | {\"description\":\"x\", \"molecule_type\":\"dna\", \"topology\":\"circular\"}";
+        FastaHeaderParserException e = assertThrows(FastaHeaderParserException.class, () -> parser.parse(line));
+        assertTrue(e.getMessage().contains(" id "));
+    }
+
+    @Test
+    void missingPipeThrowsError() {
+        String line = ">AF999999.5 some label without json";
+
+        assertThrows(FastaHeaderParserException.class, () -> parser.parse(line));
+    }
+
+    // ---------------------------------------------------------
+    // MALFORMED JSON
+    // ---------------------------------------------------------
+
+    @Test
+    void malformedJsonThrowsAndIncludesJsonInMessage() {
+        String badJson = "{\"description\": \"x\", \"molecule_type\": \"genomic\", OOPS }";
+        String line = ">ID6 | " + badJson;
+
+        FastaHeaderParserException e = assertThrows(FastaHeaderParserException.class, () -> parser.parse(line));
+        assertTrue(e.getMessage().contains("OOPS"));
+        assertTrue(e.getMessage().contains("{\"description"));
+    }
+
+    @Test
+    void malformedJsonBracesThrowsAndIncludesJsonInMessage() {
+        String badJson = "{\"description\": \"x\", \"molecule_type\": \"genomic\", OOPS }";
+        String line = ">ID6 | " + badJson;
+
+        FastaHeaderParserException e = assertThrows(FastaHeaderParserException.class, () -> parser.parse(line));
+        assertTrue(e.getMessage().contains("OOPS"));
+        assertTrue(e.getMessage().contains("{\"description"));
+    }
+
+    @Test
+    void malformedJsonWithTrailingCommaThrowsAndMentionsComma() {
+        String badJson = "{ \"description\":\"y\", \"molecule_type\":\"genomic\", }";
+        String line = ">ID7 | " + badJson;
+
+        FastaHeaderParserException e = assertThrows(FastaHeaderParserException.class, () -> parser.parse(line));
+        assertTrue(e.getMessage().contains("\"description\":\"y\""));
+        assertTrue(e.getMessage().contains("\"molecule_type\":\"genomic\""));
+    }
+}

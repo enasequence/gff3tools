@@ -1,0 +1,6 @@
+>MCHU - Calmodulin - Human, rabbit, bovine, rat, and chicken
+aaNACGT
+GGGG
+NNNN
+NNNA
+NNNnn
