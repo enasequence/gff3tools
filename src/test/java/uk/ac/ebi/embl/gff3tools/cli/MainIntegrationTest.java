@@ -401,7 +401,7 @@ public class MainIntegrationTest {
     @Test
     void testCLIExceptionProcessCommandOnFastaNoExtension() throws IOException {
         Path gff3 = Files.createTempFile("input", ".gff3");
-        Path fastaNoExt = Files.createTempFile("sequence/fasta", "");
+        Path fastaNoExt = Files.createTempFile("fasta", "");
         Path output = Files.createTempFile("out", ".gff3");
 
         Files.writeString(gff3, "##gff-version 3\n");
@@ -444,7 +444,7 @@ public class MainIntegrationTest {
     @Test
     void testCLIExceptionProcessCommandOnInvalidFastaExtension() throws IOException {
         Path gff3 = Files.createTempFile("input", ".gff3");
-        Path fastaTxt = Files.createTempFile("sequence/fasta", ".txt");
+        Path fastaTxt = Files.createTempFile("fasta", ".txt");
         Path output = Files.createTempFile("out", ".gff3");
 
         Files.writeString(gff3, "##gff-version 3\n");
