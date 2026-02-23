@@ -41,6 +41,23 @@ public class JsonHeaderParserTest {
     }
 
     @Test
+    void parsesUnicodeHeaderWithJsonWithQuestionMarks() {
+        String line =
+                ">AF123456.1\uD83D\uDE2D | { \"description\":\"Pinus sativa తెలుగు\", \"molecule_type\":\"genomicΦ\", \"topology\":\"circular \uD83D\uDC40\" }";
+
+        ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
+        assertEquals("AF123456.1?", ph.getId());
+
+        FastaHeader h = ph.getHeader();
+        assertEquals("Pinus sativa ??????", h.getDescription());
+        assertEquals("genomic?", h.getMoleculeType());
+        assertEquals("circular ?", h.getTopology());
+        assertEquals(null, h.getChromosomeType());
+        assertEquals(null, h.getChromosomeLocation());
+        assertEquals(null, h.getChromosomeName());
+    }
+
+    @Test
     void parsesCurlyQuotes() {
         String line =
                 ">ID1 | { \u201Cdescription\u201D: \u201CPinus\u201D,  \u201Cmolecule_type\u201D:\"genomic\", \u201Ctopology\u201D:\"CIRCULAR\" }";
