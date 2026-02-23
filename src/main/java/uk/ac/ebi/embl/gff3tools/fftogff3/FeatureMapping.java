@@ -15,7 +15,6 @@ import java.util.stream.Stream;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.JsonHeaderFastaReader;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 

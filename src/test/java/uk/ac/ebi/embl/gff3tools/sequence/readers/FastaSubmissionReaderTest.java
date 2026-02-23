@@ -13,31 +13,30 @@ package uk.ac.ebi.embl.gff3tools.sequence.readers;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.fastareader.FastaEntry;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.fastareader.exception.FastaFileException;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.FastaHeaderParserException;
+import uk.ac.ebi.embl.gff3tools.sequence.IdType;
 
-public class JsonHeaderFastaReaderTest {
+public class FastaSubmissionReaderTest {
 
     @Test
-    void doesNotTolerateImproperHeaders() throws IOException {
+    void doesNotTolerateImproperHeaders() {
         // by improper headers, i mean ones not in the EBI spec*/
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_improper_header.txt");
-        List<String> accessionIds = List.of("acc1");
 
-        assertThrows(FastaHeaderParserException.class, () -> new JsonHeaderFastaReader(fasta, accessionIds));
+        assertThrows(FastaHeaderParserException.class, () -> new FastaSubmissionReader(fasta));
     }
 
     @Test
-    void throwsWhenThereAreMultipleIdenticalSubmissionIds() throws IOException {
+    void throwsWhenThereAreMultipleIdenticalSubmissionIds() {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_duplicate_submission_id.txt"); // has 3 entries
 
-        FastaFileException ex = assertThrows(FastaFileException.class, () -> new JsonHeaderFastaReader(fasta));
+        FastaFileException ex = assertThrows(FastaFileException.class, () -> new FastaSubmissionReader(fasta));
 
         assertTrue(
                 ex.getMessage().contains("Duplicate submission ID detected: ID1"),
@@ -45,19 +44,24 @@ public class JsonHeaderFastaReaderTest {
     }
 
     @Test
-    void throwsWhenNumberOfAccessionIdsDiffersFromTheActualNumberOfEntries() throws IOException {
+    void throwsWhenNumberOfAccessionIdsDiffersFromTheActualNumberOfEntries() {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_good_example.txt"); // has 3 entries
         List<String> accessionIds = List.of("acc1", "acc2");
 
-        assertThrows(FastaFileException.class, () -> new JsonHeaderFastaReader(fasta, accessionIds));
+        try (var reader = new FastaSubmissionReader(fasta)) {
+            assertThrows(FastaFileException.class, () -> reader.setAccessionIds(accessionIds));
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Test
-    void basicWorkingMappingExample() throws IOException, FastaHeaderParserException, FastaFileException {
+    void basicWorkingMappingExample() {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_good_example.txt");
         List<String> accessionIds = List.of("acc1", "acc2", "acc3");
 
-        try (JsonHeaderFastaReader service = new JsonHeaderFastaReader(fasta)) {
+        try (var service = new FastaSubmissionReader(fasta)) {
             service.setAccessionIds(accessionIds);
             assertEquals("ID1", service.getSubmissionIdByAccessionId("acc1"));
             assertEquals("ID2", service.getSubmissionIdByAccessionId("acc2"));
@@ -73,12 +77,12 @@ public class JsonHeaderFastaReaderTest {
     }
 
     @Test
-    void basicWorkingMappingExampleWithConstructor()
-            throws IOException, FastaHeaderParserException, FastaFileException {
+    void basicWorkingMappingExampleWithConstructor() {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_good_example.txt");
         List<String> accessionIds = List.of("acc1", "acc2", "acc3");
 
-        try (JsonHeaderFastaReader service = new JsonHeaderFastaReader(fasta, accessionIds)) {
+        try (var service = new FastaSubmissionReader(fasta)) {
+            service.setAccessionIds(accessionIds);
             assertEquals("ID1", service.getSubmissionIdByAccessionId("acc1"));
             assertEquals("ID2", service.getSubmissionIdByAccessionId("acc2"));
             assertEquals("ID3", service.getSubmissionIdByAccessionId("acc3"));
@@ -93,45 +97,45 @@ public class JsonHeaderFastaReaderTest {
     }
 
     @Test
-    void basicWorkingExample() throws IOException, FastaHeaderParserException, FastaFileException {
+    void basicWorkingExample() {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_good_example.txt");
 
-        try (JsonHeaderFastaReader service = new JsonHeaderFastaReader(fasta)) {
+        try (var service = new FastaSubmissionReader(fasta)) {
 
-            FastaEntry entry1 = service.getFastaEntry(IdType.SUBMITTERID, "ID1");
-            FastaEntry entry2 = service.getFastaEntry(IdType.SUBMITTERID, "ID2");
-            FastaEntry entry3 = service.getFastaEntry(IdType.SUBMITTERID, "ID3");
+            var entry1 = service.getStats(IdType.SUBMISSION_ID, "ID1");
+            var entry2 = service.getStats(IdType.SUBMISSION_ID, "ID2");
+            var entry3 = service.getStats(IdType.SUBMISSION_ID, "ID3");
             assertNotNull(entry1);
             assertNotNull(entry2);
             assertNotNull(entry3);
-            assertNull(service.getFastaHeader(IdType.SUBMITTERID, "nonsense"));
+            assertThrows(IllegalArgumentException.class, () -> service.getStats(IdType.SUBMISSION_ID, "nonsense"));
 
             // From the sample file above:
-            assertEquals(2, entry1.leadingNsCount, "ID1 leading Ns");
-            assertEquals(2, entry1.trailingNsCount, "ID1 trailing Ns");
-            assertEquals(4, entry1.baseCount.get('N'), "ID1 total Ns");
+            assertEquals(2, entry1.leadingNsCount(), "ID1 leading Ns");
+            assertEquals(2, entry1.trailingNsCount(), "ID1 trailing Ns");
+            assertEquals(4, entry1.baseCount().get('N'), "ID1 total Ns");
 
-            assertEquals(0, entry2.leadingNsCount, "ID2 leading Ns");
-            assertEquals(0, entry2.trailingNsCount, "ID2 trailing Ns");
-            assertEquals(0, entry2.baseCount.get('N'), "ID2 total Ns");
+            assertEquals(0, entry2.leadingNsCount(), "ID2 leading Ns");
+            assertEquals(0, entry2.trailingNsCount(), "ID2 trailing Ns");
+            assertEquals(0, entry2.baseCount().get('N'), "ID2 total Ns");
 
-            assertEquals(0, entry3.leadingNsCount, "ID3 leading Ns");
-            assertEquals(5, entry3.trailingNsCount, "ID3 trailing Ns");
-            assertEquals(13, entry3.baseCount.get('N'), "ID3 total Ns");
+            assertEquals(0, entry3.leadingNsCount(), "ID3 leading Ns");
+            assertEquals(5, entry3.trailingNsCount(), "ID3 trailing Ns");
+            assertEquals(13, entry3.baseCount().get('N'), "ID3 total Ns");
 
             String sequence1 = service.getSequenceSlice(
-                    IdType.SUBMITTERID, "ID1", 1, entry1.totalBases, SequenceRangeOption.WHOLE_SEQUENCE);
+                    IdType.SUBMISSION_ID, "ID1", 1, entry1.totalBases(), SequenceRangeOption.WHOLE_SEQUENCE);
             assertEquals("NNACACGTTTNN", sequence1);
 
             String sequence2 = service.getSequenceSlice(
-                    IdType.SUBMITTERID, "ID2", 1, entry2.totalBases, SequenceRangeOption.WHOLE_SEQUENCE);
+                    IdType.SUBMISSION_ID, "ID2", 1, entry2.totalBases(), SequenceRangeOption.WHOLE_SEQUENCE);
             assertEquals("ACGTGGGG", sequence2);
 
             String sequence1withoutNbases = service.getSequenceSlice(
-                    IdType.SUBMITTERID,
+                    IdType.SUBMISSION_ID,
                     "ID1",
                     1,
-                    entry1.totalBasesWithoutNBases,
+                    entry1.totalBasesWithoutNBases(),
                     SequenceRangeOption.WITHOUT_EDGE_N_BASES);
             assertEquals("ACACGTTT", sequence1withoutNbases);
 
@@ -141,46 +145,47 @@ public class JsonHeaderFastaReaderTest {
     }
 
     @Test
-    void basicWorkingExampleWithAccessionIds() throws IOException, FastaHeaderParserException, FastaFileException {
+    void basicWorkingExampleWithAccessionIds() {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_good_example.txt");
         List<String> accessionIds = List.of("acc1", "acc2", "acc3");
 
-        try (JsonHeaderFastaReader service = new JsonHeaderFastaReader(fasta, accessionIds)) {
+        try (var service = new FastaSubmissionReader(fasta)) {
 
-            FastaEntry entry1 = service.getFastaEntry(IdType.ACCESSIONID, "acc1");
-            FastaEntry entry2 = service.getFastaEntry(IdType.ACCESSIONID, "acc2");
-            FastaEntry entry3 = service.getFastaEntry(IdType.ACCESSIONID, "acc3");
+            service.setAccessionIds(accessionIds);
+            var entry1 = service.getStats(IdType.ACCESSION_ID, "acc1");
+            var entry2 = service.getStats(IdType.ACCESSION_ID, "acc2");
+            var entry3 = service.getStats(IdType.ACCESSION_ID, "acc3");
             assertNotNull(entry1);
             assertNotNull(entry2);
             assertNotNull(entry3);
-            assertThrows(NullPointerException.class, () -> service.getFastaHeader(IdType.ACCESSIONID, "nonsense"));
+            assertThrows(NullPointerException.class, () -> service.getStats(IdType.ACCESSION_ID, "nonsense"));
 
             // From the sample file above:
-            assertEquals(2, entry1.leadingNsCount, "ID1 leading Ns");
-            assertEquals(2, entry1.trailingNsCount, "ID1 trailing Ns");
-            assertEquals(4, entry1.baseCount.get('N'), "ID1 total Ns");
+            assertEquals(2, entry1.leadingNsCount(), "ID1 leading Ns");
+            assertEquals(2, entry1.trailingNsCount(), "ID1 trailing Ns");
+            assertEquals(4, entry1.baseCount().get('N'), "ID1 total Ns");
 
-            assertEquals(0, entry2.leadingNsCount, "ID2 leading Ns");
-            assertEquals(0, entry2.trailingNsCount, "ID2 trailing Ns");
-            assertEquals(0, entry2.baseCount.get('N'), "ID2 total Ns");
+            assertEquals(0, entry2.leadingNsCount(), "ID2 leading Ns");
+            assertEquals(0, entry2.trailingNsCount(), "ID2 trailing Ns");
+            assertEquals(0, entry2.baseCount().get('N'), "ID2 total Ns");
 
-            assertEquals(0, entry3.leadingNsCount, "ID3 leading Ns");
-            assertEquals(5, entry3.trailingNsCount, "ID3 trailing Ns");
-            assertEquals(13, entry3.baseCount.get('N'), "ID3 total Ns");
+            assertEquals(0, entry3.leadingNsCount(), "ID3 leading Ns");
+            assertEquals(5, entry3.trailingNsCount(), "ID3 trailing Ns");
+            assertEquals(13, entry3.baseCount().get('N'), "ID3 total Ns");
 
             String sequence1 = service.getSequenceSlice(
-                    IdType.ACCESSIONID, "acc1", 1, entry1.totalBases, SequenceRangeOption.WHOLE_SEQUENCE);
+                    IdType.ACCESSION_ID, "acc1", 1, entry1.totalBases(), SequenceRangeOption.WHOLE_SEQUENCE);
             assertEquals("NNACACGTTTNN", sequence1);
 
             String sequence2 = service.getSequenceSlice(
-                    IdType.ACCESSIONID, "acc2", 1, entry2.totalBases, SequenceRangeOption.WHOLE_SEQUENCE);
+                    IdType.ACCESSION_ID, "acc2", 1, entry2.totalBases(), SequenceRangeOption.WHOLE_SEQUENCE);
             assertEquals("ACGTGGGG", sequence2);
 
             String sequence1withoutNbases = service.getSequenceSlice(
-                    IdType.ACCESSIONID,
+                    IdType.ACCESSION_ID,
                     "acc1",
                     1,
-                    entry1.totalBasesWithoutNBases,
+                    entry1.totalBasesWithoutNBases(),
                     SequenceRangeOption.WITHOUT_EDGE_N_BASES);
             assertEquals("ACACGTTT", sequence1withoutNbases);
 
@@ -190,36 +195,36 @@ public class JsonHeaderFastaReaderTest {
     }
 
     @Test
-    void basicStreamingSequenceExample() throws IOException, FastaHeaderParserException, FastaFileException {
+    void basicStreamingSequenceExample() {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_good_example.txt");
 
-        try (JsonHeaderFastaReader service = new JsonHeaderFastaReader(fasta)) {
+        try (FastaSubmissionReader service = new FastaSubmissionReader(fasta)) {
 
-            FastaEntry entry1 = service.getFastaEntry(IdType.SUBMITTERID, "ID1");
-            FastaEntry entry2 = service.getFastaEntry(IdType.SUBMITTERID, "ID2");
-            FastaEntry entry3 = service.getFastaEntry(IdType.SUBMITTERID, "ID3");
+            var entry1 = service.getStats(IdType.SUBMISSION_ID, "ID1");
+            var entry2 = service.getStats(IdType.SUBMISSION_ID, "ID2");
+            var entry3 = service.getStats(IdType.SUBMISSION_ID, "ID3");
             assertNotNull(entry1);
             assertNotNull(entry2);
             assertNotNull(entry3);
-            assertNull(service.getFastaHeader(IdType.SUBMITTERID, "nonsense"));
+            assertEquals(Optional.empty(), service.getHeader(IdType.SUBMISSION_ID, "nonsense"));
 
             // From the sample file above:
-            assertEquals(2, entry1.leadingNsCount, "ID1 leading Ns");
-            assertEquals(2, entry1.trailingNsCount, "ID1 trailing Ns");
-            assertEquals(4, entry1.baseCount.get('N'), "ID1 total Ns");
+            assertEquals(2, entry1.leadingNsCount(), "ID1 leading Ns");
+            assertEquals(2, entry1.trailingNsCount(), "ID1 trailing Ns");
+            assertEquals(4, entry1.baseCount().get('N'), "ID1 total Ns");
 
-            assertEquals(0, entry2.leadingNsCount, "ID2 leading Ns");
-            assertEquals(0, entry2.trailingNsCount, "ID2 trailing Ns");
-            assertEquals(0, entry2.baseCount.get('N'), "ID2 total Ns");
+            assertEquals(0, entry2.leadingNsCount(), "ID2 leading Ns");
+            assertEquals(0, entry2.trailingNsCount(), "ID2 trailing Ns");
+            assertEquals(0, entry2.baseCount().get('N'), "ID2 total Ns");
 
-            assertEquals(0, entry3.leadingNsCount, "ID3 leading Ns");
-            assertEquals(5, entry3.trailingNsCount, "ID3 trailing Ns");
-            assertEquals(13, entry3.baseCount.get('N'), "ID3 total Ns");
+            assertEquals(0, entry3.leadingNsCount(), "ID3 leading Ns");
+            assertEquals(5, entry3.trailingNsCount(), "ID3 trailing Ns");
+            assertEquals(13, entry3.baseCount().get('N'), "ID3 total Ns");
 
             // stream whole sequence with the reader
             String streamedSequence;
             try (java.io.Reader r = service.getSequenceSliceReader(
-                    IdType.SUBMITTERID, "ID1", 1, entry1.totalBases, SequenceRangeOption.WHOLE_SEQUENCE)) {
+                    IdType.SUBMISSION_ID, "ID1", 1, entry1.totalBases(), SequenceRangeOption.WHOLE_SEQUENCE)) {
                 StringBuilder sb = new StringBuilder();
                 char[] cbuf = new char[8192];
                 int n;
@@ -234,10 +239,10 @@ public class JsonHeaderFastaReaderTest {
             // stream whole sequence with the reader
             String streamedSequenceWithoutNbases;
             try (java.io.Reader r = service.getSequenceSliceReader(
-                    IdType.SUBMITTERID,
+                    IdType.SUBMISSION_ID,
                     "ID1",
                     1,
-                    entry1.totalBasesWithoutNBases,
+                    entry1.totalBasesWithoutNBases(),
                     SequenceRangeOption.WITHOUT_EDGE_N_BASES)) {
                 StringBuilder sb = new StringBuilder();
                 char[] cbuf = new char[8192];
@@ -253,7 +258,7 @@ public class JsonHeaderFastaReaderTest {
             // stream sequence with the reader
             String streamedSequence2;
             try (java.io.Reader r = service.getSequenceSliceReader(
-                    IdType.SUBMITTERID, "ID2", 1, entry2.totalBases, SequenceRangeOption.WHOLE_SEQUENCE)) {
+                    IdType.SUBMISSION_ID, "ID2", 1, entry2.totalBases(), SequenceRangeOption.WHOLE_SEQUENCE)) {
                 StringBuilder sb = new StringBuilder();
                 char[] cbuf = new char[8192];
                 int n;
@@ -271,38 +276,38 @@ public class JsonHeaderFastaReaderTest {
     }
 
     @Test
-    void basicStreamingSequenceExampleWithAccessionIds()
-            throws IOException, FastaHeaderParserException, FastaFileException {
+    void basicStreamingSequenceExampleWithAccessionIds() {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_good_example.txt");
         List<String> accessionIds = List.of("acc1", "acc2", "acc3");
 
-        try (JsonHeaderFastaReader service = new JsonHeaderFastaReader(fasta, accessionIds)) {
+        try (var service = new FastaSubmissionReader(fasta)) {
 
-            FastaEntry entry1 = service.getFastaEntry(IdType.ACCESSIONID, "acc1");
-            FastaEntry entry2 = service.getFastaEntry(IdType.ACCESSIONID, "acc2");
-            FastaEntry entry3 = service.getFastaEntry(IdType.ACCESSIONID, "acc3");
+            service.setAccessionIds(accessionIds);
+            var entry1 = service.getStats(IdType.ACCESSION_ID, "acc1");
+            var entry2 = service.getStats(IdType.ACCESSION_ID, "acc2");
+            var entry3 = service.getStats(IdType.ACCESSION_ID, "acc3");
             assertNotNull(entry1);
             assertNotNull(entry2);
             assertNotNull(entry3);
-            assertThrows(NullPointerException.class, () -> service.getFastaHeader(IdType.ACCESSIONID, "nonsense"));
+            assertThrows(NullPointerException.class, () -> service.getStats(IdType.ACCESSION_ID, "nonsense"));
 
             // From the sample file above:
-            assertEquals(2, entry1.leadingNsCount, "ID1 leading Ns");
-            assertEquals(2, entry1.trailingNsCount, "ID1 trailing Ns");
-            assertEquals(4, entry1.baseCount.get('N'), "ID1 total Ns");
+            assertEquals(2, entry1.leadingNsCount(), "ID1 leading Ns");
+            assertEquals(2, entry1.trailingNsCount(), "ID1 trailing Ns");
+            assertEquals(4, entry1.baseCount().get('N'), "ID1 total Ns");
 
-            assertEquals(0, entry2.leadingNsCount, "ID2 leading Ns");
-            assertEquals(0, entry2.trailingNsCount, "ID2 trailing Ns");
-            assertEquals(0, entry2.baseCount.get('N'), "ID2 total Ns");
+            assertEquals(0, entry2.leadingNsCount(), "ID2 leading Ns");
+            assertEquals(0, entry2.trailingNsCount(), "ID2 trailing Ns");
+            assertEquals(0, entry2.baseCount().get('N'), "ID2 total Ns");
 
-            assertEquals(0, entry3.leadingNsCount, "ID3 leading Ns");
-            assertEquals(5, entry3.trailingNsCount, "ID3 trailing Ns");
-            assertEquals(13, entry3.baseCount.get('N'), "ID3 total Ns");
+            assertEquals(0, entry3.leadingNsCount(), "ID3 leading Ns");
+            assertEquals(5, entry3.trailingNsCount(), "ID3 trailing Ns");
+            assertEquals(13, entry3.baseCount().get('N'), "ID3 total Ns");
 
             // stream whole sequence with the reader
             String streamedSequence;
             try (java.io.Reader r = service.getSequenceSliceReader(
-                    IdType.ACCESSIONID, "acc1", 1, entry1.totalBases, SequenceRangeOption.WHOLE_SEQUENCE)) {
+                    IdType.ACCESSION_ID, "acc1", 1, entry1.totalBases(), SequenceRangeOption.WHOLE_SEQUENCE)) {
                 StringBuilder sb = new StringBuilder();
                 char[] cbuf = new char[8192];
                 int n;
@@ -317,10 +322,10 @@ public class JsonHeaderFastaReaderTest {
             // stream whole sequence with the reader
             String streamedSequenceWithoutNbases;
             try (java.io.Reader r = service.getSequenceSliceReader(
-                    IdType.ACCESSIONID,
+                    IdType.ACCESSION_ID,
                     "acc1",
                     1,
-                    entry1.totalBasesWithoutNBases,
+                    entry1.totalBasesWithoutNBases(),
                     SequenceRangeOption.WITHOUT_EDGE_N_BASES)) {
                 StringBuilder sb = new StringBuilder();
                 char[] cbuf = new char[8192];
@@ -336,7 +341,7 @@ public class JsonHeaderFastaReaderTest {
             // stream sequence with the reader
             String streamedSequence2;
             try (java.io.Reader r = service.getSequenceSliceReader(
-                    IdType.ACCESSIONID, "acc2", 1, entry2.totalBases, SequenceRangeOption.WHOLE_SEQUENCE)) {
+                    IdType.ACCESSION_ID, "acc2", 1, entry2.totalBases(), SequenceRangeOption.WHOLE_SEQUENCE)) {
                 StringBuilder sb = new StringBuilder();
                 char[] cbuf = new char[8192];
                 int n;

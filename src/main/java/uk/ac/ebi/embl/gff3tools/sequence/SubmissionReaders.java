@@ -1,11 +1,20 @@
+/*
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package uk.ac.ebi.embl.gff3tools.sequence;
 
-import uk.ac.ebi.embl.gff3tools.sequence.readers.headerutils.FastaHeader;
+import java.io.File;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.FastaSubmissionReader;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.PlainSequenceSubmissionReader;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionSequenceReader;
-
-import java.io.File;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.headerutils.FastaHeader;
 
 /**
  * Factory methods for opening {@link SubmissionSequenceReader} instances.
@@ -47,8 +56,8 @@ public final class SubmissionReaders {
      *
      * <p>Records can be accessed using:</p>
      * <ul>
-     *   <li>{@code RecordIdType.SUBMISSION_ID} immediately (submission IDs come from the parsed headers)</li>
-     *   <li>{@code RecordIdType.ACCESSION_ID} only after providing a mapping via
+     *   <li>{@code IdType.SUBMISSION_ID} immediately (submission IDs come from the parsed headers)</li>
+     *   <li>{@code IdType.ACCESSION_ID} only after providing a mapping via
      *       {@link SubmissionSequenceReader#setAccessionIds(java.util.List)}</li>
      * </ul>
      *
@@ -69,7 +78,7 @@ public final class SubmissionReaders {
      *
      * <p>The sequence file is expected to contain exactly one sequence record. The record is addressed
      * by the provided {@code accessionId}. A {@link FastaHeader} may be supplied separately; if {@code null},
-     * header access via {@link SubmissionSequenceReader#getHeader(RecordIdType, String)} will return empty.</p>
+     * header access via {@link SubmissionSequenceReader#getHeader(IdType, String)} will return empty.</p>
      *
      * @param sequenceFile plain sequence file to open (must not be {@code null})
      * @param accessionId accession ID identifying the single record (must not be {@code null} or blank)
@@ -79,10 +88,7 @@ public final class SubmissionReaders {
      *                   empty file, more than one record, I/O errors)
      */
     public static SubmissionSequenceReader openPlainSequence(
-            File sequenceFile,
-            String accessionId,
-            FastaHeader optionalHeader
-    ) throws Exception {
+            File sequenceFile, String accessionId, FastaHeader optionalHeader) throws Exception {
         return new PlainSequenceSubmissionReader(sequenceFile, accessionId, optionalHeader);
     }
 }
