@@ -19,7 +19,7 @@ import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.fastareader.SequenceReader;
 import uk.ac.ebi.embl.gff3tools.sequence.IdType;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.headerutils.FastaHeader;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.FastaHeader;
 
 public final class PlainSequenceSubmissionReader implements SubmissionSequenceReader {
     private final SequenceReader sequenceReader;

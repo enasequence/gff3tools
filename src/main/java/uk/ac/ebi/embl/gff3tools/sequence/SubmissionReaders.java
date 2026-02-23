@@ -14,7 +14,7 @@ import java.io.File;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.FastaSubmissionReader;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.PlainSequenceSubmissionReader;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionSequenceReader;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.headerutils.FastaHeader;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.FastaHeader;
 
 /**
  * Factory methods for opening {@link SubmissionSequenceReader} instances.

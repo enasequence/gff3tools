@@ -21,14 +21,13 @@ import uk.ac.ebi.embl.fastareader.sequenceutils.SequenceAlphabet;
 import uk.ac.ebi.embl.gff3tools.exception.FastaHeaderParserException;
 import uk.ac.ebi.embl.gff3tools.sequence.IdType;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.headerutils.FastaHeader;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.headerutils.JsonHeaderParser;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.FastaHeader;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.JsonHeaderParser;
 
 public final class FastaSubmissionReader implements SubmissionSequenceReader {
 
     private FastaReader fastaReader;
     private final JsonHeaderParser headerParser = new JsonHeaderParser();
-
     // accession-submission id mapping
     private final HashMap<String, String> accessionIdToSubmissionId = new HashMap<>();
     private final HashMap<String, String> submissionIdToAccessionId = new HashMap<>();
@@ -117,6 +116,18 @@ public final class FastaSubmissionReader implements SubmissionSequenceReader {
         }
     }
 
+    /** helper method for testing **/
+    public String getSubmissionIdByAccessionId(String accessionId) {
+        return accessionIdToSubmissionId.get(accessionId);
+    }
+
+    /** helper method for testing **/
+    public String getAccessionIdBySubmissionId(String submissionId) {
+        return submissionIdToAccessionId.get(submissionId);
+    }
+
+    // --------------------------------------- helper methods ---------------------------------------
+
     private void parseData() throws FastaHeaderParserException, FastaFileException {
         var entries = fastaReader.getFastaEntries();
         for (int i = 0; i < entries.size(); i++) {
@@ -134,16 +145,6 @@ public final class FastaSubmissionReader implements SubmissionSequenceReader {
             submissionIdToFastaEntry.put(submissionId, entry);
         }
     }
-
-    public String getSubmissionIdByAccessionId(String accessionId) {
-        return accessionIdToSubmissionId.get(accessionId);
-    }
-
-    public String getAccessionIdBySubmissionId(String submissionId) {
-        return submissionIdToAccessionId.get(submissionId);
-    }
-
-    // --------------------------------------- helper methods ---------------------------------------
 
     private void clearData() {
         orderedSubmissionIds.clear();
