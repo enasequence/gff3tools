@@ -65,9 +65,9 @@ public class EcNumberValueFix {
             String normalized = productValue.trim().toLowerCase();
             if (normalized.contains("hypothetical protein") || normalized.contains("unknown")) {
 
-                log.info(
+                /*log.info(
                         "Fix: removing EC_NUMBER because product is 'hypothetical protein' or 'unknown' at line {}",
-                        line);
+                        line);*/
 
                 feature.removeAttributeList(EC_NUMBER);
                 return;

@@ -189,6 +189,14 @@ public class GFF3AnnotationFactory {
                     getPhase(ffFeature));
             gff3Feature.addAttributes(attributes);
             validationEngine.validate(gff3Feature, -1);
+            if (featureName.equalsIgnoreCase("CDS")) {
+                Path sequencePath = Path.of(gff3Feature.accession() + ".seq");
+                ValidationContext context = ValidationContext.builder()
+                        .gff3Feature(gff3Feature)
+                        .sequencePath(sequencePath)
+                        .build();
+                validationEngine.validate(context, -1);
+            }
             gff3Features.add(gff3Feature);
         }
 
@@ -207,7 +215,7 @@ public class GFF3AnnotationFactory {
             String translationKey = TranslationWriter.getTranslationKey(sequenceRegion.accession(), featureId.get());
             List<String> translation = baseAttributes.get("translation");
             TranslationWriter.writeTranslation(fastaWriter, translationKey, translation.get(0));
-            baseAttributes.remove("translation");
+            // baseAttributes.remove("translation");
         }
     }
 
@@ -356,8 +364,8 @@ public class GFF3AnnotationFactory {
         // Check if gffFeatures has the parent
         return parentId.isPresent()
                 && gffFeatures.stream().anyMatch(f -> f.getId()
-                        .map(id -> id.equalsIgnoreCase(parentId.get()))
-                        .orElse(false));
+                .map(id -> id.equalsIgnoreCase(parentId.get()))
+                .orElse(false));
     }
 
     public String getIncrementalId(String featureName, Optional<String> geneName) {

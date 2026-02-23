@@ -827,7 +827,7 @@ public class TranslatorTest {
         Translator translator = createTranslator(1);
         translator.setFivePrimePartial(true);
         translator.setThreePrimePartial(true);
-        translator.setException(true); // Allow internal stop codons
+        translator.setExceptional(true); // Allow internal stop codons
         TranslationResult result = translator.translate(sequence.getBytes());
         assertEquals("XVKPG*PVTSASIX", result.getTranslation());
     }

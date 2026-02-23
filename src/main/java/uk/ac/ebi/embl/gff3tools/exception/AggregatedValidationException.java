@@ -32,7 +32,7 @@ public class AggregatedValidationException extends ValidationException {
         }
         StringBuilder sb = new StringBuilder();
         sb.append("Processing completed with %d error(s):".formatted(errors.size()));
-        int maxToShow = Math.min(3, errors.size());
+        int maxToShow = Math.min(20, errors.size());
         for (int i = 0; i < maxToShow; i++) {
             sb.append("\n  - ").append(errors.get(i).getMessage());
         }

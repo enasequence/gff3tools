@@ -48,9 +48,10 @@ public class Translator {
 
     private GFF3Feature feature;
 
-    // The purpose of 'exception' is to relaxes several validations.
+    // The purpose of 'exceptional' is to relax several validations.
     // This will be used in the future to support more flexible translation.
-    private boolean exception = false;
+    @Setter(AccessLevel.PUBLIC)
+    private boolean exceptional = false;
 
     private boolean threePrimePartial = false; // 3' partial
 
@@ -214,6 +215,11 @@ public class Translator {
             return translationResult;
         }
 
+        // Normalize sequence to upper case
+        for (int i = 0; i < sequence.length; i++) {
+            sequence[i] = (byte) Character.toUpperCase((char) sequence[i]);
+        }
+
         if (isComplement) {
             sequence = reverseComplement(sequence);
         }
@@ -230,7 +236,7 @@ public class Translator {
             translateCodons(sequence, translationResult);
 
             if (translationResult.getCodons().isEmpty()) {
-                if (exception) {
+                if (exceptional) {
                     translationResult.setConceptualTranslationCodons(0);
                     return translationResult;
                 } else {
@@ -475,7 +481,7 @@ public class Translator {
             int length = bases - codonStart + 1;
             translationResult.setTranslationLength(length);
 
-            if (!peptideFeature && !fivePrimePartial && !threePrimePartial && !nonTranslating && !exception) {
+            if (!peptideFeature && !fivePrimePartial && !threePrimePartial && !nonTranslating && !exceptional) {
                 if (fixNonMultipleOfThreeMake3And5Partial) {
                     fivePrimePartial = true;
                     threePrimePartial = true;
@@ -531,7 +537,7 @@ public class Translator {
     }
 
     private void validateStopCodonOnly(TranslationResult translationResult) throws TranslationException {
-        if (exception || nonTranslating) {
+        if (exceptional || nonTranslating) {
             return;
         }
         if (!(translationResult.getCodons().size() == 1
@@ -544,7 +550,7 @@ public class Translator {
 
     private boolean validateTrailingStopCodons(int trailingStopCodons, TranslationResult translationResult)
             throws TranslationException {
-        if (!exception) {
+        if (!exceptional) {
             if (trailingStopCodons > 1) {
                 if (nonTranslating) {
                     return false;
@@ -598,7 +604,7 @@ public class Translator {
     private boolean validateInternalStopCodons(int internalStopCodons, TranslationResult translationResult)
             throws TranslationException {
         if (internalStopCodons > 0) {
-            if (exception || nonTranslating) {
+            if (exceptional || nonTranslating) {
                 return false;
             } else {
                 if (fixInternalStopCodonMakePseudo) {
@@ -615,7 +621,7 @@ public class Translator {
     }
 
     private boolean validateStartCodon(TranslationResult translationResult) throws TranslationException {
-        if (!fivePrimePartial && !exception && !peptideFeature) {
+        if (!fivePrimePartial && !exceptional && !peptideFeature) {
             if (translationResult.getCodons().get(0).getAminoAcid() != START_CODON) {
                 if (nonTranslating) {
                     return false;

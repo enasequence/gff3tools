@@ -18,6 +18,7 @@ import uk.ac.ebi.embl.gff3tools.exception.AggregatedValidationException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 public class ValidationEngine {
@@ -97,6 +98,8 @@ public class ValidationEngine {
                 if (target instanceof GFF3Feature && methodAnnotation.type() == ValidationType.FEATURE) {
                     validator.method().invoke(validator.instance(), target, line);
                 } else if (target instanceof GFF3Annotation && methodAnnotation.type() == ValidationType.ANNOTATION) {
+                    validator.method().invoke(validator.instance(), target, line);
+                } else if (target instanceof ValidationContext && methodAnnotation.type() == ValidationType.CONTEXT) {
                     validator.method().invoke(validator.instance(), target, line);
                 }
             } catch (Exception e) {
