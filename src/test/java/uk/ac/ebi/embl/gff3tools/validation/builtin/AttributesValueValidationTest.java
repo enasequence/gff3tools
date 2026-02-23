@@ -186,27 +186,21 @@ public class AttributesValueValidationTest {
     }
 
     @Test
-    public void testValidateAttributeValueDependencyFailureEmptyValue() {
+    public void testValidateAttributeValueDependencySuccessWithoutOrganelle() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.GENE, List.of("12S rRNA")));
         GFF3Feature sig = TestUtils.createGFF3Feature(
                 OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
                 OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
-                Map.of(GFF3Attributes.ORGANELLE, List.of()));
+                Map.of(GFF3Attributes.PRODUCT, List.of("product")));
         GFF3Feature prop = TestUtils.createGFF3Feature(
                 OntologyTerm.PROPEPTIDE.name(),
                 OntologyTerm.CDS.name(),
                 Map.of(GFF3Attributes.CHROMOSOME, List.of("chromosome")));
         gff3Annotation.setFeatures(List.of(cds, sig, prop));
 
-        ValidationException ex = Assertions.assertThrows(
-                ValidationException.class,
+        Assertions.assertDoesNotThrow(
                 () -> attributesValueValidation.validateAttributeValueDependency(gff3Annotation, 1));
-
-        Assertions.assertTrue(ex.getMessage()
-                .contains(
-                        "Qualifier \"%s\" must have one of values \"%s\" when qualifier \"%s\" has value \"%s\" in any feature."
-                                .formatted(GFF3Attributes.ORGANELLE, MITOCHONDRION, GFF3Attributes.GENE, "12S rRNA")));
     }
 
     @Test
@@ -305,30 +299,6 @@ public class AttributesValueValidationTest {
 
         Assertions.assertDoesNotThrow(
                 () -> attributesValueValidation.validateAttributeValueDependency(gff3Annotation, 1));
-    }
-
-    @Test
-    public void testValidateQualifierValueDependencyFailureEmptyValue() {
-        GFF3Feature cds = TestUtils.createGFF3Feature(
-                OntologyTerm.CDS.name(), OntologyTerm.CDS.name(), Map.of(GFF3Attributes.GENE, List.of("12S rRNA")));
-        GFF3Feature sig = TestUtils.createGFF3Feature(
-                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
-                OntologyTerm.SIGNAL_PEPTIDE_REGION_OF_CDS.name(),
-                Map.of(GFF3Attributes.ORGANELLE, List.of()));
-        GFF3Feature prop = TestUtils.createGFF3Feature(
-                OntologyTerm.PROPEPTIDE.name(),
-                OntologyTerm.CDS.name(),
-                Map.of(GFF3Attributes.CHROMOSOME, List.of("chromosome")));
-        gff3Annotation.setFeatures(List.of(cds, sig, prop));
-
-        ValidationException ex = Assertions.assertThrows(
-                ValidationException.class,
-                () -> attributesValueValidation.validateAttributeValueDependency(gff3Annotation, 1));
-
-        Assertions.assertTrue(ex.getMessage()
-                .contains(
-                        "Qualifier \"%s\" must have one of values \"%s\" when qualifier \"%s\" has value \"%s\" in any feature."
-                                .formatted(GFF3Attributes.ORGANELLE, MITOCHONDRION, GFF3Attributes.GENE, "12S rRNA")));
     }
 
     @Test

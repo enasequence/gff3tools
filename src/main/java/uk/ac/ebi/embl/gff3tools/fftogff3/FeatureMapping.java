@@ -22,7 +22,9 @@ public class FeatureMapping {
 
     public static String getGFF3FeatureName(Feature ffFeature) throws ValidationException {
         String featureName = ffFeature.getName();
-        List<ConversionEntry> mappings = ConversionUtils.getFF2GFF3FeatureMap().get(featureName);
+        List<ConversionEntry> mappings = Optional.ofNullable(
+                        ConversionUtils.getFF2GFF3FeatureMap().get(featureName))
+                .orElse(Collections.emptyList());
 
         return mappings.stream()
                 .filter(entry -> entry.getFeature().equalsIgnoreCase(ffFeature.getName()))

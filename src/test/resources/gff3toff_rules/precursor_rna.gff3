@@ -1,0 +1,8 @@
+##gff-version 3.1.26
+##species https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?name=Test organism
+##sequence-region PRECURSOR01.1 1 12000
+PRECURSOR01.1	.	ncRNA_gene	100	11000	.	+	.	ID=ncRNA_gene_rRNA_cluster;gene=rRNA_cluster;locus_tag=GENE001;
+PRECURSOR01.1	.	rRNA	500	2300	.	+	.	ID=rRNA_rRNA_cluster;Parent=ncRNA_gene_rRNA_cluster;locus_tag=GENE001;product=18S ribosomal RNA;
+PRECURSOR01.1	.	rRNA	2500	2700	.	+	.	ID=rRNA_rRNA_cluster_1;Parent=ncRNA_gene_rRNA_cluster;locus_tag=GENE001;product=5.8S ribosomal RNA;
+PRECURSOR01.1	.	rRNA	3000	6400	.	+	.	ID=rRNA_rRNA_cluster_2;Parent=ncRNA_gene_rRNA_cluster;locus_tag=GENE001;product=25S ribosomal RNA;
+PRECURSOR01.1	.	precursor_RNA	100	11000	.	+	.	ID=precursor_RNA_rRNA_cluster;gene=rRNA_cluster;locus_tag=GENE001;product=45S pre-ribosomal RNA;standard_name=45S_rRNA_precursor;

@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import java.util.*;
+import java.util.stream.Collectors;
 import uk.ac.ebi.embl.gff3tools.exception.FastaHeaderParserException;
 
 public class JsonHeaderParser {
@@ -32,6 +33,9 @@ public class JsonHeaderParser {
 
         // parse id
         String id = (pipe >= 0 ? rest.substring(0, pipe) : rest).trim();
+        id = id.codePoints()
+                .mapToObj(cp -> cp <= 0x7F ? String.valueOf((char) cp) : "?")
+                .collect(Collectors.joining()); // replace non-ascii char with one char '?' per unicode mark
         if (Objects.equals(id, "")) {
             throw new FastaHeaderParserException("FASTA header should contain the id, but no id was provided.");
         }
@@ -51,6 +55,10 @@ public class JsonHeaderParser {
         }
 
         String normalised = normaliseRawJsonString(raw);
+        normalised = normalised
+                .codePoints()
+                .mapToObj(cp -> cp <= 0x7F ? String.valueOf((char) cp) : "?")
+                .collect(Collectors.joining()); // replace non-ascii char with one char '?' per unicode mark
 
         try {
             FastaHeader header = MAPPER.readValue(normalised, FastaHeader.class);
