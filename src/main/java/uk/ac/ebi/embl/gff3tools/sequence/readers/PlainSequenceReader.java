@@ -45,7 +45,7 @@ public final class PlainSequenceReader implements SequenceReader {
 
     @Override
     public void setAccessionIds(List<String> orderedAccessionIds) {
-        // “still must be able to be set” => accept it, but validate it matches the one record.
+        // “still must be able to be set” => accepting it, but validating it matches the one record.
         if (orderedAccessionIds == null || orderedAccessionIds.size() != 1)
             throw new IllegalArgumentException("Plain sequence expects exactly 1 accessionId");
         if (!accessionId.equals(orderedAccessionIds.get(0)))
@@ -86,7 +86,7 @@ public final class PlainSequenceReader implements SequenceReader {
     }
 
     private void validateId(IdType idType, String id) {
-        // treat submission id == accession id for plain submissions (simplest + least surprising)
+        // treating submission id == accession id for plain submissions
         if (!accessionId.equals(id)) {
             throw new IllegalArgumentException("No record for " + idType + ":" + id);
         }
