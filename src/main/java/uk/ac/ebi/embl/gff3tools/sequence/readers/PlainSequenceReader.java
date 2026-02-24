@@ -40,7 +40,7 @@ public final class PlainSequenceReader implements SequenceReader {
     @Override
     public List<String> getOrderedIds(IdType idType) {
         // Only ACCESSION_ID makes sense here.
-        return idType == IdType.ACCESSION_ID ? List.of(accessionId) : List.of(accessionId);
+        return List.of(accessionId);
     }
 
     @Override
