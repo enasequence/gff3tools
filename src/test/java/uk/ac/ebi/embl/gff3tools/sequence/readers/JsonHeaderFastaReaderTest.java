@@ -22,21 +22,21 @@ import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.FastaHeaderParserException;
 import uk.ac.ebi.embl.gff3tools.sequence.IdType;
 
-public class FastaSubmissionReaderTest {
+public class JsonHeaderFastaReaderTest {
 
     @Test
     void doesNotTolerateImproperHeaders() {
         // by improper headers, i mean ones not in the EBI spec*/
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_improper_header.txt");
 
-        assertThrows(FastaHeaderParserException.class, () -> new FastaSubmissionReader(fasta));
+        assertThrows(FastaHeaderParserException.class, () -> new JsonHeaderFastaReader(fasta));
     }
 
     @Test
     void throwsWhenThereAreMultipleIdenticalSubmissionIds() {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_duplicate_submission_id.txt"); // has 3 entries
 
-        FastaFileException ex = assertThrows(FastaFileException.class, () -> new FastaSubmissionReader(fasta));
+        FastaFileException ex = assertThrows(FastaFileException.class, () -> new JsonHeaderFastaReader(fasta));
 
         assertTrue(
                 ex.getMessage().contains("Duplicate submission ID detected: ID1"),
@@ -48,7 +48,7 @@ public class FastaSubmissionReaderTest {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_good_example.txt"); // has 3 entries
         List<String> accessionIds = List.of("acc1", "acc2");
 
-        try (var reader = new FastaSubmissionReader(fasta)) {
+        try (var reader = new JsonHeaderFastaReader(fasta)) {
             assertThrows(FastaFileException.class, () -> reader.setAccessionIds(accessionIds));
 
         } catch (Exception e) {
@@ -61,7 +61,7 @@ public class FastaSubmissionReaderTest {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_good_example.txt");
         List<String> accessionIds = List.of("acc1", "acc2", "acc3");
 
-        try (var service = new FastaSubmissionReader(fasta)) {
+        try (var service = new JsonHeaderFastaReader(fasta)) {
             service.setAccessionIds(accessionIds);
             assertEquals("ID1", service.getSubmissionIdByAccessionId("acc1"));
             assertEquals("ID2", service.getSubmissionIdByAccessionId("acc2"));
@@ -81,7 +81,7 @@ public class FastaSubmissionReaderTest {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_good_example.txt");
         List<String> accessionIds = List.of("acc1", "acc2", "acc3");
 
-        try (var service = new FastaSubmissionReader(fasta)) {
+        try (var service = new JsonHeaderFastaReader(fasta)) {
             service.setAccessionIds(accessionIds);
             assertEquals("ID1", service.getSubmissionIdByAccessionId("acc1"));
             assertEquals("ID2", service.getSubmissionIdByAccessionId("acc2"));
@@ -100,7 +100,7 @@ public class FastaSubmissionReaderTest {
     void basicWorkingExample() {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_good_example.txt");
 
-        try (var service = new FastaSubmissionReader(fasta)) {
+        try (var service = new JsonHeaderFastaReader(fasta)) {
 
             var entry1 = service.getStats(IdType.SUBMISSION_ID, "ID1");
             var entry2 = service.getStats(IdType.SUBMISSION_ID, "ID2");
@@ -149,7 +149,7 @@ public class FastaSubmissionReaderTest {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_good_example.txt");
         List<String> accessionIds = List.of("acc1", "acc2", "acc3");
 
-        try (var service = new FastaSubmissionReader(fasta)) {
+        try (var service = new JsonHeaderFastaReader(fasta)) {
 
             service.setAccessionIds(accessionIds);
             var entry1 = service.getStats(IdType.ACCESSION_ID, "acc1");
@@ -198,7 +198,7 @@ public class FastaSubmissionReaderTest {
     void basicStreamingSequenceExample() {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_good_example.txt");
 
-        try (FastaSubmissionReader service = new FastaSubmissionReader(fasta)) {
+        try (JsonHeaderFastaReader service = new JsonHeaderFastaReader(fasta)) {
 
             var entry1 = service.getStats(IdType.SUBMISSION_ID, "ID1");
             var entry2 = service.getStats(IdType.SUBMISSION_ID, "ID2");
@@ -280,7 +280,7 @@ public class FastaSubmissionReaderTest {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_good_example.txt");
         List<String> accessionIds = List.of("acc1", "acc2", "acc3");
 
-        try (var service = new FastaSubmissionReader(fasta)) {
+        try (var service = new JsonHeaderFastaReader(fasta)) {
 
             service.setAccessionIds(accessionIds);
             var entry1 = service.getStats(IdType.ACCESSION_ID, "acc1");

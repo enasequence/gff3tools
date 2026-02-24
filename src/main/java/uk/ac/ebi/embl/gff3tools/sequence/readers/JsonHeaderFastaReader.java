@@ -23,8 +23,9 @@ import uk.ac.ebi.embl.gff3tools.sequence.IdType;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.JsonHeaderParser;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.ParsedHeader;
 
-public final class FastaSubmissionReader implements SubmissionSequenceReader {
+public final class JsonHeaderFastaReader implements SequenceReader {
 
     private FastaReader fastaReader;
     private final JsonHeaderParser headerParser = new JsonHeaderParser();
@@ -36,7 +37,7 @@ public final class FastaSubmissionReader implements SubmissionSequenceReader {
     private final HashMap<String, FastaHeader> submissionIdToFastaHeader = new HashMap<>();
     private final HashMap<String, FastaEntry> submissionIdToFastaEntry = new HashMap<>();
 
-    public FastaSubmissionReader(File fastaFile) throws Exception {
+    public JsonHeaderFastaReader(File fastaFile) throws Exception {
         fastaReader = new FastaReader(fastaFile, SequenceAlphabet.defaultNucleotideAlphabet());
         parseData();
     }
@@ -59,8 +60,8 @@ public final class FastaSubmissionReader implements SubmissionSequenceReader {
                     "Number of entries in the actual file does not match number of provided accession IDs");
         }
         for (int i = 0; i < orderedSubmissionIds.size(); i++) {
-            var submissionId = orderedSubmissionIds.get(i);
-            var accessionId = orderedAccessionIds.get(i);
+            String submissionId = orderedSubmissionIds.get(i);
+            String accessionId = orderedAccessionIds.get(i);
             accessionIdToSubmissionId.put(accessionId, submissionId);
             submissionIdToAccessionId.put(submissionId, accessionId);
         }
@@ -68,14 +69,14 @@ public final class FastaSubmissionReader implements SubmissionSequenceReader {
 
     @Override
     public Optional<FastaHeader> getHeader(IdType idType, String id) {
-        var resolvedId = resolveId(idType, id);
+        String resolvedId = resolveId(idType, id);
         return Optional.ofNullable(submissionIdToFastaHeader.get(resolvedId));
     }
 
     @Override
     public SequenceStats getStats(IdType idType, String id) {
-        var resolvedId = resolveId(idType, id);
-        var entry = submissionIdToFastaEntry.get(resolvedId);
+        String resolvedId = resolveId(idType, id);
+        FastaEntry entry = submissionIdToFastaEntry.get(resolvedId);
         if (entry == null) throw new IllegalArgumentException("No record for " + idType + ":" + id);
 
         return new SequenceStats(
@@ -89,8 +90,8 @@ public final class FastaSubmissionReader implements SubmissionSequenceReader {
     @Override
     public String getSequenceSlice(IdType idType, String id, long fromBase, long toBase, SequenceRangeOption option)
             throws Exception {
-        var resolvedId = resolveId(idType, id);
-        var entry = submissionIdToFastaEntry.get(resolvedId);
+        String resolvedId = resolveId(idType, id);
+        FastaEntry entry = submissionIdToFastaEntry.get(resolvedId);
         if (entry == null) {
             throw new FastaFileException("No entry found for submissionId: " + resolvedId);
         }
@@ -100,8 +101,8 @@ public final class FastaSubmissionReader implements SubmissionSequenceReader {
     @Override
     public Reader getSequenceSliceReader(
             IdType idType, String id, long fromBase, long toBase, SequenceRangeOption option) throws Exception {
-        var resolvedId = resolveId(idType, id);
-        var entry = submissionIdToFastaEntry.get(resolvedId);
+        String resolvedId = resolveId(idType, id);
+        FastaEntry entry = submissionIdToFastaEntry.get(resolvedId);
         if (entry == null) {
             throw new FastaFileException("No entry found for submissionId: " + resolvedId);
         }
@@ -131,10 +132,10 @@ public final class FastaSubmissionReader implements SubmissionSequenceReader {
     private void parseData() throws FastaHeaderParserException, FastaFileException {
         var entries = fastaReader.getFastaEntries();
         for (int i = 0; i < entries.size(); i++) {
-            var entry = entries.get(i);
+            FastaEntry entry = entries.get(i);
             // parse headers
-            var parsedHeader = headerParser.parse(entry.headerLine);
-            var submissionId = parsedHeader.getId();
+            ParsedHeader parsedHeader = headerParser.parse(entry.headerLine);
+            String submissionId = parsedHeader.getId();
             // check for duplicate submission ID
             if (submissionIdToFastaEntry.containsKey(submissionId)) {
                 throw new FastaFileException("Duplicate submission ID detected: " + submissionId);

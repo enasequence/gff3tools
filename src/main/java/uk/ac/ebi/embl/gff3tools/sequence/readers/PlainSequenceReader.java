@@ -15,20 +15,19 @@ import java.io.Reader;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import uk.ac.ebi.embl.fastareader.SequenceEntry;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
-import uk.ac.ebi.embl.fastareader.SequenceReader;
 import uk.ac.ebi.embl.gff3tools.sequence.IdType;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.FastaHeader;
 
-public final class PlainSequenceSubmissionReader implements SubmissionSequenceReader {
-    private final SequenceReader sequenceReader;
+public final class PlainSequenceReader implements SequenceReader {
+    private final uk.ac.ebi.embl.fastareader.SequenceReader sequenceReader;
     private final String accessionId;
     private final FastaHeader header; // nullable
 
-    public PlainSequenceSubmissionReader(File sequenceFile, String accessionId, FastaHeader optionalHeader)
-            throws Exception {
-        this.sequenceReader = new SequenceReader(sequenceFile);
+    public PlainSequenceReader(File sequenceFile, String accessionId, FastaHeader optionalHeader) throws Exception {
+        this.sequenceReader = new uk.ac.ebi.embl.fastareader.SequenceReader(sequenceFile);
         this.accessionId = Objects.requireNonNull(accessionId, "accessionId");
         this.header = optionalHeader; // may be null
     }
@@ -63,7 +62,7 @@ public final class PlainSequenceSubmissionReader implements SubmissionSequenceRe
     @Override
     public SequenceStats getStats(IdType idType, String id) {
         validateId(idType, id);
-        var e = sequenceReader.getSequenceEntry();
+        SequenceEntry e = sequenceReader.getSequenceEntry();
         return new SequenceStats(
                 e.getTotalBases(),
                 e.getTotalBasesWithoutNBases(),

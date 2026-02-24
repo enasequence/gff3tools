@@ -37,7 +37,7 @@ import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.FastaHeader;
  * </ul>
  *
  */
-public interface SubmissionSequenceReader extends AutoCloseable {
+public interface SequenceReader extends AutoCloseable {
 
     /**
      * Returns the type of input backing this reader.

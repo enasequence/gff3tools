@@ -26,14 +26,14 @@ import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.sequence.IdType;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.FastaHeader;
 
-public class PlainSequenceSubmissionReaderTest {
+public class PlainSequenceReaderTest {
 
     @Test
     void openPlainSequence_basicWorkingExample_withoutHeader() throws Exception {
         File seqFile = TestUtils.getResourceFile("sequence/plain/plain_good_sequence.txt");
         String accessionId = "acc1";
 
-        try (var r = new PlainSequenceSubmissionReader(seqFile, accessionId, null)) {
+        try (var r = new PlainSequenceReader(seqFile, accessionId, null)) {
             // optional header absent
             assertTrue(r.getHeader(IdType.ACCESSION_ID, "acc1").isEmpty());
 
@@ -64,7 +64,7 @@ public class PlainSequenceSubmissionReaderTest {
         File seqFile = TestUtils.getResourceFile("sequence/plain/plain_good_sequence.txt");
         String accessionId = "acc1";
 
-        try (var r = new PlainSequenceSubmissionReader(seqFile, accessionId, null)) {
+        try (var r = new PlainSequenceReader(seqFile, accessionId, null)) {
             r.setAccessionIds(List.of("acc1"));
             // wrong count
             assertThrows(IllegalArgumentException.class, () -> r.setAccessionIds(List.of("acc1", "acc2")));
@@ -78,7 +78,7 @@ public class PlainSequenceSubmissionReaderTest {
         File nonUtf8 = TestUtils.getResourceFile("sequence/plain/plain_not_utf8.txt");
 
         assertThrows(SequenceFileException.class, () -> {
-            try (var r = new PlainSequenceSubmissionReader(nonUtf8, "acc1", null)) {
+            try (var r = new PlainSequenceReader(nonUtf8, "acc1", null)) {
                 // no-op
             }
         });
@@ -89,7 +89,7 @@ public class PlainSequenceSubmissionReaderTest {
         File empty = TestUtils.getResourceFile("sequence/plain/plain_empty.txt");
 
         assertThrows(SequenceFileException.class, () -> {
-            try (var r = new PlainSequenceSubmissionReader(empty, "acc1", null)) {
+            try (var r = new PlainSequenceReader(empty, "acc1", null)) {
                 // no-op
             }
         });
@@ -104,7 +104,7 @@ public class PlainSequenceSubmissionReaderTest {
         h.setMoleculeType("DNA");
         h.setTopology("linear");
 
-        try (var r = new PlainSequenceSubmissionReader(seqFile, "acc1", h)) {
+        try (var r = new PlainSequenceReader(seqFile, "acc1", h)) {
             var got = r.getHeader(IdType.ACCESSION_ID, "acc1");
             assertTrue(got.isPresent());
             assertEquals("desc", got.get().getDescription());

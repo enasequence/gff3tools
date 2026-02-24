@@ -17,18 +17,18 @@ import java.io.Reader;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionSequenceReader;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionType;
 
-public class SubmissionReadersTest {
+public class SequenceReaderFactoryTest {
 
     @Test
-    void openFasta_basicStreamingSequenceExample() throws Exception {
+    void readFasta_basicStreamingSequenceExample() throws Exception {
         File fasta = TestUtils.getResourceFile("sequence/fasta/fasta_good_example.txt");
         File seqFile = TestUtils.getResourceFile("sequence/plain/plain_short_good_sequence.txt");
 
         // basic sanity check for fasta
-        try (SubmissionSequenceReader r = SubmissionReaders.openFasta(fasta)) {
+        try (SequenceReader r = SequenceReaderFactory.readFasta(fasta)) {
             assertEquals(SubmissionType.FASTA, r.submissionType());
 
             var s1 = r.getStats(IdType.SUBMISSION_ID, "ID1");
@@ -46,7 +46,7 @@ public class SubmissionReadersTest {
         }
 
         // basic sanity check for sequenceReader
-        try (SubmissionSequenceReader r = SubmissionReaders.openPlainSequence(seqFile, "ID1", null)) {
+        try (SequenceReader r = SequenceReaderFactory.readPlainSequence(seqFile, "ID1")) {
             assertEquals(SubmissionType.PLAIN_SEQUENCE, r.submissionType());
 
             var s1 = r.getStats(IdType.SUBMISSION_ID, "ID1");

@@ -11,13 +11,14 @@
 package uk.ac.ebi.embl.gff3tools.sequence;
 
 import java.io.File;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.FastaSubmissionReader;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.PlainSequenceSubmissionReader;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionSequenceReader;
+import java.util.Objects;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.JsonHeaderFastaReader;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.PlainSequenceReader;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.FastaHeader;
 
 /**
- * Factory methods for opening {@link SubmissionSequenceReader} instances.
+ * Factory methods for opening {@link SequenceReader} instances.
  *
  * <p>This is the single entry point for reading sequence submissions in a unified way,
  * regardless of whether the submission is a multi-record FASTA file or a single-record
@@ -27,7 +28,7 @@ import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.FastaHeader;
  * <ul>
  *   <li><b>FASTA</b>: a FASTA file containing one or more entries. Each entry is addressable by
  *       its submission ID (parsed from the JSON header). Accession IDs may be supplied later via
- *       {@link SubmissionSequenceReader#setAccessionIds(java.util.List)}.</li>
+ *       {@link SequenceReader#setAccessionIds(java.util.List)}.</li>
  *   <li><b>PLAIN_SEQUENCE</b>: a single sequence file containing exactly one sequence record.
  *       The record is addressed by the provided accession ID. A {@link FastaHeader} may be provided
  *       separately (optional).</li>
@@ -37,14 +38,14 @@ import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.FastaHeader;
  * <p>Readers returned by this factory hold file handles. Always close them when done.</p>
  *
  * <pre>{@code
- * try (SubmissionSequenceReader reader = SubmissionReaders.openFasta(fastaFile)) {
+ * try (SequenceReader reader = SequenceReaderFactory.openFasta(fastaFile)) {
  *     // use reader...
  * }
  * }</pre>
  */
-public final class SubmissionReaders {
+public final class SequenceReaderFactory {
 
-    private SubmissionReaders() {
+    private SequenceReaderFactory() {
         // Utility class; do not instantiate.
     }
 
@@ -58,37 +59,55 @@ public final class SubmissionReaders {
      * <ul>
      *   <li>{@code IdType.SUBMISSION_ID} immediately (submission IDs come from the parsed headers)</li>
      *   <li>{@code IdType.ACCESSION_ID} only after providing a mapping via
-     *       {@link SubmissionSequenceReader#setAccessionIds(java.util.List)}</li>
+     *       {@link SequenceReader#setAccessionIds(java.util.List)}</li>
      * </ul>
      *
      * <p>If accession IDs are supplied later, they must be provided in the same order as the records
      * appear in the FASTA file.</p>
      *
      * @param fastaFile FASTA file to open (must not be {@code null})
-     * @return a {@link SubmissionSequenceReader} backed by the FASTA file
+     * @return a {@link SequenceReader} backed by the FASTA file
      * @throws Exception if the file cannot be opened, parsed, or validated (e.g. invalid FASTA,
      *                   invalid headers, duplicate IDs, I/O errors)
      */
-    public static SubmissionSequenceReader openFasta(File fastaFile) throws Exception {
-        return new FastaSubmissionReader(fastaFile);
+    public static SequenceReader readFasta(File fastaFile) throws Exception {
+        return new JsonHeaderFastaReader(fastaFile);
     }
 
     /**
      * Opens a reader for a plain (single-record) sequence submission.
      *
      * <p>The sequence file is expected to contain exactly one sequence record. The record is addressed
-     * by the provided {@code accessionId}. A {@link FastaHeader} may be supplied separately; if {@code null},
-     * header access via {@link SubmissionSequenceReader#getHeader(IdType, String)} will return empty.</p>
+     * by the provided {@code accessionId}. A {@link FastaHeader} is supplied via this constructor,
+     * header access via {@link SequenceReader#getHeader(IdType, String)} will return empty.</p>
      *
      * @param sequenceFile plain sequence file to open (must not be {@code null})
      * @param accessionId accession ID identifying the single record (must not be {@code null} or blank)
-     * @param optionalHeader optional metadata for the record; may be {@code null}
-     * @return a {@link SubmissionSequenceReader} backed by the plain sequence file
+     * @param header metadata for the record; if not present use the other constructor as null inputs are not accepted
+     * @return a {@link SequenceReader} backed by the plain sequence file
      * @throws Exception if the file cannot be opened, parsed, or validated (e.g. not UTF-8, wrong format,
      *                   empty file, more than one record, I/O errors)
      */
-    public static SubmissionSequenceReader openPlainSequence(
-            File sequenceFile, String accessionId, FastaHeader optionalHeader) throws Exception {
-        return new PlainSequenceSubmissionReader(sequenceFile, accessionId, optionalHeader);
+    public static SequenceReader readPlainSequence(File sequenceFile, String accessionId, FastaHeader header)
+            throws Exception {
+        Objects.requireNonNull(header, "header");
+        return new PlainSequenceReader(sequenceFile, accessionId, header);
+    }
+
+    /**
+     * Opens a reader for a plain (single-record) sequence submission.
+     *
+     * <p>The sequence file is expected to contain exactly one sequence record. The record is addressed
+     * by the provided {@code accessionId}. {@link FastaHeader} is assumed to be non-existent here, so
+     * header access via {@link SequenceReader#getHeader(IdType, String)} will return empty.</p>
+     *
+     * @param sequenceFile plain sequence file to open (must not be {@code null})
+     * @param accessionId accession ID identifying the single record (must not be {@code null} or blank)
+     * @return a {@link SequenceReader} backed by the plain sequence file
+     * @throws Exception if the file cannot be opened, parsed, or validated (e.g. not UTF-8, wrong format,
+     *                   empty file, more than one record, I/O errors)
+     */
+    public static SequenceReader readPlainSequence(File sequenceFile, String accessionId) throws Exception {
+        return new PlainSequenceReader(sequenceFile, accessionId, null);
     }
 }
