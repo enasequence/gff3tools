@@ -34,6 +34,10 @@ public class TranslExceptAttribute {
     // Pattern to parse position: either "start..end" or just "start"
     private static final Pattern POSITION_PATTERN = Pattern.compile("^\\s*(\\d+)(?:\\s*\\.\\.\\s*(\\d+))?\\s*$");
 
+    // Handles complement
+    private static final Pattern COMPLEMENT_PATTERN =
+            Pattern.compile("^complement\\((.+)\\)$", Pattern.CASE_INSENSITIVE);
+
     private final Integer startPosition;
     private final Integer endPosition;
     private final String aminoAcidCode;
@@ -57,12 +61,7 @@ public class TranslExceptAttribute {
 
         try {
             // Parse position (group 1)
-            String positionStr = matcher.group(1);
-            Matcher posMatcher = POSITION_PATTERN.matcher(positionStr);
-            if (!posMatcher.matches()) {
-                throw new TranslationException("Invalid position in transl_except: " + positionStr);
-            }
-
+            Matcher posMatcher = getPositionMatcher(matcher);
             this.startPosition = Integer.parseInt(posMatcher.group(1));
             String endGroup = posMatcher.group(2);
             this.endPosition = endGroup != null ? Integer.parseInt(endGroup) : startPosition;
@@ -74,5 +73,21 @@ public class TranslExceptAttribute {
         } catch (NumberFormatException e) {
             throw new TranslationException("Invalid position in transl_except: " + value, e);
         }
+
+    }
+
+    private static Matcher getPositionMatcher(Matcher matcher) throws TranslationException {
+        String positionStr = matcher.group(1).trim();
+
+        Matcher complementMatcher = COMPLEMENT_PATTERN.matcher(positionStr);
+        if (complementMatcher.matches()) {
+            positionStr = complementMatcher.group(1);
+        }
+
+        Matcher posMatcher = POSITION_PATTERN.matcher(positionStr);
+        if (!posMatcher.matches()) {
+            throw new TranslationException("Invalid position in transl_except: " + positionStr);
+        }
+        return posMatcher;
     }
 }
