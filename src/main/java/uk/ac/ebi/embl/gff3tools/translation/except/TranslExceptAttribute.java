@@ -73,7 +73,6 @@ public class TranslExceptAttribute {
         } catch (NumberFormatException e) {
             throw new TranslationException("Invalid position in transl_except: " + value, e);
         }
-
     }
 
     private static Matcher getPositionMatcher(Matcher matcher) throws TranslationException {
