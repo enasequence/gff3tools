@@ -163,8 +163,7 @@ public class GFF3AnnotationFactory {
         id.ifPresent(v -> baseAttributes.put("ID", List.of(v)));
         parentId.ifPresent(v -> baseAttributes.put("Parent", List.of(v)));
 
-        // Write translation to fasta and remove from attribute map.
-        handleTranslation(fastaWriter, baseAttributes, id, sequenceRegion);
+        StringBuilder gff3Translation = new StringBuilder();
 
         CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
         for (Location location : compoundLocation.getLocations()) {
@@ -196,26 +195,40 @@ public class GFF3AnnotationFactory {
                         .sequencePath(sequencePath)
                         .build();
                 validationEngine.validate(context, -1);
+                gff3Translation.append(gff3Feature.getAttribute("translation").orElse(""));
+                gff3Feature.removeAttributeList("translation");
             }
             gff3Features.add(gff3Feature);
+        }
+
+        if (featureName.equalsIgnoreCase("CDS")) {
+            String expectedTranslation = ffFeature.getSingleQualifierValue("translation");
+            String actualTranslation = gff3Translation.toString();
+            if (!expectedTranslation.equalsIgnoreCase(actualTranslation)) {
+                LOG.error(expectedTranslation);
+                LOG.error(actualTranslation);
+                throw new ValidationException("Translation failed for feature at location "
+                        + ffFeature.getLocations().getMinPosition() + "-"
+                        + ffFeature.getLocations().getMaxPosition());
+            } else {
+                LOG.info("Translation successful for feature at location "
+                        + ffFeature.getLocations().getMinPosition() + "-"
+                        + ffFeature.getLocations().getMaxPosition());
+                handleTranslation(fastaWriter, actualTranslation, id, sequenceRegion);
+            }
         }
 
         return gff3Features;
     }
 
-    /**
-     * Write translation to fasta and remove from attribute map.
-     */
     private void handleTranslation(
             Writer fastaWriter,
-            Map<String, List<String>> baseAttributes,
+            String translationSeq,
             Optional<String> featureId,
             GFF3SequenceRegion sequenceRegion) {
-        if (baseAttributes.containsKey("translation") && featureId.isPresent()) {
+        if (!translationSeq.isEmpty()) {
             String translationKey = TranslationWriter.getTranslationKey(sequenceRegion.accession(), featureId.get());
-            List<String> translation = baseAttributes.get("translation");
-            TranslationWriter.writeTranslation(fastaWriter, translationKey, translation.get(0));
-            // baseAttributes.remove("translation");
+            TranslationWriter.writeTranslation(fastaWriter, translationKey, translationSeq);
         }
     }
 
@@ -225,6 +238,7 @@ public class GFF3AnnotationFactory {
 
         ffFeature.getQualifiers().stream()
                 .filter(q -> !"gene".equals(q.getName()))
+                .filter(q -> !"translation".equals(q.getName()))
                 .forEach(q -> {
                     String key = qualifierMap.getOrDefault(q.getName(), q.getName());
                     String value = q.isValue() ? q.getValue() : "true";
