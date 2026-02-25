@@ -478,7 +478,7 @@ public class AttributesLocationValidationTest {
                 ValidationException.class, () -> attributesLocationValidation.validateTranslExcept(gff3Annotation, 1));
 
         Assertions.assertTrue(
-                ex.getMessage().contains("%s contains an invalid amino acid \"%s\"".formatted(TRANSL_EXCEPT, "MOO")));
+                ex.getMessage().contains("Violation of rule on line 1: Unknown amino acid: %s".formatted( "MOO")));
     }
 
     @Test
