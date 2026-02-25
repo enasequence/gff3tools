@@ -11,8 +11,6 @@
 package uk.ac.ebi.embl.gff3tools.tsvconverter;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -39,15 +37,15 @@ public class TSVEntryReader implements Closeable {
     private final TemplateProcessor templateProcessor;
     private final SubmissionOptions options;
     private final TemplateInfo templateInfo;
-    private final BufferedReader replayReader;
 
     private int currentLineNumber = 0;
 
     /**
      * Creates a TSVEntryReader from a BufferedReader.
      *
-     * <p>The reader will scan the first lines to extract the template ID, buffer those lines,
-     * and then continue reading the rest of the TSV data.
+     * <p>The reader will scan the first lines to extract the template ID, then pass the
+     * reader directly to CSVReader. This works because CSVReader's readHeader already skips
+     * comments, empty lines, and checklist ID lines.
      *
      * @param reader BufferedReader for the TSV input (caller handles gzip decompression)
      * @throws ReadException if the file cannot be read
@@ -57,18 +55,17 @@ public class TSVEntryReader implements Closeable {
         this.options = createDefaultOptions();
 
         try {
-            // 1. Extract template ID while buffering initial lines
-            List<String> bufferedLines = new ArrayList<>();
-            String templateId = extractTemplateId(reader, bufferedLines);
+            // 1. Extract template ID (consumes lines up to and including the checklist line)
+            String templateId = extractTemplateId(reader);
             LOG.info("Detected template ID: {}", templateId);
 
             // 2. Load template
             this.templateInfo = loadTemplate(templateId);
             this.templateProcessor = new TemplateProcessor(templateInfo, options);
 
-            // 3. Create CSVReader with a BufferedReader that replays buffered lines first
-            this.replayReader = createReplayReader(bufferedLines, reader);
-            this.csvReader = new CSVReader(replayReader, templateInfo.getTokens(), 0);
+            // 3. Pass reader directly to CSVReader — it already handles skipping
+            //    comments, empty lines, and checklist ID lines in its readHeader.
+            this.csvReader = new CSVReader(reader, templateInfo.getTokens(), 0);
 
         } catch (TemplateNotFoundException e) {
             throw e;
@@ -134,25 +131,23 @@ public class TSVEntryReader implements Closeable {
 
     @Override
     public void close() throws IOException {
-        // Close the replay reader which wraps the original BufferedReader
-        if (replayReader != null) {
-            replayReader.close();
-        }
+        // Nothing to close here — the caller owns the BufferedReader
     }
 
     /**
-     * Extracts template ID from the first lines of the TSV.
-     * Buffers lines read so they can be replayed for the CSVReader.
+     * Extracts the template ID from the first lines of the TSV.
+     *
+     * <p>Consumes lines from the reader up to and including the checklist ID line.
+     * Any preceding comment or empty lines are consumed and discarded, which is fine
+     * because CSVReader would skip them anyway.
      */
-    private String extractTemplateId(BufferedReader reader, List<String> bufferedLines)
-            throws IOException, TemplateNotFoundException {
+    private String extractTemplateId(BufferedReader reader) throws IOException, TemplateNotFoundException {
 
         for (int i = 0; i < MAX_LINES_FOR_TEMPLATE_ID; i++) {
             String line = reader.readLine();
             if (line == null) {
                 break;
             }
-            bufferedLines.add(line);
 
             String templateId = CSVReader.getChecklistIdFromIdLine(line);
             if (templateId != null) {
@@ -163,53 +158,6 @@ public class TSVEntryReader implements Closeable {
         throw new TemplateNotFoundException("No template ID found in TSV file header. "
                 + "Expected a line like 'Checklist ERT000002' or '#template_accession ERT000002' "
                 + "in the first " + MAX_LINES_FOR_TEMPLATE_ID + " lines.");
-    }
-
-    /**
-     * Creates a BufferedReader that first replays buffered lines, then continues from the original reader.
-     */
-    private BufferedReader createReplayReader(List<String> bufferedLines, BufferedReader continuation) {
-        // Build string from buffered lines
-        StringBuilder sb = new StringBuilder();
-        for (String line : bufferedLines) {
-            sb.append(line).append("\n");
-        }
-
-        // Create a reader that combines buffered content with continuation
-        Reader combinedReader = new SequenceReader(new StringReader(sb.toString()), continuation);
-        return new BufferedReader(combinedReader);
-    }
-
-    /**
-     * A Reader that reads from two Readers in sequence.
-     */
-    private static class SequenceReader extends Reader {
-        private final Reader first;
-        private final Reader second;
-        private boolean firstExhausted = false;
-
-        SequenceReader(Reader first, Reader second) {
-            this.first = first;
-            this.second = second;
-        }
-
-        @Override
-        public int read(char[] cbuf, int off, int len) throws IOException {
-            if (!firstExhausted) {
-                int result = first.read(cbuf, off, len);
-                if (result != -1) {
-                    return result;
-                }
-                firstExhausted = true;
-            }
-            return second.read(cbuf, off, len);
-        }
-
-        @Override
-        public void close() throws IOException {
-            first.close();
-            second.close();
-        }
     }
 
     /**
