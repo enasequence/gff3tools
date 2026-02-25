@@ -1,0 +1,17 @@
+ID   ACC123; SV 1; XXX; XXX; XXX; XXX; 0 BP.
+XX
+AC   ACC123;
+XX
+DE   .
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..1000
+FT   mobile_element  100..500
+FT                   /mobile_element_type="LINE"
+FT   mobile_element  complement(600..900)
+FT                   /mobile_element_type="SINE"
+XX
+//

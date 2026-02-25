@@ -8,12 +8,13 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.fasta.headerutils;
+package uk.ac.ebi.embl.gff3tools.sequence;
 
-import lombok.Value;
+import java.util.Map;
 
-@Value
-public class ParsedHeader {
-    String id;
-    FastaHeader header;
-}
+public record SequenceStats(
+        long totalBases,
+        long totalBasesWithoutNBases,
+        long leadingNsCount,
+        long trailingNsCount,
+        Map<Character, Long> baseCount) {}

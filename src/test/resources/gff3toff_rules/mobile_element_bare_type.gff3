@@ -1,0 +1,4 @@
+##gff-version 3.1.26
+##sequence-region ACC123.1 1 1000
+ACC123.1	.	LINE_element	100	500	.	+	.	ID=LINE_element;mobile_element_type=LINE;
+ACC123.1	.	SINE_element	600	900	.	-	.	ID=SINE_element;mobile_element_type=SINE;

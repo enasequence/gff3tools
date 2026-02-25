@@ -10,17 +10,19 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
+import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.*;
+
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
@@ -37,11 +39,6 @@ public class AttributesValueValidation extends Validation {
     private static final String QUALIFIER_VALUE_REQUIRED_ERROR =
             "Qualifier \"%s\" must have one of values \"%s\" when qualifier \"%s\" has value \"%s\" in any feature.";
 
-    private static final String PROTEIN_ID_VALUE_VALIDATION = "Protein Id cannot be null or empty";
-
-    private static final String PSEUDOGENE_VALUE_VALIDATION =
-            "pseudogene qualifier value \"%s\" is invalid. Allowed values are: \"%s\"";
-
     public static final String MITOCHONDRION = "mitochondrion";
     public static final String PROVIRAL_VALUE_PATTERN = ".*endogenous retrovirus$";
 
@@ -57,20 +54,12 @@ public class AttributesValueValidation extends Validation {
                     "^(23S ribosomal RNA)$",
                     "^(28S ribosomal RNA)$"));
 
-    public static final Set<String> PSEUDO_GENE_VALUES = new HashSet<>(Arrays.asList(
-            GFF3Attributes.PROCESSED,
-            GFF3Attributes.UNPROCESSED,
-            GFF3Attributes.UNITARY,
-            GFF3Attributes.ALLELIC,
-            GFF3Attributes.UNKNOWN));
-
     private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
 
     @ValidationMethod(rule = "RNA_PRODUCT_ATTRIBUTE_VALUE", type = ValidationType.FEATURE)
     public void validateAttributeValuePattern(GFF3Feature feature, int line) throws ValidationException {
 
-        List<String> productValues =
-                feature.getAttributeList(GFF3Attributes.PRODUCT).orElse(new ArrayList<>());
+        List<String> productValues = feature.getAttributeList(PRODUCT).orElse(new ArrayList<>());
         if (productValues.isEmpty()) {
             return;
         }
@@ -93,11 +82,7 @@ public class AttributesValueValidation extends Validation {
                     if (!featureExists) {
                         throw new ValidationException(
                                 line,
-                                String.format(
-                                        INVALID_FEATURE_PRODUCT_PATTERN,
-                                        feature.getName(),
-                                        GFF3Attributes.PRODUCT,
-                                        patterns));
+                                String.format(INVALID_FEATURE_PRODUCT_PATTERN, feature.getName(), PRODUCT, patterns));
                     }
                 }
             }
@@ -106,44 +91,38 @@ public class AttributesValueValidation extends Validation {
 
     @ValidationMethod(rule = "PROVIRAL_ATTRIBUTE_VALUE", type = ValidationType.FEATURE)
     public void validateProviralAttribute(GFF3Feature feature, int line) throws ValidationException {
-        if (feature.hasAttribute(GFF3Attributes.NOTE) && feature.hasAttribute(GFF3Attributes.PROVIRAL)) {
-            Optional<String> opv =
-                    feature.getAttribute(GFF3Attributes.PROVIRAL).filter((pv) -> pv.matches(PROVIRAL_VALUE_PATTERN));
+        if (feature.hasAttribute(NOTE) && feature.hasAttribute(PROVIRAL)) {
+            Optional<String> opv = feature.getAttribute(PROVIRAL).filter((pv) -> pv.matches(PROVIRAL_VALUE_PATTERN));
             if (opv.isEmpty()) {
                 throw new ValidationException(
-                        line,
-                        INVALID_ATTRIBUTE_VALUE_PATTERN.formatted(GFF3Attributes.PROVIRAL, PROVIRAL_VALUE_PATTERN));
+                        line, INVALID_ATTRIBUTE_VALUE_PATTERN.formatted(PROVIRAL, PROVIRAL_VALUE_PATTERN));
             }
         }
     }
 
-    @ValidationMethod(rule = "12S_RRNA_MITOCHONDRION_DEPENDENCY", type = ValidationType.ANNOTATION)
+    @ValidationMethod(
+            rule = "12S_RRNA_MITOCHONDRION_DEPENDENCY",
+            type = ValidationType.ANNOTATION,
+            severity = RuleSeverity.WARN)
     public void validateAttributeValueDependency(GFF3Annotation annotation, int line) throws ValidationException {
-        boolean has12SrRNA = false;
-        boolean hasMitochondrion = false;
 
-        for (GFF3Feature feature : annotation.getFeatures()) {
-            String geneValue = feature.getAttribute(GFF3Attributes.GENE).orElse(null);
-            if ("12S rRNA".equalsIgnoreCase(geneValue)) {
-                has12SrRNA = true;
-            }
+        boolean has12SrRNA = annotation.getFeatures().stream().anyMatch(f -> f.getAttributeList(GENE)
+                .map(values -> values.stream().anyMatch("12S rRNA"::equalsIgnoreCase))
+                .orElse(false));
 
-            String organelleValue =
-                    feature.getAttribute(GFF3Attributes.ORGANELLE).orElse(null);
-            if (MITOCHONDRION.equalsIgnoreCase(organelleValue)) {
-                hasMitochondrion = true;
-            }
-
-            if (has12SrRNA && hasMitochondrion) {
-                break;
-            }
+        if (!has12SrRNA) {
+            return;
         }
 
-        if (has12SrRNA && !hasMitochondrion) {
+        boolean hasInvalidOrganelle = annotation.getFeatures().stream()
+                .filter(f -> f.hasAttribute(ORGANELLE))
+                .anyMatch(f -> f.getAttributeList(ORGANELLE)
+                        .map(values -> values.stream().noneMatch(MITOCHONDRION::equalsIgnoreCase))
+                        .orElse(false));
+
+        if (hasInvalidOrganelle) {
             throw new ValidationException(
-                    line,
-                    QUALIFIER_VALUE_REQUIRED_ERROR.formatted(
-                            GFF3Attributes.ORGANELLE, MITOCHONDRION, GFF3Attributes.GENE, "12S rRNA"));
+                    line, QUALIFIER_VALUE_REQUIRED_ERROR.formatted(ORGANELLE, MITOCHONDRION, GENE, "12S rRNA"));
         }
     }
 }

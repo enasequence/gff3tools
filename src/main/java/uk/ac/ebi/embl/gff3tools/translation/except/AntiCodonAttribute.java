@@ -16,20 +16,19 @@ import lombok.Getter;
 import uk.ac.ebi.embl.gff3tools.translation.TranslationException;
 
 /**
- * Parses and represents a transl_except attribute value.
- * Format: (pos:start..end,aa:AminoAcidName)
+ * Parses and represents a codon attribute value.
+ * Format: (seq:"codon",aa:AminoAcidName)
  * Examples:
- *   (pos:213..215,aa:Trp)
- *   (pos:213..215,aa:Sec)
- *   (pos:1,aa:Met)
+ *   (seq:"tga",aa:Trp)
+ *   (seq:"aga",aa:Arg)
  */
 @Getter
-public class TranslExceptAttribute {
+public class AntiCodonAttribute {
 
-    // Pattern to match transl_except format with flexible whitespace
-    // Groups: 1=position (e.g., "213..215" or "213"), 2=amino acid name
+    // Pattern to match anticodon value
     private static final Pattern PATTERN = Pattern.compile(
-            "^\\s*\\(\\s*pos\\s*:\\s*([^,]+)\\s*,\\s*aa\\s*:\\s*([^\\s,)]+)\\s*\\)\\s*$", Pattern.CASE_INSENSITIVE);
+            "^\\s*\\(\\s*pos:\\s*([^,]+)\\s*,\\s*aa\\s*:\\s*([^,\\s]+)(?:\\s*,\\s*seq\\s*:\\s*([^\\s)]+))?\\s*\\)\\s*$",
+            Pattern.CASE_INSENSITIVE);
 
     // Pattern to parse position: either "start..end" or just "start"
     private static final Pattern POSITION_PATTERN = Pattern.compile("^\\s*(\\d+)(?:\\s*\\.\\.\\s*(\\d+))?\\s*$");
@@ -42,46 +41,46 @@ public class TranslExceptAttribute {
     private final long endPosition;
     private final String aminoAcidCode;
     /**
-     * Parses a transl_except attribute value.
+     * Parses a anti codon attribute value.
      *
-     * @param value the attribute value, e.g., "(pos:213..215,aa:Trp)"
+     * @param value the attribute value, e.g., "(seq:\"tga\",aa:Trp)"
      * @throws TranslationException if the format is invalid
      */
-    public TranslExceptAttribute(String value) throws TranslationException {
+    public AntiCodonAttribute(String value) throws TranslationException {
         if (value == null || value.isBlank()) {
-            throw new TranslationException("transl_except value cannot be null or empty");
+            throw new TranslationException("Anticodon value cannot be null or empty");
         }
 
         Matcher matcher = PATTERN.matcher(value);
         if (!matcher.matches()) {
-            throw new TranslationException("Invalid transl_except format: " + value);
+            throw new TranslationException("Invalid Anticodon format: " + value);
         }
 
         try {
-            // Parse position (group 1)
             Matcher posMatcher = getPositionMatcher(matcher);
             this.startPosition = Long.parseLong(posMatcher.group(1));
             String endGroup = posMatcher.group(2);
-            this.endPosition = endGroup != null ? Integer.parseInt(endGroup) : startPosition;
+            this.endPosition = endGroup != null ? Long.parseLong(endGroup) : this.startPosition;
 
         } catch (NumberFormatException e) {
-            throw new TranslationException("Invalid position in transl_except: " + value, e);
+            throw new TranslationException("Invalid numeric value in anticodon: " + value);
         }
 
-        this.aminoAcidCode = matcher.group(2);
+        this.aminoAcidCode = matcher.group(2).trim();
     }
 
     private static Matcher getPositionMatcher(Matcher matcher) throws TranslationException {
-        String positionStr = matcher.group(1).trim();
+        String positionString = matcher.group(1).trim();
 
-        Matcher complementMatcher = COMPLEMENT_PATTERN.matcher(positionStr);
+        // Remove complement(...) if present
+        Matcher complementMatcher = COMPLEMENT_PATTERN.matcher(positionString);
         if (complementMatcher.matches()) {
-            positionStr = complementMatcher.group(1);
+            positionString = complementMatcher.group(1);
         }
 
-        Matcher posMatcher = POSITION_PATTERN.matcher(positionStr);
+        Matcher posMatcher = POSITION_PATTERN.matcher(positionString);
         if (!posMatcher.matches()) {
-            throw new TranslationException("Invalid position in transl_except: " + positionStr);
+            throw new TranslationException("Invalid anticodon position: " + positionString);
         }
         return posMatcher;
     }

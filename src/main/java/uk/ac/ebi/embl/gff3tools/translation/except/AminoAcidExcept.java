@@ -53,11 +53,20 @@ public class AminoAcidExcept {
      * @return the single-letter code
      * @throws TranslationException if the amino acid name is unknown
      */
-    public static Character toSingleLetter(String name) throws TranslationException {
+    public static Character getAminoAcidLetter(String name) throws TranslationException {
         Character aminoAcid = AMINO_ACID_MAP.get(name.toUpperCase());
         if (aminoAcid == null) {
             throw new TranslationException("Unknown amino acid: " + name);
         }
         return aminoAcid;
+    }
+
+    /**
+     * Check if the 3-letter amino acid exists in the Map
+     * @param name the amino acid name (case-insensitive), e.g., "Trp", "SEC", "TERM"
+     * @return true or false
+     */
+    public static boolean isValidAminoAcid(String name) {
+        return AMINO_ACID_MAP.containsKey(name.toUpperCase());
     }
 }
