@@ -137,7 +137,7 @@ public class Translator {
                 feature.getAttributeList(GFF3Attributes.TRANSL_EXCEPT).orElse(List.of());
         for (String translExceptValue : translExceptValues) {
             TranslExceptAttribute attribute = new TranslExceptAttribute(translExceptValue);
-            addPositionException(attribute.getStartPosition(), attribute.getEndPosition(), attribute.getAminoAcid());
+            addPositionException(attribute.getStartPosition(), attribute.getEndPosition(), attribute.getAminoAcidLetter());
         }
     }
 

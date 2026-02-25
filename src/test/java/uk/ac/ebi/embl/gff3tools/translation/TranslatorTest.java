@@ -258,7 +258,7 @@ public class TranslatorTest {
         TranslExceptAttribute attr = new TranslExceptAttribute("(pos:1,aa:Met)");
         assertEquals(Integer.valueOf(1), attr.getStartPosition());
         assertEquals(Integer.valueOf(1), attr.getEndPosition()); // end equals start for single position
-        assertEquals(Character.valueOf('M'), attr.getAminoAcid());
+        assertEquals(Character.valueOf('M'), attr.getAminoAcidLetter());
     }
 
     @Test

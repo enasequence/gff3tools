@@ -25,7 +25,7 @@ public class TranslExceptAttributeTest {
         TranslExceptAttribute attr = new TranslExceptAttribute("(pos:213..215,aa:Trp)");
         assertEquals(Integer.valueOf(213), attr.getStartPosition());
         assertEquals(Integer.valueOf(215), attr.getEndPosition());
-        assertEquals(Character.valueOf('W'), attr.getAminoAcid());
+        assertEquals(Character.valueOf('W'), attr.getAminoAcidLetter());
     }
 
     @Test
@@ -33,7 +33,7 @@ public class TranslExceptAttributeTest {
         TranslExceptAttribute attr = new TranslExceptAttribute("(pos:1,aa:Met)");
         assertEquals(Integer.valueOf(1), attr.getStartPosition());
         assertEquals(Integer.valueOf(1), attr.getEndPosition()); // end equals start for single position
-        assertEquals(Character.valueOf('M'), attr.getAminoAcid());
+        assertEquals(Character.valueOf('M'), attr.getAminoAcidLetter());
     }
 
     // ========== Flexible Whitespace Tests ==========
@@ -43,7 +43,7 @@ public class TranslExceptAttributeTest {
         TranslExceptAttribute attr = new TranslExceptAttribute("( pos : 213..215 , aa : Trp )");
         assertEquals(Integer.valueOf(213), attr.getStartPosition());
         assertEquals(Integer.valueOf(215), attr.getEndPosition());
-        assertEquals(Character.valueOf('W'), attr.getAminoAcid());
+        assertEquals(Character.valueOf('W'), attr.getAminoAcidLetter());
     }
 
     @Test
@@ -51,7 +51,7 @@ public class TranslExceptAttributeTest {
         TranslExceptAttribute attr = new TranslExceptAttribute("  (pos:1..3,aa:Met)  ");
         assertEquals(Integer.valueOf(1), attr.getStartPosition());
         assertEquals(Integer.valueOf(3), attr.getEndPosition());
-        assertEquals(Character.valueOf('M'), attr.getAminoAcid());
+        assertEquals(Character.valueOf('M'), attr.getAminoAcidLetter());
     }
 
     @Test
@@ -59,7 +59,7 @@ public class TranslExceptAttributeTest {
         TranslExceptAttribute attr = new TranslExceptAttribute("(pos:213 .. 215,aa:Trp)");
         assertEquals(Integer.valueOf(213), attr.getStartPosition());
         assertEquals(Integer.valueOf(215), attr.getEndPosition());
-        assertEquals(Character.valueOf('W'), attr.getAminoAcid());
+        assertEquals(Character.valueOf('W'), attr.getAminoAcidLetter());
     }
 
     // ========== Case Insensitivity Tests ==========
@@ -67,152 +67,152 @@ public class TranslExceptAttributeTest {
     @Test
     public void testLowercaseAminoAcid() throws TranslationException {
         TranslExceptAttribute attr = new TranslExceptAttribute("(pos:1..3,aa:trp)");
-        assertEquals(Character.valueOf('W'), attr.getAminoAcid());
+        assertEquals(Character.valueOf('W'), attr.getAminoAcidLetter());
     }
 
     @Test
     public void testMixedCaseAminoAcid() throws TranslationException {
         TranslExceptAttribute attr = new TranslExceptAttribute("(pos:1..3,aa:TrP)");
-        assertEquals(Character.valueOf('W'), attr.getAminoAcid());
+        assertEquals(Character.valueOf('W'), attr.getAminoAcidLetter());
     }
 
     @Test
     public void testUppercaseKeywords() throws TranslationException {
         TranslExceptAttribute attr = new TranslExceptAttribute("(POS:1..3,AA:Met)");
         assertEquals(Integer.valueOf(1), attr.getStartPosition());
-        assertEquals(Character.valueOf('M'), attr.getAminoAcid());
+        assertEquals(Character.valueOf('M'), attr.getAminoAcidLetter());
     }
 
     // ========== All Amino Acid Types Tests ==========
 
     @Test
     public void testAminoAcidAla() throws TranslationException {
-        assertEquals(Character.valueOf('A'), new TranslExceptAttribute("(pos:1..3,aa:Ala)").getAminoAcid());
+        assertEquals(Character.valueOf('A'), new TranslExceptAttribute("(pos:1..3,aa:Ala)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidArg() throws TranslationException {
-        assertEquals(Character.valueOf('R'), new TranslExceptAttribute("(pos:1..3,aa:Arg)").getAminoAcid());
+        assertEquals(Character.valueOf('R'), new TranslExceptAttribute("(pos:1..3,aa:Arg)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidAsn() throws TranslationException {
-        assertEquals(Character.valueOf('N'), new TranslExceptAttribute("(pos:1..3,aa:Asn)").getAminoAcid());
+        assertEquals(Character.valueOf('N'), new TranslExceptAttribute("(pos:1..3,aa:Asn)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidAsp() throws TranslationException {
-        assertEquals(Character.valueOf('D'), new TranslExceptAttribute("(pos:1..3,aa:Asp)").getAminoAcid());
+        assertEquals(Character.valueOf('D'), new TranslExceptAttribute("(pos:1..3,aa:Asp)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidCys() throws TranslationException {
-        assertEquals(Character.valueOf('C'), new TranslExceptAttribute("(pos:1..3,aa:Cys)").getAminoAcid());
+        assertEquals(Character.valueOf('C'), new TranslExceptAttribute("(pos:1..3,aa:Cys)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidGln() throws TranslationException {
-        assertEquals(Character.valueOf('Q'), new TranslExceptAttribute("(pos:1..3,aa:Gln)").getAminoAcid());
+        assertEquals(Character.valueOf('Q'), new TranslExceptAttribute("(pos:1..3,aa:Gln)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidGlu() throws TranslationException {
-        assertEquals(Character.valueOf('E'), new TranslExceptAttribute("(pos:1..3,aa:Glu)").getAminoAcid());
+        assertEquals(Character.valueOf('E'), new TranslExceptAttribute("(pos:1..3,aa:Glu)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidGly() throws TranslationException {
-        assertEquals(Character.valueOf('G'), new TranslExceptAttribute("(pos:1..3,aa:Gly)").getAminoAcid());
+        assertEquals(Character.valueOf('G'), new TranslExceptAttribute("(pos:1..3,aa:Gly)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidHis() throws TranslationException {
-        assertEquals(Character.valueOf('H'), new TranslExceptAttribute("(pos:1..3,aa:His)").getAminoAcid());
+        assertEquals(Character.valueOf('H'), new TranslExceptAttribute("(pos:1..3,aa:His)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidIle() throws TranslationException {
-        assertEquals(Character.valueOf('I'), new TranslExceptAttribute("(pos:1..3,aa:Ile)").getAminoAcid());
+        assertEquals(Character.valueOf('I'), new TranslExceptAttribute("(pos:1..3,aa:Ile)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidLeu() throws TranslationException {
-        assertEquals(Character.valueOf('L'), new TranslExceptAttribute("(pos:1..3,aa:Leu)").getAminoAcid());
+        assertEquals(Character.valueOf('L'), new TranslExceptAttribute("(pos:1..3,aa:Leu)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidLys() throws TranslationException {
-        assertEquals(Character.valueOf('K'), new TranslExceptAttribute("(pos:1..3,aa:Lys)").getAminoAcid());
+        assertEquals(Character.valueOf('K'), new TranslExceptAttribute("(pos:1..3,aa:Lys)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidMet() throws TranslationException {
-        assertEquals(Character.valueOf('M'), new TranslExceptAttribute("(pos:1..3,aa:Met)").getAminoAcid());
+        assertEquals(Character.valueOf('M'), new TranslExceptAttribute("(pos:1..3,aa:Met)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidPhe() throws TranslationException {
-        assertEquals(Character.valueOf('F'), new TranslExceptAttribute("(pos:1..3,aa:Phe)").getAminoAcid());
+        assertEquals(Character.valueOf('F'), new TranslExceptAttribute("(pos:1..3,aa:Phe)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidPro() throws TranslationException {
-        assertEquals(Character.valueOf('P'), new TranslExceptAttribute("(pos:1..3,aa:Pro)").getAminoAcid());
+        assertEquals(Character.valueOf('P'), new TranslExceptAttribute("(pos:1..3,aa:Pro)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidSer() throws TranslationException {
-        assertEquals(Character.valueOf('S'), new TranslExceptAttribute("(pos:1..3,aa:Ser)").getAminoAcid());
+        assertEquals(Character.valueOf('S'), new TranslExceptAttribute("(pos:1..3,aa:Ser)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidThr() throws TranslationException {
-        assertEquals(Character.valueOf('T'), new TranslExceptAttribute("(pos:1..3,aa:Thr)").getAminoAcid());
+        assertEquals(Character.valueOf('T'), new TranslExceptAttribute("(pos:1..3,aa:Thr)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidTrp() throws TranslationException {
-        assertEquals(Character.valueOf('W'), new TranslExceptAttribute("(pos:1..3,aa:Trp)").getAminoAcid());
+        assertEquals(Character.valueOf('W'), new TranslExceptAttribute("(pos:1..3,aa:Trp)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidTyr() throws TranslationException {
-        assertEquals(Character.valueOf('Y'), new TranslExceptAttribute("(pos:1..3,aa:Tyr)").getAminoAcid());
+        assertEquals(Character.valueOf('Y'), new TranslExceptAttribute("(pos:1..3,aa:Tyr)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidVal() throws TranslationException {
-        assertEquals(Character.valueOf('V'), new TranslExceptAttribute("(pos:1..3,aa:Val)").getAminoAcid());
+        assertEquals(Character.valueOf('V'), new TranslExceptAttribute("(pos:1..3,aa:Val)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidSec() throws TranslationException {
         // Selenocysteine
-        assertEquals(Character.valueOf('U'), new TranslExceptAttribute("(pos:1..3,aa:Sec)").getAminoAcid());
+        assertEquals(Character.valueOf('U'), new TranslExceptAttribute("(pos:1..3,aa:Sec)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidPyl() throws TranslationException {
         // Pyrrolysine
-        assertEquals(Character.valueOf('O'), new TranslExceptAttribute("(pos:1..3,aa:Pyl)").getAminoAcid());
+        assertEquals(Character.valueOf('O'), new TranslExceptAttribute("(pos:1..3,aa:Pyl)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidTerm() throws TranslationException {
         // Stop codon (TERM)
-        assertEquals(Character.valueOf('*'), new TranslExceptAttribute("(pos:1..3,aa:TERM)").getAminoAcid());
+        assertEquals(Character.valueOf('*'), new TranslExceptAttribute("(pos:1..3,aa:TERM)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidTer() throws TranslationException {
         // Stop codon (TER - alternative)
-        assertEquals(Character.valueOf('*'), new TranslExceptAttribute("(pos:1..3,aa:Ter)").getAminoAcid());
+        assertEquals(Character.valueOf('*'), new TranslExceptAttribute("(pos:1..3,aa:Ter)").getAminoAcidLetter());
     }
 
     @Test
     public void testAminoAcidOther() throws TranslationException {
         // Unknown amino acid
-        assertEquals(Character.valueOf('X'), new TranslExceptAttribute("(pos:1..3,aa:OTHER)").getAminoAcid());
+        assertEquals(Character.valueOf('X'), new TranslExceptAttribute("(pos:1..3,aa:OTHER)").getAminoAcidLetter());
     }
 
     // ========== Error Handling Tests ==========
