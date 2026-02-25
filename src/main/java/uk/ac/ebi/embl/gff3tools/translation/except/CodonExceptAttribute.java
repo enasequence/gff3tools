@@ -13,7 +13,7 @@ package uk.ac.ebi.embl.gff3tools.translation.except;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.Getter;
-import uk.ac.ebi.embl.gff3tools.exception.TranslationException;
+import uk.ac.ebi.embl.gff3tools.translation.TranslationException;
 
 /**
  * Parses and represents a codon attribute value.
@@ -58,6 +58,6 @@ public class CodonExceptAttribute {
         }
 
         // Parse amino acid (group 2)
-        this.aminoAcid = AminoAcidExcept.toSingleLetter(matcher.group(2));
+        this.aminoAcid = AminoAcidExcept.getAminoAcidLetter(matcher.group(2));
     }
 }

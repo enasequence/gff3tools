@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.Getter;
-import uk.ac.ebi.embl.gff3tools.exception.TranslationException;
 import uk.ac.ebi.embl.gff3tools.translation.tables.TranslationTable;
 import uk.ac.ebi.embl.gff3tools.translation.tables.TranslationTableFactory;
 

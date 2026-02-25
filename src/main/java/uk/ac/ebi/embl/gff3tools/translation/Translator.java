@@ -14,9 +14,9 @@ import java.util.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
-import uk.ac.ebi.embl.gff3tools.exception.TranslationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.translation.except.AminoAcidExcept;
 import uk.ac.ebi.embl.gff3tools.translation.except.CodonExceptAttribute;
 import uk.ac.ebi.embl.gff3tools.translation.except.TranslExceptAttribute;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
@@ -38,7 +38,7 @@ public class Translator {
     private final CodonTranslator codonTranslator;
 
     // Map of exception amino acid for a specific position
-    private final Map<Integer, PositionExceptionData> positionExceptionMap = new HashMap<>();
+    private final Map<Long, PositionExceptionData> positionExceptionMap = new HashMap<>();
 
     private int codonStart = 1;
 
@@ -137,8 +137,8 @@ public class Translator {
                 feature.getAttributeList(GFF3Attributes.TRANSL_EXCEPT).orElse(List.of());
         for (String translExceptValue : translExceptValues) {
             TranslExceptAttribute attribute = new TranslExceptAttribute(translExceptValue);
-            addPositionException(
-                    attribute.getStartPosition(), attribute.getEndPosition(), attribute.getAminoAcidLetter());
+            Character aminoAcid = AminoAcidExcept.getAminoAcidLetter(attribute.getAminoAcidCode());
+            addPositionException(attribute.getStartPosition(), attribute.getEndPosition(), aminoAcid);
         }
     }
 
@@ -183,7 +183,7 @@ public class Translator {
      * @param endPosition the end position (1-based)
      * @param aminoAcid the amino acid to use instead of the standard translation
      */
-    public void addPositionException(Integer beginPosition, Integer endPosition, Character aminoAcid) {
+    public void addPositionException(long beginPosition, long endPosition, Character aminoAcid) {
         PositionExceptionData translationPosException = new PositionExceptionData();
         translationPosException.beginPosition = beginPosition;
         translationPosException.endPosition = endPosition;
@@ -405,8 +405,8 @@ public class Translator {
         int sequenceLength = sequence.length;
 
         for (PositionExceptionData exception : positionExceptionMap.values()) {
-            int beginPos = exception.beginPosition;
-            int endPos = exception.endPosition != null ? exception.endPosition : beginPos;
+            int beginPos = (int) exception.beginPosition;
+            int endPos = exception.endPosition != 0 ? (int) exception.endPosition : beginPos;
             char aminoAcid = exception.aminoAcid;
 
             validateExceptionBounds(beginPos, endPos, sequenceLength);
@@ -708,7 +708,7 @@ public class Translator {
 
     private static class PositionExceptionData {
         Character aminoAcid;
-        Integer beginPosition;
-        Integer endPosition;
+        long beginPosition;
+        long endPosition;
     }
 }

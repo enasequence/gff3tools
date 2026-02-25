@@ -19,7 +19,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.fastareader.FastaReader;
 import uk.ac.ebi.embl.fastareader.exception.FastaFileException;
-import uk.ac.ebi.embl.gff3tools.exception.TranslationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.translation.except.TranslExceptAttribute;
 
@@ -256,9 +255,9 @@ public class TranslatorTest {
         // Single position format (pos:1,aa:Met) - used for partial codons
         // This tests that the parsing works; single position (1..1) covers partial codon
         TranslExceptAttribute attr = new TranslExceptAttribute("(pos:1,aa:Met)");
-        assertEquals(Integer.valueOf(1), attr.getStartPosition());
-        assertEquals(Integer.valueOf(1), attr.getEndPosition()); // end equals start for single position
-        assertEquals(Character.valueOf('M'), attr.getAminoAcidLetter());
+        assertEquals(Long.valueOf(1), attr.getStartPosition());
+        assertEquals(Long.valueOf(1), attr.getEndPosition()); // end equals start for single position
+        assertEquals(Character.valueOf('M'), attr.getAminoAcidCode());
     }
 
     @Test
