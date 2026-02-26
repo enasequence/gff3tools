@@ -465,7 +465,8 @@ public class GFF3FileReaderTest {
 
     @Test
     void testPathConstructorReadsAnnotation() throws Exception {
-        Path testFile = TestUtils.getResourceFile("fftogff3_rules/reduced/contig-reduced-expected.gff3").toPath();
+        Path testFile = TestUtils.getResourceFile("fftogff3_rules/reduced/contig-reduced-expected.gff3")
+                .toPath();
         ValidationEngine validationEngine = getValidationEngine();
 
         try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, testFile)) {

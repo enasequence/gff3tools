@@ -62,7 +62,7 @@ public class GFF3FileReader implements AutoCloseable {
 
     // Used by GFF3 processing pipeline
     public GFF3FileReader(ValidationEngine validationEngine, Path gff3Path) throws IOException {
-        this(validationEngine, Files.newBufferedReader(gff3Path),gff3Path);
+        this(validationEngine, Files.newBufferedReader(gff3Path), gff3Path);
     }
 
     public GFF3Annotation readAnnotation() throws IOException, ValidationException {
