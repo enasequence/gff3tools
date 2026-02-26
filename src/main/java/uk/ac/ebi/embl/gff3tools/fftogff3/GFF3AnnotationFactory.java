@@ -36,6 +36,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.context.TranslationValidationContext;
 
 public class GFF3AnnotationFactory {
 
@@ -190,7 +191,7 @@ public class GFF3AnnotationFactory {
             validationEngine.validate(gff3Feature, -1);
             if (featureName.equalsIgnoreCase("CDS")) {
                 Path sequencePath = Path.of(gff3Feature.accession() + ".seq");
-                ValidationContext context = ValidationContext.builder()
+                TranslationValidationContext context = TranslationValidationContext.builder()
                         .gff3Feature(gff3Feature)
                         .sequencePath(sequencePath)
                         .build();

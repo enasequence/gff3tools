@@ -17,10 +17,7 @@ import io.github.classgraph.ScanResult;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.sql.Connection;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +28,8 @@ public class ValidationRegistry {
     private static final ValidationRegistry INSTANCE = new ValidationRegistry();
     private static final Logger LOG = LoggerFactory.getLogger(ValidationRegistry.class);
     private static volatile List<ValidatorDescriptor> cachedValidators;
+    private static volatile Map<ValidationType, List<ValidatorDescriptor>> validationsByType;
+    private static volatile Map<ValidationType, List<ValidatorDescriptor>> fixesByType;
     private static ValidationConfig validationConfig;
     private static Connection connection;
 
@@ -49,6 +48,37 @@ public class ValidationRegistry {
     private void initRegistry() {
         synchronized (ValidationRegistry.class) {
             cachedValidators = build(getValidationList());
+            validationsByType = groupByType(cachedValidators, Gff3Validation.class, ValidationMethod.class);
+            fixesByType = groupByType(cachedValidators, Gff3Fix.class, FixMethod.class);
+        }
+    }
+
+    private Map<ValidationType, List<ValidatorDescriptor>> groupByType(
+            List<ValidatorDescriptor> descriptors,
+            Class<? extends Annotation> classAnnotation,
+            Class<? extends Annotation> methodAnnotation) {
+
+        Map<ValidationType, List<ValidatorDescriptor>> grouped = new EnumMap<>(ValidationType.class);
+        for (ValidationType type : ValidationType.values()) {
+            grouped.put(type, new ArrayList<>());
+        }
+
+        for (ValidatorDescriptor vd : descriptors) {
+            if (!vd.clazz().isAnnotationPresent(classAnnotation)) continue;
+            if (!vd.method().isAnnotationPresent(methodAnnotation)) continue;
+
+            ValidationType type = getValidationType(vd.method(), methodAnnotation);
+            grouped.get(type).add(vd);
+        }
+
+        return Collections.unmodifiableMap(grouped);
+    }
+
+    private ValidationType getValidationType(Method method, Class<? extends Annotation> annotationType) {
+        if (annotationType == ValidationMethod.class) {
+            return method.getAnnotation(ValidationMethod.class).type();
+        } else {
+            return method.getAnnotation(FixMethod.class).type();
         }
     }
 
@@ -126,23 +156,17 @@ public class ValidationRegistry {
     }
 
     /**
-     * Returns only classes annotated with @ValidationClass.
+     * Returns validation descriptors for the given type.
      */
-    public List<ValidatorDescriptor> getValidations() {
-        return cachedValidators.stream()
-                .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Validation.class))
-                .filter(vd -> vd.method().isAnnotationPresent(ValidationMethod.class))
-                .collect(Collectors.toList());
+    public List<ValidatorDescriptor> getValidations(ValidationType type) {
+        return validationsByType.getOrDefault(type, List.of());
     }
 
     /**
-     * Returns only classes annotated with @FixClass.
+     * Returns fix descriptors for the given type.
      */
-    public List<ValidatorDescriptor> getFixs() {
-        return cachedValidators.stream()
-                .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Fix.class))
-                .filter(vd -> vd.method().isAnnotationPresent(FixMethod.class))
-                .collect(Collectors.toList());
+    public List<ValidatorDescriptor> getFixes(ValidationType type) {
+        return fixesByType.getOrDefault(type, List.of());
     }
 
     public List<ValidatorDescriptor> getExits() {

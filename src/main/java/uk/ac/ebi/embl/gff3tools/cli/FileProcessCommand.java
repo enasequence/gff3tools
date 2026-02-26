@@ -13,9 +13,16 @@ package uk.ac.ebi.embl.gff3tools.cli;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.CLIException;
+import uk.ac.ebi.embl.gff3tools.exception.UnregisteredValidationRuleException;
+import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.context.FileValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 @CommandLine.Command(name = "process", description = "Performs the file processing of gff3 & fasta files")
 @Slf4j
@@ -50,6 +57,16 @@ public class FileProcessCommand extends AbstractCommand {
         } catch (Exception e) {
             throw new RuntimeException("Unexpected error", e);
         }
+    }
+
+    public void initGff3Processing(Path gff3Path, Path fastaFile) throws UnregisteredValidationRuleException, ValidationException {
+        Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
+        ValidationEngine engine = initValidationEngine(ruleOverrides);
+        FileValidationContext fileValidationContext = FileValidationContext.builder()
+                .gff3Path(gff3Path)
+                .fastaPath(fastaFile)
+                .build();
+        engine.validate(fileValidationContext,-1);
     }
 
     protected void validateFile(Path filePath, String fileExtension) throws CLIException {

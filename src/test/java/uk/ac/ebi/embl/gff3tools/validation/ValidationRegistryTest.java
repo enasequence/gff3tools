@@ -129,7 +129,7 @@ class ValidationRegistryTest {
         // Inject cachedValidators
         setCachedValidators(all);
 
-        List<ValidatorDescriptor> result = registry.getValidations();
+        List<ValidatorDescriptor> result = registry.getValidations(ValidationType.FEATURE);
         assertEquals(1, result.size());
         assertEquals(ValClass.class, result.get(0).clazz());
     }
@@ -197,7 +197,7 @@ class ValidationRegistryTest {
 
         setCachedValidators(all);
 
-        List<ValidatorDescriptor> result = registry.getFixs();
+        List<ValidatorDescriptor> result = registry.getFixes(ValidationType.FEATURE);
         assertEquals(1, result.size());
         assertEquals(FixClass.class, result.get(0).clazz());
     }
@@ -271,9 +271,44 @@ class ValidationRegistryTest {
             var field = ValidationRegistry.class.getDeclaredField("cachedValidators");
             field.setAccessible(true);
             field.set(null, validators);
+
+            // Also rebuild the grouped maps
+            var validationsByTypeField = ValidationRegistry.class.getDeclaredField("validationsByType");
+            validationsByTypeField.setAccessible(true);
+            validationsByTypeField.set(null, groupByType(validators, Gff3Validation.class, ValidationMethod.class));
+
+            var fixesByTypeField = ValidationRegistry.class.getDeclaredField("fixesByType");
+            fixesByTypeField.setAccessible(true);
+            fixesByTypeField.set(null, groupByType(validators, Gff3Fix.class, FixMethod.class));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static Map<ValidationType, List<ValidatorDescriptor>> groupByType(
+            List<ValidatorDescriptor> descriptors,
+            Class<? extends java.lang.annotation.Annotation> classAnnotation,
+            Class<? extends java.lang.annotation.Annotation> methodAnnotation) {
+
+        Map<ValidationType, List<ValidatorDescriptor>> grouped = new EnumMap<>(ValidationType.class);
+        for (ValidationType type : ValidationType.values()) {
+            grouped.put(type, new ArrayList<>());
+        }
+
+        for (ValidatorDescriptor vd : descriptors) {
+            if (!vd.clazz().isAnnotationPresent(classAnnotation)) continue;
+            if (!vd.method().isAnnotationPresent(methodAnnotation)) continue;
+
+            ValidationType type;
+            if (methodAnnotation == ValidationMethod.class) {
+                type = vd.method().getAnnotation(ValidationMethod.class).type();
+            } else {
+                type = vd.method().getAnnotation(FixMethod.class).type();
+            }
+            grouped.get(type).add(vd);
+        }
+
+        return Collections.unmodifiableMap(grouped);
     }
 
     private void invokeCheckUniqueValidationRules(ClassInfoList list) {

@@ -18,11 +18,19 @@ import uk.ac.ebi.embl.gff3tools.exception.AggregatedValidationException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.gff3.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.context.FileValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.context.TranslationValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 public class ValidationEngine {
     private static final Logger LOG = LoggerFactory.getLogger(ValidationEngine.class);
+
+    private static final Map<Class<?>, ValidationType> TYPE_MAP = Map.of(
+            GFF3Feature.class, ValidationType.FEATURE,
+            GFF3Annotation.class, ValidationType.ANNOTATION,
+            FileValidationContext.class, ValidationType.FILE_CONTEXT,
+            TranslationValidationContext.class, ValidationType.TRANSLATION_CONTEXT
+    );
 
     private final List<ValidationException> parsingWarnings;
     private final List<ValidationException> collectedErrors;
@@ -49,10 +57,12 @@ public class ValidationEngine {
     }
 
     public <T> void executeValidations(T target, int line) throws ValidationException {
-        List<ValidatorDescriptor> validators = validationRegistry.getValidations();
+        ValidationType type = TYPE_MAP.get(target.getClass());
+        if (type == null) return;
+
+        List<ValidatorDescriptor> validators = validationRegistry.getValidations(type);
 
         for (ValidatorDescriptor validator : validators) {
-
             ValidationMethod methodAnnotation = validator.method().getAnnotation(ValidationMethod.class);
             RuleSeverity ruleSeverity =
                     validationConfig.getSeverity(methodAnnotation.rule(), methodAnnotation.severity());
@@ -60,11 +70,7 @@ public class ValidationEngine {
             if (ruleSeverity == RuleSeverity.OFF) continue;
 
             try {
-                if (target instanceof GFF3Feature && methodAnnotation.type() == ValidationType.FEATURE) {
-                    validator.method().invoke(validator.instance(), target, line);
-                } else if (target instanceof GFF3Annotation && methodAnnotation.type() == ValidationType.ANNOTATION) {
-                    validator.method().invoke(validator.instance(), target, line);
-                }
+                validator.method().invoke(validator.instance(), target, line);
             } catch (Exception e) {
                 handleRuleException(e, ruleSeverity, methodAnnotation.rule());
             }
@@ -84,10 +90,12 @@ public class ValidationEngine {
     }
 
     public <T> void executeFixes(T target, int line) throws ValidationException {
-        List<ValidatorDescriptor> validators = validationRegistry.getFixs();
+        ValidationType type = TYPE_MAP.get(target.getClass());
+        if (type == null) return;
+
+        List<ValidatorDescriptor> validators = validationRegistry.getFixes(type);
 
         for (ValidatorDescriptor validator : validators) {
-
             FixMethod methodAnnotation = validator.method().getAnnotation(FixMethod.class);
 
             boolean fixEnabled = validationConfig.getFix(methodAnnotation.rule(), methodAnnotation.enabled());
@@ -95,13 +103,7 @@ public class ValidationEngine {
             if (!fixEnabled) continue;
 
             try {
-                if (target instanceof GFF3Feature && methodAnnotation.type() == ValidationType.FEATURE) {
-                    validator.method().invoke(validator.instance(), target, line);
-                } else if (target instanceof GFF3Annotation && methodAnnotation.type() == ValidationType.ANNOTATION) {
-                    validator.method().invoke(validator.instance(), target, line);
-                } else if (target instanceof ValidationContext && methodAnnotation.type() == ValidationType.CONTEXT) {
-                    validator.method().invoke(validator.instance(), target, line);
-                }
+                validator.method().invoke(validator.instance(), target, line);
             } catch (Exception e) {
                 handleRuleException(e, null, methodAnnotation.rule());
             }

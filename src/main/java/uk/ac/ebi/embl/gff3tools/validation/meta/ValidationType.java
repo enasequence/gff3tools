@@ -14,5 +14,7 @@ public enum ValidationType {
     FEATURE,
     ANNOTATION,
     SYNTACTIC,
-    CONTEXT
+    FILE_CONTEXT,
+    SEQUENCE_CONTEXT,
+    TRANSLATION_CONTEXT;
 }
