@@ -10,17 +10,6 @@
  */
 package uk.ac.ebi.embl.gff3tools.translation.except;
 
-/*
- * Copyright 2025 EMBL - European Bioinformatics Institute
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
- * file except in compliance with the License. You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
- * CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
- */
-
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.Getter;
@@ -49,9 +38,11 @@ public class TranslExceptAttribute {
     private static final Pattern COMPLEMENT_PATTERN =
             Pattern.compile("^complement\\((.+)\\)$", Pattern.CASE_INSENSITIVE);
 
-    private final long startPosition;
-    private final long endPosition;
+    private final Integer startPosition;
+    private final Integer endPosition;
     private final String aminoAcidCode;
+    private final Character aminoAcidLetter;
+
     /**
      * Parses a transl_except attribute value.
      *
@@ -71,15 +62,17 @@ public class TranslExceptAttribute {
         try {
             // Parse position (group 1)
             Matcher posMatcher = getPositionMatcher(matcher);
-            this.startPosition = Long.parseLong(posMatcher.group(1));
+            this.startPosition = Integer.parseInt(posMatcher.group(1));
             String endGroup = posMatcher.group(2);
             this.endPosition = endGroup != null ? Integer.parseInt(endGroup) : startPosition;
+
+            this.aminoAcidCode = matcher.group(2).trim();
+            // Parse amino acid (group 2)
+            this.aminoAcidLetter = AminoAcidExcept.getAminoAcidLetter(matcher.group(2));
 
         } catch (NumberFormatException e) {
             throw new TranslationException("Invalid position in transl_except: " + value, e);
         }
-
-        this.aminoAcidCode = matcher.group(2);
     }
 
     private static Matcher getPositionMatcher(Matcher matcher) throws TranslationException {
