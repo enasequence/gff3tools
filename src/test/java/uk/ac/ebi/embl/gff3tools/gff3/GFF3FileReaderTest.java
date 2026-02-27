@@ -463,6 +463,26 @@ public class GFF3FileReaderTest {
         }
     }
 
+    @Test
+    void testPathConstructorReadsAnnotation() throws Exception {
+        Path testFile = TestUtils.getResourceFile("fftogff3_rules/reduced/contig-reduced-expected.gff3")
+                .toPath();
+        ValidationEngine validationEngine = getValidationEngine();
+
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, testFile)) {
+            GFF3Header header = gff3Reader.readHeader();
+            Assertions.assertNotNull(header);
+
+            GFF3Annotation annotation = gff3Reader.readAnnotation();
+            Assertions.assertNotNull(annotation);
+            Assertions.assertFalse(annotation.getFeatures().isEmpty());
+            gff3Reader.getTranslationOffsetMap().forEach((key, value) -> {
+                Assertions.assertNotNull(key);
+                Assertions.assertNotNull(value);
+            });
+        }
+    }
+
     private String getAttributeString(Map<String, List<String>> attributes) throws WriteException, IOException {
         try (StringWriter gff3Writer = new StringWriter()) {
             GFF3Annotation annotation = new GFF3Annotation();

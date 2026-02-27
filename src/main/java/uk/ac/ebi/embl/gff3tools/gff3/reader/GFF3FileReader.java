@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.gff3.reader;
 import java.io.*;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -46,9 +47,10 @@ public class GFF3FileReader implements AutoCloseable {
     public GFF3Species gff3Species;
     private final Set<String> processedAccessions;
 
-    private final Map<String, OffsetRange> translationMap;
+    private Map<String, OffsetRange> translationMap;
     private final GFF3TranslationReader translationReader;
 
+    // Used by GFF3 conversion process
     public GFF3FileReader(ValidationEngine validationEngine, Reader reader, Path gff3Path) {
         this.validationEngine = validationEngine;
         this.bufferedReader = new BufferedReader(reader);
@@ -56,9 +58,11 @@ public class GFF3FileReader implements AutoCloseable {
         currentAnnotation = new GFF3Annotation();
         processedAccessions = new HashSet<>();
         translationReader = new GFF3TranslationReader(validationEngine, gff3Path);
+    }
 
-        // Offset range should be read only once
-        translationMap = translationReader.readTranslationOffset();
+    // Used by GFF3 processing pipeline
+    public GFF3FileReader(ValidationEngine validationEngine, Path gff3Path) throws IOException {
+        this(validationEngine, Files.newBufferedReader(gff3Path), gff3Path);
     }
 
     public GFF3Annotation readAnnotation() throws IOException, ValidationException {
@@ -310,12 +314,15 @@ public class GFF3FileReader implements AutoCloseable {
     }
 
     public Map<String, OffsetRange> getTranslationOffsetForAnnotation(GFF3Annotation annotation) {
-        return translationMap.entrySet().stream()
+        return getTranslationOffsetMap().entrySet().stream()
                 .filter(e -> e.getKey().startsWith(annotation.getAccession()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     public Map<String, OffsetRange> getTranslationOffsetMap() {
+        if (translationMap == null) {
+            translationMap = Collections.unmodifiableMap(translationReader.readTranslationOffset());
+        }
         return translationMap;
     }
 

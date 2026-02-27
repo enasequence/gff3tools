@@ -10,18 +10,18 @@
  */
 package uk.ac.ebi.embl.gff3tools.translation;
 
-import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 /**
- * Exception thrown when translation fails due to invalid sequence or configuration.
+ * Immutable representation of a codon (3-base sequence) with its translated amino acid.
  */
-public class TranslationException extends ValidationException {
+@Getter
+@AllArgsConstructor
+public final class Codon {
 
-    public TranslationException(String message) {
-        super(message);
-    }
-
-    public TranslationException(String message, Throwable cause) {
-        super(message, cause);
-    }
+    private final String codon;
+    private final int position;
+    private final char aminoAcid;
+    private final boolean translationException;
 }

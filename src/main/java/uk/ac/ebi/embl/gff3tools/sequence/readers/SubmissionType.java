@@ -8,20 +8,9 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.translation;
+package uk.ac.ebi.embl.gff3tools.sequence.readers;
 
-import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
-
-/**
- * Exception thrown when translation fails due to invalid sequence or configuration.
- */
-public class TranslationException extends ValidationException {
-
-    public TranslationException(String message) {
-        super(message);
-    }
-
-    public TranslationException(String message, Throwable cause) {
-        super(message, cause);
-    }
+public enum SubmissionType {
+    FASTA,
+    PLAIN_SEQUENCE,
 }

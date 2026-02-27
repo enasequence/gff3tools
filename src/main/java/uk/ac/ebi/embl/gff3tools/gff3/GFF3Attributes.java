@@ -50,6 +50,7 @@ public class GFF3Attributes {
     public static final String RIBOSOMAL_SLIPPAGE = "ribosomal_slippage";
     public static final String TRANS_SPLICING = "trans_splicing";
     public static final String ANTI_CODON = "anticodon";
+    public static final String CODON = "codon";
     public static final String TRANSL_EXCEPT = "transl_except";
     public static final String TERM_AMINO_ACID = "TERM";
     public static final String COMPARE = "compare";
