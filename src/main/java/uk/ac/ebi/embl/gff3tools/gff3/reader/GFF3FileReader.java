@@ -147,13 +147,6 @@ public class GFF3FileReader implements AutoCloseable {
         return null;
     }
 
-    private Map<String, OffsetRange> getTranslationMap() {
-        if (translationMap == null) {
-            translationMap = translationReader.readTranslationOffset();
-        }
-        return translationMap;
-    }
-
     @FunctionalInterface
     public interface AnnotationHandler<T> {
         void handle(T entry) throws WriteException, ValidationException;
@@ -321,13 +314,16 @@ public class GFF3FileReader implements AutoCloseable {
     }
 
     public Map<String, OffsetRange> getTranslationOffsetForAnnotation(GFF3Annotation annotation) {
-        return getTranslationMap().entrySet().stream()
+        return getTranslationOffsetMap().entrySet().stream()
                 .filter(e -> e.getKey().startsWith(annotation.getAccession()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     public Map<String, OffsetRange> getTranslationOffsetMap() {
-        return getTranslationMap();
+        if (translationMap == null) {
+            translationMap = Collections.unmodifiableMap(translationReader.readTranslationOffset());
+        }
+        return translationMap;
     }
 
     public String getTranslation(OffsetRange offsetRange) {
