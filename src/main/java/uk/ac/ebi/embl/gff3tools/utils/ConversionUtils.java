@@ -33,8 +33,91 @@ public enum ConversionUtils {
     private OntologyClient ontologyClient = null;
     private static final Logger LOGGER = LoggerFactory.getLogger(ConversionUtils.class);
 
-    // Pattern to match wildcard qualifier values like <length of feature>
-    public static final Pattern WILDCARD_TEXT = Pattern.compile("^\\<.+\\>$");
+    // Pattern to detect wildcard placeholders like <NAME> or <length of feature> anywhere in a value
+    public static final Pattern WILDCARD_TEXT = Pattern.compile("<[^>]+>");
+
+    /**
+     * Checks whether an actual qualifier value matches an expected value that may contain
+     * wildcard placeholders or glob patterns.
+     *
+     * <p>Supported wildcard types:
+     * <ul>
+     *   <li>{@code <NAME>} — named placeholder, matches <b>1 or more</b> characters</li>
+     *   <li>{@code *} — glob wildcard, matches <b>0 or more</b> characters</li>
+     * </ul>
+     *
+     * <p>Uses string prefix/suffix matching instead of regex for performance, since this is
+     * called per qualifier per feature (potentially millions of times for large files).
+     *
+     * <p>Examples:
+     * <ul>
+     *   <li>{@code "transposon*"} matches {@code "transposon"}, {@code "transposon:Ac"}</li>
+     *   <li>{@code "<length of feature>"} matches {@code "91"} (any non-empty value)</li>
+     *   <li>{@code "<NAME>"} matches {@code "anything"} (any non-empty value)</li>
+     * </ul>
+     *
+     * @param expectedValue the expected value from the mapping TSV, possibly with wildcards
+     * @param actualValue the actual qualifier value from the feature
+     * @return true if the actual value matches the expected value (with wildcard expansion)
+     */
+    public static boolean matchesWildcardValue(String expectedValue, String actualValue) {
+        boolean hasNamedWildcard = WILDCARD_TEXT.matcher(expectedValue).find();
+        boolean hasGlob = expectedValue.contains("*");
+
+        if (!hasNamedWildcard && !hasGlob) {
+            return actualValue.equalsIgnoreCase(expectedValue);
+        }
+
+        if (hasNamedWildcard) {
+            return matchesNamedWildcard(expectedValue, actualValue);
+        }
+
+        return matchesGlob(expectedValue, actualValue);
+    }
+
+    /**
+     * Matches a named wildcard pattern like {@code "prefix<NAME>suffix"}.
+     * The wildcard must match at least one character.
+     */
+    private static boolean matchesNamedWildcard(String expectedValue, String actualValue) {
+        int wildcardStart = expectedValue.indexOf('<');
+        String prefix = expectedValue.substring(0, wildcardStart);
+
+        int wildcardEnd = expectedValue.lastIndexOf('>');
+        String suffix = expectedValue.substring(wildcardEnd + 1);
+
+        // The actual value must be at least as long as the literal parts combined,
+        // plus at least one character for the wildcard
+        if (actualValue.length() < prefix.length() + suffix.length() + 1) {
+            return false;
+        }
+
+        return actualValue.toLowerCase().startsWith(prefix.toLowerCase())
+                && actualValue.toLowerCase().endsWith(suffix.toLowerCase());
+    }
+
+    /**
+     * Matches a glob pattern where {@code *} matches zero or more characters.
+     * Only supports a single {@code *} at the end of the pattern (trailing glob).
+     *
+     * <p>Examples:
+     * <ul>
+     *   <li>{@code "transposon*"} matches {@code "transposon"}, {@code "transposon:Ac"}</li>
+     *   <li>{@code "*"} matches any value including empty string</li>
+     * </ul>
+     */
+    private static boolean matchesGlob(String expectedValue, String actualValue) {
+        int starIndex = expectedValue.indexOf('*');
+        String prefix = expectedValue.substring(0, starIndex);
+        String suffix = expectedValue.substring(starIndex + 1);
+
+        if (actualValue.length() < prefix.length() + suffix.length()) {
+            return false;
+        }
+
+        return actualValue.toLowerCase().startsWith(prefix.toLowerCase())
+                && actualValue.toLowerCase().endsWith(suffix.toLowerCase());
+    }
 
     private ConversionUtils() {
         this.ontologyClient = OntologyClient.getInstance();
@@ -135,14 +218,9 @@ public enum ConversionUtils {
                 return false;
             }
 
-            // Check if any actual value matches
-            boolean matches = actualValues.stream().anyMatch(actualValue -> {
-                // Wildcard match: <any text> pattern
-                if (WILDCARD_TEXT.matcher(expectedValue).matches()) {
-                    return true;
-                }
-                return actualValue.equalsIgnoreCase(expectedValue);
-            });
+            // Check if any actual value matches (supports wildcards like "transposon*" or "<NAME>")
+            boolean matches =
+                    actualValues.stream().anyMatch(actualValue -> matchesWildcardValue(expectedValue, actualValue));
 
             if (!matches) {
                 return false;
