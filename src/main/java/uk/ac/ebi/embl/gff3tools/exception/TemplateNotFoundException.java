@@ -8,11 +8,21 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.cli;
+package uk.ac.ebi.embl.gff3tools.exception;
 
-public enum ConversionFileFormat {
-    embl,
-    gff3,
-    fasta,
-    tsv
+import java.io.IOException;
+
+/**
+ * Exception thrown when a TSV file references a template ID that cannot be found
+ * in sequencetools' template resources.
+ */
+public class TemplateNotFoundException extends ReadException {
+
+    public TemplateNotFoundException(String message) {
+        super(message, new IOException(message));
+    }
+
+    public TemplateNotFoundException(String message, Exception cause) {
+        super(message, wrapAsIOException(cause));
+    }
 }

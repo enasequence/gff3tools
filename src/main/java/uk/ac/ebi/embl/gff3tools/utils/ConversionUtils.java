@@ -11,6 +11,8 @@
 package uk.ac.ebi.embl.gff3tools.utils;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -20,6 +22,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.ac.ebi.embl.api.entry.Entry;
+import uk.ac.ebi.embl.fasta.writer.FastaFileWriter;
+import uk.ac.ebi.embl.gff3tools.exception.WriteException;
 
 public enum ConversionUtils {
     INSTANCE;
@@ -153,6 +158,50 @@ public enum ConversionUtils {
 
     public static OntologyClient getOntologyClient() {
         return INSTANCE.ontologyClient;
+    }
+
+    /**
+     * Gets the effective accession for an Entry, falling back to submitter accession if
+     * the sequence accession is not available.
+     *
+     * <p>This is useful for TSV-based entries where the sequence accession is not set
+     * (assigned after submission), but the submitter accession (ENTRYNUMBER) is available.
+     *
+     * @param entry the Entry to get the accession from
+     * @return the effective accession, or null if neither is available
+     */
+    public static String getEffectiveAccession(Entry entry) {
+        if (entry == null || entry.getSequence() == null) {
+            return entry != null ? entry.getSubmitterAccession() : null;
+        }
+
+        String accession = entry.getSequence().getAccession();
+        if (accession != null && !accession.isEmpty()) {
+            return accession;
+        }
+
+        // Fall back to submitter accession (e.g., ENTRYNUMBER from TSV files)
+        return entry.getSubmitterAccession();
+    }
+
+    /**
+     * Writes nucleotide sequence from an entry to a FASTA writer.
+     *
+     * <p>This method safely handles null entries and entries without sequences (no-op).
+     *
+     * @param entry the Entry containing the sequence to write (may be null)
+     * @param fastaWriter the writer to write the FASTA output to
+     * @throws WriteException if an I/O error occurs while writing
+     */
+    public static void writeNucleotideSequence(Entry entry, BufferedWriter fastaWriter) throws WriteException {
+        if (entry == null || entry.getSequence() == null || entry.getSequence().getLength() == 0) {
+            return;
+        }
+        try {
+            new FastaFileWriter(entry, fastaWriter).write();
+        } catch (IOException e) {
+            throw new WriteException("Error writing nucleotide sequence to FASTA", e);
+        }
     }
 
     private void addConversionEntry(ConversionEntry conversionEntry) {

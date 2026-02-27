@@ -59,4 +59,27 @@ public class GFF3FileFactory {
                 .parsingWarnings(engine.getParsingWarnings())
                 .build();
     }
+
+    public GFF3File from(List<Entry> entries, Entry masterEntry) throws ValidationException {
+        GFF3Header header = new GFF3Header("3.1.26");
+        GFF3Species species = null;
+        List<GFF3Annotation> annotations = new ArrayList<>();
+        GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
+        GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(engine, directivesFactory, fastaFilePath);
+
+        for (Entry entry : entries) {
+            if (species == null) {
+                species = directivesFactory.createSpecies(entry, masterEntry);
+            }
+            annotations.add(annotationFactory.from(entry));
+        }
+
+        return GFF3File.builder()
+                .header(header)
+                .species(species)
+                .annotations(annotations)
+                .fastaFilePath(fastaFilePath)
+                .parsingWarnings(engine.getParsingWarnings())
+                .build();
+    }
 }

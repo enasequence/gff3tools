@@ -207,4 +207,86 @@ class FileConversionCommandTest {
         // Output file should NOT exist
         assertFalse(Files.exists(outputFile), "Output file should not be created when errors occur");
     }
+
+    @Test
+    void testGetFileExtension_simple() {
+        assertEquals(
+                "tsv",
+                FileConversionCommand.getFileExtension(Path.of("input.tsv")).orElse(null));
+        assertEquals(
+                "gff3",
+                FileConversionCommand.getFileExtension(Path.of("output.gff3")).orElse(null));
+        assertEquals(
+                "embl",
+                FileConversionCommand.getFileExtension(Path.of("data.embl")).orElse(null));
+    }
+
+    @Test
+    void testGetFileExtension_gzipped() {
+        // All gzipped formats should be recognized
+        assertEquals(
+                "tsv",
+                FileConversionCommand.getFileExtension(Path.of("input.tsv.gz")).orElse(null));
+        assertEquals(
+                "embl",
+                FileConversionCommand.getFileExtension(Path.of("input.embl.gz")).orElse(null));
+        assertEquals(
+                "gff3",
+                FileConversionCommand.getFileExtension(Path.of("input.gff3.gz")).orElse(null));
+    }
+
+    @Test
+    void testGetFileExtension_noExtension() {
+        assertNull(
+                FileConversionCommand.getFileExtension(Path.of("noextension")).orElse(null));
+    }
+
+    @Test
+    void testGetFileExtension_withPath() {
+        assertEquals(
+                "tsv",
+                FileConversionCommand.getFileExtension(Path.of("/some/path/to/input.tsv"))
+                        .orElse(null));
+        assertEquals(
+                "tsv",
+                FileConversionCommand.getFileExtension(Path.of("/some/path/to/input.tsv.gz"))
+                        .orElse(null));
+    }
+
+    @Test
+    void testConversionFileFormat_tsvIncluded() {
+        // Verify tsv is a valid format
+        ConversionFileFormat format = ConversionFileFormat.valueOf("tsv");
+        assertEquals(ConversionFileFormat.tsv, format);
+    }
+
+    @Test
+    void testOutputSequenceOption_longForm() {
+        FileConversionCommand cmd = new FileConversionCommand();
+        new CommandLine(cmd).parseArgs("--output-sequence", "output.fasta", "input.embl", "output.gff3");
+        assertEquals(Path.of("output.fasta"), cmd.fastaOutputPath);
+    }
+
+    @Test
+    void testOutputSequenceOption_shortForm() {
+        FileConversionCommand cmd = new FileConversionCommand();
+        new CommandLine(cmd).parseArgs("-os", "sequences.fa", "input.embl", "output.gff3");
+        assertEquals(Path.of("sequences.fa"), cmd.fastaOutputPath);
+    }
+
+    @Test
+    void testOutputSequenceOption_notProvided() {
+        FileConversionCommand cmd = new FileConversionCommand();
+        new CommandLine(cmd).parseArgs("input.embl", "output.gff3");
+        assertNull(cmd.fastaOutputPath);
+    }
+
+    @Test
+    void testOutputSequenceOption_withOtherOptions() {
+        FileConversionCommand cmd = new FileConversionCommand();
+        new CommandLine(cmd).parseArgs("-f", "embl", "-t", "gff3", "-os", "seqs.fasta", "input.embl", "output.gff3");
+        assertEquals(Path.of("seqs.fasta"), cmd.fastaOutputPath);
+        assertEquals(ConversionFileFormat.embl, cmd.fromFileType);
+        assertEquals(ConversionFileFormat.gff3, cmd.toFileType);
+    }
 }

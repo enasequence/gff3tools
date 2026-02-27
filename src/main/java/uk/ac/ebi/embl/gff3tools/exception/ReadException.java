@@ -14,6 +14,11 @@ import java.io.IOException;
 import uk.ac.ebi.embl.gff3tools.cli.CLIExitCode;
 
 public class ReadException extends ExitException {
+
+    public ReadException(String msg) {
+        super(msg);
+    }
+
     public ReadException(String msg, IOException cause) {
         super(msg, cause);
     }
@@ -25,5 +30,16 @@ public class ReadException extends ExitException {
     @Override
     public CLIExitCode exitCode() {
         return CLIExitCode.READ_ERROR;
+    }
+
+    /**
+     * Wraps an exception as IOException if it isn't already one.
+     * Useful for subclasses and other classes that need to pass non-IOException causes to this class.
+     */
+    public static IOException wrapAsIOException(Exception e) {
+        if (e instanceof IOException) {
+            return (IOException) e;
+        }
+        return new IOException(e);
     }
 }
