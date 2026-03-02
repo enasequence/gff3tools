@@ -116,10 +116,14 @@ class ValidationRegistryTest {
         }
 
         List<ValidatorDescriptor> all = new ArrayList<>();
-        all.add(new ValidatorDescriptor(ValClass.class, new ValClass(), getMethod(ValClass.class, "validate")));
-        all.add(new ValidatorDescriptor(ValClass.class, new ValClass(), getMethod(ValClass.class, "onExit")));
-        all.add(new ValidatorDescriptor(FixClass.class, new FixClass(), getMethod(FixClass.class, "fix")));
-        all.add(new ValidatorDescriptor(FixClass.class, new FixClass(), getMethod(FixClass.class, "onExit")));
+        all.add(new ValidatorDescriptor(
+                ValClass.class, new ValClass(), getMethod(ValClass.class, "validate"), ValidationPriority.NORMAL));
+        all.add(new ValidatorDescriptor(
+                ValClass.class, new ValClass(), getMethod(ValClass.class, "onExit"), ValidationPriority.NORMAL));
+        all.add(new ValidatorDescriptor(
+                FixClass.class, new FixClass(), getMethod(FixClass.class, "fix"), ValidationPriority.NORMAL));
+        all.add(new ValidatorDescriptor(
+                FixClass.class, new FixClass(), getMethod(FixClass.class, "onExit"), ValidationPriority.NORMAL));
 
         // Inject cachedValidators
         setCachedValidators(all);
@@ -157,10 +161,14 @@ class ValidationRegistryTest {
         }
 
         List<ValidatorDescriptor> all = new ArrayList<>();
-        all.add(new ValidatorDescriptor(ValClass.class, new ValClass(), getMethod(ValClass.class, "validate")));
-        all.add(new ValidatorDescriptor(Val2Class.class, new Val2Class(), getMethod(Val2Class.class, "onExit")));
-        all.add(new ValidatorDescriptor(FixClass.class, new FixClass(), getMethod(FixClass.class, "fix")));
-        all.add(new ValidatorDescriptor(Fix2Class.class, new Fix2Class(), getMethod(Fix2Class.class, "onExit")));
+        all.add(new ValidatorDescriptor(
+                ValClass.class, new ValClass(), getMethod(ValClass.class, "validate"), ValidationPriority.NORMAL));
+        all.add(new ValidatorDescriptor(
+                Val2Class.class, new Val2Class(), getMethod(Val2Class.class, "onExit"), ValidationPriority.NORMAL));
+        all.add(new ValidatorDescriptor(
+                FixClass.class, new FixClass(), getMethod(FixClass.class, "fix"), ValidationPriority.NORMAL));
+        all.add(new ValidatorDescriptor(
+                Fix2Class.class, new Fix2Class(), getMethod(Fix2Class.class, "onExit"), ValidationPriority.NORMAL));
 
         // Inject cachedValidators
         setCachedValidators(all);
@@ -187,8 +195,10 @@ class ValidationRegistryTest {
         }
 
         List<ValidatorDescriptor> all = new ArrayList<>();
-        all.add(new ValidatorDescriptor(ValClass.class, new ValClass(), getMethod(ValClass.class, "validate")));
-        all.add(new ValidatorDescriptor(FixClass.class, new FixClass(), getMethod(FixClass.class, "fix")));
+        all.add(new ValidatorDescriptor(
+                ValClass.class, new ValClass(), getMethod(ValClass.class, "validate"), ValidationPriority.NORMAL));
+        all.add(new ValidatorDescriptor(
+                FixClass.class, new FixClass(), getMethod(FixClass.class, "fix"), ValidationPriority.NORMAL));
 
         setCachedValidators(all);
 

@@ -10,18 +10,19 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.meta;
 
-import java.lang.annotation.*;
+public enum ValidationPriority {
+    CRITICAL(0),
+    HIGH(10),
+    NORMAL(100),
+    LOW(200);
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface ValidationMethod {
-    String rule() default "";
+    private final int level;
 
-    ValidationType type();
+    ValidationPriority(int level) {
+        this.level = level;
+    }
 
-    RuleSeverity severity() default RuleSeverity.ERROR;
-
-    ValidationPriority priority() default ValidationPriority.NORMAL;
-
-    String description() default "";
+    public int getLevel() {
+        return level;
+    }
 }

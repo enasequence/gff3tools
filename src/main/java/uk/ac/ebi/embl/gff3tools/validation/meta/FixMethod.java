@@ -24,5 +24,7 @@ public @interface FixMethod {
 
     boolean enabled() default true;
 
+    ValidationPriority priority() default ValidationPriority.NORMAL;
+
     String description() default "";
 }
