@@ -78,8 +78,16 @@ public class FileConversionCommand extends AbstractCommand {
 
             // Conversion succeeded - move temp file to final destination atomically
             if (writingToFile && tempFile != null) {
-                Files.move(
-                        tempFile, outputFilePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                try {
+                    Files.move(
+                            tempFile,
+                            outputFilePath,
+                            StandardCopyOption.REPLACE_EXISTING,
+                            StandardCopyOption.ATOMIC_MOVE);
+                } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                    // ATOMIC_MOVE fails across filesystems; fall back to a regular move
+                    Files.move(tempFile, outputFilePath, StandardCopyOption.REPLACE_EXISTING);
+                }
                 tempFile = null; // Mark as successfully moved
             }
         } catch (Exception e) {
