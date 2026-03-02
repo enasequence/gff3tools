@@ -36,6 +36,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.context.TranslationValidationContext;
 
 public class GFF3AnnotationFactory {
 
@@ -163,8 +164,7 @@ public class GFF3AnnotationFactory {
         id.ifPresent(v -> baseAttributes.put("ID", List.of(v)));
         parentId.ifPresent(v -> baseAttributes.put("Parent", List.of(v)));
 
-        // Write translation to fasta and remove from attribute map.
-        handleTranslation(fastaWriter, baseAttributes, id, sequenceRegion);
+        StringBuilder gff3Translation = new StringBuilder();
 
         CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
         for (Location location : compoundLocation.getLocations()) {
@@ -189,7 +189,34 @@ public class GFF3AnnotationFactory {
                     getPhase(ffFeature));
             gff3Feature.addAttributes(attributes);
             validationEngine.validate(gff3Feature, -1);
+            if (featureName.equalsIgnoreCase("CDS")) {
+                Path sequencePath = Path.of(gff3Feature.accession() + ".seq");
+                TranslationValidationContext context = TranslationValidationContext.builder()
+                        .gff3Feature(gff3Feature)
+                        .sequencePath(sequencePath)
+                        .build();
+                validationEngine.validate(context, -1);
+                gff3Translation.append(gff3Feature.getAttribute("translation").orElse(""));
+                gff3Feature.removeAttributeList("translation");
+            }
             gff3Features.add(gff3Feature);
+        }
+
+        if (featureName.equalsIgnoreCase("CDS")) {
+            String expectedTranslation = ffFeature.getSingleQualifierValue("translation");
+            String actualTranslation = gff3Translation.toString();
+            if (!expectedTranslation.equalsIgnoreCase(actualTranslation)) {
+                LOG.error(expectedTranslation);
+                LOG.error(actualTranslation);
+                throw new ValidationException("Translation failed for feature at location "
+                        + ffFeature.getLocations().getMinPosition() + "-"
+                        + ffFeature.getLocations().getMaxPosition());
+            } else {
+                LOG.info("Translation successful for feature at location "
+                        + ffFeature.getLocations().getMinPosition() + "-"
+                        + ffFeature.getLocations().getMaxPosition());
+                handleTranslation(fastaWriter, actualTranslation, id, sequenceRegion);
+            }
         }
 
         return gff3Features;
@@ -198,7 +225,7 @@ public class GFF3AnnotationFactory {
     /**
      * Write translation to fasta and remove from attribute map.
      */
-    private void handleTranslation(
+    /*private void handleTranslation(
             Writer fastaWriter,
             Map<String, List<String>> baseAttributes,
             Optional<String> featureId,
@@ -209,6 +236,14 @@ public class GFF3AnnotationFactory {
             TranslationWriter.writeTranslation(fastaWriter, translationKey, translation.get(0));
             baseAttributes.remove("translation");
         }
+    }*/
+
+    private void handleTranslation(
+            Writer fastaWriter, String translationSeq, Optional<String> featureId, GFF3SequenceRegion sequenceRegion) {
+        if (!translationSeq.isEmpty()) {
+            String translationKey = TranslationWriter.getTranslationKey(sequenceRegion.accession(), featureId.get());
+            TranslationWriter.writeTranslation(fastaWriter, translationKey, translationSeq);
+        }
     }
 
     public Map<String, List<String>> getAttributeMap(Feature ffFeature) {
@@ -217,6 +252,7 @@ public class GFF3AnnotationFactory {
 
         ffFeature.getQualifiers().stream()
                 .filter(q -> !"gene".equals(q.getName()))
+                .filter(q -> !"translation".equals(q.getName()))
                 .forEach(q -> {
                     String key = qualifierMap.getOrDefault(q.getName(), q.getName());
                     String value = q.isValue() ? q.getValue() : "true";

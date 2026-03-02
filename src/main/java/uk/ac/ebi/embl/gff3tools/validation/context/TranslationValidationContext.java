@@ -8,11 +8,18 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.validation.meta;
+package uk.ac.ebi.embl.gff3tools.validation.context;
 
-public enum ValidationType {
-    FEATURE,
-    ANNOTATION,
-    SYNTACTIC,
-    TRANSLATION_CONTEXT
+import java.nio.file.Path;
+import lombok.Builder;
+import lombok.Getter;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+
+@Getter
+@Builder
+public class TranslationValidationContext {
+
+    private final GFF3Feature gff3Feature;
+
+    private final Path sequencePath;
 }
