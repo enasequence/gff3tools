@@ -28,28 +28,15 @@ import uk.ac.ebi.embl.gff3tools.exception.DuplicateValidationRuleException;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 public class ValidationRegistry {
-    private static final ValidationRegistry INSTANCE = new ValidationRegistry();
     private static final Logger LOG = LoggerFactory.getLogger(ValidationRegistry.class);
-    private static volatile List<ValidatorDescriptor> cachedValidators;
-    private static ValidationConfig validationConfig;
-    private static Connection connection;
+    private final List<ValidatorDescriptor> cachedValidators;
+    private final ValidationConfig validationConfig;
+    private final Connection connection;
 
-    private ValidationRegistry() {}
-
-    public static ValidationRegistry getInstance(ValidationConfig config, Connection con) {
-        validationConfig = config;
-        connection = con;
-        INSTANCE.initRegistry();
-        return INSTANCE;
-    }
-
-    /**
-     * Creates list of validations and fixes
-     */
-    private void initRegistry() {
-        synchronized (ValidationRegistry.class) {
-            cachedValidators = build(getValidationList());
-        }
+    public ValidationRegistry(ValidationConfig config, Connection con) {
+        this.validationConfig = config;
+        this.connection = con;
+        this.cachedValidators = build(getValidationList());
     }
 
     private List<ValidatorDescriptor> build(List<ClassInfo> validationList) {
@@ -90,6 +77,35 @@ public class ValidationRegistry {
 
         LOG.info("Initialized {} validator methods", descriptors.size());
         return descriptors;
+    }
+
+    /**
+     * Discovers all concrete classes implementing ContextProvider via ClassGraph,
+     * instantiates each via no-arg constructor, and returns them.
+     */
+    public List<ContextProvider<?>> discoverProviders() {
+        List<ContextProvider<?>> providers = new ArrayList<>();
+        try (ScanResult scan = new ClassGraph().enableClassInfo().scan()) {
+
+            ClassInfoList providerClasses = scan.getClassesImplementing(ContextProvider.class.getName())
+                    .filter(ci -> !ci.isAbstract()
+                            && !ci.isInterface()
+                            && !ci.getName().contains("$")
+                            && !ci.isSynthetic());
+
+            for (ClassInfo classInfo : providerClasses) {
+                try {
+                    Class<?> clazz = classInfo.loadClass();
+                    Object instance = clazz.getDeclaredConstructor().newInstance();
+                    providers.add((ContextProvider<?>) instance);
+                    LOG.debug("Discovered context provider: {}", clazz.getName());
+                } catch (Exception e) {
+                    LOG.warn("Failed to instantiate context provider {}: {}", classInfo.getName(), e.getMessage());
+                }
+            }
+        }
+        LOG.info("Discovered {} context providers", providers.size());
+        return providers;
     }
 
     private Annotation getClassAnnotation(Class<?> clazz) {

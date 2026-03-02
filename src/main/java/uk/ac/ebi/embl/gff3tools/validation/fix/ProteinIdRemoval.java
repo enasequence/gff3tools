@@ -16,12 +16,13 @@ import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 
 @Slf4j
 @Gff3Fix(name = "PROTEIN_ID_REMOVE", description = "Removes the protein ID from feature", enabled = false)
-public class ProteinIdRemoval {
+public class ProteinIdRemoval extends Validation {
 
     @FixMethod(
             rule = "PROTEIN_ID_REMOVE",

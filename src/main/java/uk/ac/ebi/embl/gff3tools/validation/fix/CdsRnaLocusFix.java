@@ -20,6 +20,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 
@@ -28,7 +29,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
         name = "CDS_RNA_LOCUS",
         description =
                 "Transfers gene, gene_synonym, and locus_tag attributes from gene features to their corresponding CDS, rRNA, and tRNA child features based on location overlap.")
-public class CdsRnaLocusFix {
+public class CdsRnaLocusFix extends Validation {
 
     private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
 

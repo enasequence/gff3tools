@@ -15,25 +15,43 @@ import java.io.InputStream;
 import java.sql.Connection;
 import java.util.*;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidatorDescriptor;
 
 public class ValidationEngineBuilder {
 
     private final ValidationConfig validationConfig;
-    public ValidationRegistry validationRegistry;
+    private ValidationRegistry validationRegistry;
     private Connection connection;
     private boolean failFast = false;
+    private final List<ContextProvider<?>> providerOverrides = new ArrayList<>();
 
     public ValidationEngineBuilder() {
 
         // Loads default severity rules and validatorOverrides
         validationConfig = getValidationConfig();
-
-        // Init validation validationRegistry
-        validationRegistry = ValidationRegistry.getInstance(validationConfig, connection);
     }
 
     public ValidationEngine build() {
-        return new ValidationEngine(validationConfig, validationRegistry, failFast);
+        // Create a fresh registry for each build
+        validationRegistry = new ValidationRegistry(validationConfig, connection);
+
+        // Discover providers, apply overrides, create context, inject into instances
+        ValidationContext context = buildContext(validationRegistry);
+        injectContext(validationRegistry, context);
+
+        return new ValidationEngine(validationConfig, validationRegistry, context, failFast);
+    }
+
+    /**
+     * Register a provider override. During build(), this provider replaces any
+     * auto-discovered provider registered under the same class key.
+     *
+     * @param provider the provider instance to register as an override
+     * @return this builder for chaining
+     */
+    public ValidationEngineBuilder withProvider(ContextProvider<?> provider) {
+        providerOverrides.add(provider);
+        return this;
     }
 
     public ValidationEngineBuilder failFast(boolean failFast) {
@@ -58,6 +76,45 @@ public class ValidationEngineBuilder {
 
     public void setConnection(Connection connection) {
         this.connection = connection;
+    }
+
+    @SuppressWarnings("unchecked")
+    private ValidationContext buildContext(ValidationRegistry registry) {
+        ValidationContext context = new ValidationContext();
+
+        // Step 1: Auto-discover and register providers
+        List<ContextProvider<?>> discovered = registry.discoverProviders();
+        for (ContextProvider<?> provider : discovered) {
+            context.register(
+                    (Class<? extends ContextProvider<Object>>) provider.getClass(), (ContextProvider<Object>) provider);
+        }
+
+        // Step 2: Apply overrides (replace auto-discovered providers of the same class)
+        for (ContextProvider<?> override : providerOverrides) {
+            context.register(
+                    (Class<? extends ContextProvider<Object>>) override.getClass(), (ContextProvider<Object>) override);
+        }
+
+        return context;
+    }
+
+    /**
+     * Injects the ValidationContext into all validator/fix instances that extend Validation.
+     */
+    private void injectContext(ValidationRegistry registry, ValidationContext context) {
+        Set<Object> injected = new HashSet<>();
+
+        List<ValidatorDescriptor> allDescriptors = new ArrayList<>();
+        allDescriptors.addAll(registry.getValidations());
+        allDescriptors.addAll(registry.getFixs());
+        allDescriptors.addAll(registry.getExits());
+
+        for (ValidatorDescriptor descriptor : allDescriptors) {
+            Object instance = descriptor.instance();
+            if (instance instanceof Validation validation && injected.add(instance)) {
+                validation.setContext(context);
+            }
+        }
     }
 
     private ValidationConfig getValidationConfig() {

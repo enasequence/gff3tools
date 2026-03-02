@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.*;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.AggregatedValidationException;
@@ -43,7 +42,7 @@ public class ValidationEngineTest {
     void setup() {
         MockitoAnnotations.openMocks(this);
         // Use fail-fast=true to preserve original test behavior (default changed to false)
-        engine = new ValidationEngine(validationConfig, validationRegistry, true);
+        engine = new ValidationEngine(validationConfig, validationRegistry, new ValidationContext(), true);
     }
 
     @Test
@@ -118,15 +117,12 @@ public class ValidationEngineTest {
         List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
         when(validationConfig.getSeverity("RULE_X", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
-        try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
+        when(validationRegistry.getValidations()).thenReturn(descriptors);
 
-            mocked.when(validationRegistry::getValidations).thenReturn(descriptors);
+        GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
+        engine.executeValidations(feature, 10);
 
-            GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
-            engine.executeValidations(feature, 10);
-
-            verify(instance, times(1)).validate(feature, 10);
-        }
+        verify(instance, times(1)).validate(feature, 10);
     }
 
     // ------------------------------------------------------------
@@ -146,12 +142,10 @@ public class ValidationEngineTest {
         List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
         when(validationConfig.getSeverity("RULE_OFF", RuleSeverity.ERROR)).thenReturn(RuleSeverity.OFF);
+        when(validationRegistry.getValidations()).thenReturn(descriptors);
 
-        try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
-            mocked.when(validationRegistry::getValidations).thenReturn(descriptors);
-            GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
-            assertDoesNotThrow(() -> engine.executeValidations(feature, 1));
-        }
+        GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
+        assertDoesNotThrow(() -> engine.executeValidations(feature, 1));
     }
 
     // ------------------------------------------------------------
@@ -171,13 +165,11 @@ public class ValidationEngineTest {
         List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
         when(validationConfig.getSeverity("RULE_WARN", RuleSeverity.ERROR)).thenReturn(RuleSeverity.WARN);
-        try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
-            mocked.when(validationRegistry::getValidations).thenReturn(descriptors);
+        when(validationRegistry.getValidations()).thenReturn(descriptors);
 
-            GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
-            engine.executeValidations(feature, 1);
-            assertEquals(1, engine.getParsingWarnings().size());
-        }
+        GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
+        engine.executeValidations(feature, 1);
+        assertEquals(1, engine.getParsingWarnings().size());
     }
 
     @Test
@@ -194,14 +186,11 @@ public class ValidationEngineTest {
         List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
         when(validationConfig.getSeverity("RULE_ERR", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
-        try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
-            mocked.when(validationRegistry::getValidations).thenReturn(descriptors);
+        when(validationRegistry.getValidations()).thenReturn(descriptors);
 
-            GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
-            ValidationException ex =
-                    assertThrows(ValidationException.class, () -> engine.executeValidations(feature, 1));
-            assertEquals("Violation of rule RULE_ERR on line 0: error triggered", ex.getMessage());
-        }
+        GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
+        ValidationException ex = assertThrows(ValidationException.class, () -> engine.executeValidations(feature, 1));
+        assertEquals("Violation of rule RULE_ERR on line 0: error triggered", ex.getMessage());
     }
 
     // ------------------------------------------------------------
@@ -220,13 +209,11 @@ public class ValidationEngineTest {
         List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
         when(validationConfig.getFix("FIX_1", true)).thenReturn(true);
-        try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
-            mocked.when(() -> validationRegistry.getFixs()).thenReturn(descriptors);
+        when(validationRegistry.getFixs()).thenReturn(descriptors);
 
-            engine.executeFixes(new GFF3Annotation(), 5);
+        engine.executeFixes(new GFF3Annotation(), 5);
 
-            verify(instance, times(1)).fix(any(), eq(5));
-        }
+        verify(instance, times(1)).fix(any(), eq(5));
     }
 
     // ------------------------------------------------------------
@@ -283,13 +270,10 @@ public class ValidationEngineTest {
         ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyValidator.class, instance, m);
         List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
-        try (MockedStatic<ValidationRegistry> mocked = mockStatic(ValidationRegistry.class)) {
+        when(validationRegistry.getExits()).thenReturn(descriptors);
 
-            mocked.when(validationRegistry::getExits).thenReturn(descriptors);
-
-            engine.executeExits();
-            verify(instance, times(1)).onExit();
-        }
+        engine.executeExits();
+        verify(instance, times(1)).onExit();
     }
 
     // ------------------------------------------------------------
@@ -298,7 +282,8 @@ public class ValidationEngineTest {
     @Test
     void handleSyntacticError_defaultBehavior_collectsError() {
         // Default is failFast=false (collect errors)
-        ValidationEngine engineCollect = new ValidationEngine(validationConfig, validationRegistry, false);
+        ValidationEngine engineCollect =
+                new ValidationEngine(validationConfig, validationRegistry, new ValidationContext(), false);
         ValidationException exception = new ValidationException("RULE", 1, "test error");
         when(validationConfig.getSeverity("RULE", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
 
@@ -308,7 +293,8 @@ public class ValidationEngineTest {
 
     @Test
     void handleSyntacticError_failFastTrue_throwsImmediately() {
-        ValidationEngine engineFailFast = new ValidationEngine(validationConfig, validationRegistry, true);
+        ValidationEngine engineFailFast =
+                new ValidationEngine(validationConfig, validationRegistry, new ValidationContext(), true);
         ValidationException exception = new ValidationException("RULE", 1, "test error");
         when(validationConfig.getSeverity("RULE", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
 
@@ -317,7 +303,8 @@ public class ValidationEngineTest {
 
     @Test
     void handleSyntacticError_failFastFalse_collectsMultipleErrors() throws ValidationException {
-        ValidationEngine engineCollect = new ValidationEngine(validationConfig, validationRegistry, false);
+        ValidationEngine engineCollect =
+                new ValidationEngine(validationConfig, validationRegistry, new ValidationContext(), false);
         when(validationConfig.getSeverity("RULE", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
 
         engineCollect.handleSyntacticError(new ValidationException("RULE", 1, "error 1"));
@@ -329,7 +316,8 @@ public class ValidationEngineTest {
 
     @Test
     void throwIfErrorsCollected_withErrors_throwsAggregate() throws ValidationException {
-        ValidationEngine engineCollect = new ValidationEngine(validationConfig, validationRegistry, false);
+        ValidationEngine engineCollect =
+                new ValidationEngine(validationConfig, validationRegistry, new ValidationContext(), false);
         when(validationConfig.getSeverity("RULE", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
 
         engineCollect.handleSyntacticError(new ValidationException("RULE", 1, "error 1"));
@@ -343,14 +331,16 @@ public class ValidationEngineTest {
 
     @Test
     void throwIfErrorsCollected_noErrors_doesNotThrow() {
-        ValidationEngine engineCollect = new ValidationEngine(validationConfig, validationRegistry, false);
+        ValidationEngine engineCollect =
+                new ValidationEngine(validationConfig, validationRegistry, new ValidationContext(), false);
 
         assertDoesNotThrow(() -> engineCollect.throwIfErrorsCollected());
     }
 
     @Test
     void hasCollectedErrors_withErrors_returnsTrue() throws ValidationException {
-        ValidationEngine engineCollect = new ValidationEngine(validationConfig, validationRegistry, false);
+        ValidationEngine engineCollect =
+                new ValidationEngine(validationConfig, validationRegistry, new ValidationContext(), false);
         when(validationConfig.getSeverity("RULE", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
 
         engineCollect.handleSyntacticError(new ValidationException("RULE", 1, "error 1"));
@@ -360,7 +350,8 @@ public class ValidationEngineTest {
 
     @Test
     void hasCollectedErrors_noErrors_returnsFalse() {
-        ValidationEngine engineCollect = new ValidationEngine(validationConfig, validationRegistry, false);
+        ValidationEngine engineCollect =
+                new ValidationEngine(validationConfig, validationRegistry, new ValidationContext(), false);
 
         assertFalse(engineCollect.hasCollectedErrors());
     }
