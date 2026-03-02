@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Objects;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
@@ -23,7 +24,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
         name = "TRANSFORM_EXCLUSIVE_ATTRIBUTE_TO_NOTE",
         description = "Moves the value one of the mutually exclusive feature attributes to the note attribute",
         enabled = false)
-public class TransformAttributeToNoteFix {
+public class TransformAttributeToNoteFix extends Validation {
 
     List<ExclusiveAttributePair> pairs = new ArrayList<ExclusiveAttributePair>();
     private final String note = GFF3Attributes.NOTE;

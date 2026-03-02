@@ -29,13 +29,23 @@ public class ValidationEngine {
 
     private final ValidationConfig validationConfig;
     private final ValidationRegistry validationRegistry;
+    private final ValidationContext context;
 
-    ValidationEngine(ValidationConfig validationConfig, ValidationRegistry validationRegistry, boolean failFast) {
+    ValidationEngine(
+            ValidationConfig validationConfig,
+            ValidationRegistry validationRegistry,
+            ValidationContext context,
+            boolean failFast) {
         this.parsingWarnings = new java.util.ArrayList<>();
         this.collectedErrors = new java.util.ArrayList<>();
         this.failFast = failFast;
         this.validationConfig = validationConfig;
         this.validationRegistry = validationRegistry;
+        this.context = context;
+    }
+
+    public ValidationContext getContext() {
+        return context;
     }
 
     /**

@@ -16,6 +16,7 @@ import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 
@@ -23,7 +24,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 @Gff3Fix(
         name = "REMOVE_ATTRIBUTES_DUPLICATE_VALUE",
         description = "Remove the duplicate values in the old_locus_tag and locus_tag")
-public class AttributesDuplicateValue {
+public class AttributesDuplicateValue extends Validation {
 
     @FixMethod(
             rule = "REMOVE_ATTRIBUTES_DUPLICATE_VALUE",

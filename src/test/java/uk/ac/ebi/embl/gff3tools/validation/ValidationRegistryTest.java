@@ -29,16 +29,9 @@ class ValidationRegistryTest {
 
     @BeforeEach
     void setUp() {
-
         validationConfig = mock(ValidationConfig.class);
-        registry = ValidationRegistry.getInstance(validationConfig, null);
-    }
-
-    @Test
-    @DisplayName("Should return the same instance (singleton)")
-    void testSingletonInstance() {
-        ValidationRegistry another = ValidationRegistry.getInstance(validationConfig, null);
-        assertSame(registry, another, "ValidationRegistry must be a singleton");
+        when(validationConfig.isValidatorEnabled(any(Annotation.class))).thenReturn(true);
+        registry = new ValidationRegistry(validationConfig, null);
     }
 
     @Gff3Validation(name = "LENGTH", enabled = true)
@@ -257,6 +250,15 @@ class ValidationRegistryTest {
         assertDoesNotThrow(() -> privateMethod.invoke(registry, validationList));
     }
 
+    @Test
+    @DisplayName("Should discover ContextProvider implementations via ClassGraph")
+    void testDiscoverProviders() {
+        List<ContextProvider<?>> providers = registry.discoverProviders();
+        // No concrete providers exist yet (Phase 4 will add them),
+        // but the method should not throw and should return a list
+        assertNotNull(providers);
+    }
+
     // Utility methods
     private static Method getMethod(Class<?> clazz, String name) {
         try {
@@ -266,11 +268,11 @@ class ValidationRegistryTest {
         }
     }
 
-    private static void setCachedValidators(List<ValidatorDescriptor> validators) {
+    private void setCachedValidators(List<ValidatorDescriptor> validators) {
         try {
             var field = ValidationRegistry.class.getDeclaredField("cachedValidators");
             field.setAccessible(true);
-            field.set(null, validators);
+            field.set(registry, validators);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

@@ -15,6 +15,7 @@ import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 
@@ -22,7 +23,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 @Gff3Fix(
         name = "ATTRIBUTES_VALUE",
         description = "Change the attribute value of mod_base. Refer: Modified base abbreviations")
-public class AttributeValueFix {
+public class AttributeValueFix extends Validation {
 
     @FixMethod(
             rule = "ATTRIBUTES_VALUE",

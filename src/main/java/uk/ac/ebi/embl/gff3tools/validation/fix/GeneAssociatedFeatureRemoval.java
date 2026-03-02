@@ -18,6 +18,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 
@@ -25,7 +26,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
         name = "GENE_ASSOCIATED_FEATURE_REMOVAL",
         description =
                 "Removes gene features entry if locations are identical with gene associated features (CDS, RRNA, TRNA)")
-public class GeneAssociatedFeatureRemoval {
+public class GeneAssociatedFeatureRemoval extends Validation {
 
     private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
 
