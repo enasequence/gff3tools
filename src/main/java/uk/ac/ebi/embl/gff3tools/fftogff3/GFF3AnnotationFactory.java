@@ -223,10 +223,7 @@ public class GFF3AnnotationFactory {
     }
 
     private void handleTranslation(
-            Writer fastaWriter,
-            String translationSeq,
-            Optional<String> featureId,
-            GFF3SequenceRegion sequenceRegion) {
+            Writer fastaWriter, String translationSeq, Optional<String> featureId, GFF3SequenceRegion sequenceRegion) {
         if (!translationSeq.isEmpty()) {
             String translationKey = TranslationWriter.getTranslationKey(sequenceRegion.accession(), featureId.get());
             TranslationWriter.writeTranslation(fastaWriter, translationKey, translationSeq);
@@ -379,8 +376,8 @@ public class GFF3AnnotationFactory {
         // Check if gffFeatures has the parent
         return parentId.isPresent()
                 && gffFeatures.stream().anyMatch(f -> f.getId()
-                .map(id -> id.equalsIgnoreCase(parentId.get()))
-                .orElse(false));
+                        .map(id -> id.equalsIgnoreCase(parentId.get()))
+                        .orElse(false));
     }
 
     public String getIncrementalId(String featureName, Optional<String> geneName) {

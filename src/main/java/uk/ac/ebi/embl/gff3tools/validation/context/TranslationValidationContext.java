@@ -22,7 +22,4 @@ public class TranslationValidationContext {
     private final GFF3Feature gff3Feature;
 
     private final Path sequencePath;
-
-
-
 }

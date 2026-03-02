@@ -14,7 +14,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.CLIException;
@@ -59,14 +58,15 @@ public class FileProcessCommand extends AbstractCommand {
         }
     }
 
-    public void initGff3Processing(Path gff3Path, Path fastaFile) throws UnregisteredValidationRuleException, ValidationException {
+    public void initGff3Processing(Path gff3Path, Path fastaFile)
+            throws UnregisteredValidationRuleException, ValidationException {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
         ValidationEngine engine = initValidationEngine(ruleOverrides);
         FileValidationContext fileValidationContext = FileValidationContext.builder()
                 .gff3Path(gff3Path)
                 .fastaPath(fastaFile)
                 .build();
-        engine.validate(fileValidationContext,-1);
+        engine.validate(fileValidationContext, -1);
     }
 
     protected void validateFile(Path filePath, String fileExtension) throws CLIException {

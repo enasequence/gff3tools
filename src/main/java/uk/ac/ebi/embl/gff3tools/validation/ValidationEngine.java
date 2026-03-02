@@ -29,8 +29,7 @@ public class ValidationEngine {
             GFF3Feature.class, ValidationType.FEATURE,
             GFF3Annotation.class, ValidationType.ANNOTATION,
             FileValidationContext.class, ValidationType.FILE_CONTEXT,
-            TranslationValidationContext.class, ValidationType.TRANSLATION_CONTEXT
-    );
+            TranslationValidationContext.class, ValidationType.TRANSLATION_CONTEXT);
 
     private final List<ValidationException> parsingWarnings;
     private final List<ValidationException> collectedErrors;
