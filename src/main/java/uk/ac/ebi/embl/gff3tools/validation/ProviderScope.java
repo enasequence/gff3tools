@@ -10,14 +10,15 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation;
 
-import java.sql.Connection;
-import lombok.Getter;
-import lombok.Setter;
-
-@Setter
-@Getter
-public class Validation {
-
-    private Connection connection;
-    private ValidationContext context;
+/**
+ * Declares the cache lifecycle scope of a {@link ContextProvider}.
+ *
+ * <ul>
+ *   <li>{@link #GLOBAL} -- never invalidated during a validation run (e.g., OntologyClient).</li>
+ *   <li>{@link #ANNOTATION} -- invalidated each time the engine transitions to a new annotation block.</li>
+ * </ul>
+ */
+public enum ProviderScope {
+    GLOBAL,
+    ANNOTATION
 }

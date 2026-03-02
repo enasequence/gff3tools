@@ -8,16 +8,14 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.validation;
+package uk.ac.ebi.embl.gff3tools.exception;
 
-import java.sql.Connection;
-import lombok.Getter;
-import lombok.Setter;
-
-@Setter
-@Getter
-public class Validation {
-
-    private Connection connection;
-    private ValidationContext context;
+/**
+ * Thrown when two or more {@link uk.ac.ebi.embl.gff3tools.validation.ContextProvider}
+ * instances form a circular dependency during resolution.
+ */
+public class CircularDependencyException extends RuntimeException {
+    public CircularDependencyException(String message) {
+        super(message);
+    }
 }
