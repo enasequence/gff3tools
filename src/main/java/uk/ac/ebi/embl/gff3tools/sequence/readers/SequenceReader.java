@@ -91,6 +91,29 @@ public interface SequenceReader extends AutoCloseable {
     void setAccessionIds(List<String> orderedAccessionIds) throws Exception;
 
     /**
+     * Configures/validates accession ids for this submission.
+     *
+     * <p>FASTA behavior:
+     * <ul>
+     *   <li>Maps accession id to the corresponding FASTA submissionId.</li>
+     *   <li>The submissionId must match an existing submissionId; otherwise an exception is thrown.</li>
+     * </ul>
+     *
+     * <p>Plain sequence behavior:
+     * <ul>
+     *   <li>There is only one record; this call exists for interface uniformity.</li>
+     *   <li>Validates that the provided accessionId matches the singular existing accessionId, otherwise an exception is thrown.</li>
+     *   <li>Submission id here does not play a role as it does not exist in the mapping. </li>
+     *   <li>Does not change any mapping because there is nothing to map.</li>
+     * </ul>
+     *
+     * @param accessionId accession ids aligned to file order
+     * @param submissionId can be anything, provided for interface uniformity
+     * @throws Exception format/problem specific exceptions if mapping/validation fails
+     */
+    void setAccessionIdForSubmissionId(String accessionId, String submissionId) throws Exception;
+
+    /**
      * Returns optional FASTA header metadata for the record.
      *
      * <p>FASTA:

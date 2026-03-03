@@ -68,6 +68,15 @@ public final class JsonHeaderFastaReader implements SequenceReader {
     }
 
     @Override
+    public void setAccessionIdForSubmissionId(String accessionId, String submissionId) throws Exception {
+        if (!orderedSubmissionIds.contains(submissionId)) {
+            throw new FastaFileException("The submission ID " + submissionId + " does not exist");
+        }
+        accessionIdToSubmissionId.put(accessionId, submissionId);
+        submissionIdToAccessionId.put(submissionId, accessionId);
+    }
+
+    @Override
     public Optional<FastaHeader> getHeader(IdType idType, String id) {
         String resolvedId = resolveId(idType, id);
         return Optional.ofNullable(submissionIdToFastaHeader.get(resolvedId));
