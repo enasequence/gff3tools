@@ -54,6 +54,13 @@ public final class PlainSequenceReader implements SequenceReader {
     }
 
     @Override
+    public void setAccessionIdForSubmissionId(String accessionId, String submissionId) throws Exception {
+        if (!this.accessionId.equals(accessionId))
+            throw new IllegalArgumentException(
+                    "AccessionId mismatch. Expected " + this.accessionId + " got " + accessionId);
+    }
+
+    @Override
     public Optional<FastaHeader> getHeader(IdType idType, String id) {
         validateId(idType, id);
         return Optional.ofNullable(header);
