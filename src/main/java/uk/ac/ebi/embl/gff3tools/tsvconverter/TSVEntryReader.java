@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.tsvconverter;
 
 import java.io.*;
+import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -52,6 +53,7 @@ public class TSVEntryReader implements Closeable {
      * @throws TemplateNotFoundException if template ID is not found in file or template doesn't exist
      */
     public TSVEntryReader(BufferedReader reader) throws ReadException, TemplateNotFoundException {
+        Objects.requireNonNull(reader, "reader must not be null");
         this.options = createDefaultOptions();
 
         try {
