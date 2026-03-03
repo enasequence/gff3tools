@@ -21,6 +21,9 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.LocusTagIndexProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 public class FeatureSpecificValidationTest {
 
@@ -30,10 +33,16 @@ public class FeatureSpecificValidationTest {
 
     private GFF3Feature feature;
 
+    private ValidationContext context;
+
     @BeforeEach
     public void setUp() {
         gff3Annotation = new GFF3Annotation();
         attributeSpecificValidation = new FeatureSpecificValidation();
+        context = new ValidationContext();
+        context.register(OntologyClientProvider.class, new OntologyClientProvider());
+        context.register(LocusTagIndexProvider.class, new LocusTagIndexProvider());
+        attributeSpecificValidation.setContext(context);
     }
 
     @Test
@@ -113,6 +122,7 @@ public class FeatureSpecificValidationTest {
                         GFF3Attributes.PSEUDO, List.of("true")));
 
         gff3Annotation.setFeatures(List.of(cds, peptide));
+        context.setCurrentAnnotation(gff3Annotation);
 
         Assertions.assertDoesNotThrow(() -> attributeSpecificValidation.validatePeptideFeature(gff3Annotation, 1));
     }
@@ -132,6 +142,7 @@ public class FeatureSpecificValidationTest {
                 Map.of(GFF3Attributes.LOCUS_TAG, List.of("L1")));
 
         gff3Annotation.setFeatures(List.of(cds, peptide));
+        context.setCurrentAnnotation(gff3Annotation);
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> attributeSpecificValidation.validatePeptideFeature(gff3Annotation, 2));
@@ -156,6 +167,7 @@ public class FeatureSpecificValidationTest {
                 Map.of(GFF3Attributes.LOCUS_TAG, List.of("L2")));
 
         gff3Annotation.setFeatures(List.of(cds, peptide));
+        context.setCurrentAnnotation(gff3Annotation);
 
         Assertions.assertDoesNotThrow(() -> attributeSpecificValidation.validatePeptideFeature(gff3Annotation, 3));
     }
@@ -175,6 +187,7 @@ public class FeatureSpecificValidationTest {
                 Map.of(GFF3Attributes.GENE, List.of("geneA")));
 
         gff3Annotation.setFeatures(List.of(cds, peptide));
+        context.setCurrentAnnotation(gff3Annotation);
 
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> attributeSpecificValidation.validatePeptideFeature(gff3Annotation, 4));

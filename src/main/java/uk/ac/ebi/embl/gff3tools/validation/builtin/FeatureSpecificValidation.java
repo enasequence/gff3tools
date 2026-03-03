@@ -15,13 +15,15 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
+import uk.ac.ebi.embl.gff3tools.validation.provider.LocusTagIndex;
+import uk.ac.ebi.embl.gff3tools.validation.provider.LocusTagIndexProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Validation(name = "FEATURE_SPECIFIC")
 public class FeatureSpecificValidation extends Validation {
@@ -32,10 +34,9 @@ public class FeatureSpecificValidation extends Validation {
     private static final String PSEUDO_ATTRIBUTE_REQUIRED_VALIDATION =
             "Peptide \"%s\" requires the 'pseudo' attribute because its CDS \"%s\" is marked as pseudo";
 
-    private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
-
     @ValidationMethod(rule = "OPERON_FEATURE", type = ValidationType.FEATURE)
     public void validateOperonFeatures(GFF3Feature feature, int line) throws ValidationException {
+        OntologyClient ontologyClient = getContext().get(OntologyClientProvider.class);
         String operonValue = feature.getAttribute(GFF3Attributes.OPERON).orElse(null);
         if (operonValue == null || operonValue.isBlank()) {
             return;
@@ -53,8 +54,12 @@ public class FeatureSpecificValidation extends Validation {
 
     @ValidationMethod(rule = "PEPTIDE_FEATURE", type = ValidationType.ANNOTATION)
     public void validatePeptideFeature(GFF3Annotation annotation, int line) throws ValidationException {
+        OntologyClient ontologyClient = getContext().get(OntologyClientProvider.class);
+        LocusTagIndex index = getContext().get(LocusTagIndexProvider.class);
+        Map<String, List<GFF3Feature>> peptidesByLocus = index.getLocusTagToPeptides();
+
         List<GFF3Feature> cdsFeatures = new ArrayList<>();
-        List<GFF3Feature> peptideFeatures = new ArrayList<>();
+        Map<String, List<GFF3Feature>> peptidesByGene = new HashMap<>();
 
         for (GFF3Feature feature : annotation.getFeatures()) {
             Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
@@ -65,24 +70,10 @@ public class FeatureSpecificValidation extends Validation {
             if (OntologyTerm.CDS.ID.equals(soId) || OntologyTerm.CDS_REGION.ID.equals(soId)) {
                 cdsFeatures.add(feature);
             } else if (ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.POLYPEPTIDE_REGION.ID)) {
-                peptideFeatures.add(feature);
-            }
-        }
-
-        Map<String, List<GFF3Feature>> peptidesByLocus = new HashMap<>();
-        Map<String, List<GFF3Feature>> peptidesByGene = new HashMap<>();
-
-        for (GFF3Feature peptide : peptideFeatures) {
-            String locusTag = peptide.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
-            String gene = peptide.getAttribute(GFF3Attributes.GENE).orElse(null);
-
-            if (locusTag != null) {
-                peptidesByLocus
-                        .computeIfAbsent(locusTag, k -> new ArrayList<>())
-                        .add(peptide);
-            }
-            if (gene != null) {
-                peptidesByGene.computeIfAbsent(gene, k -> new ArrayList<>()).add(peptide);
+                String gene = feature.getAttribute(GFF3Attributes.GENE).orElse(null);
+                if (gene != null) {
+                    peptidesByGene.computeIfAbsent(gene, k -> new ArrayList<>()).add(feature);
+                }
             }
         }
 
