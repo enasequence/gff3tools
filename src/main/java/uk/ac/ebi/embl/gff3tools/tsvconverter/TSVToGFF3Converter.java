@@ -82,10 +82,8 @@ public class TSVToGFF3Converter implements Converter {
             GFF3AnnotationFactory annotationFactory =
                     new GFF3AnnotationFactory(validationEngine, directivesFactory, translationFastaPath);
 
-            // Create FASTA writer first (outside try-with-resources) to ensure TSVEntryReader
-            // is not left unclosed if FASTA writer creation fails
-            BufferedWriter nucleotideFastaWriter = createNucleotideFastaWriter();
-            try (TSVEntryReader entryReader = new TSVEntryReader(reader)) {
+            try (TSVEntryReader entryReader = new TSVEntryReader(reader);
+                    BufferedWriter nucleotideFastaWriter = createNucleotideFastaWriter()) {
                 LOG.info(
                         "Converting TSV file using template: {}",
                         entryReader.getTemplateInfo().getName());
@@ -111,18 +109,8 @@ public class TSVToGFF3Converter implements Converter {
                 if (nucleotideFastaWriter != null) {
                     LOG.info("Wrote nucleotide sequences to FASTA file: {}", fastaOutputPath);
                 }
-            } catch (ReadException e) {
-                throw e;
             } catch (IOException e) {
                 throw new ReadException("Error reading TSV file", e);
-            } finally {
-                if (nucleotideFastaWriter != null) {
-                    try {
-                        nucleotideFastaWriter.close();
-                    } catch (IOException e) {
-                        LOG.warn("Failed to close nucleotide FASTA writer", e);
-                    }
-                }
             }
 
             GFF3File file = GFF3File.builder()
