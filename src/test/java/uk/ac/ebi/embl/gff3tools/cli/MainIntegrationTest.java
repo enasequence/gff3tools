@@ -627,12 +627,16 @@ public class MainIntegrationTest {
         Path fastaGz = writeGzFile();
         Path output = Files.createTempFile("out", ".gff3");
 
-        Files.writeString(gff3, "##gff-version 3\n");
+        Files.writeString(
+                gff3,
+                "##gff-version 3\n"
+                        + "##sequence-region seq1 1 100\n"
+                        + "seq1\tENA\tgene\t1\t100\t.\t+\t.\tID=gene1;\n");
 
         String[] args = {
             "process",
             "-accessions",
-            "AB_1000,ES8999,B560000.1",
+            "seq1:AB_1000",
             "-gff3",
             gff3.toString(),
             "-fasta",

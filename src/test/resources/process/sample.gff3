@@ -1,0 +1,9 @@
+##gff-version 3.1.26
+##species https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=9606
+##sequence-region seq1.1 1 1000
+seq1.1	ENA	gene	100	500	.	+	.	ID=gene1;locus_tag=GENE001;
+seq1.1	ENA	CDS	100	500	.	+	0	ID=cds1;Parent=gene1;product=hypothetical protein;
+###
+##sequence-region seq2.1 1 2000
+seq2.1	ENA	gene	200	800	.	-	.	ID=gene2;locus_tag=GENE002;
+seq2.1	ENA	rRNA	200	800	.	-	.	ID=rrna1;Parent=gene2;product=16S ribosomal RNA;
