@@ -147,8 +147,10 @@ public class FileConversionCommand extends AbstractCommand {
             // Need input file to random access the translation sequence.
             return new Gff3ToFFConverter(engine, inputFilePath);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
-            // Create converter with optional master file and nucleotide sequence output path
-            return new FFToGff3Converter(engine, masterFilePath, fastaOutputPath);
+            // FASTA path to write translation sequences
+            return masterFilePath == null
+                    ? new FFToGff3Converter(engine)
+                    : new FFToGff3Converter(engine, masterFilePath);
         } else if (inputFileType == ConversionFileFormat.tsv && outputFileType == ConversionFileFormat.gff3) {
             // TSV to GFF3 conversion using sequencetools template processing
             return new TSVToGFF3Converter(engine, fastaOutputPath);
