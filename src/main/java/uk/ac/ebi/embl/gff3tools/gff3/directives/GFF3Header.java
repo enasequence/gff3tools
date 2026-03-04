@@ -17,6 +17,8 @@ import uk.ac.ebi.embl.gff3tools.gff3.IGFF3Feature;
 
 public record GFF3Header(String version) implements IGFF3Feature {
 
+    public static final String DEFAULT_VERSION = "3.1.26";
+
     @Override
     public void writeGFF3String(Writer writer) throws WriteException {
         try {
