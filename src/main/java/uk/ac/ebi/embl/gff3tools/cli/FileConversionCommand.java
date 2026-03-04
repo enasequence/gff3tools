@@ -165,7 +165,7 @@ public class FileConversionCommand extends AbstractCommand {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
             return new Gff3ToFFConverter(engine, inputFilePath);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
-            // FASTA path to write translation sequences
+            // Optional master file for reduced flatfile conversion
             return masterFilePath == null
                     ? new FFToGff3Converter(engine)
                     : new FFToGff3Converter(engine, masterFilePath);
