@@ -446,11 +446,11 @@ public class ValidationEngineTest {
                 ValidationPriority.NORMAL);
 
         // Mock registry to return grouped maps
-        Map<ValidationPriority, List<ValidatorDescriptor>> fixesByPriority = new LinkedHashMap<>();
+        Map<ValidationPriority, List<ValidatorDescriptor>> fixesByPriority = new HashMap<>();
         fixesByPriority.put(ValidationPriority.CRITICAL, List.of(criticalFix));
         fixesByPriority.put(ValidationPriority.NORMAL, List.of(normalFix));
 
-        Map<ValidationPriority, List<ValidatorDescriptor>> valsByPriority = new LinkedHashMap<>();
+        Map<ValidationPriority, List<ValidatorDescriptor>> valsByPriority = new HashMap<>();
         valsByPriority.put(ValidationPriority.CRITICAL, List.of(criticalVal));
         valsByPriority.put(ValidationPriority.NORMAL, List.of(normalVal));
 
@@ -496,8 +496,8 @@ public class ValidationEngineTest {
                 NormalValidation.class.getDeclaredMethod("validate", GFF3Feature.class, int.class),
                 ValidationPriority.NORMAL);
 
-        Map<ValidationPriority, List<ValidatorDescriptor>> fixesByPriority = new LinkedHashMap<>();
-        Map<ValidationPriority, List<ValidatorDescriptor>> valsByPriority = new LinkedHashMap<>();
+        Map<ValidationPriority, List<ValidatorDescriptor>> fixesByPriority = new HashMap<>();
+        Map<ValidationPriority, List<ValidatorDescriptor>> valsByPriority = new HashMap<>();
         valsByPriority.put(ValidationPriority.CRITICAL, List.of(criticalVal));
         valsByPriority.put(ValidationPriority.NORMAL, List.of(normalVal));
 
@@ -534,8 +534,8 @@ public class ValidationEngineTest {
                 NormalValidation.class.getDeclaredMethod("validate", GFF3Feature.class, int.class),
                 ValidationPriority.NORMAL);
 
-        Map<ValidationPriority, List<ValidatorDescriptor>> fixesByPriority = new LinkedHashMap<>();
-        Map<ValidationPriority, List<ValidatorDescriptor>> valsByPriority = new LinkedHashMap<>();
+        Map<ValidationPriority, List<ValidatorDescriptor>> fixesByPriority = new HashMap<>();
+        Map<ValidationPriority, List<ValidatorDescriptor>> valsByPriority = new HashMap<>();
         valsByPriority.put(ValidationPriority.CRITICAL, List.of(criticalVal));
         valsByPriority.put(ValidationPriority.NORMAL, List.of(normalVal));
 

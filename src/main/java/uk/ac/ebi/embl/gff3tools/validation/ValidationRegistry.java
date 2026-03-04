@@ -139,7 +139,6 @@ public class ValidationRegistry {
             }
         }
 
-        descriptors.sort(Comparator.comparingInt(vd -> vd.priority().getLevel()));
         LOG.info("Initialized {} validator methods", descriptors.size());
         return descriptors;
     }
@@ -214,23 +213,23 @@ public class ValidationRegistry {
     }
 
     /**
-     * Returns validations grouped by priority, ordered from CRITICAL to LOW.
+     * Returns validations grouped by priority.
      */
     public Map<ValidationPriority, List<ValidatorDescriptor>> getValidationsByPriority() {
         return cachedValidators.stream()
                 .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Validation.class))
                 .filter(vd -> vd.method().isAnnotationPresent(ValidationMethod.class))
-                .collect(Collectors.groupingBy(ValidatorDescriptor::priority, LinkedHashMap::new, Collectors.toList()));
+                .collect(Collectors.groupingBy(ValidatorDescriptor::priority));
     }
 
     /**
-     * Returns fixes grouped by priority, ordered from CRITICAL to LOW.
+     * Returns fixes grouped by priority.
      */
     public Map<ValidationPriority, List<ValidatorDescriptor>> getFixesByPriority() {
         return cachedValidators.stream()
                 .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Fix.class))
                 .filter(vd -> vd.method().isAnnotationPresent(FixMethod.class))
-                .collect(Collectors.groupingBy(ValidatorDescriptor::priority, LinkedHashMap::new, Collectors.toList()));
+                .collect(Collectors.groupingBy(ValidatorDescriptor::priority));
     }
 
     public List<ValidatorDescriptor> getExits() {

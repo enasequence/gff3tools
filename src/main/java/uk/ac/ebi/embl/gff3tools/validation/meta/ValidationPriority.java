@@ -11,18 +11,8 @@
 package uk.ac.ebi.embl.gff3tools.validation.meta;
 
 public enum ValidationPriority {
-    CRITICAL(0),
-    HIGH(10),
-    NORMAL(100),
-    LOW(200);
-
-    private final int level;
-
-    ValidationPriority(int level) {
-        this.level = level;
-    }
-
-    public int getLevel() {
-        return level;
-    }
+    CRITICAL,
+    HIGH,
+    NORMAL,
+    LOW;
 }
