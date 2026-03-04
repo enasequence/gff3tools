@@ -57,23 +57,6 @@ public abstract class AbstractCommand implements Runnable {
             description = "Specify rules in the format key:value")
     public CliRulesOption rules;
 
-    @CommandLine.Option(names = "-f", description = "The type of the file to be converted")
-    public ConversionFileFormat fromFileType;
-
-    @CommandLine.Option(names = "-t", description = "The type of the file to convert to")
-    public ConversionFileFormat toFileType;
-
-    @CommandLine.Option(
-            names = {"--master-entry", "-m"},
-            description = "Optional master entry file. Accepts MasterEntry JSON (.json) or EMBL flatfile (.embl/.ff).")
-    public Path masterFilePath;
-
-    @CommandLine.Option(
-            names = {"--output-sequence", "-os"},
-            description =
-                    "Optional output path for nucleotide sequences in FASTA format (only applicable for GFF3 output)")
-    public Path fastaOutputPath;
-
     @CommandLine.Parameters(
             paramLabel = "[input-file]",
             defaultValue = "",
