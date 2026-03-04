@@ -41,15 +41,6 @@ public abstract class AbstractCommand implements Runnable {
             description = "Specify rules in the format key:value")
     public CliRulesOption rules;
 
-    @CommandLine.Option(names = "-f", description = "The type of the file to be converted")
-    public ConversionFileFormat fromFileType;
-
-    @CommandLine.Option(names = "-t", description = "The type of the file to convert to")
-    public ConversionFileFormat toFileType;
-
-    @CommandLine.Option(names = "-m", description = "Optional master file")
-    public Path masterFilePath;
-
     @CommandLine.Parameters(
             paramLabel = "[input-file]",
             defaultValue = "",
