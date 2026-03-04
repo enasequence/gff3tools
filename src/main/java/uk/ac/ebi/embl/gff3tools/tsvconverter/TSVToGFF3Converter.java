@@ -123,6 +123,7 @@ public class TSVToGFF3Converter implements Converter {
 
             file.writeGFF3String(writer);
 
+            validationEngine.throwIfErrorsCollected();
         } finally {
             deleteTempFile(translationFastaPath);
         }
