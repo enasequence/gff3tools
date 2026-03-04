@@ -10,7 +10,8 @@
  */
 package uk.ac.ebi.embl.gff3tools.tsvconverter;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +30,7 @@ import uk.ac.ebi.embl.template.*;
  * <p>The reader accepts a BufferedReader, allowing the caller to handle gzip decompression
  * if needed (e.g., in FileConversionCommand).
  */
-public class TSVEntryReader implements Closeable {
+public class TSVEntryReader {
     private static final Logger LOG = LoggerFactory.getLogger(TSVEntryReader.class);
 
     private static final int MAX_LINES_FOR_TEMPLATE_ID = 10;
@@ -129,11 +130,6 @@ public class TSVEntryReader implements Closeable {
      */
     public TemplateInfo getTemplateInfo() {
         return templateInfo;
-    }
-
-    @Override
-    public void close() throws IOException {
-        // Nothing to close here — the caller owns the BufferedReader
     }
 
     /**

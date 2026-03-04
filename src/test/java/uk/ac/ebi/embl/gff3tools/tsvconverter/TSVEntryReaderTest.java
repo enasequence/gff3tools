@@ -30,8 +30,8 @@ class TSVEntryReaderTest {
                 + "Organism\tSedimentation coefficient\tENV_SAMPLE\tSequence\n"
                 + "Escherichia coli\t16S\tno\tATGC\n";
 
-        try (BufferedReader reader = new BufferedReader(new StringReader(tsvContent));
-                TSVEntryReader tsvReader = new TSVEntryReader(reader)) {
+        try (BufferedReader reader = new BufferedReader(new StringReader(tsvContent))) {
+            TSVEntryReader tsvReader = new TSVEntryReader(reader);
             assertNotNull(tsvReader.getTemplateInfo());
             assertEquals("rRNA gene", tsvReader.getTemplateInfo().getName());
         }
@@ -71,8 +71,8 @@ class TSVEntryReaderTest {
                 + "Organism\tSedimentation coefficient\tENV_SAMPLE\tSequence\n"
                 + "Escherichia coli\t16S\tno\tATGC\n";
 
-        try (BufferedReader reader = new BufferedReader(new StringReader(tsvContent));
-                TSVEntryReader tsvReader = new TSVEntryReader(reader)) {
+        try (BufferedReader reader = new BufferedReader(new StringReader(tsvContent))) {
+            TSVEntryReader tsvReader = new TSVEntryReader(reader);
             assertNotNull(tsvReader.getTemplateInfo());
             assertEquals("rRNA gene", tsvReader.getTemplateInfo().getName());
         }
@@ -87,8 +87,8 @@ class TSVEntryReaderTest {
                 + "Organism\tSedimentation coefficient\tENV_SAMPLE\tSequence\n"
                 + "Escherichia coli\t16S\tno\tATGC\n";
 
-        try (BufferedReader reader = new BufferedReader(new StringReader(tsvContent));
-                TSVEntryReader tsvReader = new TSVEntryReader(reader)) {
+        try (BufferedReader reader = new BufferedReader(new StringReader(tsvContent))) {
+            TSVEntryReader tsvReader = new TSVEntryReader(reader);
             assertNotNull(tsvReader.getTemplateInfo());
             assertEquals("rRNA gene", tsvReader.getTemplateInfo().getName());
         }
@@ -106,8 +106,8 @@ class TSVEntryReaderTest {
                 + "ENTRYNUMBER\tORGANISM_NAME\tSEDIMENT\tENV_SAMPLE\tSEQUENCE\n"
                 + "entry1\tEscherichia coli\t16S\tno\t" + SEQUENCE_100BP + "\n";
 
-        try (BufferedReader reader = new BufferedReader(new StringReader(tsvContent));
-                TSVEntryReader tsvReader = new TSVEntryReader(reader)) {
+        try (BufferedReader reader = new BufferedReader(new StringReader(tsvContent))) {
+            TSVEntryReader tsvReader = new TSVEntryReader(reader);
 
             Entry entry = tsvReader.read();
             assertNotNull(entry, "Should read one entry");
@@ -125,8 +125,8 @@ class TSVEntryReaderTest {
                 + "entry1\tEscherichia coli\t16S\tno\t" + SEQUENCE_100BP + "\n"
                 + "entry2\tBacillus subtilis\t23S\tno\t" + SEQUENCE_100BP + "\n";
 
-        try (BufferedReader reader = new BufferedReader(new StringReader(tsvContent));
-                TSVEntryReader tsvReader = new TSVEntryReader(reader)) {
+        try (BufferedReader reader = new BufferedReader(new StringReader(tsvContent))) {
+            TSVEntryReader tsvReader = new TSVEntryReader(reader);
 
             Entry entry1 = tsvReader.read();
             assertNotNull(entry1);
@@ -147,8 +147,8 @@ class TSVEntryReaderTest {
                 + "ENTRYNUMBER\tORGANISM_NAME\tSEDIMENT\tENV_SAMPLE\tSEQUENCE\n"
                 + "entry1\t\t16S\tno\t" + SEQUENCE_100BP + "\n"; // Missing organism
 
-        try (BufferedReader reader = new BufferedReader(new StringReader(tsvContent));
-                TSVEntryReader tsvReader = new TSVEntryReader(reader)) {
+        try (BufferedReader reader = new BufferedReader(new StringReader(tsvContent))) {
+            TSVEntryReader tsvReader = new TSVEntryReader(reader);
 
             TSVParseException exception = assertThrows(TSVParseException.class, tsvReader::read);
             assertTrue(exception.getLineNumber() > 0, "Line number should be tracked");
