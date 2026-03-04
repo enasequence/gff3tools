@@ -42,6 +42,22 @@ public class FileConversionCommand extends AbstractCommand {
     private static final int GZIP_MAGIC_BYTE1 = 0x1f;
     private static final int GZIP_MAGIC_BYTE2 = 0x8b;
 
+    @CommandLine.Option(names = "-f", description = "The type of the input file to be converted")
+    public ConversionFileFormat fromFileType;
+
+    @CommandLine.Option(names = "-t", description = "The type of the file to convert to")
+    public ConversionFileFormat toFileType;
+
+    @CommandLine.Option(
+            names = "-m",
+            description = "Optional master file for reduced flatfile conversion (EMBL to GFF3 only)")
+    public Path masterFilePath;
+
+    @CommandLine.Option(
+            names = {"--output-sequence", "-os"},
+            description = "Output path for nucleotide sequences in FASTA format (TSV to GFF3 conversion only)")
+    public Path fastaOutputPath;
+
     @CommandLine.Parameters(
             paramLabel = "[output-file]",
             defaultValue = "",
