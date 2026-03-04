@@ -34,7 +34,7 @@ public class GFF3FileFactory {
     }
 
     public GFF3File from(EmblEntryReader entryReader, Entry masterEntry) throws ValidationException, ReadException {
-        GFF3Header header = new GFF3Header("3.1.26");
+        GFF3Header header = new GFF3Header(GFF3Header.DEFAULT_VERSION);
         GFF3Species species = null;
         List<GFF3Annotation> annotations = new ArrayList<>();
         GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
