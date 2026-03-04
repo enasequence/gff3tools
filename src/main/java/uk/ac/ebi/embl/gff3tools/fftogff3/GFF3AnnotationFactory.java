@@ -189,25 +189,23 @@ public class GFF3AnnotationFactory {
                     getPhase(ffFeature));
             gff3Feature.addAttributes(attributes);
             validationEngine.validate(gff3Feature, -1);
-            if (featureName.equalsIgnoreCase("CDS")) {
-                Path sequencePath = Path.of(gff3Feature.accession() + ".seq");
-                TranslationValidationContext context = TranslationValidationContext.builder()
-                        .gff3Feature(gff3Feature)
-                        .sequencePath(sequencePath)
-                        .build();
-                validationEngine.validate(context, -1);
-                gff3Translation.append(gff3Feature.getAttribute("translation").orElse(""));
-                gff3Feature.removeAttributeList("translation");
-            }
             gff3Features.add(gff3Feature);
         }
 
         if (featureName.equalsIgnoreCase("CDS")) {
+            Path sequencePath = Path.of(gff3Features.get(0).accession() + ".seq");
+            TranslationValidationContext context = TranslationValidationContext.builder()
+                    .gff3Feature(gff3Features.get(0))
+                    .sequencePath(sequencePath)
+                    .compoundLocation(compoundLocation)
+                    .build();
+            validationEngine.validate(context, -1);
+
             String expectedTranslation = ffFeature.getSingleQualifierValue("translation");
-            String actualTranslation = gff3Translation.toString();
+            String actualTranslation = gff3Features.get(0).getAttribute("translation").orElse("");
             if (!expectedTranslation.equalsIgnoreCase(actualTranslation)) {
-                LOG.error(expectedTranslation);
-                LOG.error(actualTranslation);
+                LOG.error("expectedTranslation: "+expectedTranslation);
+                LOG.error("actualTranslation: "+actualTranslation);
                 throw new ValidationException("Translation failed for feature at location "
                         + ffFeature.getLocations().getMinPosition() + "-"
                         + ffFeature.getLocations().getMaxPosition());

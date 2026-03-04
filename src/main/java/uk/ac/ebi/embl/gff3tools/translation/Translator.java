@@ -14,6 +14,8 @@ import java.util.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
+import uk.ac.ebi.embl.api.entry.location.Location;
+import uk.ac.ebi.embl.api.entry.location.RemoteLocation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.translation.except.CodonExceptAttribute;
@@ -183,11 +185,40 @@ public class Translator {
      * @param aminoAcid the amino acid to use instead of the standard translation
      */
     public void addPositionException(int beginPosition, int endPosition, Character aminoAcid) {
+        int relativeBegin;
+        int relativeEnd;
+
+        if (isComplement) {
+            // On complement strand, genomic end maps to relative begin
+            // because the sequence is read right-to-left
+            relativeBegin = toRelativePosition(endPosition);
+            relativeEnd   = toRelativePosition(beginPosition);
+        } else {
+            relativeBegin = toRelativePosition(beginPosition);
+            relativeEnd   = toRelativePosition(endPosition);
+        }
+
         PositionExceptionData translationPosException = new PositionExceptionData();
-        translationPosException.beginPosition = beginPosition;
-        translationPosException.endPosition = endPosition;
-        translationPosException.aminoAcid = aminoAcid;
-        positionExceptionMap.put(beginPosition, translationPosException);
+        translationPosException.beginPosition = relativeBegin;
+        translationPosException.endPosition   = relativeEnd;
+        translationPosException.aminoAcid     = aminoAcid;
+        positionExceptionMap.put(relativeBegin, translationPosException);
+    }
+
+
+
+    /**
+     * Converts an absolute genomic position to a 1-based position relative
+     * to the start of the feature's translated sequence.
+     *
+     * Forward strand : counts left-to-right from feature start.
+     * Complement strand: counts right-to-left from feature end.
+     */
+    private int toRelativePosition(int absolutePosition) {
+        if (isComplement) {
+            return (int) (feature.getEnd() - absolutePosition + 1);
+        }
+        return (int) (absolutePosition - feature.getStart() + 1);
     }
 
     /**
@@ -212,6 +243,10 @@ public class Translator {
         if (sequence == null) {
             translationResult.addError("Sequence is null");
             return translationResult;
+        }
+
+        for (int i = 0; i < sequence.length; i++) {
+            sequence[i] = (byte) Character.toUpperCase(sequence[i]);
         }
 
         if (isComplement) {
@@ -525,7 +560,11 @@ public class Translator {
                 conceptualTranslation = false;
             }
             if (!conceptualTranslation) {
+                System.err.println("translation is not valid: "+translationResult.getConceptualTranslation());
                 translationResult.setConceptualTranslationCodons(0);
+            }
+            if (conceptualTranslation) {
+                System.out.println("translation is valid: "+translationResult.getConceptualTranslation());
             }
         }
     }

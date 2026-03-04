@@ -11,8 +11,11 @@
 package uk.ac.ebi.embl.gff3tools.validation.context;
 
 import java.nio.file.Path;
+
 import lombok.Builder;
 import lombok.Getter;
+import uk.ac.ebi.embl.api.entry.location.CompoundLocation;
+import uk.ac.ebi.embl.api.entry.location.Location;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 
 @Getter
@@ -22,4 +25,6 @@ public class TranslationValidationContext {
     private final GFF3Feature gff3Feature;
 
     private final Path sequencePath;
+
+    private final CompoundLocation<Location> compoundLocation;
 }
