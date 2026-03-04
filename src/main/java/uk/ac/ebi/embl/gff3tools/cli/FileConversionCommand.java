@@ -122,10 +122,8 @@ public class FileConversionCommand extends AbstractCommand {
             return new BufferedReader(new InputStreamReader(System.in));
         }
 
-        InputStream fis = null;
         try {
-            fis = Files.newInputStream(inputFilePath);
-            BufferedInputStream bis = new BufferedInputStream(fis);
+            BufferedInputStream bis = new BufferedInputStream(Files.newInputStream(inputFilePath));
 
             // Check for gzip magic bytes
             bis.mark(2);
@@ -140,10 +138,8 @@ public class FileConversionCommand extends AbstractCommand {
 
             return new BufferedReader(new InputStreamReader(bis));
         } catch (NoSuchFileException e) {
-            closeQuietly(fis);
             throw new NonExistingFile("The file does not exist: " + inputFilePath, e);
         } catch (IOException e) {
-            closeQuietly(fis);
             throw new ReadException("Error opening file: " + inputFilePath, e);
         }
     }
@@ -185,18 +181,5 @@ public class FileConversionCommand extends AbstractCommand {
             }
         }
         return fileFormat;
-    }
-
-    /**
-     * Closes an InputStream quietly, ignoring any exceptions.
-     */
-    private static void closeQuietly(InputStream is) {
-        if (is != null) {
-            try {
-                is.close();
-            } catch (IOException ignored) {
-                // Intentionally ignored
-            }
-        }
     }
 }
