@@ -25,7 +25,6 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
-import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Validation(name = "LOCATION")
 public class LocationValidation {
@@ -57,7 +56,7 @@ public class LocationValidation {
 
     @ValidationMethod(rule = "CDS_LOCATION_BOUNDARIES", type = ValidationType.ANNOTATION)
     public void validateCdsLocation(GFF3Annotation annotation, int line) throws ValidationException {
-        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
         List<GFF3Feature> propFeatures = new ArrayList<>();
         List<GFF3Feature> cdsFeatures = new ArrayList<>();
         List<GFF3Feature> peptideFeatures = new ArrayList<>();

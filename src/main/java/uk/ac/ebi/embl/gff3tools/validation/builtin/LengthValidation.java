@@ -28,7 +28,6 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
-import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Validation(name = "LENGTH")
 public class LengthValidation {
@@ -49,7 +48,7 @@ public class LengthValidation {
 
     @ValidationMethod(rule = "INTRON_LENGTH", type = ValidationType.FEATURE)
     public void validateIntronLength(GFF3Feature feature, int line) throws ValidationException {
-        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
         long length = feature.getLength();
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
         if (soIdOpt.isEmpty()) return;
@@ -62,7 +61,7 @@ public class LengthValidation {
 
     @ValidationMethod(rule = "CDS_INTRON_LENGTH", type = ValidationType.ANNOTATION)
     public void validateCdsIntronLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
-        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
         Map<String, List<GFF3Feature>> cdsListById = new HashMap<>();
 
         for (GFF3Feature feature : gff3Annotation.getFeatures()) {
@@ -119,7 +118,7 @@ public class LengthValidation {
 
     @ValidationMethod(rule = "EXON_LENGTH", type = ValidationType.FEATURE, severity = RuleSeverity.WARN)
     public void validateExonLength(GFF3Feature feature, int line) throws ValidationException {
-        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
         long length = feature.getLength();
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
         if (soIdOpt.isEmpty()) return;
@@ -132,7 +131,7 @@ public class LengthValidation {
 
     @ValidationMethod(rule = "PROPEPTIDE_LENGTH", type = ValidationType.FEATURE)
     public void validatePropeptideLength(GFF3Feature feature, int line) throws ValidationException {
-        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
         if (soIdOpt.isEmpty()) return;
 

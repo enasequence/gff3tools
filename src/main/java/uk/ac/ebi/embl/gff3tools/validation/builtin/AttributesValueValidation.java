@@ -25,7 +25,6 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
-import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Slf4j
 @Gff3Validation(name = "ATTRIBUTES_VALUE")
@@ -60,7 +59,7 @@ public class AttributesValueValidation {
 
     @ValidationMethod(rule = "RNA_PRODUCT_ATTRIBUTE_VALUE", type = ValidationType.FEATURE)
     public void validateAttributeValuePattern(GFF3Feature feature, int line) throws ValidationException {
-        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
         List<String> productValues = feature.getAttributeList(PRODUCT).orElse(new ArrayList<>());
         if (productValues.isEmpty()) {
             return;

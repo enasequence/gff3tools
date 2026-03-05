@@ -23,7 +23,6 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
-import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Slf4j
 @Gff3Fix(
@@ -41,7 +40,7 @@ public class CdsRnaLocusFix {
                     "Transfers gene, gene_synonym, and locus_tag attributes from gene features to their corresponding CDS, rRNA, and tRNA child features based on location overlap.",
             type = ANNOTATION)
     public void fix(GFF3Annotation annotation, int line) {
-        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
         List<GFF3Feature> geneFeatures = new ArrayList<>();
         List<GFF3Feature> nonLocusFeatures = new ArrayList<>();
         for (GFF3Feature feature : annotation.getFeatures()) {

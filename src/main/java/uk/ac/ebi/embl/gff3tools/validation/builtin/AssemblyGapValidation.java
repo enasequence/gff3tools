@@ -21,7 +21,6 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
-import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Validation(name = "ASSEMBLY_GAP")
 public class AssemblyGapValidation {
@@ -63,7 +62,7 @@ public class AssemblyGapValidation {
 
     @ValidationMethod(rule = VALIDATION_RULE, type = ValidationType.FEATURE)
     public void validateGapFeature(GFF3Feature feature, int line) throws ValidationException {
-        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
         if (soIdOpt.isPresent()) {
             String soId = soIdOpt.get();

@@ -21,7 +21,6 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
-import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Fix(
         name = "GENE_ASSOCIATED_FEATURE_REMOVAL",
@@ -38,7 +37,7 @@ public class GeneAssociatedFeatureRemoval {
                     "Removes gene features entry if locations are identical with gene associated features (CDS, RRNA, TRNA)",
             type = ANNOTATION)
     public void fixAnnotation(GFF3Annotation gff3Annotation, int line) {
-        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
         List<GFF3Feature> geneAssociatedFeatures = new ArrayList<>();
         Map<String, GFF3Feature> geneFeatureMap = new HashMap<>();
 

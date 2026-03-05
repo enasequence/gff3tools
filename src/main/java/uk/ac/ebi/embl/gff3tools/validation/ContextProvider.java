@@ -22,4 +22,7 @@ public interface ContextProvider<T> {
      * other providers via the supplied {@code context}.
      */
     T get(ValidationContext context);
+
+    /** The value type this provider produces; used as the registration key. */
+    Class<T> type();
 }
