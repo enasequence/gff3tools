@@ -76,7 +76,7 @@ public class LengthValidation {
 
             if (!isCds) continue;
 
-            if (isPseudo(feature, ontologyClient)
+            if (isPseudo(feature)
                     || feature.hasAttribute(GFF3Attributes.RIBOSOMAL_SLIPPAGE)
                     || feature.hasAttribute(GFF3Attributes.TRANS_SPLICING)) {
                 continue;
@@ -88,12 +88,11 @@ public class LengthValidation {
         }
 
         for (List<GFF3Feature> cdsGroup : cdsListById.values()) {
-            validateCdsIntronLength(cdsGroup, line, ontologyClient);
+            validateCdsIntronLength(cdsGroup, line);
         }
     }
 
-    private void validateCdsIntronLength(List<GFF3Feature> cdsList, int line, OntologyClient ontologyClient)
-            throws ValidationException {
+    private void validateCdsIntronLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
 
         if (cdsList.size() <= 1) {
             return;
@@ -108,7 +107,7 @@ public class LengthValidation {
                 boolean artificial = prev.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION)
                         || curr.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION);
 
-                if (!artificial && !isPseudo(curr, ontologyClient)) {
+                if (!artificial && !isPseudo(curr)) {
                     throw new ValidationException(line, INVALID_CDS_INTRON_LENGTH_MESSAGE);
                 }
             }
@@ -146,7 +145,8 @@ public class LengthValidation {
         }
     }
 
-    public boolean isPseudo(GFF3Feature feature, OntologyClient ontologyClient) {
+    public boolean isPseudo(GFF3Feature feature) {
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
         if (soIdOpt.isEmpty()) return false;
 
