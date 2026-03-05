@@ -35,12 +35,14 @@ public class FeatureSpecificValidationTest {
     private ValidationContext context;
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws Exception {
         gff3Annotation = new GFF3Annotation();
         attributeSpecificValidation = new FeatureSpecificValidation();
         context = new ValidationContext();
         context.register(OntologyClientProvider.class, new OntologyClientProvider());
-        attributeSpecificValidation.setContext(context);
+        var ctxField = FeatureSpecificValidation.class.getDeclaredField("context");
+        ctxField.setAccessible(true);
+        ctxField.set(attributeSpecificValidation, context);
     }
 
     @Test

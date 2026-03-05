@@ -17,14 +17,18 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
-import uk.ac.ebi.embl.gff3tools.validation.Validation;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Validation(name = "FEATURE_SPECIFIC")
-public class FeatureSpecificValidation extends Validation {
+public class FeatureSpecificValidation {
+
+    @InjectContext
+    private ValidationContext context;
 
     private static final String INVALID_OPERON_MESSAGE =
             "Feature \"%s\" belongs to operon \"%s\", but no other features share this operon. Expected at least one additional member.";
@@ -34,7 +38,7 @@ public class FeatureSpecificValidation extends Validation {
 
     @ValidationMethod(rule = "OPERON_FEATURE", type = ValidationType.FEATURE)
     public void validateOperonFeatures(GFF3Feature feature, int line) throws ValidationException {
-        OntologyClient ontologyClient = getContext().get(OntologyClientProvider.class);
+        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
         String operonValue = feature.getAttribute(GFF3Attributes.OPERON).orElse(null);
         if (operonValue == null || operonValue.isBlank()) {
             return;
@@ -52,7 +56,7 @@ public class FeatureSpecificValidation extends Validation {
 
     @ValidationMethod(rule = "PEPTIDE_FEATURE", type = ValidationType.ANNOTATION)
     public void validatePeptideFeature(GFF3Annotation annotation, int line) throws ValidationException {
-        OntologyClient ontologyClient = getContext().get(OntologyClientProvider.class);
+        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
 
         Map<String, List<GFF3Feature>> peptidesByLocus = new HashMap<>();
         List<GFF3Feature> cdsFeatures = new ArrayList<>();

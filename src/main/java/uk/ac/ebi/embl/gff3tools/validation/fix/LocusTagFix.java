@@ -16,13 +16,12 @@ import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 
 @Slf4j
 @Gff3Fix(name = "LOCUS_TAG_TO_UPPERCASE", description = "Update the locus_tag value to upper case")
-public class LocusTagFix extends Validation {
+public class LocusTagFix {
 
     @FixMethod(
             rule = "LOCUS_TAG_TO_UPPERCASE",

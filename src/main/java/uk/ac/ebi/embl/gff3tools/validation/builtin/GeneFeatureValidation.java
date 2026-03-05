@@ -17,15 +17,19 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
-import uk.ac.ebi.embl.gff3tools.validation.Validation;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Validation(name = "GENE_FEATURE")
-public class GeneFeatureValidation extends Validation {
+public class GeneFeatureValidation {
+
+    @InjectContext
+    private ValidationContext context;
 
     private static final String GENE_ASSOCIATION_VALIDATION =
             "Features sharing gene \"%s\" are associated with \"%s\" attributes with different values (\"%s\" and \"%s\")";
@@ -40,7 +44,7 @@ public class GeneFeatureValidation extends Validation {
 
     @ValidationMethod(rule = "GENE_ASSOCIATION", type = ValidationType.ANNOTATION, severity = RuleSeverity.WARN)
     public void validateGeneAssociation(GFF3Annotation gff3Annotation, int line) throws ValidationException {
-        OntologyClient ontologyClient = getContext().get(OntologyClientProvider.class);
+        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
         Map<String, String> geneToLocusTag = new HashMap<>();
         Map<String, String> geneToPseudoGene = new HashMap<>();
         for (GFF3Feature feature : gff3Annotation.getFeatures()) {
@@ -83,7 +87,7 @@ public class GeneFeatureValidation extends Validation {
 
     @ValidationMethod(rule = "GENE_LOCUS_TAG_ASSOCIATION", type = ValidationType.ANNOTATION)
     public void validateGeneLocusTagAssociation(GFF3Annotation gff3Annotation, int line) throws ValidationException {
-        OntologyClient ontologyClient = getContext().get(OntologyClientProvider.class);
+        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
         Map<String, GFF3Feature> locusTagToGeneFeature = new HashMap<>();
 
         for (GFF3Feature feature : gff3Annotation.getFeatures()) {

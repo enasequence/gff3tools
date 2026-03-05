@@ -35,7 +35,7 @@ class ValidationRegistryTest {
     }
 
     @Gff3Validation(name = "LENGTH", enabled = true)
-    static class DummyValidation extends Validation {
+    static class DummyValidation {
         public DummyValidation() {}
 
         @ValidationMethod(rule = "RULE_1", type = ValidationType.FEATURE)
@@ -46,7 +46,7 @@ class ValidationRegistryTest {
     }
 
     @Gff3Fix(name = "FIX_LENGTH", enabled = true)
-    static class DummyFix extends Validation {
+    static class DummyFix {
         public DummyFix() {}
 
         @FixMethod(rule = "FIX_RULE_1", type = ValidationType.FEATURE)
@@ -279,5 +279,30 @@ class ValidationRegistryTest {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Test
+    @DisplayName("@InjectContext field on plain class should be injected with context")
+    void testInjectContextFieldInjection() throws Exception {
+        class PlainFix {
+            @InjectContext
+            ValidationContext ctx;
+
+            @FixMethod(rule = "X", type = ValidationType.FEATURE)
+            public void fix() {}
+        }
+
+        PlainFix instance = new PlainFix();
+        ValidatorDescriptor descriptor =
+                new ValidatorDescriptor(PlainFix.class, instance, PlainFix.class.getDeclaredMethod("fix"));
+        ValidationContext context = new ValidationContext();
+
+        Method injectMethod = ValidationRegistry.Builder.class.getDeclaredMethod(
+                "injectContext", List.class, ValidationContext.class);
+        injectMethod.setAccessible(true);
+        ValidationRegistry.Builder builder = new ValidationRegistry.Builder(validationConfig);
+        injectMethod.invoke(builder, List.of(descriptor), context);
+
+        assertSame(context, instance.ctx);
     }
 }

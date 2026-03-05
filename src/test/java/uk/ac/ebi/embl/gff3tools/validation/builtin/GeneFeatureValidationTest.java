@@ -33,12 +33,14 @@ public class GeneFeatureValidationTest {
     private ValidationContext context;
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws Exception {
         gff3Annotation = new GFF3Annotation();
         geneFeatureValidation = new GeneFeatureValidation();
         context = new ValidationContext();
         context.register(OntologyClientProvider.class, new OntologyClientProvider());
-        geneFeatureValidation.setContext(context);
+        var ctxField = GeneFeatureValidation.class.getDeclaredField("context");
+        ctxField.setAccessible(true);
+        ctxField.set(geneFeatureValidation, context);
     }
 
     @Test

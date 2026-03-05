@@ -16,7 +16,6 @@ import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.LOCUS_TAG;
 import java.util.*;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
@@ -25,7 +24,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
         name = "LOCUS_TAG_ASSOCIATION",
         description =
                 "Adds locus tag attribute to the features with the gene attribute, considering first-seen pair as the correct one")
-public class LocusTagAssociationFix extends Validation {
+public class LocusTagAssociationFix {
 
     @FixMethod(
             rule = "LOCUS_TAG_ADD_TO_FEATURES_SHARING_THE_GENE",

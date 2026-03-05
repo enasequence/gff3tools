@@ -16,14 +16,13 @@ import java.util.Set;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FeatureMapping;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation(name = "FEATURE_ATTRIBUTE_REQUIRED")
-public class FeatureAttributeRequiredValidation extends Validation {
+public class FeatureAttributeRequiredValidation {
 
     public static final List<String> FF_FEATURE_SET_ATTRIBUTES_REQUIRED = List.of(
             "misc_binding",

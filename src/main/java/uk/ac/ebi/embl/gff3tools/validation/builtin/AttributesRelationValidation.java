@@ -19,14 +19,13 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
-import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation(name = "ATTRIBUTES_RELATION")
-public class AttributesRelationValidation extends Validation {
+public class AttributesRelationValidation {
 
     private static final String ERROR_MUTUALLY_EXCLUSIVE_BY_VALUE =
             "Attribute \"%s\" must not exist when qualifier \"%s\" has value \"%s\"";
