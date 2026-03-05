@@ -17,10 +17,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.MockedStatic;
+import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 
@@ -32,11 +31,8 @@ class GapEstimatedLengthFixTest {
     @BeforeEach
     void setUp() {
         ontologyClient = mock(OntologyClient.class);
-
-        try (MockedStatic<ConversionUtils> mocked = mockStatic(ConversionUtils.class)) {
-            mocked.when(ConversionUtils::getOntologyClient).thenReturn(ontologyClient);
-            fix = new GapEstimatedLengthFix();
-        }
+        fix = new GapEstimatedLengthFix();
+        TestUtils.injectContext(fix, ontologyClient);
     }
 
     @ParameterizedTest

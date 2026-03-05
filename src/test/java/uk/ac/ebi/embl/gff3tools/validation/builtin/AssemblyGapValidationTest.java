@@ -31,6 +31,7 @@ public class AssemblyGapValidationTest {
     public void setUp() {
         gff3Annotation = new GFF3Annotation();
         assemblyGapValidation = new AssemblyGapValidation();
+        TestUtils.injectContext(assemblyGapValidation);
     }
 
     @Test

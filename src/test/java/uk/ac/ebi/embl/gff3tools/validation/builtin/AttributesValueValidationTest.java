@@ -36,6 +36,7 @@ public class AttributesValueValidationTest {
     public void setUp() {
         gff3Annotation = new GFF3Annotation();
         attributesValueValidation = new AttributesValueValidation();
+        TestUtils.injectContext(attributesValueValidation);
     }
 
     @Test

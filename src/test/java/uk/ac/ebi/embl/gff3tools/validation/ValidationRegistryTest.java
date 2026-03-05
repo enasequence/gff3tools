@@ -73,11 +73,12 @@ class ValidationRegistryTest {
         when(validationConfig.isValidatorEnabled(any(Annotation.class))).thenReturn(true);
 
         // Access private build() via reflection
-        Method buildMethod = ValidationRegistry.class.getDeclaredMethod("build", List.class);
+        Method buildMethod = ValidationRegistry.class.getDeclaredMethod("build", List.class, ValidationContext.class);
         buildMethod.setAccessible(true);
 
         @SuppressWarnings("unchecked")
-        List<ValidatorDescriptor> result = (List<ValidatorDescriptor>) buildMethod.invoke(registry, classInfos);
+        List<ValidatorDescriptor> result =
+                (List<ValidatorDescriptor>) buildMethod.invoke(registry, classInfos, new ValidationContext());
 
         // Assertions
         assertEquals(4, result.size(), "Should build validators for both Gff3Validation and Gff3Fix");
@@ -297,11 +298,10 @@ class ValidationRegistryTest {
                 new ValidatorDescriptor(PlainFix.class, instance, PlainFix.class.getDeclaredMethod("fix"));
         ValidationContext context = new ValidationContext();
 
-        Method injectMethod = ValidationRegistry.Builder.class.getDeclaredMethod(
-                "injectContext", List.class, ValidationContext.class);
+        Method injectMethod =
+                ValidationRegistry.class.getDeclaredMethod("injectContext", Object.class, ValidationContext.class);
         injectMethod.setAccessible(true);
-        ValidationRegistry.Builder builder = new ValidationRegistry.Builder(validationConfig);
-        injectMethod.invoke(builder, List.of(descriptor), context);
+        injectMethod.invoke(registry, instance, context);
 
         assertSame(context, instance.ctx);
     }

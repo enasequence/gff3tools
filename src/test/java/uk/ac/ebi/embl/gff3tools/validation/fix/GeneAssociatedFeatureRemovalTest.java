@@ -31,6 +31,7 @@ public class GeneAssociatedFeatureRemovalTest {
     public void setUp() {
         gff3Annotation = new GFF3Annotation();
         geneAssociatedFeatureRemoval = new GeneAssociatedFeatureRemoval();
+        TestUtils.injectContext(geneAssociatedFeatureRemoval);
     }
 
     @Test

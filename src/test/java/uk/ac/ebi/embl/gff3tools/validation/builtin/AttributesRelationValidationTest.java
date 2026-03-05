@@ -36,6 +36,7 @@ public class AttributesRelationValidationTest {
     public void setUp() {
         gff3Annotation = new GFF3Annotation();
         attributesRelationValidation = new AttributesRelationValidation();
+        TestUtils.injectContext(attributesRelationValidation);
     }
 
     @Test
