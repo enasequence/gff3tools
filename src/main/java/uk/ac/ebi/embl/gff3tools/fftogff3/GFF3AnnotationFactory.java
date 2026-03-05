@@ -193,64 +193,67 @@ public class GFF3AnnotationFactory {
         }
 
         if (featureName.equalsIgnoreCase("CDS")) {
-            Path sequencePath = Path.of(gff3Features.get(0).accession() + ".seq");
-            TranslationValidationContext context = TranslationValidationContext.builder()
-                    .gff3Feature(gff3Features.get(0))
-                    .sequencePath(sequencePath)
-                    .compoundLocation(compoundLocation)
-                    .build();
-            validationEngine.validate(context, -1);
-
-            String expectedTranslation = ffFeature.getSingleQualifierValue("translation");
-            String actualTranslation = gff3Features.get(0).getAttribute("translation").orElse("");
-            if (!expectedTranslation.equalsIgnoreCase(actualTranslation)) {
-                LOG.error("expectedTranslation: "+expectedTranslation);
-                LOG.error("actualTranslation: "+actualTranslation);
-                throw new ValidationException("Translation failed for feature at location "
-                        + ffFeature.getLocations().getMinPosition() + "-"
-                        + ffFeature.getLocations().getMaxPosition());
-            } else {
-                LOG.info("Translation successful for feature at location "
-                        + ffFeature.getLocations().getMinPosition() + "-"
-                        + ffFeature.getLocations().getMaxPosition());
-                handleTranslation(fastaWriter, actualTranslation, id, sequenceRegion);
-            }
+            handleConversionTranslation(gff3Features, sequenceRegion, ffFeature, fastaWriter);
         }
 
         return gff3Features;
     }
 
-    /**
-     * Write translation to fasta and remove from attribute map.
-     */
-    /*private void handleTranslation(
-            Writer fastaWriter,
-            Map<String, List<String>> baseAttributes,
-            Optional<String> featureId,
-            GFF3SequenceRegion sequenceRegion) {
-        if (baseAttributes.containsKey("translation") && featureId.isPresent()) {
-            String translationKey = TranslationWriter.getTranslationKey(sequenceRegion.accession(), featureId.get());
-            List<String> translation = baseAttributes.get("translation");
-            TranslationWriter.writeTranslation(fastaWriter, translationKey, translation.get(0));
-            baseAttributes.remove("translation");
-        }
-    }*/
+    private void handleConversionTranslation(
+            List<GFF3Feature> gff3Features, GFF3SequenceRegion sequenceRegion, Feature ffFeature, Writer fastaWriter)
+            throws ValidationException {
+        // first gff3Feature
+        GFF3Feature gff3Feature = gff3Features.get(0);
 
-    private void handleTranslation(
-            Writer fastaWriter, String translationSeq, Optional<String> featureId, GFF3SequenceRegion sequenceRegion) {
-        if (!translationSeq.isEmpty()) {
-            String translationKey = TranslationWriter.getTranslationKey(sequenceRegion.accession(), featureId.get());
-            TranslationWriter.writeTranslation(fastaWriter, translationKey, translationSeq);
+        // Compound location from flat file feature
+        CompoundLocation<Location> locations = ffFeature.getLocations();
+
+        TranslationValidationContext context = TranslationValidationContext.builder()
+                .gff3Feature(gff3Feature)
+                .sequencePath(Path.of(gff3Feature.accession() + ".seq"))
+                .compoundLocation(locations)
+                .build();
+        validationEngine.validate(context, -1);
+
+        String expectedTranslation = Objects.requireNonNullElse(ffFeature.getSingleQualifierValue("translation"), "");
+        String actualTranslation = gff3Feature.getAttribute("translation").orElse("");
+
+        if (!actualTranslation.equalsIgnoreCase(expectedTranslation)) {
+            LOG.error(
+                    "Translation mismatch at {}-{}: \n expected={} \n actual={}",
+                    locations.getMinPosition(),
+                    locations.getMaxPosition(),
+                    expectedTranslation,
+                    actualTranslation);
+            throw new ValidationException(String.format(
+                    "Translation failed at location %d-%d",
+                    locations.getMinPosition(), locations.getMaxPosition()));
         }
+
+        LOG.info(
+                "Translation successful for feature at location {}-{}",
+                locations.getMinPosition(),
+                locations.getMaxPosition());
+        if (!actualTranslation.isEmpty()) {
+            String translationKey = TranslationWriter.getTranslationKey(
+                    sequenceRegion.accession(), gff3Feature.getId().get());
+            TranslationWriter.writeTranslation(fastaWriter, translationKey, actualTranslation);
+        }
+
+        // Remove translation attribute after writing to file
+        gff3Features.forEach(f -> f.removeAttributeList("translation"));
     }
 
     public Map<String, List<String>> getAttributeMap(Feature ffFeature) {
         Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
         Map<String, List<String>> attributes = new LinkedHashMap<>();
 
+        boolean hasException =
+                ffFeature.getQualifiers("exception").stream().findAny().isPresent();
+
         ffFeature.getQualifiers().stream()
                 .filter(q -> !"gene".equals(q.getName()))
-                .filter(q -> !"translation".equals(q.getName()))
+                .filter(q -> hasException || !"translation".equals(q.getName()))
                 .forEach(q -> {
                     String key = qualifierMap.getOrDefault(q.getName(), q.getName());
                     String value = q.isValue() ? q.getValue() : "true";

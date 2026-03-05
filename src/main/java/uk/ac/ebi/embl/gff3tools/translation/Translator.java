@@ -14,8 +14,7 @@ import java.util.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
-import uk.ac.ebi.embl.api.entry.location.Location;
-import uk.ac.ebi.embl.api.entry.location.RemoteLocation;
+import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.translation.except.CodonExceptAttribute;
@@ -32,6 +31,7 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
  */
 @Getter
 @Setter(AccessLevel.PROTECTED)
+@Slf4j
 public class Translator {
 
     public static final Integer DEFAULT_TRANSLATION_TABLE = 11;
@@ -48,10 +48,6 @@ public class Translator {
     private boolean isComplement = false;
 
     private GFF3Feature feature;
-
-    // The purpose of 'exception' is to relaxes several validations.
-    // This will be used in the future to support more flexible translation.
-    private boolean exception = false;
 
     private boolean threePrimePartial = false; // 3' partial
 
@@ -192,20 +188,18 @@ public class Translator {
             // On complement strand, genomic end maps to relative begin
             // because the sequence is read right-to-left
             relativeBegin = toRelativePosition(endPosition);
-            relativeEnd   = toRelativePosition(beginPosition);
+            relativeEnd = toRelativePosition(beginPosition);
         } else {
             relativeBegin = toRelativePosition(beginPosition);
-            relativeEnd   = toRelativePosition(endPosition);
+            relativeEnd = toRelativePosition(endPosition);
         }
 
         PositionExceptionData translationPosException = new PositionExceptionData();
         translationPosException.beginPosition = relativeBegin;
-        translationPosException.endPosition   = relativeEnd;
-        translationPosException.aminoAcid     = aminoAcid;
+        translationPosException.endPosition = relativeEnd;
+        translationPosException.aminoAcid = aminoAcid;
         positionExceptionMap.put(relativeBegin, translationPosException);
     }
-
-
 
     /**
      * Converts an absolute genomic position to a 1-based position relative
@@ -245,6 +239,7 @@ public class Translator {
             return translationResult;
         }
 
+        // Upper case sequence
         for (int i = 0; i < sequence.length; i++) {
             sequence[i] = (byte) Character.toUpperCase(sequence[i]);
         }
@@ -265,12 +260,7 @@ public class Translator {
             translateCodons(sequence, translationResult);
 
             if (translationResult.getCodons().isEmpty()) {
-                if (exception) {
-                    translationResult.setConceptualTranslationCodons(0);
-                    return translationResult;
-                } else {
-                    throw new TranslationException("No translation produced");
-                }
+                throw new TranslationException("No translation produced");
             }
 
             validateTranslation(translationResult);
@@ -510,7 +500,7 @@ public class Translator {
             int length = bases - codonStart + 1;
             translationResult.setTranslationLength(length);
 
-            if (!peptideFeature && !fivePrimePartial && !threePrimePartial && !nonTranslating && !exception) {
+            if (!peptideFeature && !fivePrimePartial && !threePrimePartial && !nonTranslating) {
                 if (fixNonMultipleOfThreeMake3And5Partial) {
                     fivePrimePartial = true;
                     threePrimePartial = true;
@@ -560,17 +550,13 @@ public class Translator {
                 conceptualTranslation = false;
             }
             if (!conceptualTranslation) {
-                System.err.println("translation is not valid: "+translationResult.getConceptualTranslation());
                 translationResult.setConceptualTranslationCodons(0);
-            }
-            if (conceptualTranslation) {
-                System.out.println("translation is valid: "+translationResult.getConceptualTranslation());
             }
         }
     }
 
     private void validateStopCodonOnly(TranslationResult translationResult) throws TranslationException {
-        if (exception || nonTranslating) {
+        if (nonTranslating) {
             return;
         }
         if (!(translationResult.getCodons().size() == 1
@@ -583,78 +569,75 @@ public class Translator {
 
     private boolean validateTrailingStopCodons(int trailingStopCodons, TranslationResult translationResult)
             throws TranslationException {
-        if (!exception) {
-            if (trailingStopCodons > 1) {
-                if (nonTranslating) {
-                    return false;
-                } else {
-                    throw new TranslationException("More than one stop codon at the 3' end");
-                }
+        if (trailingStopCodons > 1) {
+            if (nonTranslating) {
+                return false;
+            } else {
+                throw new TranslationException("More than one stop codon at the 3' end");
             }
+        }
 
-            if (trailingStopCodons == 1 && threePrimePartial) {
-                if (nonTranslating) {
-                    return false;
+        if (trailingStopCodons == 1 && threePrimePartial) {
+            if (nonTranslating) {
+                return false;
+            } else {
+                if (fixValidStopCodonRemove3Partial) {
+                    translationResult.setFixedThreePrimePartial(true);
+                    threePrimePartial = false;
+                    fixes.add("fixValidStopCodonRemove3Partial");
                 } else {
-                    if (fixValidStopCodonRemove3Partial) {
-                        translationResult.setFixedThreePrimePartial(true);
-                        threePrimePartial = false;
-                        fixes.add("fixValidStopCodonRemove3Partial");
-                    } else {
-                        throw new TranslationException(
-                                "Stop codon found at 3' partial end. Consider removing 3' partial location");
-                    }
-                }
-            }
-
-            if (trailingStopCodons == 0 && !threePrimePartial) {
-                if (nonTranslating) {
-                    return false;
-                } else if (!peptideFeature) {
-                    if (fixNoStopCodonMake3Partial) {
-                        threePrimePartial = true;
-                        translationResult.setFixedThreePrimePartial(true);
-                        fixes.add("fixNoStopCodonMake3Partial");
-                    } else {
-                        throw new TranslationException("No stop codon at the 3' end");
-                    }
-                }
-            }
-
-            if (trailingStopCodons == 1 && translationResult.getTrailingBases().length() > 0) {
-                if (nonTranslating) {
-                    return false;
-                } else {
-                    if (!fixDeleteTrailingBasesAfterStopCodon) {
-                        throw new TranslationException("A partial codon appears after the stop codon");
-                    }
+                    throw new TranslationException(
+                            "Stop codon found at 3' partial end. Consider removing 3' partial location");
                 }
             }
         }
+
+        if (trailingStopCodons == 0 && !threePrimePartial) {
+            if (nonTranslating) {
+                return false;
+            } else if (!peptideFeature) {
+                if (fixNoStopCodonMake3Partial) {
+                    threePrimePartial = true;
+                    translationResult.setFixedThreePrimePartial(true);
+                    fixes.add("fixNoStopCodonMake3Partial");
+                } else {
+                    throw new TranslationException("No stop codon at the 3' end");
+                }
+            }
+        }
+
+        if (trailingStopCodons == 1 && translationResult.getTrailingBases().length() > 0) {
+            if (nonTranslating) {
+                return false;
+            } else {
+                if (!fixDeleteTrailingBasesAfterStopCodon) {
+                    throw new TranslationException("A partial codon appears after the stop codon");
+                }
+            }
+        }
+
         return true;
     }
 
     private boolean validateInternalStopCodons(int internalStopCodons, TranslationResult translationResult)
             throws TranslationException {
         if (internalStopCodons > 0) {
-            if (exception || nonTranslating) {
+
+            if (fixInternalStopCodonMakePseudo) {
+                translationResult.setFixedPseudo(true);
+                nonTranslating = true;
+                fixes.add("fixInternalStopCodonMakePseudo");
                 return false;
             } else {
-                if (fixInternalStopCodonMakePseudo) {
-                    translationResult.setFixedPseudo(true);
-                    nonTranslating = true;
-                    fixes.add("fixInternalStopCodonMakePseudo");
-                    return false;
-                } else {
-                    throw new TranslationException("The protein translation contains internal stop codons");
-                }
+                throw new TranslationException("The protein translation contains internal stop codons");
             }
         }
+
         return true;
     }
 
     private boolean validateStartCodon(TranslationResult translationResult) throws TranslationException {
-        if (!fivePrimePartial && !exception && !peptideFeature) {
+        if (!fivePrimePartial && !peptideFeature) {
             if (translationResult.getCodons().get(0).getAminoAcid() != START_CODON) {
                 if (nonTranslating) {
                     return false;

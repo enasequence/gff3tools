@@ -107,6 +107,10 @@ public class GFF3Feature {
         return attrBuilder.toString();
     }
 
+    public boolean isComplement() {
+        return "-".equals(strand);
+    }
+
     public long getLength() {
         return Math.max(end - start + 1, 0);
     }
@@ -224,22 +228,24 @@ public class GFF3Feature {
     }
 
     public void setFivePrimePartial() {
-        addAttribute(GFF3Attributes.PARTIAL, "start");
+        addAttribute(GFF3Attributes.PARTIAL, isComplement() ? "end" : "start");
     }
 
     public void setThreePrimePartial() {
-        addAttribute(GFF3Attributes.PARTIAL, "end");
+        addAttribute(GFF3Attributes.PARTIAL, isComplement() ? "start" : "end");
     }
 
     public boolean isFivePrimePartial() {
+        String partialValue = isComplement() ? "end" : "start";
         return getAttributeList(GFF3Attributes.PARTIAL)
-                .map(list -> list.stream().anyMatch("start"::equalsIgnoreCase))
+                .map(list -> list.stream().anyMatch(partialValue::equalsIgnoreCase))
                 .orElse(false);
     }
 
     public boolean isThreePrimePartial() {
+        String partialValue = isComplement() ? "start" : "end";
         return getAttributeList(GFF3Attributes.PARTIAL)
-                .map(list -> list.stream().anyMatch("end"::equalsIgnoreCase))
+                .map(list -> list.stream().anyMatch(partialValue::equalsIgnoreCase))
                 .orElse(false);
     }
 }

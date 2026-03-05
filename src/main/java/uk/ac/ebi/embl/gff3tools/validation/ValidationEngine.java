@@ -99,7 +99,8 @@ public class ValidationEngine {
                     validator.method().invoke(validator.instance(), target, line);
                 } else if (target instanceof GFF3Annotation && methodAnnotation.type() == ValidationType.ANNOTATION) {
                     validator.method().invoke(validator.instance(), target, line);
-                } else if (target instanceof TranslationValidationContext && methodAnnotation.type() == ValidationType.TRANSLATION_CONTEXT) {
+                } else if (target instanceof TranslationValidationContext
+                        && methodAnnotation.type() == ValidationType.TRANSLATION_CONTEXT) {
                     validator.method().invoke(validator.instance(), target, line);
                 }
             } catch (Exception e) {
