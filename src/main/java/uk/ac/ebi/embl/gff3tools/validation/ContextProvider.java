@@ -22,16 +22,4 @@ public interface ContextProvider<T> {
      * other providers via the supplied {@code context}.
      */
     T get(ValidationContext context);
-
-    /**
-     * Flush the cached value so the next call to {@link #get(ValidationContext)}
-     * recomputes it.
-     */
-    void invalidate();
-
-    /**
-     * Declare whether this provider is {@link ProviderScope#GLOBAL} or
-     * {@link ProviderScope#ANNOTATION} scoped.
-     */
-    ProviderScope scope();
 }

@@ -13,15 +13,12 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
-import uk.ac.ebi.embl.gff3tools.validation.ProviderScope;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 /**
- * GLOBAL-scoped provider that wraps {@link ConversionUtils#getOntologyClient()}.
+ * Provider that wraps {@link ConversionUtils#getOntologyClient()}.
  *
- * <p>The ontology client is created once and cached for the lifetime of the
- * validation run. {@link #invalidate()} is a no-op because the ontology
- * never changes mid-run.
+ * <p>The ontology client is created once and cached for the lifetime of the validation run.
  */
 public class OntologyClientProvider implements ContextProvider<OntologyClient> {
 
@@ -33,16 +30,5 @@ public class OntologyClientProvider implements ContextProvider<OntologyClient> {
             cached = ConversionUtils.getOntologyClient();
         }
         return cached;
-    }
-
-    /** No-op: the ontology client is immutable within a validation run. */
-    @Override
-    public void invalidate() {
-        // intentional no-op for GLOBAL scope
-    }
-
-    @Override
-    public ProviderScope scope() {
-        return ProviderScope.GLOBAL;
     }
 }

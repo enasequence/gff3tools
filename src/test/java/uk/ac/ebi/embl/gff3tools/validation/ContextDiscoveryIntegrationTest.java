@@ -41,16 +41,6 @@ class ContextDiscoveryIntegrationTest {
             }
             return cached;
         }
-
-        @Override
-        public void invalidate() {
-            cached = null;
-        }
-
-        @Override
-        public ProviderScope scope() {
-            return ProviderScope.GLOBAL;
-        }
     }
 
     // ---------------------------------------------------------------
@@ -118,14 +108,6 @@ class ContextDiscoveryIntegrationTest {
             @Override
             public Integer get(ValidationContext context) {
                 return 42;
-            }
-
-            @Override
-            public void invalidate() {}
-
-            @Override
-            public ProviderScope scope() {
-                return ProviderScope.GLOBAL;
             }
         }
 

@@ -16,7 +16,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
-import uk.ac.ebi.embl.gff3tools.validation.ProviderScope;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 class OntologyClientProviderTest {
@@ -28,12 +27,6 @@ class OntologyClientProviderTest {
     void setUp() {
         provider = new OntologyClientProvider();
         context = new ValidationContext();
-    }
-
-    @Test
-    @DisplayName("scope() returns GLOBAL")
-    void scope_returnsGlobal() {
-        assertEquals(ProviderScope.GLOBAL, provider.scope());
     }
 
     @Test
@@ -49,14 +42,5 @@ class OntologyClientProviderTest {
         OntologyClient first = provider.get(context);
         OntologyClient second = provider.get(context);
         assertSame(first, second, "Repeated get() calls must return the same cached instance");
-    }
-
-    @Test
-    @DisplayName("invalidate() is a no-op -- get() still returns the same instance")
-    void invalidate_isNoOp() {
-        OntologyClient before = provider.get(context);
-        provider.invalidate();
-        OntologyClient after = provider.get(context);
-        assertSame(before, after, "invalidate() should be a no-op for OntologyClientProvider");
     }
 }

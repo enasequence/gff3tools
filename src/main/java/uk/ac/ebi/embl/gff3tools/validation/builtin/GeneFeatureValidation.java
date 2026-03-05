@@ -22,8 +22,6 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
-import uk.ac.ebi.embl.gff3tools.validation.provider.LocusTagIndex;
-import uk.ac.ebi.embl.gff3tools.validation.provider.LocusTagIndexProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Validation(name = "GENE_FEATURE")
@@ -86,33 +84,25 @@ public class GeneFeatureValidation extends Validation {
     @ValidationMethod(rule = "GENE_LOCUS_TAG_ASSOCIATION", type = ValidationType.ANNOTATION)
     public void validateGeneLocusTagAssociation(GFF3Annotation gff3Annotation, int line) throws ValidationException {
         OntologyClient ontologyClient = getContext().get(OntologyClientProvider.class);
-        LocusTagIndex index = getContext().get(LocusTagIndexProvider.class);
-        Map<String, GFF3Feature> locusTagToGeneFeature = index.getLocusTagToGeneFeature();
+        Map<String, GFF3Feature> locusTagToGeneFeature = new HashMap<>();
 
         for (GFF3Feature feature : gff3Annotation.getFeatures()) {
             Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
-
             if (soIdOpt.isEmpty()) continue;
-
             String soId = soIdOpt.get();
 
-            // Check if feature is a gene or pseudogene type
             boolean isGene = soId.equals(OntologyTerm.GENE.ID)
                     || soId.equals(OntologyTerm.PSEUDOGENE.ID)
                     || soId.equals(OntologyTerm.UNITARY_PSEUDOGENE.ID)
                     || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENE.ID)
                     || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.UNITARY_PSEUDOGENE.ID);
 
-            if (!isGene) {
-                return;
-            }
+            if (!isGene) continue;
 
             String locusTag = feature.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
-            if (locusTag == null || locusTag.isBlank()) {
-                return;
-            }
+            if (locusTag == null || locusTag.isBlank()) continue;
 
-            GFF3Feature existing = locusTagToGeneFeature.get(locusTag);
+            GFF3Feature existing = locusTagToGeneFeature.putIfAbsent(locusTag, feature);
             if (existing != null && existing != feature) {
                 throw new ValidationException(
                         line, GENE_FEATURE_LOCUS_VALIDATION.formatted(locusTag, existing.getName(), feature.getName()));
@@ -122,9 +112,22 @@ public class GeneFeatureValidation extends Validation {
 
     @ValidationMethod(rule = "LOCUS_TAG_ASSOCIATION", type = ValidationType.ANNOTATION)
     public void validateLocusTagAssociation(GFF3Annotation gff3Annotation, int line) throws ValidationException {
-        LocusTagIndex index = getContext().get(LocusTagIndexProvider.class);
-        Map<String, String> locusTagToGene = index.getLocusTagToGene();
-        Map<String, List<String>> locusTagToSynonyms = index.getLocusTagToSynonyms();
+        Map<String, String> locusTagToGene = new HashMap<>();
+        Map<String, List<String>> locusTagToSynonyms = new HashMap<>();
+
+        for (GFF3Feature feature : gff3Annotation.getFeatures()) {
+            String locusTag = feature.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
+            if (locusTag == null || locusTag.isBlank()) continue;
+
+            String geneName = feature.getAttribute(GFF3Attributes.GENE).orElse(null);
+            if (geneName != null && !geneName.isEmpty()) {
+                locusTagToGene.putIfAbsent(locusTag, geneName);
+            }
+            String synonymsRaw = feature.getAttribute(GFF3Attributes.GENE_SYNONYM).orElse(null);
+            if (synonymsRaw != null && !synonymsRaw.isEmpty()) {
+                locusTagToSynonyms.computeIfAbsent(locusTag, k -> parseSynonyms(synonymsRaw));
+            }
+        }
 
         for (GFF3Feature feature : gff3Annotation.getFeatures()) {
             if (feature == null || !feature.hasAttribute(GFF3Attributes.LOCUS_TAG)) {

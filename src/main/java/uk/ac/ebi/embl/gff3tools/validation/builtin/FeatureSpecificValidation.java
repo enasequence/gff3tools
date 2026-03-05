@@ -21,8 +21,6 @@ import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
-import uk.ac.ebi.embl.gff3tools.validation.provider.LocusTagIndex;
-import uk.ac.ebi.embl.gff3tools.validation.provider.LocusTagIndexProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Validation(name = "FEATURE_SPECIFIC")
@@ -55,9 +53,8 @@ public class FeatureSpecificValidation extends Validation {
     @ValidationMethod(rule = "PEPTIDE_FEATURE", type = ValidationType.ANNOTATION)
     public void validatePeptideFeature(GFF3Annotation annotation, int line) throws ValidationException {
         OntologyClient ontologyClient = getContext().get(OntologyClientProvider.class);
-        LocusTagIndex index = getContext().get(LocusTagIndexProvider.class);
-        Map<String, List<GFF3Feature>> peptidesByLocus = index.getLocusTagToPeptides();
 
+        Map<String, List<GFF3Feature>> peptidesByLocus = new HashMap<>();
         List<GFF3Feature> cdsFeatures = new ArrayList<>();
         Map<String, List<GFF3Feature>> peptidesByGene = new HashMap<>();
 
@@ -70,6 +67,10 @@ public class FeatureSpecificValidation extends Validation {
             if (OntologyTerm.CDS.ID.equals(soId) || OntologyTerm.CDS_REGION.ID.equals(soId)) {
                 cdsFeatures.add(feature);
             } else if (ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.POLYPEPTIDE_REGION.ID)) {
+                String locusTag = feature.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
+                if (locusTag != null) {
+                    peptidesByLocus.computeIfAbsent(locusTag, k -> new ArrayList<>()).add(feature);
+                }
                 String gene = feature.getAttribute(GFF3Attributes.GENE).orElse(null);
                 if (gene != null) {
                     peptidesByGene.computeIfAbsent(gene, k -> new ArrayList<>()).add(feature);
