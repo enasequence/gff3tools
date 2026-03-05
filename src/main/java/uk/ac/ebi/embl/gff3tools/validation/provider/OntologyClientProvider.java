@@ -10,13 +10,12 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
-import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 /**
- * Provider that wraps {@link ConversionUtils#getOntologyClient()}.
+ * Provider that supplies the shared {@link OntologyClient} instance.
  *
  * <p>The ontology client is created once and cached for the lifetime of the validation run.
  */
@@ -27,7 +26,7 @@ public class OntologyClientProvider implements ContextProvider<OntologyClient> {
     @Override
     public OntologyClient get(ValidationContext context) {
         if (cached == null) {
-            cached = ConversionUtils.getOntologyClient();
+            cached = OntologyClient.getInstance();
         }
         return cached;
     }

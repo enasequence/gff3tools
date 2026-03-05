@@ -14,12 +14,14 @@ import java.util.*;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
+import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Validation(name = "ASSEMBLY_GAP")
 public class AssemblyGapValidation {
@@ -56,10 +58,12 @@ public class AssemblyGapValidation {
             GFF3Attributes.GAP_TYPE,
             GFF3Attributes.LINKAGE_EVIDENCE);
 
-    private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
+    @InjectContext
+    private ValidationContext context;
 
     @ValidationMethod(rule = VALIDATION_RULE, type = ValidationType.FEATURE)
     public void validateGapFeature(GFF3Feature feature, int line) throws ValidationException {
+        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
         if (soIdOpt.isPresent()) {
             String soId = soIdOpt.get();

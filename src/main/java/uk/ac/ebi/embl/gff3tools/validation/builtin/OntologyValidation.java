@@ -12,20 +12,26 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
+import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
+import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Validation(name = "ONTOLOGY")
 public class OntologyValidation {
 
     public static final String VALIDATION_RULE = "ONTOLOGY_FEATURE";
 
+    @InjectContext
+    private ValidationContext context;
+
     @ValidationMethod(rule = VALIDATION_RULE, type = ValidationType.FEATURE)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
-        if (!ConversionUtils.getOntologyClient().isFeatureSoTerm(feature.getName())) {
+        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
+        if (!ontologyClient.isFeatureSoTerm(feature.getName())) {
             throw new ValidationException(
                     String.format(
                             "Feature name '%s' is not a valid feature SO term. (line %d)", feature.getName(), line),

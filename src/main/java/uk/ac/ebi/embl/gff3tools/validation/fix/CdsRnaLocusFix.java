@@ -17,11 +17,13 @@ import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
+import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Slf4j
 @Gff3Fix(
@@ -30,7 +32,8 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
                 "Transfers gene, gene_synonym, and locus_tag attributes from gene features to their corresponding CDS, rRNA, and tRNA child features based on location overlap.")
 public class CdsRnaLocusFix {
 
-    private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
+    @InjectContext
+    private ValidationContext context;
 
     @FixMethod(
             rule = "CDS_RNA_LOCUS",
@@ -38,6 +41,7 @@ public class CdsRnaLocusFix {
                     "Transfers gene, gene_synonym, and locus_tag attributes from gene features to their corresponding CDS, rRNA, and tRNA child features based on location overlap.",
             type = ANNOTATION)
     public void fix(GFF3Annotation annotation, int line) {
+        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
         List<GFF3Feature> geneFeatures = new ArrayList<>();
         List<GFF3Feature> nonLocusFeatures = new ArrayList<>();
         for (GFF3Feature feature : annotation.getFeatures()) {
@@ -47,9 +51,9 @@ public class CdsRnaLocusFix {
 
             String soId = soIdOpt.get();
 
-            if (isGeneFeature(soId)) {
+            if (isGeneFeature(soId, ontologyClient)) {
                 geneFeatures.add(feature);
-            } else if (isNonLocusFeature(soId) && !hasGeneAttributes(feature)) {
+            } else if (isNonLocusFeature(soId, ontologyClient) && !hasGeneAttributes(feature)) {
                 nonLocusFeatures.add(feature);
             }
         }
@@ -85,14 +89,14 @@ public class CdsRnaLocusFix {
     }
 
     // Determine if this is a gene feature
-    private boolean isGeneFeature(String soId) {
+    private boolean isGeneFeature(String soId, OntologyClient ontologyClient) {
         return OntologyTerm.GENE.ID.equals(soId)
                 || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENE.ID)
                 || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.UNITARY_PSEUDOGENE.ID);
     }
 
     // Determine if this is a NonLocus CDS/tRNA/rRNA feature
-    private boolean isNonLocusFeature(String soId) {
+    private boolean isNonLocusFeature(String soId, OntologyClient ontologyClient) {
         return ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.CDS.ID)
                 || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.TRNA.ID)
                 || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.RRNA.ID);

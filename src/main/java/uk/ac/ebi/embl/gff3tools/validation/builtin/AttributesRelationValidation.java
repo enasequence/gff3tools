@@ -16,13 +16,15 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
+import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Validation(name = "ATTRIBUTES_RELATION")
 public class AttributesRelationValidation {
@@ -82,7 +84,8 @@ public class AttributesRelationValidation {
             GFF3Attributes.GERM_LINE, Map.of(GFF3Attributes.MOL_TYPE, Set.of("mRNA")),
             GFF3Attributes.MACRO_NUCLEAR, Map.of(GFF3Attributes.ORGANELLE, Set.of(MITOCHONDRION)));
 
-    private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
+    @InjectContext
+    private ValidationContext context;
 
     @ValidationMethod(rule = "EXCLUSIVE_ATTRIBUTES", type = ValidationType.FEATURE)
     public void validateExclusiveAttributes(GFF3Feature feature, int line) throws ValidationException {
@@ -195,6 +198,7 @@ public class AttributesRelationValidation {
 
     @ValidationMethod(rule = "CIRCULAR_RNA_ATTRIBUTES", type = ValidationType.FEATURE)
     public void validateCircularRNAAttribute(GFF3Feature feature, int line) throws ValidationException {
+        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
         String featureName = feature.getName();
         Optional<String> soOptId = ontologyClient.findTermByNameOrSynonym(featureName);
         if (soOptId.isEmpty()) {

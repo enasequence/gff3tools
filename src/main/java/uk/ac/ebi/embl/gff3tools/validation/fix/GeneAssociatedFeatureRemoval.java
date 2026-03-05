@@ -15,11 +15,13 @@ import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION
 import java.util.*;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
+import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Fix(
         name = "GENE_ASSOCIATED_FEATURE_REMOVAL",
@@ -27,7 +29,8 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
                 "Removes gene features entry if locations are identical with gene associated features (CDS, RRNA, TRNA)")
 public class GeneAssociatedFeatureRemoval {
 
-    private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
+    @InjectContext
+    private ValidationContext context;
 
     @FixMethod(
             rule = "GENE_ASSOCIATED_FEATURE_REMOVAL",
@@ -35,6 +38,7 @@ public class GeneAssociatedFeatureRemoval {
                     "Removes gene features entry if locations are identical with gene associated features (CDS, RRNA, TRNA)",
             type = ANNOTATION)
     public void fixAnnotation(GFF3Annotation gff3Annotation, int line) {
+        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
         List<GFF3Feature> geneAssociatedFeatures = new ArrayList<>();
         Map<String, GFF3Feature> geneFeatureMap = new HashMap<>();
 

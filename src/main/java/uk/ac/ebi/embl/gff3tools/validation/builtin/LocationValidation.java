@@ -18,13 +18,14 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
+import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Validation(name = "LOCATION")
 public class LocationValidation {
@@ -34,7 +35,8 @@ public class LocationValidation {
     private static final String INVALID_PROPEPTIDE_PEPTIDE_LOCATION_MESSAGE =
             "Propeptide [%d %d] overlaps with peptide features";
 
-    private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
+    @InjectContext
+    private ValidationContext context;
 
     @ValidationMethod(rule = "LOCATION", type = ValidationType.FEATURE)
     public void validateLocation(GFF3Feature feature, int line) throws ValidationException {
@@ -55,6 +57,7 @@ public class LocationValidation {
 
     @ValidationMethod(rule = "CDS_LOCATION_BOUNDARIES", type = ValidationType.ANNOTATION)
     public void validateCdsLocation(GFF3Annotation annotation, int line) throws ValidationException {
+        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
         List<GFF3Feature> propFeatures = new ArrayList<>();
         List<GFF3Feature> cdsFeatures = new ArrayList<>();
         List<GFF3Feature> peptideFeatures = new ArrayList<>();

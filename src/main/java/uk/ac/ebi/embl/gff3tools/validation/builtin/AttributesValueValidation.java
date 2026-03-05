@@ -17,13 +17,15 @@ import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
+import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Slf4j
 @Gff3Validation(name = "ATTRIBUTES_VALUE")
@@ -53,11 +55,12 @@ public class AttributesValueValidation {
                     "^(23S ribosomal RNA)$",
                     "^(28S ribosomal RNA)$"));
 
-    private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
+    @InjectContext
+    private ValidationContext context;
 
     @ValidationMethod(rule = "RNA_PRODUCT_ATTRIBUTE_VALUE", type = ValidationType.FEATURE)
     public void validateAttributeValuePattern(GFF3Feature feature, int line) throws ValidationException {
-
+        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
         List<String> productValues = feature.getAttributeList(PRODUCT).orElse(new ArrayList<>());
         if (productValues.isEmpty()) {
             return;
