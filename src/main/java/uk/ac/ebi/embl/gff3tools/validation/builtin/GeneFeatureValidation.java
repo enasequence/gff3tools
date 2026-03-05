@@ -47,12 +47,9 @@ public class GeneFeatureValidation {
     private final Map<String, Map<String, String>> annotationLocusTagToGene = new HashMap<>();
     private final Map<String, Map<String, List<String>>> annotationLocusTagToSynonyms = new HashMap<>();
 
-    private OntologyClient ontologyClient() {
-        return context.get(OntologyClient.class);
-    }
-
     @ValidationMethod(rule = "GENE_ASSOCIATION", type = ValidationType.ANNOTATION, severity = RuleSeverity.WARN)
     public void validateGeneAssociation(GFF3Annotation gff3Annotation, int line) throws ValidationException {
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
         Map<String, String> geneToLocusTag = new HashMap<>();
         Map<String, String> geneToPseudoGene = new HashMap<>();
         for (GFF3Feature feature : gff3Annotation.getFeatures()) {
@@ -61,7 +58,7 @@ public class GeneFeatureValidation {
             String geneName = feature.getAttribute(GFF3Attributes.GENE).orElse(null);
             String locusTag = feature.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
             String existingLocus = geneToLocusTag.get(geneName);
-            Optional<String> soIdOpt = ontologyClient().findTermByNameOrSynonym(feature.getName());
+            Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
 
             if (soIdOpt.isEmpty()) continue;
 
@@ -69,7 +66,7 @@ public class GeneFeatureValidation {
             if (existingLocus != null && !Objects.equals(existingLocus, locusTag)) {
                 boolean isRrna = soId.equals(OntologyTerm.RRNA.ID)
                         || soId.equals(OntologyTerm.PSEUDOGENIC_RRNA.ID)
-                        || ontologyClient().isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENIC_RRNA.ID);
+                        || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENIC_RRNA.ID);
 
                 if (!isRrna) {
                     throw new ValidationException(
@@ -95,9 +92,10 @@ public class GeneFeatureValidation {
 
     @ValidationMethod(rule = "GENE_LOCUS_TAG_ASSOCIATION", type = ValidationType.ANNOTATION)
     public void validateGeneLocusTagAssociation(GFF3Annotation gff3Annotation, int line) throws ValidationException {
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
         Map<String, GFF3Feature> locusTagToGeneFeature = new HashMap<>();
         for (GFF3Feature feature : gff3Annotation.getFeatures()) {
-            Optional<String> soIdOpt = ontologyClient().findTermByNameOrSynonym(feature.getName());
+            Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
 
             if (soIdOpt.isEmpty()) continue;
 
@@ -107,8 +105,8 @@ public class GeneFeatureValidation {
             boolean isGene = soId.equals(OntologyTerm.GENE.ID)
                     || soId.equals(OntologyTerm.PSEUDOGENE.ID)
                     || soId.equals(OntologyTerm.UNITARY_PSEUDOGENE.ID)
-                    || ontologyClient().isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENE.ID)
-                    || ontologyClient().isSelfOrDescendantOf(soId, OntologyTerm.UNITARY_PSEUDOGENE.ID);
+                    || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENE.ID)
+                    || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.UNITARY_PSEUDOGENE.ID);
 
             if (!isGene) {
                 return;
@@ -205,8 +203,9 @@ public class GeneFeatureValidation {
     }
 
     private boolean isGeneOrCds(GFF3Feature feature) {
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
         String featureName = feature.getName();
-        Optional<String> soIdOpt = ontologyClient().findTermByNameOrSynonym(featureName);
+        Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(featureName);
         if (soIdOpt.isEmpty()) {
             return false;
         }
@@ -216,9 +215,9 @@ public class GeneFeatureValidation {
         return soId.equals(OntologyTerm.GENE.ID)
                 || soId.equals(OntologyTerm.CDS.ID)
                 || soId.equals(OntologyTerm.PSEUDOGENIC_CDS.ID)
-                || ontologyClient().isSelfOrDescendantOf(soId, OntologyTerm.GENE.ID)
-                || ontologyClient().isSelfOrDescendantOf(soId, OntologyTerm.CDS.ID)
-                || ontologyClient().isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENE.ID)
-                || ontologyClient().isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENIC_CDS.ID);
+                || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.GENE.ID)
+                || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.CDS.ID)
+                || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENE.ID)
+                || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENIC_CDS.ID);
     }
 }

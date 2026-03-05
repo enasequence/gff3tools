@@ -35,10 +35,6 @@ public class FeatureSpecificValidation {
     private static final String PSEUDO_ATTRIBUTE_REQUIRED_VALIDATION =
             "Peptide \"%s\" requires the 'pseudo' attribute because its CDS \"%s\" is marked as pseudo";
 
-    private OntologyClient ontologyClient() {
-        return context.get(OntologyClient.class);
-    }
-
     @ValidationMethod(rule = "OPERON_FEATURE", type = ValidationType.FEATURE)
     public void validateOperonFeatures(GFF3Feature feature, int line) throws ValidationException {
         String operonValue = feature.getAttribute(GFF3Attributes.OPERON).orElse(null);
@@ -46,9 +42,10 @@ public class FeatureSpecificValidation {
             return;
         }
 
-        Optional<String> soIdOpt = ontologyClient().findTermByNameOrSynonym(feature.getName());
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
+        Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
         boolean isOperon =
-                soIdOpt.isPresent() && (ontologyClient().isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.OPERON.ID));
+                soIdOpt.isPresent() && (ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.OPERON.ID));
         if (isOperon) {
             return;
         }
@@ -58,18 +55,19 @@ public class FeatureSpecificValidation {
 
     @ValidationMethod(rule = "PEPTIDE_FEATURE", type = ValidationType.ANNOTATION)
     public void validatePeptideFeature(GFF3Annotation annotation, int line) throws ValidationException {
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
         List<GFF3Feature> cdsFeatures = new ArrayList<>();
         List<GFF3Feature> peptideFeatures = new ArrayList<>();
 
         for (GFF3Feature feature : annotation.getFeatures()) {
-            Optional<String> soIdOpt = ontologyClient().findTermByNameOrSynonym(feature.getName());
+            Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
             if (soIdOpt.isEmpty()) {
                 continue;
             }
             String soId = soIdOpt.get();
             if (OntologyTerm.CDS.ID.equals(soId) || OntologyTerm.CDS_REGION.ID.equals(soId)) {
                 cdsFeatures.add(feature);
-            } else if (ontologyClient().isSelfOrDescendantOf(soId, OntologyTerm.POLYPEPTIDE_REGION.ID)) {
+            } else if (ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.POLYPEPTIDE_REGION.ID)) {
                 peptideFeatures.add(feature);
             }
         }
