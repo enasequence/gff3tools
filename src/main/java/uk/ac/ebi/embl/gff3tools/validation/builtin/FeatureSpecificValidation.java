@@ -36,17 +36,20 @@ public class FeatureSpecificValidation {
     private static final String PSEUDO_ATTRIBUTE_REQUIRED_VALIDATION =
             "Peptide \"%s\" requires the 'pseudo' attribute because its CDS \"%s\" is marked as pseudo";
 
+    private OntologyClient ontologyClient() {
+        return context.get(OntologyClientProvider.class);
+    }
+
     @ValidationMethod(rule = "OPERON_FEATURE", type = ValidationType.FEATURE)
     public void validateOperonFeatures(GFF3Feature feature, int line) throws ValidationException {
-        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
         String operonValue = feature.getAttribute(GFF3Attributes.OPERON).orElse(null);
         if (operonValue == null || operonValue.isBlank()) {
             return;
         }
 
-        Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
+        Optional<String> soIdOpt = ontologyClient().findTermByNameOrSynonym(feature.getName());
         boolean isOperon =
-                soIdOpt.isPresent() && (ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.OPERON.ID));
+                soIdOpt.isPresent() && (ontologyClient().isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.OPERON.ID));
         if (isOperon) {
             return;
         }
@@ -56,31 +59,36 @@ public class FeatureSpecificValidation {
 
     @ValidationMethod(rule = "PEPTIDE_FEATURE", type = ValidationType.ANNOTATION)
     public void validatePeptideFeature(GFF3Annotation annotation, int line) throws ValidationException {
-        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
-
-        Map<String, List<GFF3Feature>> peptidesByLocus = new HashMap<>();
         List<GFF3Feature> cdsFeatures = new ArrayList<>();
-        Map<String, List<GFF3Feature>> peptidesByGene = new HashMap<>();
+        List<GFF3Feature> peptideFeatures = new ArrayList<>();
 
         for (GFF3Feature feature : annotation.getFeatures()) {
-            Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
+            Optional<String> soIdOpt = ontologyClient().findTermByNameOrSynonym(feature.getName());
             if (soIdOpt.isEmpty()) {
                 continue;
             }
             String soId = soIdOpt.get();
             if (OntologyTerm.CDS.ID.equals(soId) || OntologyTerm.CDS_REGION.ID.equals(soId)) {
                 cdsFeatures.add(feature);
-            } else if (ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.POLYPEPTIDE_REGION.ID)) {
-                String locusTag = feature.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
-                if (locusTag != null) {
-                    peptidesByLocus
-                            .computeIfAbsent(locusTag, k -> new ArrayList<>())
-                            .add(feature);
-                }
-                String gene = feature.getAttribute(GFF3Attributes.GENE).orElse(null);
-                if (gene != null) {
-                    peptidesByGene.computeIfAbsent(gene, k -> new ArrayList<>()).add(feature);
-                }
+            } else if (ontologyClient().isSelfOrDescendantOf(soId, OntologyTerm.POLYPEPTIDE_REGION.ID)) {
+                peptideFeatures.add(feature);
+            }
+        }
+
+        Map<String, List<GFF3Feature>> peptidesByLocus = new HashMap<>();
+        Map<String, List<GFF3Feature>> peptidesByGene = new HashMap<>();
+
+        for (GFF3Feature peptide : peptideFeatures) {
+            String locusTag = peptide.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
+            String gene = peptide.getAttribute(GFF3Attributes.GENE).orElse(null);
+
+            if (locusTag != null) {
+                peptidesByLocus
+                        .computeIfAbsent(locusTag, k -> new ArrayList<>())
+                        .add(peptide);
+            }
+            if (gene != null) {
+                peptidesByGene.computeIfAbsent(gene, k -> new ArrayList<>()).add(peptide);
             }
         }
 
