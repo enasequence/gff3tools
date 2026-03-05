@@ -11,10 +11,15 @@
 package uk.ac.ebi.embl.gff3tools;
 
 import java.io.*;
+import java.lang.reflect.Field;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.*;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
+import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 
 public class TestUtils {
 
@@ -211,6 +216,62 @@ public class TestUtils {
                 "");
         feature.addAttributes(attributes);
         return feature;
+    }
+
+    /**
+     * Creates a ValidationContext with the real OntologyClient and injects it
+     * into the target's @InjectContext fields via reflection.
+     */
+    public static void injectContext(Object target) {
+        ValidationContext context = createTestContext();
+        injectContext(target, context);
+    }
+
+    /**
+     * Creates a ValidationContext with a custom OntologyClient and injects it
+     * into the target's @InjectContext fields via reflection.
+     */
+    public static void injectContext(Object target, OntologyClient ontologyClient) {
+        ValidationContext context = createTestContext(ontologyClient);
+        injectContext(target, context);
+    }
+
+    public static ValidationContext createTestContext() {
+        return createTestContext(OntologyClient.getInstance());
+    }
+
+    @SuppressWarnings("unchecked")
+    public static ValidationContext createTestContext(OntologyClient ontologyClient) {
+        ValidationContext context = new ValidationContext();
+        context.register(OntologyClient.class, new ContextProvider<>() {
+            @Override
+            public OntologyClient get(ValidationContext ctx) {
+                return ontologyClient;
+            }
+
+            @Override
+            public Class<OntologyClient> type() {
+                return OntologyClient.class;
+            }
+        });
+        return context;
+    }
+
+    public static void injectContext(Object target, ValidationContext context) {
+        Class<?> clazz = target.getClass();
+        while (clazz != null) {
+            for (Field field : clazz.getDeclaredFields()) {
+                if (field.isAnnotationPresent(InjectContext.class)) {
+                    field.setAccessible(true);
+                    try {
+                        field.set(target, context);
+                    } catch (IllegalAccessException e) {
+                        throw new RuntimeException("Failed to inject context", e);
+                    }
+                }
+            }
+            clazz = clazz.getSuperclass();
+        }
     }
 
     public static String defaultAccession() {

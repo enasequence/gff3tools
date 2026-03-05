@@ -34,6 +34,7 @@ public class CdsRnaLocusFixTest {
     @BeforeEach
     public void setUp() {
         cdsRnsLocusFix = new CdsRnaLocusFix();
+        TestUtils.injectContext(cdsRnsLocusFix);
         geneAnnotation = new GFF3Annotation();
     }
 

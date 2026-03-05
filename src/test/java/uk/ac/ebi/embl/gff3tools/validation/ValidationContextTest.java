@@ -40,6 +40,11 @@ class ValidationContextTest {
             }
             return cached;
         }
+
+        @Override
+        public Class<String> type() {
+            return String.class;
+        }
     }
 
     static class ObjectProvider implements ContextProvider<Object> {
@@ -52,6 +57,11 @@ class ValidationContextTest {
             }
             return cached;
         }
+
+        @Override
+        public Class<Object> type() {
+            return Object.class;
+        }
     }
 
     /** Provider that depends on another provider without forming a cycle. */
@@ -61,10 +71,15 @@ class ValidationContextTest {
         @Override
         public String get(ValidationContext context) {
             if (cached == null) {
-                Object globalValue = context.get(ObjectProvider.class);
+                Object globalValue = context.get(Object.class);
                 cached = "dependent-on-" + globalValue;
             }
             return cached;
+        }
+
+        @Override
+        public Class<String> type() {
+            return String.class;
         }
     }
 
@@ -73,6 +88,11 @@ class ValidationContextTest {
         @Override
         public String get(ValidationContext context) {
             throw new RuntimeException("provider computation failed");
+        }
+
+        @Override
+        public Class<String> type() {
+            return String.class;
         }
     }
 
@@ -83,10 +103,10 @@ class ValidationContextTest {
     @Test
     @DisplayName("SC2: get() returns the same cached instance on repeated calls (assertSame)")
     void get_returnsCachedInstance() {
-        context.register(CachingProvider.class, new CachingProvider());
+        context.register(String.class, new CachingProvider());
 
-        String first = context.get(CachingProvider.class);
-        String second = context.get(CachingProvider.class);
+        String first = context.get(String.class);
+        String second = context.get(String.class);
 
         assertSame(first, second, "Repeated get() calls must return the same cached instance");
     }
@@ -94,10 +114,10 @@ class ValidationContextTest {
     @Test
     @DisplayName("SC2: ObjectProvider returns same cached instance on repeated calls")
     void get_objectProvider_returnsCachedInstance() {
-        context.register(ObjectProvider.class, new ObjectProvider());
+        context.register(Object.class, new ObjectProvider());
 
-        Object first = context.get(ObjectProvider.class);
-        Object second = context.get(ObjectProvider.class);
+        Object first = context.get(Object.class);
+        Object second = context.get(Object.class);
 
         assertSame(first, second, "Provider must return the same cached instance");
     }
@@ -109,7 +129,7 @@ class ValidationContextTest {
     @Test
     @DisplayName("get() for unregistered provider throws IllegalArgumentException")
     void get_unregisteredProvider_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> context.get(CachingProvider.class));
+        assertThrows(IllegalArgumentException.class, () -> context.get(String.class));
     }
 
     @Test
@@ -118,11 +138,11 @@ class ValidationContextTest {
         CachingProvider first = new CachingProvider();
         CachingProvider second = new CachingProvider();
 
-        context.register(CachingProvider.class, first);
-        String valueFromFirst = context.get(CachingProvider.class);
+        context.register(String.class, first);
+        String valueFromFirst = context.get(String.class);
 
-        context.register(CachingProvider.class, second);
-        String valueFromSecond = context.get(CachingProvider.class);
+        context.register(String.class, second);
+        String valueFromSecond = context.get(String.class);
 
         assertNotSame(valueFromFirst, valueFromSecond, "After replacing a provider, get() should use the new provider");
     }
@@ -130,10 +150,10 @@ class ValidationContextTest {
     @Test
     @DisplayName("Provider can depend on another provider")
     void get_nonCircularDependency_resolves() {
-        context.register(ObjectProvider.class, new ObjectProvider());
-        context.register(DependentProvider.class, new DependentProvider());
+        context.register(Object.class, new ObjectProvider());
+        context.register(String.class, new DependentProvider());
 
-        String result = context.get(DependentProvider.class);
+        String result = context.get(String.class);
 
         assertNotNull(result);
         assertTrue(result.startsWith("dependent-on-"), "Dependent provider should resolve its dependency");
@@ -142,11 +162,11 @@ class ValidationContextTest {
     @Test
     @DisplayName("Context remains usable after a provider throws")
     void get_providerThrows_contextRemainsUsable() {
-        context.register(FailingProvider.class, new FailingProvider());
-        context.register(ObjectProvider.class, new ObjectProvider());
+        context.register(String.class, new FailingProvider());
+        context.register(Object.class, new ObjectProvider());
 
-        assertThrows(RuntimeException.class, () -> context.get(FailingProvider.class));
+        assertThrows(RuntimeException.class, () -> context.get(String.class));
 
-        assertDoesNotThrow(() -> context.get(ObjectProvider.class), "Context must be usable after a provider throws");
+        assertDoesNotThrow(() -> context.get(Object.class), "Context must be usable after a provider throws");
     }
 }

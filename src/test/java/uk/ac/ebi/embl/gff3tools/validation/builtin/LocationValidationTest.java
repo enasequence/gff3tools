@@ -35,6 +35,7 @@ public class LocationValidationTest {
     @BeforeEach
     public void setUp() {
         locationValidation = new LocationValidation();
+        TestUtils.injectContext(locationValidation);
         gff3Annotation = new GFF3Annotation();
     }
 

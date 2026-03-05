@@ -35,6 +35,7 @@ public class LengthValidationTest {
     @BeforeEach
     public void setUp() {
         lengthValidation = new LengthValidation();
+        TestUtils.injectContext(lengthValidation);
         gff3Annotation = new GFF3Annotation();
     }
 

@@ -41,6 +41,11 @@ class ContextDiscoveryIntegrationTest {
             }
             return cached;
         }
+
+        @Override
+        public Class<String> type() {
+            return String.class;
+        }
     }
 
     // ---------------------------------------------------------------
@@ -58,7 +63,7 @@ class ContextDiscoveryIntegrationTest {
 
         // When: We retrieve the provider from the engine's context
         ValidationContext context = engine.getContext();
-        String value = context.get(TestValueProvider.class);
+        String value = context.get(String.class);
 
         // Then: The override value is used, not the auto-discovered default
         assertEquals("overridden", value);
@@ -109,6 +114,11 @@ class ContextDiscoveryIntegrationTest {
             public Integer get(ValidationContext context) {
                 return 42;
             }
+
+            @Override
+            public Class<Integer> type() {
+                return Integer.class;
+            }
         }
 
         ValidationEngine engine = new ValidationEngineBuilder()
@@ -117,8 +127,8 @@ class ContextDiscoveryIntegrationTest {
                 .build();
 
         ValidationContext context = engine.getContext();
-        assertEquals("custom", context.get(TestValueProvider.class));
-        assertEquals(42, context.get(AnotherProvider.class));
+        assertEquals("custom", context.get(String.class));
+        assertEquals(42, context.get(Integer.class));
     }
 
     // ---------------------------------------------------------------
