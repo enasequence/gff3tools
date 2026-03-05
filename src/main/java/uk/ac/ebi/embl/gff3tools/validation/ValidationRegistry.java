@@ -43,7 +43,7 @@ public class ValidationRegistry {
         return context;
     }
 
-    private List<ValidatorDescriptor> build(List<ClassInfo> validationList) {
+    private List<ValidatorDescriptor> build(List<ClassInfo> validationList, ValidationContext context) {
         List<ValidatorDescriptor> descriptors = new ArrayList<>();
 
         for (ClassInfo classInfo : validationList) {
@@ -62,10 +62,9 @@ public class ValidationRegistry {
             }
 
             try {
-                // Instantiate once
+                // Instantiate once and inject context immediately
                 Object instance = clazz.getDeclaredConstructor().newInstance();
-
-                // Set connection to all the validations and fixes
+                injectContext(instance, context);
 
                 for (Method method : clazz.getDeclaredMethods()) {
                     if (isMethodAnnotationPresent(method)) {
@@ -81,6 +80,26 @@ public class ValidationRegistry {
 
         LOG.info("Initialized {} validator methods", descriptors.size());
         return descriptors;
+    }
+
+    private void injectContext(Object instance, ValidationContext context) {
+        Class<?> clazz = instance.getClass();
+        while (clazz != null) {
+            for (Field field : clazz.getDeclaredFields()) {
+                if (field.isAnnotationPresent(InjectContext.class)) {
+                    field.setAccessible(true);
+                    try {
+                        field.set(instance, context);
+                    } catch (IllegalAccessException e) {
+                        throw new RuntimeException(
+                                "Failed to inject context into "
+                                        + instance.getClass().getName(),
+                                e);
+                    }
+                }
+            }
+            clazz = clazz.getSuperclass();
+        }
     }
 
     /**
@@ -238,10 +257,8 @@ public class ValidationRegistry {
             // Use a temporary registry instance to access the private build() and getValidationList()
             // methods (static inner class may access private members of enclosing class instances)
             ValidationRegistry temp = new ValidationRegistry(this, null, null);
-            List<ValidatorDescriptor> descriptors = temp.build(temp.getValidationList());
-
             ValidationContext context = buildContext(temp.discoverProviders());
-            injectContext(descriptors, context);
+            List<ValidatorDescriptor> descriptors = temp.build(temp.getValidationList(), context);
 
             return new ValidationRegistry(this, descriptors, context);
         }
@@ -259,32 +276,6 @@ public class ValidationRegistry {
             }
 
             return context;
-        }
-
-        private void injectContext(List<ValidatorDescriptor> descriptors, ValidationContext context) {
-            Set<Object> injected = new HashSet<>();
-            for (ValidatorDescriptor descriptor : descriptors) {
-                Object instance = descriptor.instance();
-                if (!injected.add(instance)) continue;
-
-                Class<?> clazz = instance.getClass();
-                while (clazz != null) {
-                    for (Field field : clazz.getDeclaredFields()) {
-                        if (field.isAnnotationPresent(InjectContext.class)) {
-                            field.setAccessible(true);
-                            try {
-                                field.set(instance, context);
-                            } catch (IllegalAccessException e) {
-                                throw new RuntimeException(
-                                        "Failed to inject context into "
-                                                + instance.getClass().getName(),
-                                        e);
-                            }
-                        }
-                    }
-                    clazz = clazz.getSuperclass();
-                }
-            }
         }
     }
 }
