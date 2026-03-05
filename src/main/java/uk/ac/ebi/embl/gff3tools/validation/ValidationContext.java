@@ -19,21 +19,21 @@ import java.util.Map;
  */
 public class ValidationContext {
 
-    private final Map<Class<? extends ContextProvider<?>>, ContextProvider<?>> providers = new HashMap<>();
+    private final Map<Class<?>, ContextProvider<?>> providers = new HashMap<>();
 
     /**
-     * Resolve a provider's value.
+     * Resolve a provider's value by the value type it produces.
      *
-     * @param providerClass the provider class to look up
-     * @param <T>           the value type produced by the provider
+     * @param type the value type to look up
+     * @param <T>  the value type
      * @return the cached or freshly computed value
-     * @throws IllegalArgumentException if no provider is registered for the given class
+     * @throws IllegalArgumentException if no provider is registered for the given type
      */
     @SuppressWarnings("unchecked")
-    public <T> T get(Class<? extends ContextProvider<T>> providerClass) {
-        ContextProvider<?> provider = providers.get(providerClass);
+    public <T> T get(Class<T> type) {
+        ContextProvider<?> provider = providers.get(type);
         if (provider == null) {
-            throw new IllegalArgumentException("No provider registered for " + providerClass.getName());
+            throw new IllegalArgumentException("No provider registered for " + type.getName());
         }
         return (T) provider.get(this);
     }
@@ -41,7 +41,7 @@ public class ValidationContext {
     /**
      * Register or replace a provider in the context.
      */
-    public <T> void register(Class<? extends ContextProvider<T>> providerClass, ContextProvider<T> provider) {
-        providers.put(providerClass, provider);
+    public <T> void register(Class<T> type, ContextProvider<T> provider) {
+        providers.put(type, provider);
     }
 }

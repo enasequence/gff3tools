@@ -24,7 +24,6 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
-import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Validation(name = "ATTRIBUTES_RELATION")
 public class AttributesRelationValidation {
@@ -198,7 +197,7 @@ public class AttributesRelationValidation {
 
     @ValidationMethod(rule = "CIRCULAR_RNA_ATTRIBUTES", type = ValidationType.FEATURE)
     public void validateCircularRNAAttribute(GFF3Feature feature, int line) throws ValidationException {
-        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
         String featureName = feature.getName();
         Optional<String> soOptId = ontologyClient.findTermByNameOrSynonym(featureName);
         if (soOptId.isEmpty()) {

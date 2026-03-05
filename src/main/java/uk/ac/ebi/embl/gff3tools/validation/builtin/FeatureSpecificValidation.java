@@ -22,7 +22,6 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
-import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Validation(name = "FEATURE_SPECIFIC")
 public class FeatureSpecificValidation {
@@ -37,7 +36,7 @@ public class FeatureSpecificValidation {
             "Peptide \"%s\" requires the 'pseudo' attribute because its CDS \"%s\" is marked as pseudo";
 
     private OntologyClient ontologyClient() {
-        return context.get(OntologyClientProvider.class);
+        return context.get(OntologyClient.class);
     }
 
     @ValidationMethod(rule = "OPERON_FEATURE", type = ValidationType.FEATURE)

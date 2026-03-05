@@ -23,7 +23,6 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
-import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Validation(name = "GENE_FEATURE")
 public class GeneFeatureValidation {
@@ -49,7 +48,7 @@ public class GeneFeatureValidation {
     private final Map<String, Map<String, List<String>>> annotationLocusTagToSynonyms = new HashMap<>();
 
     private OntologyClient ontologyClient() {
-        return context.get(OntologyClientProvider.class);
+        return context.get(OntologyClient.class);
     }
 
     @ValidationMethod(rule = "GENE_ASSOCIATION", type = ValidationType.ANNOTATION, severity = RuleSeverity.WARN)

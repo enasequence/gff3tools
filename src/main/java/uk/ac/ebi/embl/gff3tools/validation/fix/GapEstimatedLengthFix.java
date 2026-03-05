@@ -22,7 +22,6 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
-import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Slf4j
 @Gff3Fix(name = "GAP_ESTIMATED_LENGTH", description = "Set estimated_length for a gap or assembly_gap feature")
@@ -33,7 +32,7 @@ public class GapEstimatedLengthFix {
 
     @FixMethod(rule = "GAP_ESTIMATED_LENGTH", description = "Set estimated_length for a gap feature", type = FEATURE)
     public void fixFeature(GFF3Feature feature, int line) {
-        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
         if (soIdOpt.isEmpty()) return;
 

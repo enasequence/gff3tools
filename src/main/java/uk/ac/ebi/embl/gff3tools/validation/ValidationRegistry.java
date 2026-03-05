@@ -251,15 +251,11 @@ public class ValidationRegistry {
             ValidationContext context = new ValidationContext();
 
             for (ContextProvider<?> provider : discovered) {
-                context.register(
-                        (Class<? extends ContextProvider<Object>>) provider.getClass(),
-                        (ContextProvider<Object>) provider);
+                context.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
             }
 
             for (ContextProvider<?> override : providerOverrides) {
-                context.register(
-                        (Class<? extends ContextProvider<Object>>) override.getClass(),
-                        (ContextProvider<Object>) override);
+                context.register((Class<Object>) override.type(), (ContextProvider<Object>) override);
             }
 
             return context;

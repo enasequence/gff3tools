@@ -30,4 +30,9 @@ public class OntologyClientProvider implements ContextProvider<OntologyClient> {
         }
         return cached;
     }
+
+    @Override
+    public Class<OntologyClient> type() {
+        return OntologyClient.class;
+    }
 }
