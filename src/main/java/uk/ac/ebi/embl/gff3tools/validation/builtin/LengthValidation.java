@@ -20,13 +20,15 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
+import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 @Gff3Validation(name = "LENGTH")
 public class LengthValidation {
@@ -42,10 +44,12 @@ public class LengthValidation {
     private static final String INVALID_CDS_INTRON_LENGTH_MESSAGE =
             "Intron usually expected to be at least 10 nt long. Please check accuracy and Use one of the following options for annotation: \n /artificial_location=\"heterogeneous population sequenced\" \n OR \n /artificial_location=\"low-quality sequence region\". \n Alternatively, use where appropriate: \n /pseudo, /pseudogene, /trans_splicing, /ribosomal_slippage";
 
-    private final OntologyClient ontologyClient = ConversionUtils.getOntologyClient();
+    @InjectContext
+    private ValidationContext context;
 
     @ValidationMethod(rule = "INTRON_LENGTH", type = ValidationType.FEATURE)
     public void validateIntronLength(GFF3Feature feature, int line) throws ValidationException {
+        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
         long length = feature.getLength();
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
         if (soIdOpt.isEmpty()) return;
@@ -58,7 +62,7 @@ public class LengthValidation {
 
     @ValidationMethod(rule = "CDS_INTRON_LENGTH", type = ValidationType.ANNOTATION)
     public void validateCdsIntronLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
-
+        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
         Map<String, List<GFF3Feature>> cdsListById = new HashMap<>();
 
         for (GFF3Feature feature : gff3Annotation.getFeatures()) {
@@ -73,7 +77,7 @@ public class LengthValidation {
 
             if (!isCds) continue;
 
-            if (isPseudo(feature)
+            if (isPseudo(feature, ontologyClient)
                     || feature.hasAttribute(GFF3Attributes.RIBOSOMAL_SLIPPAGE)
                     || feature.hasAttribute(GFF3Attributes.TRANS_SPLICING)) {
                 continue;
@@ -85,11 +89,12 @@ public class LengthValidation {
         }
 
         for (List<GFF3Feature> cdsGroup : cdsListById.values()) {
-            validateCdsIntronLength(cdsGroup, line);
+            validateCdsIntronLength(cdsGroup, line, ontologyClient);
         }
     }
 
-    private void validateCdsIntronLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
+    private void validateCdsIntronLength(List<GFF3Feature> cdsList, int line, OntologyClient ontologyClient)
+            throws ValidationException {
 
         if (cdsList.size() <= 1) {
             return;
@@ -104,7 +109,7 @@ public class LengthValidation {
                 boolean artificial = prev.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION)
                         || curr.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION);
 
-                if (!artificial && !isPseudo(curr)) {
+                if (!artificial && !isPseudo(curr, ontologyClient)) {
                     throw new ValidationException(line, INVALID_CDS_INTRON_LENGTH_MESSAGE);
                 }
             }
@@ -114,6 +119,7 @@ public class LengthValidation {
 
     @ValidationMethod(rule = "EXON_LENGTH", type = ValidationType.FEATURE, severity = RuleSeverity.WARN)
     public void validateExonLength(GFF3Feature feature, int line) throws ValidationException {
+        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
         long length = feature.getLength();
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
         if (soIdOpt.isEmpty()) return;
@@ -126,6 +132,7 @@ public class LengthValidation {
 
     @ValidationMethod(rule = "PROPEPTIDE_LENGTH", type = ValidationType.FEATURE)
     public void validatePropeptideLength(GFF3Feature feature, int line) throws ValidationException {
+        OntologyClient ontologyClient = context.get(OntologyClientProvider.class);
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
         if (soIdOpt.isEmpty()) return;
 
@@ -140,7 +147,7 @@ public class LengthValidation {
         }
     }
 
-    public boolean isPseudo(GFF3Feature feature) {
+    public boolean isPseudo(GFF3Feature feature, OntologyClient ontologyClient) {
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
         if (soIdOpt.isEmpty()) return false;
 
