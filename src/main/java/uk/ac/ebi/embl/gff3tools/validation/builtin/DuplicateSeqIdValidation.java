@@ -20,7 +20,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation(name = "DUPLICATE_SEQ_ID")
-public class DuplicateSeqIdValidation extends Validation {
+public class DuplicateSeqIdValidation {
 
     private HashSet<String> processedAnnotations = new HashSet<>();
     private String currentAccession = null;

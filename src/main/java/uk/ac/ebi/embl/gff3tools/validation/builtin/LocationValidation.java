@@ -27,7 +27,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation(name = "LOCATION")
-public class LocationValidation extends Validation {
+public class LocationValidation {
 
     private static final String INVALID_START_END_MESSAGE = "Invalid start/end for accession \"%s\"";
     private static final String INVALID_PROPEPTIDE_CDS_LOCATION_MESSAGE = "Propeptide [%d %d] not inside any CDS";

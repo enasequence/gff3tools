@@ -15,7 +15,6 @@ import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.validation.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 
@@ -23,7 +22,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 @Gff3Fix(
         name = "RENAME_ATTRIBUTES",
         description = "Moves 'label' into 'Note' and renames 'mobile_element' to 'mobile_element_type'")
-public class RenameAttributes extends Validation {
+public class RenameAttributes {
 
     @FixMethod(
             rule = "RENAME_ATTRIBUTES",

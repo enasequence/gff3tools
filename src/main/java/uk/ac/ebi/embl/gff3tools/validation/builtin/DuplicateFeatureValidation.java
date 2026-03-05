@@ -22,7 +22,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation(name = "DUPLICATE_FEATURE")
-public class DuplicateFeatureValidation extends Validation {
+public class DuplicateFeatureValidation {
 
     private static final String DUPLICATE_PROTEIN_ID_MESSAGE =
             "Duplicate Protein Id \"%s\" found in the \"%s\" at location \"%s\"";

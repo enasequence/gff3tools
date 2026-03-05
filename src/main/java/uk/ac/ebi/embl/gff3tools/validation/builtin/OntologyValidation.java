@@ -19,7 +19,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation(name = "ONTOLOGY")
-public class OntologyValidation extends Validation {
+public class OntologyValidation {
 
     public static final String VALIDATION_RULE = "ONTOLOGY_FEATURE";
 

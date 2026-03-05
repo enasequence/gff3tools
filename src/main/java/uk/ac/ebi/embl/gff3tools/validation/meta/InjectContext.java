@@ -8,16 +8,10 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.validation;
+package uk.ac.ebi.embl.gff3tools.validation.meta;
 
-import java.sql.Connection;
-import lombok.Getter;
-import lombok.Setter;
+import java.lang.annotation.*;
 
-@Setter
-@Getter
-public class Validation {
-
-    private Connection connection;
-    private ValidationContext context;
-}
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.FIELD)
+public @interface InjectContext {}

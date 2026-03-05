@@ -15,8 +15,8 @@ import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ClassInfoList;
 import io.github.classgraph.ScanResult;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -223,16 +223,10 @@ public class ValidationRegistry {
 
     public static class Builder {
         private final ValidationConfig config;
-        private Connection connection;
         private final List<ContextProvider<?>> providerOverrides = new ArrayList<>();
 
         public Builder(ValidationConfig config) {
             this.config = config;
-        }
-
-        public Builder connection(Connection connection) {
-            this.connection = connection;
-            return this;
         }
 
         public Builder withProvider(ContextProvider<?> provider) {
@@ -275,8 +269,24 @@ public class ValidationRegistry {
             Set<Object> injected = new HashSet<>();
             for (ValidatorDescriptor descriptor : descriptors) {
                 Object instance = descriptor.instance();
-                if (instance instanceof Validation validation && injected.add(instance)) {
-                    validation.setContext(context);
+                if (!injected.add(instance)) continue;
+
+                Class<?> clazz = instance.getClass();
+                while (clazz != null) {
+                    for (Field field : clazz.getDeclaredFields()) {
+                        if (field.isAnnotationPresent(InjectContext.class)) {
+                            field.setAccessible(true);
+                            try {
+                                field.set(instance, context);
+                            } catch (IllegalAccessException e) {
+                                throw new RuntimeException(
+                                        "Failed to inject context into "
+                                                + instance.getClass().getName(),
+                                        e);
+                            }
+                        }
+                    }
+                    clazz = clazz.getSuperclass();
                 }
             }
         }
