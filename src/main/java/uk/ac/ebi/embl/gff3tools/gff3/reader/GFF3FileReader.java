@@ -90,7 +90,6 @@ public class GFF3FileReader implements AutoCloseable {
                 if (!currentAnnotation.getFeatures().isEmpty() || currentAnnotation.getSequenceRegion() != null) {
                     GFF3Annotation previousAnnotation = currentAnnotation;
                     currentAnnotation = new GFF3Annotation();
-                    validationEngine.getContext().setCurrentAnnotation(previousAnnotation);
                     validationEngine.validate(previousAnnotation, lineCount);
                     return previousAnnotation;
                 }
@@ -108,7 +107,6 @@ public class GFF3FileReader implements AutoCloseable {
                     validateAndSetSequenceRegion();
 
                     if (!previousAnnotation.getFeatures().isEmpty()) {
-                        validationEngine.getContext().setCurrentAnnotation(previousAnnotation);
                         validationEngine.validate(previousAnnotation, lineCount);
                         processedAccessions.add(previousAnnotation.getAccession());
                         return previousAnnotation;
@@ -131,7 +129,6 @@ public class GFF3FileReader implements AutoCloseable {
         if (!currentAnnotation.getFeatures().isEmpty() || currentAnnotation.getSequenceRegion() != null) {
             GFF3Annotation finalAnnotation = currentAnnotation;
             currentAnnotation = new GFF3Annotation();
-            validationEngine.getContext().setCurrentAnnotation(finalAnnotation);
             validationEngine.validate(finalAnnotation, lineCount);
             processedAccessions.add(finalAnnotation.getAccession());
             return finalAnnotation;
@@ -142,7 +139,6 @@ public class GFF3FileReader implements AutoCloseable {
             if (!processedAccessions.contains(accession)) {
                 GFF3Annotation annotation = new GFF3Annotation();
                 annotation.setSequenceRegion(accessionSequenceRegionMap.get(accession));
-                validationEngine.getContext().setCurrentAnnotation(annotation);
                 validationEngine.validate(annotation, lineCount);
                 processedAccessions.add(accession);
                 return annotation;

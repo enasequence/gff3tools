@@ -105,7 +105,6 @@ public class GFF3AnnotationFactory {
             annotation.setSequenceRegion(sequenceRegion);
             annotation.setFeatures(features);
 
-            validationEngine.getContext().setCurrentAnnotation(annotation);
             validationEngine.validate(annotation, -1);
 
             return annotation;
