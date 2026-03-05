@@ -69,7 +69,9 @@ public class FeatureSpecificValidation extends Validation {
             } else if (ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.POLYPEPTIDE_REGION.ID)) {
                 String locusTag = feature.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
                 if (locusTag != null) {
-                    peptidesByLocus.computeIfAbsent(locusTag, k -> new ArrayList<>()).add(feature);
+                    peptidesByLocus
+                            .computeIfAbsent(locusTag, k -> new ArrayList<>())
+                            .add(feature);
                 }
                 String gene = feature.getAttribute(GFF3Attributes.GENE).orElse(null);
                 if (gene != null) {
