@@ -31,7 +31,7 @@ class ValidationRegistryTest {
     void setUp() {
         validationConfig = mock(ValidationConfig.class);
         when(validationConfig.isValidatorEnabled(any(Annotation.class))).thenReturn(true);
-        registry = new ValidationRegistry(validationConfig, null);
+        registry = new ValidationRegistry.Builder(validationConfig).build();
     }
 
     @Gff3Validation(name = "LENGTH", enabled = true)
@@ -248,15 +248,6 @@ class ValidationRegistryTest {
 
         // Should NOT throw since rules are unique
         assertDoesNotThrow(() -> privateMethod.invoke(registry, validationList));
-    }
-
-    @Test
-    @DisplayName("Should discover ContextProvider implementations via ClassGraph")
-    void testDiscoverProviders() {
-        List<ContextProvider<?>> providers = registry.discoverProviders();
-        // No concrete providers exist yet (Phase 4 will add them),
-        // but the method should not throw and should return a list
-        assertNotNull(providers);
     }
 
     // Utility methods

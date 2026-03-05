@@ -147,7 +147,6 @@ class ValidationContextTest {
 
         assertThrows(RuntimeException.class, () -> context.get(FailingProvider.class));
 
-        assertDoesNotThrow(
-                () -> context.get(ObjectProvider.class), "Context must be usable after a provider throws");
+        assertDoesNotThrow(() -> context.get(ObjectProvider.class), "Context must be usable after a provider throws");
     }
 }

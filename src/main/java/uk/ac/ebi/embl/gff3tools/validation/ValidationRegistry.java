@@ -31,12 +31,16 @@ public class ValidationRegistry {
     private static final Logger LOG = LoggerFactory.getLogger(ValidationRegistry.class);
     private final List<ValidatorDescriptor> cachedValidators;
     private final ValidationConfig validationConfig;
-    private final Connection connection;
+    private final ValidationContext context;
 
-    public ValidationRegistry(ValidationConfig config, Connection con) {
-        this.validationConfig = config;
-        this.connection = con;
-        this.cachedValidators = build(getValidationList());
+    private ValidationRegistry(Builder builder, List<ValidatorDescriptor> descriptors, ValidationContext context) {
+        this.validationConfig = builder.config;
+        this.cachedValidators = descriptors;
+        this.context = context;
+    }
+
+    public ValidationContext getContext() {
+        return context;
     }
 
     private List<ValidatorDescriptor> build(List<ClassInfo> validationList) {
@@ -83,7 +87,7 @@ public class ValidationRegistry {
      * Discovers all concrete classes implementing ContextProvider via ClassGraph,
      * instantiates each via no-arg constructor, and returns them.
      */
-    public List<ContextProvider<?>> discoverProviders() {
+    private List<ContextProvider<?>> discoverProviders() {
         List<ContextProvider<?>> providers = new ArrayList<>();
         try (ScanResult scan = new ClassGraph().enableClassInfo().scan()) {
 
@@ -215,5 +219,66 @@ public class ValidationRegistry {
         }
 
         return rule;
+    }
+
+    public static class Builder {
+        private final ValidationConfig config;
+        private Connection connection;
+        private final List<ContextProvider<?>> providerOverrides = new ArrayList<>();
+
+        public Builder(ValidationConfig config) {
+            this.config = config;
+        }
+
+        public Builder connection(Connection connection) {
+            this.connection = connection;
+            return this;
+        }
+
+        public Builder withProvider(ContextProvider<?> provider) {
+            providerOverrides.add(provider);
+            return this;
+        }
+
+        public ValidationRegistry build() {
+            // Use a temporary registry instance to access the private build() and getValidationList()
+            // methods (static inner class may access private members of enclosing class instances)
+            ValidationRegistry temp = new ValidationRegistry(this, null, null);
+            List<ValidatorDescriptor> descriptors = temp.build(temp.getValidationList());
+
+            ValidationContext context = buildContext(temp.discoverProviders());
+            injectContext(descriptors, context);
+
+            return new ValidationRegistry(this, descriptors, context);
+        }
+
+        @SuppressWarnings("unchecked")
+        private ValidationContext buildContext(List<ContextProvider<?>> discovered) {
+            ValidationContext context = new ValidationContext();
+
+            for (ContextProvider<?> provider : discovered) {
+                context.register(
+                        (Class<? extends ContextProvider<Object>>) provider.getClass(),
+                        (ContextProvider<Object>) provider);
+            }
+
+            for (ContextProvider<?> override : providerOverrides) {
+                context.register(
+                        (Class<? extends ContextProvider<Object>>) override.getClass(),
+                        (ContextProvider<Object>) override);
+            }
+
+            return context;
+        }
+
+        private void injectContext(List<ValidatorDescriptor> descriptors, ValidationContext context) {
+            Set<Object> injected = new HashSet<>();
+            for (ValidatorDescriptor descriptor : descriptors) {
+                Object instance = descriptor.instance();
+                if (instance instanceof Validation validation && injected.add(instance)) {
+                    validation.setContext(context);
+                }
+            }
+        }
     }
 }

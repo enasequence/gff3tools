@@ -123,7 +123,8 @@ public class GeneFeatureValidation extends Validation {
             if (geneName != null && !geneName.isEmpty()) {
                 locusTagToGene.putIfAbsent(locusTag, geneName);
             }
-            String synonymsRaw = feature.getAttribute(GFF3Attributes.GENE_SYNONYM).orElse(null);
+            String synonymsRaw =
+                    feature.getAttribute(GFF3Attributes.GENE_SYNONYM).orElse(null);
             if (synonymsRaw != null && !synonymsRaw.isEmpty()) {
                 locusTagToSynonyms.computeIfAbsent(locusTag, k -> parseSynonyms(synonymsRaw));
             }
