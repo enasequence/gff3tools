@@ -10,18 +10,9 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.meta;
 
-import java.lang.annotation.*;
-
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface ValidationMethod {
-    String rule() default "";
-
-    ValidationType type();
-
-    RuleSeverity severity() default RuleSeverity.ERROR;
-
-    ValidationPriority priority() default ValidationPriority.NORMAL;
-
-    String description() default "";
+public enum ValidationPriority {
+    CRITICAL,
+    HIGH,
+    NORMAL,
+    LOW;
 }

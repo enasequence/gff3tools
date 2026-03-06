@@ -14,8 +14,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.*;
 import org.mockito.Mock;
@@ -41,6 +43,7 @@ public class ValidationEngineTest {
     @BeforeEach
     void setup() {
         MockitoAnnotations.openMocks(this);
+        executionLog.clear();
         // Use fail-fast=true to preserve original test behavior (default changed to false)
         engine = new ValidationEngine(validationConfig, validationRegistry, new ValidationContext(), true);
     }
@@ -113,7 +116,8 @@ public class ValidationEngineTest {
         Method m = DummyValidator.class.getDeclaredMethod("validate", GFF3Feature.class, int.class);
         DummyValidator instance = spy(new DummyValidator());
 
-        ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyValidator.class, instance, m);
+        ValidatorDescriptor descriptor =
+                new ValidatorDescriptor(DummyValidator.class, instance, m, ValidationPriority.NORMAL);
         List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
         when(validationConfig.getSeverity("RULE_X", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
@@ -138,7 +142,8 @@ public class ValidationEngineTest {
         }
 
         Method m = DummyValidator.class.getDeclaredMethod("validate", GFF3Feature.class, int.class);
-        ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyValidator.class, new DummyValidator(), m);
+        ValidatorDescriptor descriptor =
+                new ValidatorDescriptor(DummyValidator.class, new DummyValidator(), m, ValidationPriority.NORMAL);
         List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
         when(validationConfig.getSeverity("RULE_OFF", RuleSeverity.ERROR)).thenReturn(RuleSeverity.OFF);
@@ -161,7 +166,8 @@ public class ValidationEngineTest {
         }
 
         Method m = DummyValidator.class.getDeclaredMethod("validate", GFF3Feature.class, int.class);
-        ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyValidator.class, new DummyValidator(), m);
+        ValidatorDescriptor descriptor =
+                new ValidatorDescriptor(DummyValidator.class, new DummyValidator(), m, ValidationPriority.NORMAL);
         List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
         when(validationConfig.getSeverity("RULE_WARN", RuleSeverity.ERROR)).thenReturn(RuleSeverity.WARN);
@@ -182,7 +188,8 @@ public class ValidationEngineTest {
         }
 
         Method m = DummyValidator.class.getDeclaredMethod("validate", GFF3Feature.class, int.class);
-        ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyValidator.class, new DummyValidator(), m);
+        ValidatorDescriptor descriptor =
+                new ValidatorDescriptor(DummyValidator.class, new DummyValidator(), m, ValidationPriority.NORMAL);
         List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
         when(validationConfig.getSeverity("RULE_ERR", RuleSeverity.ERROR)).thenReturn(RuleSeverity.ERROR);
@@ -205,7 +212,8 @@ public class ValidationEngineTest {
 
         Method m = DummyFix.class.getDeclaredMethod("fix", GFF3Annotation.class, int.class);
         DummyFix instance = spy(new DummyFix());
-        ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyFix.class, instance, m);
+        ValidatorDescriptor descriptor =
+                new ValidatorDescriptor(DummyFix.class, instance, m, ValidationPriority.NORMAL);
         List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
         when(validationConfig.getFix("FIX_1", true)).thenReturn(true);
@@ -228,7 +236,8 @@ public class ValidationEngineTest {
 
         Method m = DummyFix.class.getDeclaredMethod("fix", GFF3Annotation.class, int.class);
         DummyFix instance = spy(new DummyFix());
-        ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyFix.class, instance, m);
+        ValidatorDescriptor descriptor =
+                new ValidatorDescriptor(DummyFix.class, instance, m, ValidationPriority.NORMAL);
         List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
         when(validationConfig.getFix("FIX_1", true)).thenReturn(false);
@@ -267,7 +276,8 @@ public class ValidationEngineTest {
         Method m = DummyValidator.class.getDeclaredMethod("onExit");
         DummyValidator instance = spy(new DummyValidator());
 
-        ValidatorDescriptor descriptor = new ValidatorDescriptor(DummyValidator.class, instance, m);
+        ValidatorDescriptor descriptor =
+                new ValidatorDescriptor(DummyValidator.class, instance, m, ValidationPriority.NORMAL);
         List<ValidatorDescriptor> descriptors = List.of(descriptor);
 
         when(validationRegistry.getExits()).thenReturn(descriptors);
@@ -371,5 +381,178 @@ public class ValidationEngineTest {
         ValidationEngine engineFromBuilder =
                 new ValidationEngineBuilder().failFast(true).build();
         assertNotNull(engineFromBuilder);
+    }
+
+    // ------------------------------------------------------------
+    // 8. Priority-based execution tests
+    // ------------------------------------------------------------
+
+    /** Shared execution log used by priority tests to verify ordering. */
+    private static final List<String> executionLog = new ArrayList<>();
+
+    @Gff3Fix(name = "CRITICAL_FIX")
+    static class CriticalFix {
+        @FixMethod(rule = "FIX_CRITICAL", type = ValidationType.FEATURE, priority = ValidationPriority.CRITICAL)
+        public void fix(GFF3Feature f, int line) {
+            executionLog.add("FIX_CRITICAL");
+        }
+    }
+
+    @Gff3Fix(name = "NORMAL_FIX")
+    static class NormalFix {
+        @FixMethod(rule = "FIX_NORMAL", type = ValidationType.FEATURE, priority = ValidationPriority.NORMAL)
+        public void fix(GFF3Feature f, int line) {
+            executionLog.add("FIX_NORMAL");
+        }
+    }
+
+    @Gff3Validation(name = "CRITICAL_VAL")
+    static class CriticalValidation {
+        @ValidationMethod(rule = "VAL_CRITICAL", type = ValidationType.FEATURE, priority = ValidationPriority.CRITICAL)
+        public void validate(GFF3Feature f, int line) {
+            executionLog.add("VAL_CRITICAL");
+        }
+    }
+
+    @Gff3Validation(name = "NORMAL_VAL")
+    static class NormalValidation {
+        @ValidationMethod(rule = "VAL_NORMAL", type = ValidationType.FEATURE, priority = ValidationPriority.NORMAL)
+        public void validate(GFF3Feature f, int line) {
+            executionLog.add("VAL_NORMAL");
+        }
+    }
+
+    @Test
+    @DisplayName(
+            "Validate executes in priority order: CRITICAL fixes → CRITICAL validations → NORMAL fixes → NORMAL validations")
+    void testValidate_interleavedPriorityExecution() throws Exception {
+        // Build descriptors at different priorities
+        ValidatorDescriptor criticalFix = new ValidatorDescriptor(
+                CriticalFix.class,
+                new CriticalFix(),
+                CriticalFix.class.getDeclaredMethod("fix", GFF3Feature.class, int.class),
+                ValidationPriority.CRITICAL);
+        ValidatorDescriptor normalFix = new ValidatorDescriptor(
+                NormalFix.class,
+                new NormalFix(),
+                NormalFix.class.getDeclaredMethod("fix", GFF3Feature.class, int.class),
+                ValidationPriority.NORMAL);
+        ValidatorDescriptor criticalVal = new ValidatorDescriptor(
+                CriticalValidation.class,
+                new CriticalValidation(),
+                CriticalValidation.class.getDeclaredMethod("validate", GFF3Feature.class, int.class),
+                ValidationPriority.CRITICAL);
+        ValidatorDescriptor normalVal = new ValidatorDescriptor(
+                NormalValidation.class,
+                new NormalValidation(),
+                NormalValidation.class.getDeclaredMethod("validate", GFF3Feature.class, int.class),
+                ValidationPriority.NORMAL);
+
+        // Mock registry to return grouped maps
+        Map<ValidationPriority, List<ValidatorDescriptor>> fixesByPriority = new HashMap<>();
+        fixesByPriority.put(ValidationPriority.CRITICAL, List.of(criticalFix));
+        fixesByPriority.put(ValidationPriority.NORMAL, List.of(normalFix));
+
+        Map<ValidationPriority, List<ValidatorDescriptor>> valsByPriority = new HashMap<>();
+        valsByPriority.put(ValidationPriority.CRITICAL, List.of(criticalVal));
+        valsByPriority.put(ValidationPriority.NORMAL, List.of(normalVal));
+
+        when(validationRegistry.getFixesByPriority()).thenReturn(fixesByPriority);
+        when(validationRegistry.getValidationsByPriority()).thenReturn(valsByPriority);
+        when(validationConfig.getFix(anyString(), anyBoolean())).thenReturn(true);
+        when(validationConfig.getSeverity(anyString(), any(RuleSeverity.class))).thenReturn(RuleSeverity.ERROR);
+
+        GFF3Feature feature = TestUtils.createGFF3Feature("gene", "parent", new HashMap<>());
+        engine.validate(feature, 1);
+
+        assertEquals(
+                List.of("FIX_CRITICAL", "VAL_CRITICAL", "FIX_NORMAL", "VAL_NORMAL"),
+                executionLog,
+                "Execution must be interleaved by priority tier: fixes then validations per tier");
+    }
+
+    @Gff3Validation(name = "CRITICAL_FAIL_VAL")
+    static class CriticalFailingValidation {
+        @ValidationMethod(
+                rule = "VAL_CRITICAL_FAIL",
+                type = ValidationType.FEATURE,
+                priority = ValidationPriority.CRITICAL)
+        public void validate(GFF3Feature f, int line) throws ValidationException {
+            executionLog.add("VAL_CRITICAL_FAIL");
+            throw new ValidationException("critical failure");
+        }
+    }
+
+    @Test
+    @DisplayName("Fail-fast mode: error at CRITICAL tier prevents NORMAL tier from executing")
+    void testValidate_failFastShortCircuitsAtCurrentTier() throws Exception {
+        ValidatorDescriptor criticalVal = new ValidatorDescriptor(
+                CriticalFailingValidation.class,
+                new CriticalFailingValidation(),
+                CriticalFailingValidation.class.getDeclaredMethod("validate", GFF3Feature.class, int.class),
+                ValidationPriority.CRITICAL);
+        ValidatorDescriptor normalVal = new ValidatorDescriptor(
+                NormalValidation.class,
+                new NormalValidation(),
+                NormalValidation.class.getDeclaredMethod("validate", GFF3Feature.class, int.class),
+                ValidationPriority.NORMAL);
+
+        Map<ValidationPriority, List<ValidatorDescriptor>> fixesByPriority = new HashMap<>();
+        Map<ValidationPriority, List<ValidatorDescriptor>> valsByPriority = new HashMap<>();
+        valsByPriority.put(ValidationPriority.CRITICAL, List.of(criticalVal));
+        valsByPriority.put(ValidationPriority.NORMAL, List.of(normalVal));
+
+        when(validationRegistry.getFixesByPriority()).thenReturn(fixesByPriority);
+        when(validationRegistry.getValidationsByPriority()).thenReturn(valsByPriority);
+        when(validationConfig.getSeverity(anyString(), any(RuleSeverity.class))).thenReturn(RuleSeverity.ERROR);
+
+        // Engine with fail-fast=true
+        ValidationEngine failFastEngine =
+                new ValidationEngine(validationConfig, validationRegistry, new ValidationContext(), true);
+
+        GFF3Feature feature = TestUtils.createGFF3Feature("gene", "parent", new HashMap<>());
+        assertThrows(ValidationException.class, () -> failFastEngine.validate(feature, 1));
+
+        // CRITICAL validation ran, NORMAL did not
+        assertEquals(
+                List.of("VAL_CRITICAL_FAIL"),
+                executionLog,
+                "Fail-fast should stop at the CRITICAL tier and not execute NORMAL tier");
+    }
+
+    @Test
+    @DisplayName("No-fast-fail mode: all tiers execute and errors are collected")
+    void testValidate_noFastFailCollectsAllTierErrors() throws Exception {
+        ValidatorDescriptor criticalVal = new ValidatorDescriptor(
+                CriticalFailingValidation.class,
+                new CriticalFailingValidation(),
+                CriticalFailingValidation.class.getDeclaredMethod("validate", GFF3Feature.class, int.class),
+                ValidationPriority.CRITICAL);
+        ValidatorDescriptor normalVal = new ValidatorDescriptor(
+                NormalValidation.class,
+                new NormalValidation(),
+                NormalValidation.class.getDeclaredMethod("validate", GFF3Feature.class, int.class),
+                ValidationPriority.NORMAL);
+
+        Map<ValidationPriority, List<ValidatorDescriptor>> fixesByPriority = new HashMap<>();
+        Map<ValidationPriority, List<ValidatorDescriptor>> valsByPriority = new HashMap<>();
+        valsByPriority.put(ValidationPriority.CRITICAL, List.of(criticalVal));
+        valsByPriority.put(ValidationPriority.NORMAL, List.of(normalVal));
+
+        when(validationRegistry.getFixesByPriority()).thenReturn(fixesByPriority);
+        when(validationRegistry.getValidationsByPriority()).thenReturn(valsByPriority);
+        when(validationConfig.getSeverity(anyString(), any(RuleSeverity.class))).thenReturn(RuleSeverity.ERROR);
+
+        // Engine with fail-fast=false
+        ValidationEngine collectEngine =
+                new ValidationEngine(validationConfig, validationRegistry, new ValidationContext(), false);
+
+        GFF3Feature feature = TestUtils.createGFF3Feature("gene", "parent", new HashMap<>());
+        assertDoesNotThrow(() -> collectEngine.validate(feature, 1));
+
+        // Both tiers ran
+        assertEquals(List.of("VAL_CRITICAL_FAIL", "VAL_NORMAL"), executionLog, "No-fast-fail should run all tiers");
+        // Error was collected
+        assertEquals(1, collectEngine.getCollectedErrors().size());
     }
 }

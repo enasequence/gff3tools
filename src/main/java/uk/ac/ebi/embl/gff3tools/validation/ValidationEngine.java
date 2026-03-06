@@ -49,16 +49,27 @@ public class ValidationEngine {
     }
 
     /**
-     * Executes validations and fixes for the passed GFF3Feature and GFF3Annotation
+     * Executes fixes and validations interleaved by priority tier.
+     * For each tier (CRITICAL → HIGH → NORMAL → LOW), fixes run first, then validations.
+     * In fail-fast mode, an error at a given tier prevents lower-priority tiers from executing.
      */
     public <T> void validate(T target, int line) throws ValidationException {
+        Map<ValidationPriority, List<ValidatorDescriptor>> fixesByPriority = validationRegistry.getFixesByPriority();
+        Map<ValidationPriority, List<ValidatorDescriptor>> validationsByPriority =
+                validationRegistry.getValidationsByPriority();
 
-        executeFixes(target, line);
-        executeValidations(target, line);
+        for (ValidationPriority priority : ValidationPriority.values()) {
+            executeFixes(target, line, fixesByPriority.getOrDefault(priority, List.of()));
+            executeValidations(target, line, validationsByPriority.getOrDefault(priority, List.of()));
+        }
     }
 
     public <T> void executeValidations(T target, int line) throws ValidationException {
-        List<ValidatorDescriptor> validators = validationRegistry.getValidations();
+        executeValidations(target, line, validationRegistry.getValidations());
+    }
+
+    private <T> void executeValidations(T target, int line, List<ValidatorDescriptor> validators)
+            throws ValidationException {
 
         for (ValidatorDescriptor validator : validators) {
 
@@ -93,7 +104,10 @@ public class ValidationEngine {
     }
 
     public <T> void executeFixes(T target, int line) throws ValidationException {
-        List<ValidatorDescriptor> validators = validationRegistry.getFixs();
+        executeFixes(target, line, validationRegistry.getFixs());
+    }
+
+    private <T> void executeFixes(T target, int line, List<ValidatorDescriptor> validators) throws ValidationException {
 
         for (ValidatorDescriptor validator : validators) {
 

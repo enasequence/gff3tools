@@ -16,11 +16,13 @@ public class ValidatorDescriptor {
     Class<?> clazz;
     private final Object instance;
     private final Method method;
+    private final ValidationPriority priority;
 
-    public ValidatorDescriptor(Class<?> clazz, Object instance, Method method) {
+    public ValidatorDescriptor(Class<?> clazz, Object instance, Method method, ValidationPriority priority) {
         this.clazz = clazz;
         this.instance = instance;
         this.method = method;
+        this.priority = priority;
     }
 
     public Class<?> clazz() {
@@ -33,5 +35,9 @@ public class ValidatorDescriptor {
 
     public Method method() {
         return method;
+    }
+
+    public ValidationPriority priority() {
+        return priority;
     }
 }

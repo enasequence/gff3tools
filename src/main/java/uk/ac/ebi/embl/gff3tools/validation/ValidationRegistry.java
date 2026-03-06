@@ -20,6 +20,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Builder;
@@ -33,6 +34,8 @@ public class ValidationRegistry {
     private static final Logger LOG = LoggerFactory.getLogger(ValidationRegistry.class);
 
     private final List<ValidatorDescriptor> cachedValidators;
+    private final Map<ValidationPriority, List<ValidatorDescriptor>> cachedValidationsByPriority;
+    private final Map<ValidationPriority, List<ValidatorDescriptor>> cachedFixesByPriority;
     private final ValidationConfig validationConfig;
     private final ValidationContext context;
 
@@ -97,6 +100,14 @@ public class ValidationRegistry {
 
         this.context = ctx;
         this.cachedValidators = buildDescriptors(cachedValidationList, ctx, config);
+        this.cachedValidationsByPriority = cachedValidators.stream()
+                .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Validation.class))
+                .filter(vd -> vd.method().isAnnotationPresent(ValidationMethod.class))
+                .collect(Collectors.groupingBy(ValidatorDescriptor::priority, Collectors.toUnmodifiableList()));
+        this.cachedFixesByPriority = cachedValidators.stream()
+                .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Fix.class))
+                .filter(vd -> vd.method().isAnnotationPresent(FixMethod.class))
+                .collect(Collectors.groupingBy(ValidatorDescriptor::priority, Collectors.toUnmodifiableList()));
     }
 
     public ValidationContext getContext() {
@@ -126,7 +137,8 @@ public class ValidationRegistry {
                 for (Method method : clazz.getDeclaredMethods()) {
                     if (isMethodAnnotationPresent(method)) {
                         method.setAccessible(true);
-                        descriptors.add(new ValidatorDescriptor(clazz, instance, method));
+                        ValidationPriority priority = extractPriority(method);
+                        descriptors.add(new ValidatorDescriptor(clazz, instance, method, priority));
                     }
                 }
             } catch (Exception e) {
@@ -208,6 +220,20 @@ public class ValidationRegistry {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Returns validations grouped by priority.
+     */
+    public Map<ValidationPriority, List<ValidatorDescriptor>> getValidationsByPriority() {
+        return cachedValidationsByPriority;
+    }
+
+    /**
+     * Returns fixes grouped by priority.
+     */
+    public Map<ValidationPriority, List<ValidatorDescriptor>> getFixesByPriority() {
+        return cachedFixesByPriority;
+    }
+
     public List<ValidatorDescriptor> getExits() {
         return cachedValidators.stream()
                 .filter(vd -> vd.method().isAnnotationPresent(ExitMethod.class))
@@ -262,5 +288,14 @@ public class ValidationRegistry {
         }
 
         return rule;
+    }
+
+    private static ValidationPriority extractPriority(Method method) {
+        if (method.isAnnotationPresent(ValidationMethod.class)) {
+            return method.getAnnotation(ValidationMethod.class).priority();
+        } else if (method.isAnnotationPresent(FixMethod.class)) {
+            return method.getAnnotation(FixMethod.class).priority();
+        }
+        return ValidationPriority.NORMAL;
     }
 }
