@@ -29,12 +29,62 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 public class ValidationRegistry {
     private static final Logger LOG = LoggerFactory.getLogger(ValidationRegistry.class);
+
+    private static final List<ClassInfo> cachedValidationList;
+    private static final List<Class<? extends ContextProvider<?>>> cachedProviderClasses;
+
+    static {
+        LOG.info("Performing one-time classpath scan for validators and context providers");
+
+        try (ScanResult scan =
+                new ClassGraph().enableClassInfo().enableAnnotationInfo().scan()) {
+
+            ClassInfoList validationList = new ClassInfoList();
+            validationList.addAll(scan.getClassesWithAnnotation(Gff3Validation.class.getName())
+                    .filter(ci -> !ci.getName().contains("$") && !ci.isSynthetic()));
+            validationList.addAll(scan.getClassesWithAnnotation(Gff3Fix.class.getName())
+                    .filter(ci -> !ci.getName().contains("$") && !ci.isSynthetic()));
+
+            checkUniqueValidationRules(validationList);
+            cachedValidationList = List.copyOf(validationList);
+        }
+
+        try (ScanResult scan = new ClassGraph().enableClassInfo().scan()) {
+            List<Class<? extends ContextProvider<?>>> providerClasses = new ArrayList<>();
+
+            ClassInfoList providerInfos = scan.getClassesImplementing(ContextProvider.class.getName())
+                    .filter(ci -> !ci.isAbstract()
+                            && !ci.isInterface()
+                            && !ci.getName().contains("$")
+                            && !ci.isSynthetic());
+
+            for (ClassInfo classInfo : providerInfos) {
+                try {
+                    @SuppressWarnings("unchecked")
+                    Class<? extends ContextProvider<?>> clazz =
+                            (Class<? extends ContextProvider<?>>) classInfo.loadClass();
+                    providerClasses.add(clazz);
+                } catch (Exception e) {
+                    LOG.warn("Failed to load context provider class {}: {}", classInfo.getName(), e.getMessage());
+                }
+            }
+
+            cachedProviderClasses = List.copyOf(providerClasses);
+        }
+
+        LOG.info(
+                "Classpath scan complete: {} validator/fix classes, {} context provider classes",
+                cachedValidationList.size(),
+                cachedProviderClasses.size());
+    }
+
     private final List<ValidatorDescriptor> cachedValidators;
     private final ValidationConfig validationConfig;
     private final ValidationContext context;
 
-    private ValidationRegistry(Builder builder, List<ValidatorDescriptor> descriptors, ValidationContext context) {
-        this.validationConfig = builder.config;
+    private ValidationRegistry(
+            ValidationConfig config, List<ValidatorDescriptor> descriptors, ValidationContext context) {
+        this.validationConfig = config;
         this.cachedValidators = descriptors;
         this.context = context;
     }
@@ -43,7 +93,8 @@ public class ValidationRegistry {
         return context;
     }
 
-    private List<ValidatorDescriptor> build(List<ClassInfo> validationList, ValidationContext context) {
+    private static List<ValidatorDescriptor> buildDescriptors(
+            List<ClassInfo> validationList, ValidationContext context, ValidationConfig config) {
         List<ValidatorDescriptor> descriptors = new ArrayList<>();
 
         for (ClassInfo classInfo : validationList) {
@@ -51,18 +102,14 @@ public class ValidationRegistry {
 
             Annotation vmeta = getClassAnnotation(clazz);
             if (vmeta == null) {
-                // no @Gff3Validation or @Gff3Fix
                 continue;
             }
 
-            // Checks validation is enabled
-            boolean enabled = validationConfig.isValidatorEnabled(vmeta);
-            if (!enabled) {
+            if (!config.isValidatorEnabled(vmeta)) {
                 continue;
             }
 
             try {
-                // Instantiate once and inject context immediately
                 Object instance = clazz.getDeclaredConstructor().newInstance();
                 injectContext(instance, context);
 
@@ -82,7 +129,7 @@ public class ValidationRegistry {
         return descriptors;
     }
 
-    private void injectContext(Object instance, ValidationContext context) {
+    private static void injectContext(Object instance, ValidationContext context) {
         Class<?> clazz = instance.getClass();
         while (clazz != null) {
             for (Field field : clazz.getDeclaredFields()) {
@@ -102,36 +149,21 @@ public class ValidationRegistry {
         }
     }
 
-    /**
-     * Discovers all concrete classes implementing ContextProvider via ClassGraph,
-     * instantiates each via no-arg constructor, and returns them.
-     */
-    private List<ContextProvider<?>> discoverProviders() {
+    private static List<ContextProvider<?>> instantiateProviders() {
         List<ContextProvider<?>> providers = new ArrayList<>();
-        try (ScanResult scan = new ClassGraph().enableClassInfo().scan()) {
-
-            ClassInfoList providerClasses = scan.getClassesImplementing(ContextProvider.class.getName())
-                    .filter(ci -> !ci.isAbstract()
-                            && !ci.isInterface()
-                            && !ci.getName().contains("$")
-                            && !ci.isSynthetic());
-
-            for (ClassInfo classInfo : providerClasses) {
-                try {
-                    Class<?> clazz = classInfo.loadClass();
-                    Object instance = clazz.getDeclaredConstructor().newInstance();
-                    providers.add((ContextProvider<?>) instance);
-                    LOG.debug("Discovered context provider: {}", clazz.getName());
-                } catch (Exception e) {
-                    LOG.warn("Failed to instantiate context provider {}: {}", classInfo.getName(), e.getMessage());
-                }
+        for (Class<? extends ContextProvider<?>> clazz : cachedProviderClasses) {
+            try {
+                providers.add(clazz.getDeclaredConstructor().newInstance());
+                LOG.debug("Instantiated context provider: {}", clazz.getName());
+            } catch (Exception e) {
+                LOG.warn("Failed to instantiate context provider {}: {}", clazz.getName(), e.getMessage());
             }
         }
-        LOG.info("Discovered {} context providers", providers.size());
+        LOG.info("Instantiated {} context providers", providers.size());
         return providers;
     }
 
-    private Annotation getClassAnnotation(Class<?> clazz) {
+    private static Annotation getClassAnnotation(Class<?> clazz) {
         for (Class<? extends Annotation> type : List.of(Gff3Validation.class, Gff3Fix.class)) {
             if (clazz.isAnnotationPresent(type)) {
                 return clazz.getAnnotation(type);
@@ -140,28 +172,10 @@ public class ValidationRegistry {
         return null;
     }
 
-    private boolean isMethodAnnotationPresent(Method method) {
+    private static boolean isMethodAnnotationPresent(Method method) {
         return method.isAnnotationPresent(ValidationMethod.class)
                 || method.isAnnotationPresent(FixMethod.class)
                 || method.isAnnotationPresent(ExitMethod.class);
-    }
-
-    private List<ClassInfo> getValidationList() {
-        ClassInfoList validationList = new ClassInfoList();
-        try (ScanResult scan =
-                new ClassGraph().enableClassInfo().enableAnnotationInfo().scan()) {
-
-            //  collect @ValidationClass annotated classes
-            validationList.addAll(scan.getClassesWithAnnotation(Gff3Validation.class.getName())
-                    .filter(ci -> !ci.getName().contains("$") && !ci.isSynthetic()));
-
-            //  collect @FixClass annotated classes
-            validationList.addAll(scan.getClassesWithAnnotation(Gff3Fix.class.getName())
-                    .filter(ci -> !ci.getName().contains("$") && !ci.isSynthetic()));
-
-            checkUniqueValidationRules(validationList);
-            return validationList;
-        }
     }
 
     /**
@@ -190,7 +204,7 @@ public class ValidationRegistry {
                 .collect(Collectors.toList());
     }
 
-    private void checkUniqueValidationRules(ClassInfoList validationList) {
+    private static void checkUniqueValidationRules(ClassInfoList validationList) {
         Set<String> ruleNames = new HashSet<>();
         Set<String> classNames = new HashSet<>();
 
@@ -219,7 +233,7 @@ public class ValidationRegistry {
         }
     }
 
-    private Annotation getMethodAnnotation(Method method) {
+    private static Annotation getMethodAnnotation(Method method) {
         for (Class<? extends Annotation> type : List.of(ValidationMethod.class, FixMethod.class)) {
             if (method.isAnnotationPresent(type)) {
                 return method.getAnnotation(type);
@@ -228,7 +242,7 @@ public class ValidationRegistry {
         return null;
     }
 
-    private String getRule(Annotation method) {
+    private static String getRule(Annotation method) {
 
         String rule = "";
         if (method instanceof ValidationMethod) {
@@ -254,13 +268,10 @@ public class ValidationRegistry {
         }
 
         public ValidationRegistry build() {
-            // Use a temporary registry instance to access the private build() and getValidationList()
-            // methods (static inner class may access private members of enclosing class instances)
-            ValidationRegistry temp = new ValidationRegistry(this, null, null);
-            ValidationContext context = buildContext(temp.discoverProviders());
-            List<ValidatorDescriptor> descriptors = temp.build(temp.getValidationList(), context);
+            ValidationContext context = buildContext(instantiateProviders());
+            List<ValidatorDescriptor> descriptors = buildDescriptors(cachedValidationList, context, config);
 
-            return new ValidationRegistry(this, descriptors, context);
+            return new ValidationRegistry(config, descriptors, context);
         }
 
         @SuppressWarnings("unchecked")

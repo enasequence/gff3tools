@@ -72,13 +72,14 @@ class ValidationRegistryTest {
         // Mock config to return true for both annotation types
         when(validationConfig.isValidatorEnabled(any(Annotation.class))).thenReturn(true);
 
-        // Access private build() via reflection
-        Method buildMethod = ValidationRegistry.class.getDeclaredMethod("build", List.class, ValidationContext.class);
+        // Access private buildDescriptors() via reflection
+        Method buildMethod = ValidationRegistry.class.getDeclaredMethod(
+                "buildDescriptors", List.class, ValidationContext.class, ValidationConfig.class);
         buildMethod.setAccessible(true);
 
         @SuppressWarnings("unchecked")
-        List<ValidatorDescriptor> result =
-                (List<ValidatorDescriptor>) buildMethod.invoke(registry, classInfos, new ValidationContext());
+        List<ValidatorDescriptor> result = (List<ValidatorDescriptor>)
+                buildMethod.invoke(null, classInfos, new ValidationContext(), validationConfig);
 
         // Assertions
         assertEquals(4, result.size(), "Should build validators for both Gff3Validation and Gff3Fix");
@@ -248,7 +249,7 @@ class ValidationRegistryTest {
         privateMethod.setAccessible(true);
 
         // Should NOT throw since rules are unique
-        assertDoesNotThrow(() -> privateMethod.invoke(registry, validationList));
+        assertDoesNotThrow(() -> privateMethod.invoke(null, validationList));
     }
 
     // Utility methods
@@ -274,7 +275,7 @@ class ValidationRegistryTest {
         try {
             Method m = ValidationRegistry.class.getDeclaredMethod("checkUniqueValidationRules", ClassInfoList.class);
             m.setAccessible(true);
-            m.invoke(registry, list);
+            m.invoke(null, list);
         } catch (RuntimeException re) {
             throw re;
         } catch (Exception e) {
@@ -301,7 +302,7 @@ class ValidationRegistryTest {
         Method injectMethod =
                 ValidationRegistry.class.getDeclaredMethod("injectContext", Object.class, ValidationContext.class);
         injectMethod.setAccessible(true);
-        injectMethod.invoke(registry, instance, context);
+        injectMethod.invoke(null, instance, context);
 
         assertSame(context, instance.ctx);
     }
