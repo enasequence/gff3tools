@@ -82,28 +82,21 @@ public class ValidationRegistry {
                 cachedProviderClasses.size());
     }
 
-    private ValidationRegistry(
-            ValidationConfig config, List<ValidatorDescriptor> descriptors, ValidationContext context) {
-        this.validationConfig = config;
-        this.cachedValidators = descriptors;
-        this.context = context;
-    }
-
     @Builder
     @SuppressWarnings("unchecked")
-    private static ValidationRegistry create(
-            ValidationConfig config, @Singular("withProvider") List<ContextProvider<?>> providerOverrides) {
-        ValidationContext context = new ValidationContext();
+    private ValidationRegistry(ValidationConfig config, @Singular List<ContextProvider<?>> providers) {
+        this.validationConfig = config;
 
+        ValidationContext ctx = new ValidationContext();
         for (ContextProvider<?> provider : instantiateProviders()) {
-            context.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
+            ctx.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
         }
-        for (ContextProvider<?> override : providerOverrides) {
-            context.register((Class<Object>) override.type(), (ContextProvider<Object>) override);
+        for (ContextProvider<?> provider : providers) {
+            ctx.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
         }
 
-        List<ValidatorDescriptor> descriptors = buildDescriptors(cachedValidationList, context, config);
-        return new ValidationRegistry(config, descriptors, context);
+        this.context = ctx;
+        this.cachedValidators = buildDescriptors(cachedValidationList, ctx, config);
     }
 
     public ValidationContext getContext() {

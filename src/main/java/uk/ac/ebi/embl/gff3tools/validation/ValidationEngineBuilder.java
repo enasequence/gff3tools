@@ -28,12 +28,10 @@ public class ValidationEngineBuilder {
     }
 
     public ValidationEngine build() {
-        ValidationRegistry.ValidationRegistryBuilder registryBuilder =
-                ValidationRegistry.builder().config(validationConfig);
-        for (ContextProvider<?> override : providerOverrides) {
-            registryBuilder.withProvider(override);
-        }
-        ValidationRegistry registry = registryBuilder.build();
+        ValidationRegistry registry = ValidationRegistry.builder()
+                .config(validationConfig)
+                .providers(providerOverrides)
+                .build();
         return new ValidationEngine(validationConfig, registry, registry.getContext(), failFast);
     }
 
