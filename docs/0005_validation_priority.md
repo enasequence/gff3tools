@@ -1,11 +1,11 @@
 - Feature Name: validation_priority
 - Document Date: 2026-03-02
-- Last Updated: 2026-03-02
+- Last Updated: 2026-03-06
 - Jira Ticket: ENA-6869
 
 # Summary
 
-Add priority-based execution ordering to the ValidationEngine. A `ValidationPriority` enum defines four tiers — `CRITICAL(0)`, `HIGH(10)`, `NORMAL(100)`, `LOW(200)` — that control the order in which fixes and validations execute. For each tier, fixes run first, then validations. In fail-fast mode, an error at a given tier prevents lower-priority tiers from executing.
+Add priority-based execution ordering to the ValidationEngine. A `ValidationPriority` enum defines four tiers — `CRITICAL`, `HIGH`, `NORMAL`, `LOW` — that control the order in which fixes and validations execute. Ordering is determined by enum declaration order (ordinal). For each tier, fixes run first, then validations. In fail-fast mode, an error at a given tier prevents lower-priority tiers from executing.
 
 # Motivation
 
@@ -22,10 +22,11 @@ Priority tiers solve both: critical checks short-circuit early (in fail-fast mod
 
 ```java
 public enum ValidationPriority {
-    CRITICAL(0), HIGH(10), NORMAL(100), LOW(200);
-    // Numeric gaps reserve space for future intermediate levels.
+    CRITICAL, HIGH, NORMAL, LOW;
 }
 ```
+
+Ordering is determined by enum declaration order (ordinal). New intermediate tiers can be added by inserting constants at the desired position.
 
 ## Annotation Changes
 
@@ -37,7 +38,7 @@ Stores priority extracted at registration time to avoid repeated annotation look
 
 ## `ValidationRegistry`
 
-Sorts `cachedValidators` by priority level ascending during `build()`. Provides `getValidationsByPriority()` and `getFixesByPriority()` returning `LinkedHashMap<ValidationPriority, List<ValidatorDescriptor>>`.
+Provides `getValidationsByPriority()` and `getFixesByPriority()` returning `Map<ValidationPriority, List<ValidatorDescriptor>>`. The engine iterates `ValidationPriority.values()` to guarantee tier ordering.
 
 ## `ValidationEngine` — Tiered Execution
 

@@ -68,7 +68,7 @@ public class ValidationEngine {
         executeValidations(target, line, validationRegistry.getValidations());
     }
 
-    public <T> void executeValidations(T target, int line, List<ValidatorDescriptor> validators)
+    private <T> void executeValidations(T target, int line, List<ValidatorDescriptor> validators)
             throws ValidationException {
 
         for (ValidatorDescriptor validator : validators) {
@@ -107,7 +107,7 @@ public class ValidationEngine {
         executeFixes(target, line, validationRegistry.getFixs());
     }
 
-    public <T> void executeFixes(T target, int line, List<ValidatorDescriptor> validators) throws ValidationException {
+    private <T> void executeFixes(T target, int line, List<ValidatorDescriptor> validators) throws ValidationException {
 
         for (ValidatorDescriptor validator : validators) {
 

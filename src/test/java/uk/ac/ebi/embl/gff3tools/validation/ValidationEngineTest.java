@@ -14,7 +14,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.*;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -39,6 +43,7 @@ public class ValidationEngineTest {
     @BeforeEach
     void setup() {
         MockitoAnnotations.openMocks(this);
+        executionLog.clear();
         // Use fail-fast=true to preserve original test behavior (default changed to false)
         engine = new ValidationEngine(validationConfig, validationRegistry, new ValidationContext(), true);
     }
@@ -421,8 +426,6 @@ public class ValidationEngineTest {
     @DisplayName(
             "Validate executes in priority order: CRITICAL fixes → CRITICAL validations → NORMAL fixes → NORMAL validations")
     void testValidate_interleavedPriorityExecution() throws Exception {
-        executionLog.clear();
-
         // Build descriptors at different priorities
         ValidatorDescriptor criticalFix = new ValidatorDescriptor(
                 CriticalFix.class,
@@ -483,8 +486,6 @@ public class ValidationEngineTest {
     @Test
     @DisplayName("Fail-fast mode: error at CRITICAL tier prevents NORMAL tier from executing")
     void testValidate_failFastShortCircuitsAtCurrentTier() throws Exception {
-        executionLog.clear();
-
         ValidatorDescriptor criticalVal = new ValidatorDescriptor(
                 CriticalFailingValidation.class,
                 new CriticalFailingValidation(),
@@ -522,8 +523,6 @@ public class ValidationEngineTest {
     @Test
     @DisplayName("No-fast-fail mode: all tiers execute and errors are collected")
     void testValidate_noFastFailCollectsAllTierErrors() throws Exception {
-        executionLog.clear();
-
         ValidatorDescriptor criticalVal = new ValidatorDescriptor(
                 CriticalFailingValidation.class,
                 new CriticalFailingValidation(),
