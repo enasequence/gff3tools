@@ -16,6 +16,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -84,7 +85,7 @@ public class FileConversionCommand extends AbstractCommand {
                             outputFilePath,
                             StandardCopyOption.REPLACE_EXISTING,
                             StandardCopyOption.ATOMIC_MOVE);
-                } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                } catch (AtomicMoveNotSupportedException e) {
                     // ATOMIC_MOVE fails across filesystems; fall back to a regular move
                     Files.move(tempFile, outputFilePath, StandardCopyOption.REPLACE_EXISTING);
                 }
