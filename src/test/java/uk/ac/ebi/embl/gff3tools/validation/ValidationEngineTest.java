@@ -402,7 +402,7 @@ public class ValidationEngineTest {
     }
 
     @Gff3Validation(name = "CRITICAL_VAL")
-    static class CriticalValidation extends Validation {
+    static class CriticalValidation {
         @ValidationMethod(rule = "VAL_CRITICAL", type = ValidationType.FEATURE, priority = ValidationPriority.CRITICAL)
         public void validate(GFF3Feature f, int line) {
             executionLog.add("VAL_CRITICAL");
@@ -410,7 +410,7 @@ public class ValidationEngineTest {
     }
 
     @Gff3Validation(name = "NORMAL_VAL")
-    static class NormalValidation extends Validation {
+    static class NormalValidation {
         @ValidationMethod(rule = "VAL_NORMAL", type = ValidationType.FEATURE, priority = ValidationPriority.NORMAL)
         public void validate(GFF3Feature f, int line) {
             executionLog.add("VAL_NORMAL");
@@ -469,7 +469,7 @@ public class ValidationEngineTest {
     }
 
     @Gff3Validation(name = "CRITICAL_FAIL_VAL")
-    static class CriticalFailingValidation extends Validation {
+    static class CriticalFailingValidation {
         @ValidationMethod(
                 rule = "VAL_CRITICAL_FAIL",
                 type = ValidationType.FEATURE,
@@ -506,7 +506,8 @@ public class ValidationEngineTest {
         when(validationConfig.getSeverity(anyString(), any(RuleSeverity.class))).thenReturn(RuleSeverity.ERROR);
 
         // Engine with fail-fast=true
-        ValidationEngine failFastEngine = new ValidationEngine(validationConfig, validationRegistry, true);
+        ValidationEngine failFastEngine =
+                new ValidationEngine(validationConfig, validationRegistry, new ValidationContext(), true);
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", "parent", new HashMap<>());
         assertThrows(ValidationException.class, () -> failFastEngine.validate(feature, 1));
@@ -544,7 +545,8 @@ public class ValidationEngineTest {
         when(validationConfig.getSeverity(anyString(), any(RuleSeverity.class))).thenReturn(RuleSeverity.ERROR);
 
         // Engine with fail-fast=false
-        ValidationEngine collectEngine = new ValidationEngine(validationConfig, validationRegistry, false);
+        ValidationEngine collectEngine =
+                new ValidationEngine(validationConfig, validationRegistry, new ValidationContext(), false);
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", "parent", new HashMap<>());
         assertDoesNotThrow(() -> collectEngine.validate(feature, 1));

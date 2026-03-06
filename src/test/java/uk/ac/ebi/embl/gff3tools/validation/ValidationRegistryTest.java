@@ -305,8 +305,8 @@ class ValidationRegistryTest {
         }
 
         PlainFix instance = new PlainFix();
-        ValidatorDescriptor descriptor =
-                new ValidatorDescriptor(PlainFix.class, instance, PlainFix.class.getDeclaredMethod("fix"));
+        ValidatorDescriptor descriptor = new ValidatorDescriptor(
+                PlainFix.class, instance, PlainFix.class.getDeclaredMethod("fix"), ValidationPriority.NORMAL);
         ValidationContext context = new ValidationContext();
 
         Method injectMethod =
