@@ -12,14 +12,12 @@ package uk.ac.ebi.embl.gff3tools.validation;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Connection;
 import java.util.*;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 public class ValidationEngineBuilder {
 
     private final ValidationConfig validationConfig;
-    private Connection connection;
     private boolean failFast = false;
     private final List<ContextProvider<?>> providerOverrides = new ArrayList<>();
 
@@ -68,10 +66,6 @@ public class ValidationEngineBuilder {
     public ValidationEngineBuilder overrideClassRules(Map<String, Boolean> map) {
         this.validationConfig.getValidatorOverrides().putAll(map);
         return this;
-    }
-
-    public void setConnection(Connection connection) {
-        this.connection = connection;
     }
 
     private ValidationConfig getValidationConfig() {

@@ -47,9 +47,7 @@ public class ValidationRegistry {
 
             checkUniqueValidationRules(validationList);
             cachedValidationList = List.copyOf(validationList);
-        }
 
-        try (ScanResult scan = new ClassGraph().enableClassInfo().scan()) {
             List<Class<? extends ContextProvider<?>>> providerClasses = new ArrayList<>();
 
             ClassInfoList providerInfos = scan.getClassesImplementing(ContextProvider.class.getName())
@@ -129,7 +127,7 @@ public class ValidationRegistry {
         return descriptors;
     }
 
-    private static void injectContext(Object instance, ValidationContext context) {
+    public static void injectContext(Object instance, ValidationContext context) {
         Class<?> clazz = instance.getClass();
         while (clazz != null) {
             for (Field field : clazz.getDeclaredFields()) {

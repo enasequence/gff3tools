@@ -29,23 +29,23 @@ public class ValidationEngine {
 
     private final ValidationConfig validationConfig;
     private final ValidationRegistry validationRegistry;
-    private final ValidationContext contextOverride;
+    private final ValidationContext context;
 
     ValidationEngine(
             ValidationConfig validationConfig,
             ValidationRegistry validationRegistry,
-            ValidationContext contextOverride,
+            ValidationContext context,
             boolean failFast) {
         this.parsingWarnings = new java.util.ArrayList<>();
         this.collectedErrors = new java.util.ArrayList<>();
         this.failFast = failFast;
         this.validationConfig = validationConfig;
         this.validationRegistry = validationRegistry;
-        this.contextOverride = contextOverride;
+        this.context = context;
     }
 
     public ValidationContext getContext() {
-        return contextOverride;
+        return context;
     }
 
     /**
