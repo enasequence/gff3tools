@@ -31,7 +31,7 @@ class ValidationRegistryTest {
     void setUp() {
         validationConfig = mock(ValidationConfig.class);
         when(validationConfig.isValidatorEnabled(any(Annotation.class))).thenReturn(true);
-        registry = new ValidationRegistry.Builder(validationConfig).build();
+        registry = ValidationRegistry.builder().config(validationConfig).build();
     }
 
     @Gff3Validation(name = "LENGTH", enabled = true)

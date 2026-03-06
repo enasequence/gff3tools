@@ -22,6 +22,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.Builder;
+import lombok.Singular;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.gff3tools.exception.DuplicateValidationRuleException;
@@ -29,6 +31,10 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 public class ValidationRegistry {
     private static final Logger LOG = LoggerFactory.getLogger(ValidationRegistry.class);
+
+    private final List<ValidatorDescriptor> cachedValidators;
+    private final ValidationConfig validationConfig;
+    private final ValidationContext context;
 
     private static final List<ClassInfo> cachedValidationList;
     private static final List<Class<? extends ContextProvider<?>>> cachedProviderClasses;
@@ -76,15 +82,28 @@ public class ValidationRegistry {
                 cachedProviderClasses.size());
     }
 
-    private final List<ValidatorDescriptor> cachedValidators;
-    private final ValidationConfig validationConfig;
-    private final ValidationContext context;
-
     private ValidationRegistry(
             ValidationConfig config, List<ValidatorDescriptor> descriptors, ValidationContext context) {
         this.validationConfig = config;
         this.cachedValidators = descriptors;
         this.context = context;
+    }
+
+    @Builder
+    @SuppressWarnings("unchecked")
+    private static ValidationRegistry create(
+            ValidationConfig config, @Singular("withProvider") List<ContextProvider<?>> providerOverrides) {
+        ValidationContext context = new ValidationContext();
+
+        for (ContextProvider<?> provider : instantiateProviders()) {
+            context.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
+        }
+        for (ContextProvider<?> override : providerOverrides) {
+            context.register((Class<Object>) override.type(), (ContextProvider<Object>) override);
+        }
+
+        List<ValidatorDescriptor> descriptors = buildDescriptors(cachedValidationList, context, config);
+        return new ValidationRegistry(config, descriptors, context);
     }
 
     public ValidationContext getContext() {
@@ -250,41 +269,5 @@ public class ValidationRegistry {
         }
 
         return rule;
-    }
-
-    public static class Builder {
-        private final ValidationConfig config;
-        private final List<ContextProvider<?>> providerOverrides = new ArrayList<>();
-
-        public Builder(ValidationConfig config) {
-            this.config = config;
-        }
-
-        public Builder withProvider(ContextProvider<?> provider) {
-            providerOverrides.add(provider);
-            return this;
-        }
-
-        public ValidationRegistry build() {
-            ValidationContext context = buildContext(instantiateProviders());
-            List<ValidatorDescriptor> descriptors = buildDescriptors(cachedValidationList, context, config);
-
-            return new ValidationRegistry(config, descriptors, context);
-        }
-
-        @SuppressWarnings("unchecked")
-        private ValidationContext buildContext(List<ContextProvider<?>> discovered) {
-            ValidationContext context = new ValidationContext();
-
-            for (ContextProvider<?> provider : discovered) {
-                context.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
-            }
-
-            for (ContextProvider<?> override : providerOverrides) {
-                context.register((Class<Object>) override.type(), (ContextProvider<Object>) override);
-            }
-
-            return context;
-        }
     }
 }

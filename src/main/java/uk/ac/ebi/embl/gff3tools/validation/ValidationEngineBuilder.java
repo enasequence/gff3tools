@@ -28,7 +28,8 @@ public class ValidationEngineBuilder {
     }
 
     public ValidationEngine build() {
-        ValidationRegistry.Builder registryBuilder = new ValidationRegistry.Builder(validationConfig);
+        ValidationRegistry.ValidationRegistryBuilder registryBuilder =
+                ValidationRegistry.builder().config(validationConfig);
         for (ContextProvider<?> override : providerOverrides) {
             registryBuilder.withProvider(override);
         }
