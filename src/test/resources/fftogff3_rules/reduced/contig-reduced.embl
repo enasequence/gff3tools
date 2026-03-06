@@ -13,6 +13,7 @@ FT                   /product="hypothetical protein"
 FT                   /note="ID:STYATC00000000001"
 FT                   /note="source:GeneMark.hmm3"
 FT                   /protein_id="CAK7552472.1"
+FT                   /exception="RNA editing"
 FT                   /translation="MVIILVHLTTTTASSENDTGYVIIYDRNKRHYDANKRGKSRQHFD
 FT                   NLINSDSDIFETVNCTIITAQIAGTASLPCAIKKFTTGVVSWIRRKDFHLLTVGLATYS
 FT                   SDNRFSVEHIRHLHNWSLQIRNVQNDDCGFYECQISSHPPTSIFVQLKVIEATAEILGV

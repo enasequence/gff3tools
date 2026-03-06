@@ -16,6 +16,7 @@ FT   CDS             complement(join(4172760..4172828,4173013..4173023,
 FT                   4173079..4173084,4173352..4173402,4173720..4173751,
 FT                   4173839..4173921,4174387..4174487,4174573..4174599,
 FT                   4174856..4174883))
+FT                   /exception="RNA editing"
 FT                   /codon_start=1
 FT                   /transl_table=1
 FT                   /locus_tag="FHB240107_LOCUS4240"

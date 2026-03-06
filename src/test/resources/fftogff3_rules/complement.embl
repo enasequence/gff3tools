@@ -10,5 +10,6 @@ FT   source          1..315242
 FT   gene            1..315242
 FT                   /gene="RHD"
 FT   CDS             complement(<4348..4518)
+FT                   /exception="RNA editing"
 XX
 //
