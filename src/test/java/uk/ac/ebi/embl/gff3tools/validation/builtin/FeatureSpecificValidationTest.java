@@ -20,10 +20,7 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
-import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
-import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
 
 public class FeatureSpecificValidationTest {
 
@@ -33,17 +30,11 @@ public class FeatureSpecificValidationTest {
 
     private GFF3Feature feature;
 
-    private ValidationContext context;
-
     @BeforeEach
-    public void setUp() throws Exception {
+    public void setUp() {
         gff3Annotation = new GFF3Annotation();
         attributeSpecificValidation = new FeatureSpecificValidation();
-        context = new ValidationContext();
-        context.register(OntologyClient.class, new OntologyClientProvider());
-        var ctxField = FeatureSpecificValidation.class.getDeclaredField("context");
-        ctxField.setAccessible(true);
-        ctxField.set(attributeSpecificValidation, context);
+        TestUtils.injectContext(attributeSpecificValidation);
     }
 
     @Test
