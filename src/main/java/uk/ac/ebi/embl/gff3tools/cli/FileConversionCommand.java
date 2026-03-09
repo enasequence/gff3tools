@@ -72,7 +72,9 @@ public class FileConversionCommand extends AbstractCommand {
                             writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
                 fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
                 toFileType = validateFileType(toFileType, outputFilePath, "-t");
-                ValidationEngine engine = initValidationEngine(ruleOverrides);
+                // The input file dir is used as the process dir
+                Path processDir = inputFilePath.getParent();
+                ValidationEngine engine = initValidationEngine(ruleOverrides, processDir);
                 Converter converter = getConverter(engine, fromFileType, toFileType);
                 converter.convert(inputReader, outputWriter);
             }

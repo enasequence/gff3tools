@@ -40,7 +40,7 @@ public class ValidationCommand extends AbstractCommand {
         ValidationEngine validationEngine;
 
         try {
-            validationEngine = initValidationEngine(ruleOverrides);
+            validationEngine = initValidationEngine(ruleOverrides, inputFilePath.getParent());
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
