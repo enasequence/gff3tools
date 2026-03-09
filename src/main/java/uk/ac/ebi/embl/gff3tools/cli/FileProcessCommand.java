@@ -19,14 +19,15 @@ import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
-import uk.ac.ebi.embl.gff3tools.validation.fix.AccessionReplacementFix;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AccessionMap;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AccessionProvider;
 
 @CommandLine.Command(name = "process", description = "Performs the file processing of gff3 & fasta files")
 @Slf4j
@@ -57,9 +58,14 @@ public class FileProcessCommand extends AbstractCommand {
             validateAccessions();
 
             Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
-            Map<String, String> accessionMap = buildAccessionMap();
+            AccessionProvider accessionProvider =
+                    isMapMode() ? new AccessionProvider(buildMapModeAccessions()) : new AccessionProvider(accessions);
 
-            ValidationEngine validationEngine = initValidationEngine(ruleOverrides);
+            ValidationEngine validationEngine = new ValidationEngineBuilder()
+                    .overrideMethodRules(ruleOverrides)
+                    .failFast(failFast)
+                    .withProvider(accessionProvider)
+                    .build();
 
             List<GFF3Annotation> annotations = new ArrayList<>();
             GFF3Header header;
@@ -76,23 +82,6 @@ public class FileProcessCommand extends AbstractCommand {
 
             validationEngine.throwIfErrorsCollected();
 
-            // Apply accession replacement as a post-processing step.
-            // The fix is disabled in the engine (enabled=false) to avoid interfering with
-            // the reader's accession-based grouping. It will be engine-driven once
-            // context injection + priority execution features land.
-            AccessionReplacementFix.setAccessionMap(accessionMap);
-            try {
-                AccessionReplacementFix fix = new AccessionReplacementFix();
-                for (GFF3Annotation annotation : annotations) {
-                    fix.replaceSequenceRegion(annotation, 0);
-                    for (GFF3Feature feature : annotation.getFeatures()) {
-                        fix.replaceFeatureAccession(feature, 0);
-                    }
-                }
-            } finally {
-                AccessionReplacementFix.clearAccessionMap();
-            }
-
             try (BufferedWriter writer = Files.newBufferedWriter(outputFilePath)) {
                 GFF3File gff3File = GFF3File.builder()
                         .header(header)
@@ -102,7 +91,9 @@ public class FileProcessCommand extends AbstractCommand {
                         .build();
                 gff3File.writeGFF3String(writer);
 
-                writeFastaWithReplacedAccessions(writer, accessionMap);
+                writeFastaWithReplacedAccessions(
+                        writer,
+                        validationEngine.getContext().get(AccessionMap.class).getMap());
             }
 
             log.info("Processed {} annotations, output written to {}", annotations.size(), outputFilePath);
@@ -110,16 +101,6 @@ public class FileProcessCommand extends AbstractCommand {
             throw new RuntimeException(e);
         } catch (Exception e) {
             throw new RuntimeException("Unexpected error", e);
-        }
-    }
-
-    Map<String, String> buildAccessionMap() throws CLIException {
-        boolean isMapMode = isMapMode();
-
-        if (isMapMode) {
-            return buildMapModeAccessions();
-        } else {
-            return buildListModeAccessions();
         }
     }
 
@@ -138,46 +119,6 @@ public class FileProcessCommand extends AbstractCommand {
             map.put(parts[0], parts[1]);
         }
         return map;
-    }
-
-    private Map<String, String> buildListModeAccessions() throws CLIException {
-        // In list mode, we need to read the GFF3 to discover annotation accessions in order,
-        // then map them positionally to the provided accession list.
-        List<String> annotationAccessions = collectAnnotationAccessions();
-
-        if (annotationAccessions.size() != accessions.size()) {
-            throw new CLIException("Accession count mismatch: %d accessions provided but %d annotations found in GFF3"
-                    .formatted(accessions.size(), annotationAccessions.size()));
-        }
-
-        Map<String, String> map = new LinkedHashMap<>();
-        for (int i = 0; i < annotationAccessions.size(); i++) {
-            map.put(annotationAccessions.get(i), accessions.get(i));
-        }
-        return map;
-    }
-
-    private List<String> collectAnnotationAccessions() throws CLIException {
-        try {
-            // First pass: read annotations to discover accessions in order.
-            // Use a no-op validation engine (all fixes disabled) for this pass.
-            ValidationEngine noOpEngine = initValidationEngine(getRuleOverrides());
-            List<String> accessionOrder = new ArrayList<>();
-            Set<String> seen = new LinkedHashSet<>();
-
-            try (GFF3FileReader reader = new GFF3FileReader(noOpEngine, gff3InputFile)) {
-                reader.readHeader();
-                reader.read(annotation -> {
-                    String accession = annotation.getAccession();
-                    if (seen.add(accession)) {
-                        accessionOrder.add(accession);
-                    }
-                });
-            }
-            return accessionOrder;
-        } catch (Exception e) {
-            throw new CLIException("Failed to read GFF3 for accession discovery: " + e.getMessage());
-        }
     }
 
     private void writeFastaWithReplacedAccessions(Writer writer, Map<String, String> accessionMap) throws IOException {

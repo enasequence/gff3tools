@@ -47,6 +47,9 @@ public class GFF3FileReader implements AutoCloseable {
     public GFF3Species gff3Species;
     private final Set<String> processedAccessions;
 
+    /** The original (pre-validation) accession of the last feature returned by {@link #readFeature}. */
+    private String lastParsedFeatureAccession;
+
     private Map<String, OffsetRange> translationMap;
     private final GFF3TranslationReader translationReader;
 
@@ -95,10 +98,10 @@ public class GFF3FileReader implements AutoCloseable {
                 }
                 continue;
             } else if ((feature = readFeature(line)) != null) {
-                if (!feature.accession().equals(currentAccession)) {
+                if (!Objects.equals(lastParsedFeatureAccession, currentAccession)) {
                     // In case of different accession create a new GFF3Annotation and return the
                     // previous one.
-                    currentAccession = feature.accession();
+                    currentAccession = lastParsedFeatureAccession;
                     GFF3Annotation previousAnnotation = currentAnnotation;
                     currentAnnotation = new GFF3Annotation();
                     currentAnnotation.addFeature(feature);
@@ -248,6 +251,7 @@ public class GFF3FileReader implements AutoCloseable {
                     id, parentId, accessionId, accessionVersion, source, name, start, end, score, strand, phase);
             feature.addAttributes(attributesMap);
 
+            lastParsedFeatureAccession = feature.accession();
             validationEngine.validate(feature, lineCount);
             return feature;
         } else {

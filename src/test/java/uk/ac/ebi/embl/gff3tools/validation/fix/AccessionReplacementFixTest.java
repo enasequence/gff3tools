@@ -13,12 +13,14 @@ package uk.ac.ebi.embl.gff3tools.validation.fix;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.*;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationRegistry;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AccessionProvider;
 
 public class AccessionReplacementFixTest {
 
@@ -29,16 +31,22 @@ public class AccessionReplacementFixTest {
         fix = new AccessionReplacementFix();
     }
 
-    @AfterEach
-    public void tearDown() {
-        AccessionReplacementFix.clearAccessionMap();
+    private void injectAccessionMap(Map<String, String> map) {
+        ValidationContext context = new ValidationContext();
+        context.register(uk.ac.ebi.embl.gff3tools.validation.provider.AccessionMap.class, new AccessionProvider(map));
+        ValidationRegistry.injectContext(fix, context);
+    }
+
+    private void injectEmptyContext() {
+        ValidationContext context = new ValidationContext();
+        ValidationRegistry.injectContext(fix, context);
     }
 
     // -- Feature-level tests --
 
     @Test
     public void testFeatureReplacementWithVersion() {
-        AccessionReplacementFix.setAccessionMap(Map.of("seq1.1", "CB0001.1"));
+        injectAccessionMap(Map.of("seq1.1", "CB0001.1"));
 
         GFF3Feature feature = createFeature("seq1", Optional.of(1));
         fix.replaceFeatureAccession(feature, 1);
@@ -49,7 +57,7 @@ public class AccessionReplacementFixTest {
 
     @Test
     public void testFeatureReplacementWithoutVersion() {
-        AccessionReplacementFix.setAccessionMap(Map.of("seq1", "CB0001"));
+        injectAccessionMap(Map.of("seq1", "CB0001"));
 
         GFF3Feature feature = createFeature("seq1", Optional.empty());
         fix.replaceFeatureAccession(feature, 1);
@@ -60,7 +68,7 @@ public class AccessionReplacementFixTest {
 
     @Test
     public void testFeatureReplacementAddsVersion() {
-        AccessionReplacementFix.setAccessionMap(Map.of("seq1", "CB0001.2"));
+        injectAccessionMap(Map.of("seq1", "CB0001.2"));
 
         GFF3Feature feature = createFeature("seq1", Optional.empty());
         fix.replaceFeatureAccession(feature, 1);
@@ -71,7 +79,9 @@ public class AccessionReplacementFixTest {
 
     @Test
     public void testFeatureNoOpWhenNoMap() {
-        // accessionMap is null (not set)
+        // No AccessionMap provider registered — expect no-op
+        injectEmptyContext();
+
         GFF3Feature feature = createFeature("seq1", Optional.of(1));
         fix.replaceFeatureAccession(feature, 1);
 
@@ -81,7 +91,7 @@ public class AccessionReplacementFixTest {
 
     @Test
     public void testFeatureNoOpWhenAccessionNotInMap() {
-        AccessionReplacementFix.setAccessionMap(Map.of("other.1", "CB0001.1"));
+        injectAccessionMap(Map.of("other.1", "CB0001.1"));
 
         GFF3Feature feature = createFeature("seq1", Optional.of(1));
         fix.replaceFeatureAccession(feature, 1);
@@ -92,7 +102,7 @@ public class AccessionReplacementFixTest {
 
     @Test
     public void testFeatureAttributesPreservedAfterReplacement() {
-        AccessionReplacementFix.setAccessionMap(Map.of("seq1.1", "CB0001.1"));
+        injectAccessionMap(Map.of("seq1.1", "CB0001.1"));
 
         GFF3Feature feature = createFeature("seq1", Optional.of(1));
         feature.addAttribute("locus_tag", "GENE001");
@@ -109,7 +119,7 @@ public class AccessionReplacementFixTest {
 
     @Test
     public void testAnnotationSequenceRegionReplacement() {
-        AccessionReplacementFix.setAccessionMap(Map.of("seq1.1", "CB0001.1"));
+        injectAccessionMap(Map.of("seq1.1", "CB0001.1"));
 
         GFF3Annotation annotation = new GFF3Annotation();
         annotation.setSequenceRegion(new GFF3SequenceRegion("seq1", Optional.of(1), 1, 1000));
@@ -125,6 +135,8 @@ public class AccessionReplacementFixTest {
 
     @Test
     public void testAnnotationNoOpWhenNoMap() {
+        injectEmptyContext();
+
         GFF3Annotation annotation = new GFF3Annotation();
         annotation.setSequenceRegion(new GFF3SequenceRegion("seq1", Optional.of(1), 1, 1000));
 
@@ -135,7 +147,7 @@ public class AccessionReplacementFixTest {
 
     @Test
     public void testAnnotationNoOpWhenNoSequenceRegion() {
-        AccessionReplacementFix.setAccessionMap(Map.of("seq1.1", "CB0001.1"));
+        injectAccessionMap(Map.of("seq1.1", "CB0001.1"));
 
         GFF3Annotation annotation = new GFF3Annotation();
         // No sequence region set
@@ -146,7 +158,7 @@ public class AccessionReplacementFixTest {
 
     @Test
     public void testAnnotationNoOpWhenAccessionNotInMap() {
-        AccessionReplacementFix.setAccessionMap(Map.of("other.1", "CB0001.1"));
+        injectAccessionMap(Map.of("other.1", "CB0001.1"));
 
         GFF3Annotation annotation = new GFF3Annotation();
         annotation.setSequenceRegion(new GFF3SequenceRegion("seq1", Optional.of(1), 1, 1000));
@@ -158,7 +170,7 @@ public class AccessionReplacementFixTest {
 
     @Test
     public void testAnnotationStartEndPreserved() {
-        AccessionReplacementFix.setAccessionMap(Map.of("seq1.1", "CB0001.1"));
+        injectAccessionMap(Map.of("seq1.1", "CB0001.1"));
 
         GFF3Annotation annotation = new GFF3Annotation();
         annotation.setSequenceRegion(new GFF3SequenceRegion("seq1", Optional.of(1), 42, 9999));

@@ -13,56 +13,55 @@ package uk.ac.ebi.embl.gff3tools.validation.fix;
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION;
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 
-import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
+import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AccessionMap;
 
 @Slf4j
 @Gff3Fix(
         name = "ACCESSION_REPLACEMENT",
         description =
-                "Replaces sequence IDs with ENA-assigned accessions. Context-gated: no-op when no accession map is set.")
+                "Replaces sequence IDs with ENA-assigned accessions. Context-gated: no-op when no AccessionMap provider is registered.")
 public class AccessionReplacementFix {
 
-    private static Map<String, String> accessionMap;
-
-    public static void setAccessionMap(Map<String, String> map) {
-        accessionMap = map;
-    }
-
-    public static void clearAccessionMap() {
-        accessionMap = null;
-    }
+    @InjectContext
+    private ValidationContext context;
 
     @FixMethod(
             rule = "ACCESSION_REPLACEMENT_FEATURE",
             description = "Replaces seqId and seqIdVersion on each feature with the mapped accession",
             type = FEATURE,
-            enabled = false)
+            priority = ValidationPriority.CRITICAL)
     public void replaceFeatureAccession(GFF3Feature feature, int line) {
+        AccessionMap accessionMap = resolveAccessionMap();
         if (accessionMap == null) return;
 
-        String newAccession = accessionMap.get(feature.accession());
+        String oldAccession = feature.accession();
+        String newAccession = accessionMap.get(oldAccession);
         if (newAccession == null) return;
 
         String[] parsed = parseAccession(newAccession);
         feature.setSeqId(parsed[0]);
         feature.setSeqIdVersion(parseVersion(parsed[1]));
 
-        log.debug("Replaced feature accession {} -> {} at line {}", feature.accession(), newAccession, line);
+        log.debug("Replaced feature accession {} -> {} at line {}", oldAccession, newAccession, line);
     }
 
     @FixMethod(
             rule = "ACCESSION_REPLACEMENT_ANNOTATION",
             description = "Replaces the accession in the sequence-region directive",
             type = ANNOTATION,
-            enabled = false)
+            priority = ValidationPriority.CRITICAL)
     public void replaceSequenceRegion(GFF3Annotation annotation, int line) {
+        AccessionMap accessionMap = resolveAccessionMap();
         if (accessionMap == null) return;
 
         GFF3SequenceRegion sr = annotation.getSequenceRegion();
@@ -94,5 +93,13 @@ public class AccessionReplacementFix {
     private static Optional<Integer> parseVersion(String version) {
         if (version == null) return Optional.empty();
         return Optional.of(Integer.parseInt(version));
+    }
+
+    private AccessionMap resolveAccessionMap() {
+        try {
+            return context.get(AccessionMap.class);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }
