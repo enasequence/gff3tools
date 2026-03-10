@@ -17,11 +17,7 @@ import io.github.classgraph.ScanResult;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Singular;
@@ -39,67 +35,101 @@ public class ValidationRegistry {
     private final ValidationConfig validationConfig;
     private final ValidationContext context;
 
-    private static final List<ClassInfo> cachedValidationList;
-    private static final List<Class<? extends ContextProvider<?>>> cachedProviderClasses;
+    private static class ScanHolder {
+        static final List<ClassInfo> validationList;
+        static final List<Class<? extends ContextProvider<?>>> providerClasses;
 
-    static {
-        LOG.info("Performing one-time classpath scan for validators and context providers");
+        static {
+            LOG.info("Performing one-time classpath scan for validators and context providers");
 
-        try (ScanResult scan =
-                new ClassGraph().enableClassInfo().enableAnnotationInfo().scan()) {
+            try (ScanResult scan =
+                    new ClassGraph().enableClassInfo().enableAnnotationInfo().scan()) {
 
-            ClassInfoList validationList = new ClassInfoList();
-            validationList.addAll(scan.getClassesWithAnnotation(Gff3Validation.class.getName())
-                    .filter(ci -> !ci.getName().contains("$") && !ci.isSynthetic()));
-            validationList.addAll(scan.getClassesWithAnnotation(Gff3Fix.class.getName())
-                    .filter(ci -> !ci.getName().contains("$") && !ci.isSynthetic()));
+                ClassInfoList validationInfoList = new ClassInfoList();
+                validationInfoList.addAll(scan.getClassesWithAnnotation(Gff3Validation.class.getName())
+                        .filter(ci -> !ci.getName().contains("$") && !ci.isSynthetic()));
+                validationInfoList.addAll(scan.getClassesWithAnnotation(Gff3Fix.class.getName())
+                        .filter(ci -> !ci.getName().contains("$") && !ci.isSynthetic()));
 
-            checkUniqueValidationRules(validationList);
-            cachedValidationList = List.copyOf(validationList);
+                checkUniqueValidationRules(validationInfoList);
+                validationList = List.copyOf(validationInfoList);
 
-            List<Class<? extends ContextProvider<?>>> providerClasses = new ArrayList<>();
+                List<Class<? extends ContextProvider<?>>> providerClassesList = new ArrayList<>();
 
-            ClassInfoList providerInfos = scan.getClassesImplementing(ContextProvider.class.getName())
-                    .filter(ci -> !ci.isAbstract()
-                            && !ci.isInterface()
-                            && !ci.getName().contains("$")
-                            && !ci.isSynthetic());
+                ClassInfoList providerInfos = scan.getClassesImplementing(ContextProvider.class.getName())
+                        .filter(ci -> !ci.isAbstract()
+                                && !ci.isInterface()
+                                && !ci.getName().contains("$")
+                                && !ci.isSynthetic());
 
-            for (ClassInfo classInfo : providerInfos) {
-                try {
-                    @SuppressWarnings("unchecked")
-                    Class<? extends ContextProvider<?>> clazz =
-                            (Class<? extends ContextProvider<?>>) classInfo.loadClass();
-                    providerClasses.add(clazz);
-                } catch (Exception e) {
-                    LOG.warn("Failed to load context provider class {}: {}", classInfo.getName(), e.getMessage());
+                for (ClassInfo classInfo : providerInfos) {
+                    try {
+                        @SuppressWarnings("unchecked")
+                        Class<? extends ContextProvider<?>> clazz =
+                                (Class<? extends ContextProvider<?>>) classInfo.loadClass();
+                        providerClassesList.add(clazz);
+                    } catch (Exception e) {
+                        LOG.warn("Failed to load context provider class {}: {}", classInfo.getName(), e.getMessage());
+                    }
                 }
+
+                providerClasses = List.copyOf(providerClassesList);
             }
 
-            cachedProviderClasses = List.copyOf(providerClasses);
+            LOG.info(
+                    "Classpath scan complete: {} validator/fix classes, {} context provider classes",
+                    validationList.size(),
+                    providerClasses.size());
         }
-
-        LOG.info(
-                "Classpath scan complete: {} validator/fix classes, {} context provider classes",
-                cachedValidationList.size(),
-                cachedProviderClasses.size());
     }
 
     @Builder
     @SuppressWarnings("unchecked")
-    private ValidationRegistry(ValidationConfig config, @Singular List<ContextProvider<?>> providers) {
+    private ValidationRegistry(
+            ValidationConfig config,
+            @Singular List<ContextProvider<?>> providers,
+            boolean classpathScanningEnabled,
+            @Singular("fix") List<Object> fixes,
+            @Singular("validator") List<Object> validators) {
         this.validationConfig = config;
 
         ValidationContext ctx = new ValidationContext();
-        for (ContextProvider<?> provider : instantiateProviders()) {
-            ctx.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
+
+        if (classpathScanningEnabled) {
+            for (ContextProvider<?> provider : instantiateProviders()) {
+                ctx.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
+            }
         }
+
         for (ContextProvider<?> provider : providers) {
             ctx.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
         }
 
         this.context = ctx;
-        this.cachedValidators = buildDescriptors(cachedValidationList, ctx, config);
+
+        // Build scanned descriptors
+        List<ValidatorDescriptor> scannedDescriptors;
+        if (classpathScanningEnabled) {
+            scannedDescriptors = buildDescriptors(ScanHolder.validationList, ctx, config);
+        } else {
+            scannedDescriptors = new ArrayList<>();
+        }
+
+        // Build explicit descriptors
+        List<Object> allExplicitInstances = new ArrayList<>();
+        if (fixes != null) {
+            allExplicitInstances.addAll(fixes);
+        }
+        if (validators != null) {
+            allExplicitInstances.addAll(validators);
+        }
+        List<ValidatorDescriptor> explicitDescriptors =
+                buildDescriptorsFromInstances(allExplicitInstances, ctx, config);
+
+        // Merge: explicit wins on name collision
+        List<ValidatorDescriptor> merged = mergeDescriptors(scannedDescriptors, explicitDescriptors);
+
+        this.cachedValidators = merged;
         this.cachedValidationsByPriority = cachedValidators.stream()
                 .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Validation.class))
                 .filter(vd -> vd.method().isAnnotationPresent(ValidationMethod.class))
@@ -108,6 +138,13 @@ public class ValidationRegistry {
                 .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Fix.class))
                 .filter(vd -> vd.method().isAnnotationPresent(FixMethod.class))
                 .collect(Collectors.groupingBy(ValidatorDescriptor::priority, Collectors.toUnmodifiableList()));
+    }
+
+    /**
+     * Returns a builder with classpath scanning enabled by default.
+     */
+    public static ValidationRegistryBuilder builder() {
+        return new ValidationRegistryBuilder().classpathScanningEnabled(true);
     }
 
     public ValidationContext getContext() {
@@ -151,6 +188,85 @@ public class ValidationRegistry {
         return descriptors;
     }
 
+    private static List<ValidatorDescriptor> buildDescriptorsFromInstances(
+            List<Object> instances, ValidationContext context, ValidationConfig config) {
+        List<ValidatorDescriptor> descriptors = new ArrayList<>();
+        Set<String> seenNames = new HashSet<>();
+
+        for (Object instance : instances) {
+            Class<?> clazz = instance.getClass();
+
+            Annotation vmeta = getClassAnnotation(clazz);
+            if (vmeta == null) {
+                throw new IllegalArgumentException(
+                        "Explicit instance " + clazz.getName() + " must be annotated with @Gff3Fix or @Gff3Validation");
+            }
+
+            // Check for duplicate explicit names
+            String name = getAnnotationName(vmeta);
+            if (!name.isEmpty() && !seenNames.add(name)) {
+                throw new DuplicateValidationRuleException(
+                        "Duplicate explicit validation rule name: " + name + " in class " + clazz.getName());
+            }
+
+            if (!config.isValidatorEnabled(vmeta)) {
+                continue;
+            }
+
+            injectContext(instance, context);
+
+            for (Method method : clazz.getDeclaredMethods()) {
+                if (isMethodAnnotationPresent(method)) {
+                    method.setAccessible(true);
+                    ValidationPriority priority = extractPriority(method);
+                    descriptors.add(new ValidatorDescriptor(clazz, instance, method, priority));
+                }
+            }
+        }
+
+        LOG.info("Built {} explicit validator methods", descriptors.size());
+        return descriptors;
+    }
+
+    private static String getAnnotationName(Annotation annotation) {
+        if (annotation instanceof Gff3Fix) {
+            return ((Gff3Fix) annotation).name();
+        } else if (annotation instanceof Gff3Validation) {
+            return ((Gff3Validation) annotation).name();
+        }
+        return "";
+    }
+
+    private static List<ValidatorDescriptor> mergeDescriptors(
+            List<ValidatorDescriptor> scanned, List<ValidatorDescriptor> explicit) {
+        if (explicit.isEmpty()) {
+            return scanned;
+        }
+        if (scanned.isEmpty()) {
+            return explicit;
+        }
+
+        // Collect the annotation names from explicit descriptors
+        Set<String> explicitNames = new HashSet<>();
+        for (ValidatorDescriptor vd : explicit) {
+            String name = getAnnotationName(getClassAnnotation(vd.clazz()));
+            if (!name.isEmpty()) {
+                explicitNames.add(name);
+            }
+        }
+
+        // Filter out scanned descriptors whose name collides with an explicit one
+        List<ValidatorDescriptor> merged = new ArrayList<>();
+        for (ValidatorDescriptor vd : scanned) {
+            String name = getAnnotationName(getClassAnnotation(vd.clazz()));
+            if (name.isEmpty() || !explicitNames.contains(name)) {
+                merged.add(vd);
+            }
+        }
+        merged.addAll(explicit);
+        return merged;
+    }
+
     public static void injectContext(Object instance, ValidationContext context) {
         Class<?> clazz = instance.getClass();
         while (clazz != null) {
@@ -173,7 +289,7 @@ public class ValidationRegistry {
 
     private static List<ContextProvider<?>> instantiateProviders() {
         List<ContextProvider<?>> providers = new ArrayList<>();
-        for (Class<? extends ContextProvider<?>> clazz : cachedProviderClasses) {
+        for (Class<? extends ContextProvider<?>> clazz : ScanHolder.providerClasses) {
             try {
                 providers.add(clazz.getDeclaredConstructor().newInstance());
                 LOG.debug("Instantiated context provider: {}", clazz.getName());

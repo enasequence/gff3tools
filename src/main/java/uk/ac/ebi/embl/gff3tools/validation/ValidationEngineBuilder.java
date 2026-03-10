@@ -20,10 +20,13 @@ public class ValidationEngineBuilder {
     private final ValidationConfig validationConfig;
     private boolean failFast = false;
     private final List<ContextProvider<?>> providerOverrides = new ArrayList<>();
+    private boolean classpathScanningEnabled = true;
+    private final List<Object> fixOverrides = new ArrayList<>();
+    private final List<Object> validatorOverrides = new ArrayList<>();
 
     public ValidationEngineBuilder() {
 
-        // Loads default severity rules and validatorOverrides
+        // Loads default severity rules from properties
         validationConfig = getValidationConfig();
     }
 
@@ -31,6 +34,9 @@ public class ValidationEngineBuilder {
         ValidationRegistry registry = ValidationRegistry.builder()
                 .config(validationConfig)
                 .providers(providerOverrides)
+                .classpathScanningEnabled(classpathScanningEnabled)
+                .fixes(fixOverrides)
+                .validators(validatorOverrides)
                 .build();
         return new ValidationEngine(validationConfig, registry, registry.getContext(), failFast);
     }
@@ -43,7 +49,45 @@ public class ValidationEngineBuilder {
      * @return this builder for chaining
      */
     public ValidationEngineBuilder withProvider(ContextProvider<?> provider) {
+        Objects.requireNonNull(provider, "provider must not be null");
         providerOverrides.add(provider);
+        return this;
+    }
+
+    /**
+     * Disable classpath scanning. When disabled, only explicitly registered
+     * fixes, validators, and providers participate in the engine.
+     *
+     * @return this builder for chaining
+     */
+    public ValidationEngineBuilder disableClasspathScanning() {
+        this.classpathScanningEnabled = false;
+        return this;
+    }
+
+    /**
+     * Register an explicit fix instance. The instance must be annotated with
+     * {@code @Gff3Fix} and contain methods annotated with {@code @FixMethod}.
+     *
+     * @param instance the fix instance to register
+     * @return this builder for chaining
+     */
+    public ValidationEngineBuilder withFix(Object instance) {
+        Objects.requireNonNull(instance, "fix instance must not be null");
+        fixOverrides.add(instance);
+        return this;
+    }
+
+    /**
+     * Register an explicit validator instance. The instance must be annotated with
+     * {@code @Gff3Validation} and contain methods annotated with {@code @ValidationMethod}.
+     *
+     * @param instance the validator instance to register
+     * @return this builder for chaining
+     */
+    public ValidationEngineBuilder withValidator(Object instance) {
+        Objects.requireNonNull(instance, "validator instance must not be null");
+        validatorOverrides.add(instance);
         return this;
     }
 
