@@ -47,7 +47,7 @@ public class GFF3FileReader implements AutoCloseable {
     public GFF3Species gff3Species;
     private final Set<String> processedAccessions;
 
-    /** The original (pre-validation) accession of the last feature returned by {@link #readFeature}. */
+    /** The original submitted accession of the last feature returned by {@link #readFeature}. */
     private String lastParsedFeatureAccession;
 
     private Map<String, OffsetRange> translationMap;

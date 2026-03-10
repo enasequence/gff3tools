@@ -14,7 +14,6 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.zip.GZIPInputStream;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.CLIException;
@@ -26,10 +25,9 @@ import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
-import uk.ac.ebi.embl.gff3tools.validation.provider.AccessionMap;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AccessionProvider;
 
-@CommandLine.Command(name = "process", description = "Performs the file processing of gff3 & fasta files")
+@CommandLine.Command(name = "process", description = "Performs the file processing of gff3 files")
 @Slf4j
 public class FileProcessCommand extends AbstractCommand {
 
@@ -43,9 +41,6 @@ public class FileProcessCommand extends AbstractCommand {
     @CommandLine.Option(names = "-gff3", description = "Gff3 input file", required = true)
     private Path gff3InputFile;
 
-    @CommandLine.Option(names = "-fasta", description = "Fasta input file", required = true)
-    private Path fastaInputFile;
-
     @CommandLine.Option(names = "-o", description = "Processed output file", required = true)
     private Path outputFilePath;
 
@@ -53,7 +48,6 @@ public class FileProcessCommand extends AbstractCommand {
     public void run() {
         try {
             validateFile(gff3InputFile, ConversionFileFormat.gff3.name());
-            validateFile(fastaInputFile, ConversionFileFormat.fasta.name());
             validateOutputFile(outputFilePath);
             validateAccessions();
 
@@ -90,10 +84,6 @@ public class FileProcessCommand extends AbstractCommand {
                         .parsingWarnings(validationEngine.getParsingWarnings())
                         .build();
                 gff3File.writeGFF3String(writer);
-
-                writeFastaWithReplacedAccessions(
-                        writer,
-                        validationEngine.getContext().get(AccessionMap.class).getMap());
             }
 
             log.info("Processed {} annotations, output written to {}", annotations.size(), outputFilePath);
@@ -119,47 +109,6 @@ public class FileProcessCommand extends AbstractCommand {
             map.put(parts[0], parts[1]);
         }
         return map;
-    }
-
-    private void writeFastaWithReplacedAccessions(Writer writer, Map<String, String> accessionMap) throws IOException {
-        if (!Files.exists(fastaInputFile) || Files.size(fastaInputFile) == 0) {
-            return;
-        }
-
-        writer.write("##FASTA\n");
-
-        try (BufferedReader br = openFastaReader(fastaInputFile)) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                if (line.startsWith(">")) {
-                    line = replaceHeaderAccession(line, accessionMap);
-                }
-                writer.write(line);
-                writer.write("\n");
-            }
-        }
-    }
-
-    private static BufferedReader openFastaReader(Path fastaPath) throws IOException {
-        if (fastaPath.toString().endsWith(".gz")) {
-            return new BufferedReader(new InputStreamReader(new GZIPInputStream(Files.newInputStream(fastaPath))));
-        }
-        return Files.newBufferedReader(fastaPath);
-    }
-
-    static String replaceHeaderAccession(String headerLine, Map<String, String> accessionMap) {
-        // Header format: >accession or >accession|featureId or >accession rest
-        String content = headerLine.substring(1); // strip '>'
-
-        for (Map.Entry<String, String> entry : accessionMap.entrySet()) {
-            String oldAccession = entry.getKey();
-            if (content.equals(oldAccession)
-                    || content.startsWith(oldAccession + "|")
-                    || content.startsWith(oldAccession + " ")) {
-                return ">" + entry.getValue() + content.substring(oldAccession.length());
-            }
-        }
-        return headerLine;
     }
 
     protected void validateFile(Path filePath, String fileExtension) throws CLIException {
