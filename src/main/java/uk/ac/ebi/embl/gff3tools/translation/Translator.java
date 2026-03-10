@@ -14,7 +14,6 @@ import java.util.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.translation.except.CodonExceptAttribute;
@@ -31,7 +30,6 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
  */
 @Getter
 @Setter(AccessLevel.PROTECTED)
-@Slf4j
 public class Translator {
 
     public static final Integer DEFAULT_TRANSLATION_TABLE = 11;
@@ -239,10 +237,7 @@ public class Translator {
             return translationResult;
         }
 
-        // Upper case sequence
-        for (int i = 0; i < sequence.length; i++) {
-            sequence[i] = (byte) Character.toUpperCase(sequence[i]);
-        }
+        sequence = toUpperCase(sequence);
 
         if (isComplement) {
             sequence = reverseComplement(sequence);
@@ -714,6 +709,14 @@ public class Translator {
         COMPLEMENT['H'] = 'D';
         COMPLEMENT['V'] = 'B';
         COMPLEMENT['N'] = 'N';
+    }
+
+    private static byte[] toUpperCase(byte[] seq) {
+        byte[] result = new byte[seq.length];
+        for (int i = 0; i < seq.length; i++) {
+            result[i] = (byte) Character.toUpperCase(seq[i]);
+        }
+        return result;
     }
 
     public static byte[] reverseComplement(byte[] seq) {
