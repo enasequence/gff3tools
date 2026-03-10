@@ -18,6 +18,8 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.*;
+
+import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
@@ -28,6 +30,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationProvider;
 
+@Slf4j
 public abstract class AbstractCommand implements Runnable {
 
     @CommandLine.Option(
@@ -66,6 +69,7 @@ public abstract class AbstractCommand implements Runnable {
             throw new RuntimeException(String.format("The directory {%s} is not writable.", processDir.toString()));
         }
 
+        log.info("Running with process directory: {}", processDir);
         return new ValidationEngineBuilder()
                 .overrideMethodRules(ruleOverrides)
                 .failFast(failFast)
