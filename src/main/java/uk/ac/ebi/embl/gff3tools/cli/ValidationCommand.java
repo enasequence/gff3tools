@@ -43,6 +43,7 @@ public class ValidationCommand extends AbstractCommand {
         ValidationEngine validationEngine;
 
         try {
+            // The input file dir is used as the process dir, defaulting to the current dir if not set
             Path processDir = Optional.ofNullable(inputFilePath.getParent()).orElse(Path.of("."));
             validationEngine = initValidationEngine(ruleOverrides, processDir);
         } catch (Exception e) {
