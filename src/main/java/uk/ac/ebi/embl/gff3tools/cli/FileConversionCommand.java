@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.cli;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import java.io.*;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
