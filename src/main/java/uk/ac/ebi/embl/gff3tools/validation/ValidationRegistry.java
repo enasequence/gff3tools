@@ -84,7 +84,6 @@ public class ValidationRegistry {
 
             cachedStartupMethods = List.copyOf(scan.getClassesWithMethodAnnotation(StartupMethod.class.getName())
                     .filter(ci -> !ci.getName().contains("$") && !ci.isSynthetic()));
-
         }
 
         LOG.info(
@@ -94,7 +93,7 @@ public class ValidationRegistry {
     }
 
     /** Invokes all the @StartupMethod before executing the validations. The @StartupMethod will be defined in gff3-validations*/
-    private void invokeStartupMethods(ValidationContext context) {
+    private void invokeStartupMethods() {
         cachedStartupMethods.forEach(classInfo -> {
             try {
                 Class<?> clazz = classInfo.loadClass();
@@ -104,7 +103,7 @@ public class ValidationRegistry {
                         Object receiver = java.lang.reflect.Modifier.isStatic(method.getModifiers())
                                 ? null
                                 : clazz.getDeclaredConstructor().newInstance();
-                        method.invoke(receiver, context);
+                        method.invoke(receiver);
                         LOG.info("Startup method invoked: {}.{}", clazz.getName(), method.getName());
                     }
                 }
@@ -138,7 +137,7 @@ public class ValidationRegistry {
                 .filter(vd -> vd.method().isAnnotationPresent(FixMethod.class))
                 .collect(Collectors.groupingBy(ValidatorDescriptor::priority, Collectors.toUnmodifiableList()));
 
-        invokeStartupMethods(ctx);
+        invokeStartupMethods();
     }
 
     public ValidationContext getContext() {
