@@ -98,4 +98,37 @@ public class GFF3FeatureTest {
         assertTrue(feature.isFivePrimePartial());
         assertTrue(feature.isThreePrimePartial());
     }
+
+    // complement strand: five-prime → "end", three-prime → "start"
+
+    @Test
+    public void testSetFivePrimePartialComplement() {
+        GFF3Feature feature = TestUtils.createComplementFeature();
+
+        feature.setFivePrimePartial();
+
+        assertTrue(feature.isFivePrimePartial());
+        assertFalse(feature.isThreePrimePartial());
+    }
+
+    @Test
+    public void testSetThreePrimePartialComplement() {
+        GFF3Feature feature = TestUtils.createComplementFeature();
+
+        feature.setThreePrimePartial();
+
+        assertTrue(feature.isThreePrimePartial());
+        assertFalse(feature.isFivePrimePartial());
+    }
+
+    @Test
+    public void testSetBothPartialsComplement() {
+        GFF3Feature feature = TestUtils.createComplementFeature();
+
+        feature.setFivePrimePartial();
+        feature.setThreePrimePartial();
+
+        assertTrue(feature.isFivePrimePartial());
+        assertTrue(feature.isThreePrimePartial());
+    }
 }

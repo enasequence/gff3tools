@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.*;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
+import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationRegistry;
@@ -138,6 +139,21 @@ public class TestUtils {
 
         feature.addAttributes(attributes);
         return feature;
+    }
+
+    public static GFF3Feature createComplementFeature() {
+        return new GFF3Feature(
+                java.util.Optional.of(OntologyTerm.CDS.name()),
+                java.util.Optional.empty(),
+                TestUtils.DEFAULT_ACCESSION,
+                java.util.Optional.empty(),
+                ".",
+                OntologyTerm.CDS.name(),
+                1,
+                800,
+                ".",
+                "-",
+                "");
     }
 
     public static GFF3Feature createGFF3Feature(
