@@ -41,6 +41,7 @@ public class ValidationRegistry {
 
     private static final List<ClassInfo> cachedValidationList;
     private static final List<Class<? extends ContextProvider<?>>> cachedProviderClasses;
+    private static final List<ClassInfo> cachedStartupMethods;
 
     static {
         LOG.info("Performing one-time classpath scan for validators and context providers");
@@ -81,7 +82,9 @@ public class ValidationRegistry {
 
             cachedProviderClasses = List.copyOf(providerClasses);
 
-            invokeStartupMethods(scan);
+            cachedStartupMethods = List.copyOf(scan.getClassesWithMethodAnnotation(StartupMethod.class.getName())
+                    .filter(ci -> !ci.getName().contains("$") && !ci.isSynthetic()));
+
         }
 
         LOG.info(
@@ -91,8 +94,8 @@ public class ValidationRegistry {
     }
 
     /** Invokes all the @StartupMethod before executing the validations. The @StartupMethod will be defined in gff3-validations*/
-    private static void invokeStartupMethods(ScanResult scan) {
-        scan.getClassesWithMethodAnnotation(StartupMethod.class.getName()).forEach(classInfo -> {
+    private void invokeStartupMethods() {
+        cachedStartupMethods.forEach(classInfo -> {
             try {
                 Class<?> clazz = classInfo.loadClass();
                 for (java.lang.reflect.Method method : clazz.getDeclaredMethods()) {
@@ -134,6 +137,8 @@ public class ValidationRegistry {
                 .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Fix.class))
                 .filter(vd -> vd.method().isAnnotationPresent(FixMethod.class))
                 .collect(Collectors.groupingBy(ValidatorDescriptor::priority, Collectors.toUnmodifiableList()));
+
+        invokeStartupMethods();
     }
 
     public ValidationContext getContext() {
