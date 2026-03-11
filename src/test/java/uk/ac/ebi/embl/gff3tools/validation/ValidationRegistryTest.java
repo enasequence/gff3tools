@@ -373,7 +373,8 @@ class ValidationRegistryTest {
         buildMethod.invoke(null, List.of(mockClassInfo), context, validationConfig);
 
         assertNotNull(StartupWithContextValidation.capturedContext, "Context should have been injected");
-        assertSame(context, StartupWithContextValidation.capturedContext, "Injected context should be the same instance");
+        assertSame(
+                context, StartupWithContextValidation.capturedContext, "Injected context should be the same instance");
     }
 
     @Test
