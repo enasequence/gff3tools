@@ -14,20 +14,22 @@ import io.vavr.Function0;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
-import uk.ac.ebi.embl.gff3tools.exception.UnregisteredValidationRuleException;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationProvider;
 
+@Slf4j
 public abstract class AbstractCommand implements Runnable {
 
     @CommandLine.Option(
@@ -60,12 +62,25 @@ public abstract class AbstractCommand implements Runnable {
         return Optional.ofNullable(rules).map((r) -> r.rules()).orElse(new HashMap<>());
     }
 
-    protected ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides)
-            throws UnregisteredValidationRuleException {
+    protected ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides, Path processDir) {
+
+        if (!Files.isDirectory(processDir) || !Files.isWritable(processDir)) {
+            throw new RuntimeException(String.format("The directory {%s} is not writable.", processDir));
+        }
+
+        log.info("Running with process directory: {}", processDir);
         return new ValidationEngineBuilder()
                 .overrideMethodRules(ruleOverrides)
                 .failFast(failFast)
+                .withProvider(getTranslationProvider(processDir))
                 .build();
+    }
+
+    private TranslationProvider getTranslationProvider(Path processDir) {
+        return new TranslationProvider(TranslationContext.builder()
+                .processDir(processDir)
+                .sequenceFastaPath(processDir.resolve("gff3-translation.fasta"))
+                .build());
     }
 
     @FunctionalInterface

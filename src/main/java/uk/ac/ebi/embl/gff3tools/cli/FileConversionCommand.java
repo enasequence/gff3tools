@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Map;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,7 +73,9 @@ public class FileConversionCommand extends AbstractCommand {
                             writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
                 fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
                 toFileType = validateFileType(toFileType, outputFilePath, "-t");
-                ValidationEngine engine = initValidationEngine(ruleOverrides);
+                // The input file dir is used as the process dir, defaulting to the current dir if not set
+                Path processDir = Optional.ofNullable(inputFilePath.getParent()).orElse(Path.of("."));
+                ValidationEngine engine = initValidationEngine(ruleOverrides, processDir);
                 Converter converter = getConverter(engine, fromFileType, toFileType);
                 converter.convert(inputReader, outputWriter);
             }

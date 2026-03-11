@@ -178,6 +178,14 @@ public class ValidationRegistry {
                         descriptors.add(new ValidatorDescriptor(clazz, instance, method, priority));
                     }
                 }
+
+                // Invoke startup method.
+                for (Method m : clazz.getDeclaredMethods()) {
+                    if (m.isAnnotationPresent(StartupMethod.class)) {
+                        m.setAccessible(true);
+                        m.invoke(instance);
+                    }
+                }
             } catch (Exception e) {
                 throw new RuntimeException(
                         String.format("Failed to initialize validator %s: %s", clazz.getName(), e.getMessage()));
