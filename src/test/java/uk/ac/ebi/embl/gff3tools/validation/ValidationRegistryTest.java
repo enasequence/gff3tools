@@ -293,6 +293,106 @@ class ValidationRegistryTest {
         }
     }
 
+    @Gff3Validation(name = "STARTUP_VAL", enabled = true)
+    static class StartupValidation {
+        static boolean startupCalled = false;
+
+        @StartupMethod
+        public void startup() {
+            startupCalled = true;
+        }
+
+        @ValidationMethod(rule = "STARTUP_RULE", type = ValidationType.FEATURE)
+        public void validate() {}
+    }
+
+    @Gff3Validation(name = "STARTUP_CONTEXT_VAL", enabled = true)
+    static class StartupWithContextValidation {
+        static ValidationContext capturedContext = null;
+
+        @InjectContext
+        ValidationContext ctx;
+
+        @StartupMethod
+        public void startup() {
+            capturedContext = ctx;
+        }
+
+        @ValidationMethod(rule = "STARTUP_CONTEXT_RULE", type = ValidationType.FEATURE)
+        public void validate() {}
+    }
+
+    @Gff3Validation(name = "MULTI_STARTUP_VAL", enabled = true)
+    static class MultiStartupValidation {
+        static int startupCount = 0;
+
+        @StartupMethod
+        public void startupA() {
+            startupCount++;
+        }
+
+        @StartupMethod
+        public void startupB() {
+            startupCount++;
+        }
+
+        @ValidationMethod(rule = "MULTI_STARTUP_RULE", type = ValidationType.FEATURE)
+        public void validate() {}
+    }
+
+    @Test
+    @DisplayName("@StartupMethod is invoked when registry builds descriptors")
+    void testStartupMethodIsInvoked() throws Exception {
+        StartupValidation.startupCalled = false;
+
+        ClassInfo mockClassInfo = mock(ClassInfo.class);
+        doReturn(StartupValidation.class).when(mockClassInfo).loadClass();
+
+        Method buildMethod = ValidationRegistry.class.getDeclaredMethod(
+                "buildDescriptors", List.class, ValidationContext.class, ValidationConfig.class);
+        buildMethod.setAccessible(true);
+
+        buildMethod.invoke(null, List.of(mockClassInfo), new ValidationContext(), validationConfig);
+
+        assertTrue(StartupValidation.startupCalled, "@StartupMethod should have been called");
+    }
+
+    @Test
+    @DisplayName("@InjectContext is populated before @StartupMethod is invoked")
+    void testContextInjectedBeforeStartupMethod() throws Exception {
+        StartupWithContextValidation.capturedContext = null;
+
+        ClassInfo mockClassInfo = mock(ClassInfo.class);
+        doReturn(StartupWithContextValidation.class).when(mockClassInfo).loadClass();
+
+        Method buildMethod = ValidationRegistry.class.getDeclaredMethod(
+                "buildDescriptors", List.class, ValidationContext.class, ValidationConfig.class);
+        buildMethod.setAccessible(true);
+
+        ValidationContext context = new ValidationContext();
+        buildMethod.invoke(null, List.of(mockClassInfo), context, validationConfig);
+
+        assertNotNull(StartupWithContextValidation.capturedContext, "Context should have been injected");
+        assertSame(context, StartupWithContextValidation.capturedContext, "Injected context should be the same instance");
+    }
+
+    @Test
+    @DisplayName("All @StartupMethod methods on a class are invoked")
+    void testMultipleStartupMethodsAreAllInvoked() throws Exception {
+        MultiStartupValidation.startupCount = 0;
+
+        ClassInfo mockClassInfo = mock(ClassInfo.class);
+        doReturn(MultiStartupValidation.class).when(mockClassInfo).loadClass();
+
+        Method buildMethod = ValidationRegistry.class.getDeclaredMethod(
+                "buildDescriptors", List.class, ValidationContext.class, ValidationConfig.class);
+        buildMethod.setAccessible(true);
+
+        buildMethod.invoke(null, List.of(mockClassInfo), new ValidationContext(), validationConfig);
+
+        assertEquals(2, MultiStartupValidation.startupCount, "Both @StartupMethod methods should have been called");
+    }
+
     @Test
     @DisplayName("@InjectContext field on plain class should be injected with context")
     void testInjectContextFieldInjection() throws Exception {

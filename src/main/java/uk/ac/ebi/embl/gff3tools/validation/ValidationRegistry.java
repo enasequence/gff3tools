@@ -146,7 +146,7 @@ public class ValidationRegistry {
                 for (Method m : clazz.getDeclaredMethods()) {
                     if (m.isAnnotationPresent(StartupMethod.class)) {
                         m.setAccessible(true);
-                        m.invoke(instance, context);
+                        m.invoke(instance);
                     }
                 }
             } catch (Exception e) {
