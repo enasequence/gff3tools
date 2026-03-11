@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.cli;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
@@ -666,5 +667,268 @@ public class MainIntegrationTest {
             out.write(">seq1\nATGC\n".getBytes(StandardCharsets.UTF_8));
         }
         return path;
+    }
+
+    @Test
+    void testEmblToGff3_withoutOutputSequence_discardSequences() throws IOException {
+        // Use the test file that has sequence data
+        Path inputFile = Path.of("src/test/resources/fftogff3_rules/reduced/contig-reduced.embl");
+        Path outputGff3 = Files.createTempFile("output", ".gff3");
+
+        // No --output-sequence option provided
+        String[] args =
+                new String[] {"conversion", "-f", "embl", "-t", "gff3", inputFile.toString(), outputGff3.toString()};
+
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(errContent));
+
+        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
+            mock.when(() -> Main.main(any())).thenCallRealMethod();
+            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
+            Main.main(args);
+
+            // Verify GFF3 output was created
+            assertTrue(Files.exists(outputGff3), "GFF3 output file should exist");
+            String gff3Content = Files.readString(outputGff3);
+            assertTrue(gff3Content.contains("##gff-version"), "GFF3 should have header");
+
+            // Verify no FASTA section in GFF3 output (nucleotide sequences should be discarded)
+            // GFF3 may have ##FASTA for translation sequences, but not nucleotide sequences
+            // The nucleotide sequence "tgcctaagcc" should NOT appear in the GFF3 output
+            assertFalse(
+                    gff3Content.toLowerCase().contains("tgcctaagcc"),
+                    "GFF3 should NOT contain nucleotide sequences when --output-sequence is not provided");
+        } finally {
+            Files.deleteIfExists(outputGff3);
+            System.setErr(originalErr);
+        }
+    }
+
+    // ── TSV to GFF3 conversion integration tests ──
+
+    @Test
+    void testTsvToGff3_successfulConversion() throws IOException {
+        Path inputFile = Path.of("src/test/resources/tsvtogff3/its-two-entries.tsv");
+        Path outputGff3 = Files.createTempFile("output", ".gff3");
+
+        String[] args =
+                new String[] {"conversion", "-f", "tsv", "-t", "gff3", inputFile.toString(), outputGff3.toString()};
+
+        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
+            mock.when(() -> Main.main(any())).thenCallRealMethod();
+            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
+            Main.main(args);
+
+            mock.verify(() -> Main.exit(0));
+
+            assertTrue(Files.exists(outputGff3), "GFF3 output file should exist");
+            String gff3Content = Files.readString(outputGff3);
+            assertTrue(gff3Content.contains("##gff-version"), "GFF3 should have version header");
+            assertTrue(gff3Content.contains("##species"), "GFF3 should have species directive");
+            assertTrue(gff3Content.contains("Boletus sensibilis"), "GFF3 should contain organism name");
+        } finally {
+            Files.deleteIfExists(outputGff3);
+        }
+    }
+
+    @Test
+    void testTsvToGff3_withOutputSequence() throws IOException {
+        Path inputFile = Path.of("src/test/resources/tsvtogff3/its-two-entries.tsv");
+        Path outputGff3 = Files.createTempFile("output", ".gff3");
+        Path outputFasta = Files.createTempFile("output", ".fasta");
+
+        String[] args = new String[] {
+            "conversion",
+            "-f",
+            "tsv",
+            "-t",
+            "gff3",
+            "--output-sequence",
+            outputFasta.toString(),
+            inputFile.toString(),
+            outputGff3.toString()
+        };
+
+        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
+            mock.when(() -> Main.main(any())).thenCallRealMethod();
+            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
+            Main.main(args);
+
+            mock.verify(() -> Main.exit(0));
+
+            assertTrue(Files.exists(outputGff3), "GFF3 output file should exist");
+            String gff3Content = Files.readString(outputGff3);
+            assertTrue(gff3Content.contains("##gff-version"), "GFF3 should have version header");
+
+            assertTrue(Files.exists(outputFasta), "FASTA output file should exist");
+            String fastaContent = Files.readString(outputFasta);
+            assertFalse(fastaContent.isEmpty(), "FASTA output should contain nucleotide sequences");
+            assertTrue(fastaContent.contains(">"), "FASTA should have sequence headers");
+        } finally {
+            Files.deleteIfExists(outputGff3);
+            Files.deleteIfExists(outputFasta);
+        }
+    }
+
+    @Test
+    void testTsvToGff3_gzipInput() throws IOException {
+        Path inputFile = Path.of("src/test/resources/tsvtogff3/its-two-entries.tsv.gz");
+        Path outputGff3 = Files.createTempFile("output", ".gff3");
+
+        String[] args =
+                new String[] {"conversion", "-f", "tsv", "-t", "gff3", inputFile.toString(), outputGff3.toString()};
+
+        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
+            mock.when(() -> Main.main(any())).thenCallRealMethod();
+            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
+            Main.main(args);
+
+            mock.verify(() -> Main.exit(0));
+
+            assertTrue(Files.exists(outputGff3), "GFF3 output file should exist");
+            String gff3Content = Files.readString(outputGff3);
+            assertTrue(gff3Content.contains("##gff-version"), "GFF3 should have version header");
+            assertTrue(gff3Content.contains("Boletus"), "GFF3 should contain organism name");
+        } finally {
+            Files.deleteIfExists(outputGff3);
+        }
+    }
+
+    @Test
+    void testTsvToGff3_rrnaTemplate() throws IOException {
+        Path inputFile = Path.of("src/test/resources/tsvtogff3/rrna-single-entry.tsv");
+        Path outputGff3 = Files.createTempFile("output", ".gff3");
+
+        String[] args =
+                new String[] {"conversion", "-f", "tsv", "-t", "gff3", inputFile.toString(), outputGff3.toString()};
+
+        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
+            mock.when(() -> Main.main(any())).thenCallRealMethod();
+            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
+            Main.main(args);
+
+            mock.verify(() -> Main.exit(0));
+
+            assertTrue(Files.exists(outputGff3), "GFF3 output file should exist");
+            String gff3Content = Files.readString(outputGff3);
+            assertTrue(gff3Content.contains("##gff-version"), "GFF3 should have version header");
+            assertTrue(gff3Content.contains("Escherichia coli"), "GFF3 should contain organism name");
+        } finally {
+            Files.deleteIfExists(outputGff3);
+        }
+    }
+
+    @Test
+    void testTsvToGff3_missingTemplateId() throws IOException {
+        Path inputFile = Path.of("src/test/resources/tsvtogff3/no-template-id.tsv");
+        Path outputGff3 = Files.createTempFile("output", ".gff3");
+
+        String[] args =
+                new String[] {"conversion", "-f", "tsv", "-t", "gff3", inputFile.toString(), outputGff3.toString()};
+
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(errContent));
+
+        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
+            mock.when(() -> Main.main(any())).thenCallRealMethod();
+            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
+            Main.main(args);
+
+            // Should fail with a read error due to missing template ID
+            mock.verify(() -> Main.exit(CLIExitCode.READ_ERROR.asInt()));
+        } finally {
+            Files.deleteIfExists(outputGff3);
+            System.setErr(originalErr);
+        }
+    }
+
+    @Test
+    void testTsvToGff3_nonExistentFile() {
+        String[] args = new String[] {"conversion", "-f", "tsv", "-t", "gff3", "non_existent.tsv", "output.gff3"};
+
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(errContent));
+
+        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
+            mock.when(() -> Main.main(any())).thenCallRealMethod();
+            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
+            Main.main(args);
+
+            mock.verify(() -> Main.exit(CLIExitCode.NON_EXISTENT_FILE.asInt()));
+        } finally {
+            System.setErr(originalErr);
+        }
+    }
+
+    @Test
+    void testTsvToGff3_withoutOutputSequence_noFastaInOutput() throws IOException {
+        Path inputFile = Path.of("src/test/resources/tsvtogff3/its-two-entries.tsv");
+        Path outputGff3 = Files.createTempFile("output", ".gff3");
+
+        // No --output-sequence option
+        String[] args =
+                new String[] {"conversion", "-f", "tsv", "-t", "gff3", inputFile.toString(), outputGff3.toString()};
+
+        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
+            mock.when(() -> Main.main(any())).thenCallRealMethod();
+            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
+            Main.main(args);
+
+            mock.verify(() -> Main.exit(0));
+
+            String gff3Content = Files.readString(outputGff3);
+            // Nucleotide sequences should NOT be in the GFF3 output (only translation sequences, if any)
+            assertFalse(
+                    gff3Content.toLowerCase().contains("atcagcatacacgcaacag"),
+                    "GFF3 should NOT contain nucleotide sequences when --output-sequence is not provided");
+        } finally {
+            Files.deleteIfExists(outputGff3);
+        }
+    }
+
+    @Test
+    void testEmblToGff3_withoutSequenceInInput_fastaOutputEmpty() throws IOException {
+        // Use a test file without sequence data
+        Path inputFile = Path.of("src/test/resources/fftogff3_rules/partial_location_end.embl");
+        Path outputGff3 = Files.createTempFile("output", ".gff3");
+        Path outputFasta = Files.createTempFile("output", ".fasta");
+
+        String[] args = new String[] {
+            "conversion",
+            "-f",
+            "embl",
+            "-t",
+            "gff3",
+            "--output-sequence",
+            outputFasta.toString(),
+            inputFile.toString(),
+            outputGff3.toString()
+        };
+
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(errContent));
+
+        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
+            mock.when(() -> Main.main(any())).thenCallRealMethod();
+            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
+            Main.main(args);
+
+            // Verify GFF3 output was created
+            assertTrue(Files.exists(outputGff3), "GFF3 output file should exist");
+
+            // Verify FASTA output is empty (no sequences in input file)
+            assertTrue(Files.exists(outputFasta), "FASTA output file should exist");
+            String fastaContent = Files.readString(outputFasta);
+            assertTrue(
+                    fastaContent.isEmpty(), "FASTA output should be empty when input file has no nucleotide sequences");
+        } finally {
+            Files.deleteIfExists(outputGff3);
+            Files.deleteIfExists(outputFasta);
+            System.setErr(originalErr);
+        }
     }
 }

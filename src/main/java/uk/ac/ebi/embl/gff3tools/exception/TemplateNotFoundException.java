@@ -8,23 +8,21 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.gff3.directives;
+package uk.ac.ebi.embl.gff3tools.exception;
 
 import java.io.IOException;
-import java.io.Writer;
-import uk.ac.ebi.embl.gff3tools.exception.WriteException;
-import uk.ac.ebi.embl.gff3tools.gff3.IGFF3Feature;
 
-public record GFF3Header(String version) implements IGFF3Feature {
+/**
+ * Exception thrown when a TSV file references a template ID that cannot be found
+ * in sequencetools' template resources.
+ */
+public class TemplateNotFoundException extends ReadException {
 
-    public static final String DEFAULT_VERSION = "3.1.26";
+    public TemplateNotFoundException(String message) {
+        super(message, new IOException(message));
+    }
 
-    @Override
-    public void writeGFF3String(Writer writer) throws WriteException {
-        try {
-            writer.write("##gff-version %s\n".formatted(version));
-        } catch (IOException exception) {
-            throw new WriteException(exception);
-        }
+    public TemplateNotFoundException(String message, Exception cause) {
+        super(message, wrapAsIOException(cause));
     }
 }

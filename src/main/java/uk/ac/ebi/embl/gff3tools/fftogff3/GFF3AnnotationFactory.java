@@ -71,8 +71,8 @@ public class GFF3AnnotationFactory {
         geneMap = new LinkedHashMap<>();
         nonGeneFeatures = new ArrayList<>();
 
-        String accession = entry.getSequence().getAccession();
-        LOG.info("Converting FF entry: {}", accession);
+        String accession = ConversionUtils.getEffectiveAccession(entry);
+        LOG.info("Converting entry: {}", accession);
         GFF3SequenceRegion sequenceRegion = directivesFactory.createSequenceRegion(entry);
         try (BufferedWriter fastaWriter = Files.newBufferedWriter(
                 fastaPath,
