@@ -13,8 +13,10 @@ package uk.ac.ebi.embl.gff3tools.cli;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -40,7 +42,9 @@ public class ValidationCommand extends AbstractCommand {
         ValidationEngine validationEngine;
 
         try {
-            validationEngine = initValidationEngine(ruleOverrides);
+            // The input file dir is used as the process dir, defaulting to the current dir if not set
+            Path processDir = Optional.ofNullable(inputFilePath.getParent()).orElse(Path.of("."));
+            validationEngine = initValidationEngine(ruleOverrides, processDir);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
