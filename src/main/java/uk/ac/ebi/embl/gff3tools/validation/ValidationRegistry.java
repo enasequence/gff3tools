@@ -41,16 +41,12 @@ public class ValidationRegistry {
 
     private static final List<ClassInfo> cachedValidationList;
     private static final List<Class<? extends ContextProvider<?>>> cachedProviderClasses;
-    private static final List<ClassInfo> cachedStartupMethods;
 
     static {
         LOG.info("Performing one-time classpath scan for validators and context providers");
 
-        try (ScanResult scan = new ClassGraph()
-                .enableClassInfo()
-                .enableMethodInfo()
-                .enableAnnotationInfo()
-                .scan()) {
+        try (ScanResult scan =
+                new ClassGraph().enableClassInfo().enableAnnotationInfo().scan()) {
 
             ClassInfoList validationList = new ClassInfoList();
             validationList.addAll(scan.getClassesWithAnnotation(Gff3Validation.class.getName())
@@ -81,36 +77,12 @@ public class ValidationRegistry {
             }
 
             cachedProviderClasses = List.copyOf(providerClasses);
-
-            cachedStartupMethods = List.copyOf(scan.getClassesWithMethodAnnotation(StartupMethod.class.getName())
-                    .filter(ci -> !ci.getName().contains("$") && !ci.isSynthetic()));
         }
 
         LOG.info(
                 "Classpath scan complete: {} validator/fix classes, {} context provider classes",
                 cachedValidationList.size(),
                 cachedProviderClasses.size());
-    }
-
-    /** Invokes all the @StartupMethod before executing the validations. The @StartupMethod will be defined in gff3-validations*/
-    private void invokeStartupMethods() {
-        cachedStartupMethods.forEach(classInfo -> {
-            try {
-                Class<?> clazz = classInfo.loadClass();
-                for (java.lang.reflect.Method method : clazz.getDeclaredMethods()) {
-                    if (method.isAnnotationPresent(StartupMethod.class)) {
-                        method.setAccessible(true);
-                        Object receiver = java.lang.reflect.Modifier.isStatic(method.getModifiers())
-                                ? null
-                                : clazz.getDeclaredConstructor().newInstance();
-                        method.invoke(receiver);
-                        LOG.info("Startup method invoked: {}.{}", clazz.getName(), method.getName());
-                    }
-                }
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to invoke startup method in " + classInfo.getName(), e);
-            }
-        });
     }
 
     @Builder
@@ -136,8 +108,6 @@ public class ValidationRegistry {
                 .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Fix.class))
                 .filter(vd -> vd.method().isAnnotationPresent(FixMethod.class))
                 .collect(Collectors.groupingBy(ValidatorDescriptor::priority, Collectors.toUnmodifiableList()));
-
-        invokeStartupMethods();
     }
 
     public ValidationContext getContext() {
@@ -169,6 +139,14 @@ public class ValidationRegistry {
                         method.setAccessible(true);
                         ValidationPriority priority = extractPriority(method);
                         descriptors.add(new ValidatorDescriptor(clazz, instance, method, priority));
+                    }
+                }
+
+                // Invoke startup method.
+                for (Method m : clazz.getDeclaredMethods()) {
+                    if (m.isAnnotationPresent(StartupMethod.class)) {
+                        m.setAccessible(true);
+                        m.invoke(instance, context);
                     }
                 }
             } catch (Exception e) {
