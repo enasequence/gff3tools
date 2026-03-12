@@ -17,18 +17,16 @@ import java.util.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
-@RequiredArgsConstructor
 @Getter
 @Setter
 public class GFF3Feature {
     // Non-Mutable members used in constructor
     final Optional<String> id;
     final Optional<String> parentId;
-    final String seqId;
-    final Optional<Integer> seqIdVersion;
+    String seqId;
+    Optional<Integer> seqIdVersion;
     final String source;
     final String name;
     final long start;
@@ -36,6 +34,31 @@ public class GFF3Feature {
     final String score;
     final String strand;
     final String phase;
+
+    public GFF3Feature(
+            Optional<String> id,
+            Optional<String> parentId,
+            String seqId,
+            Optional<Integer> seqIdVersion,
+            String source,
+            String name,
+            long start,
+            long end,
+            String score,
+            String strand,
+            String phase) {
+        this.id = id;
+        this.parentId = parentId;
+        this.seqId = seqId;
+        this.seqIdVersion = seqIdVersion;
+        this.source = source;
+        this.name = name;
+        this.start = start;
+        this.end = end;
+        this.score = score;
+        this.strand = strand;
+        this.phase = phase;
+    }
 
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
