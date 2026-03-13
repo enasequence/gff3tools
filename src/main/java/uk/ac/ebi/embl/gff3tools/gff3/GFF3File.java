@@ -101,6 +101,10 @@ public class GFF3File implements IGFF3Feature {
 
     private void writeFastaFromExistingFile(Writer writer) throws IOException {
 
+        if (!Files.exists(fastaFilePath)) {
+            return;
+        }
+
         BasicFileAttributes attrs = Files.readAttributes(fastaFilePath, BasicFileAttributes.class);
 
         if (!attrs.isRegularFile() || attrs.size() == 0) {
