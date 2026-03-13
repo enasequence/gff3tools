@@ -260,7 +260,6 @@ public class Translator {
 
             validateTranslation(translationResult);
 
-
             if (translationResult.isFixedPseudo()) {
                 feature.addAttribute("pseudo", "true");
                 feature.removeAttributeList("translation");

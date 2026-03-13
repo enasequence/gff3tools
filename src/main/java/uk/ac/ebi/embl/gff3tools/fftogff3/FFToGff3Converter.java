@@ -41,7 +41,6 @@ public class FFToGff3Converter implements Converter {
     public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException {
 
-
         EmblEntryReader entryReader =
                 new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 

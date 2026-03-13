@@ -10,13 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.fftogff3;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -32,7 +26,6 @@ import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
-import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
@@ -59,8 +52,7 @@ public class GFF3AnnotationFactory {
     GFF3DirectivesFactory directivesFactory;
     ValidationEngine validationEngine;
 
-    public GFF3AnnotationFactory(
-            ValidationEngine validationEngine, GFF3DirectivesFactory directivesFactory) {
+    public GFF3AnnotationFactory(ValidationEngine validationEngine, GFF3DirectivesFactory directivesFactory) {
         this.validationEngine = validationEngine;
         this.directivesFactory = directivesFactory;
     }
@@ -183,7 +175,6 @@ public class GFF3AnnotationFactory {
         return gff3Features;
     }
 
-
     public Map<String, List<String>> getAttributeMap(Feature ffFeature) {
         Map<String, String> qualifierMap = ConversionUtils.getFF2GFF3QualifierMap();
         Map<String, List<String>> attributes = new LinkedHashMap<>();
@@ -198,8 +189,7 @@ public class GFF3AnnotationFactory {
         return attributes;
     }
 
-    private void buildGeneFeatureMap(GFF3SequenceRegion sequenceRegion, Feature ffFeature)
-            throws ValidationException {
+    private void buildGeneFeatureMap(GFF3SequenceRegion sequenceRegion, Feature ffFeature) throws ValidationException {
 
         List<Qualifier> genes = ffFeature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
 

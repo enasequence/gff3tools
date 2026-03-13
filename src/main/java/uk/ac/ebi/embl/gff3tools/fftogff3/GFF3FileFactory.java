@@ -11,7 +11,6 @@
 package uk.ac.ebi.embl.gff3tools.fftogff3;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -59,7 +58,7 @@ public class GFF3FileFactory {
                 .header(header)
                 .species(species)
                 .annotations(annotations)
-                .fastaFilePath(translationContext!=null ? translationContext.getSequenceFastaPath(): null)
+                .fastaFilePath(translationContext != null ? translationContext.getSequenceFastaPath() : null)
                 .parsingWarnings(engine.getParsingWarnings())
                 .build();
     }
