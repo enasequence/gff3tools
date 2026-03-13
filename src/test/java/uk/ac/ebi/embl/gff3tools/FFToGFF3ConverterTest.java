@@ -26,6 +26,8 @@ import uk.ac.ebi.embl.gff3tools.fftogff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.builtin.*;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationProvider;
 
 class FFToGFF3ConverterTest {
 
@@ -43,13 +45,17 @@ class FFToGFF3ConverterTest {
 
         for (String filePrefix : testFiles.keySet()) {
 
-            ValidationEngineBuilder builder = new ValidationEngineBuilder();
+            ValidationEngineBuilder builder = new ValidationEngineBuilder()
+                    .withProvider(new TranslationProvider(TranslationContext.builder()
+                            .processDir(Path.of("."))
+                            .sequenceFastaPath(fastaPath)
+                            .build()));
 
             try (BufferedReader testFileReader = TestUtils.getResourceReaderWithPath(
                     testFiles.get(filePrefix).toString())) {
 
                 // We need new ValidationEngine each time as we cache data in our tests.
-                GFF3FileFactory rule = new GFF3FileFactory(builder.build(), fastaPath);
+                GFF3FileFactory rule = new GFF3FileFactory(builder.build());
 
                 ReaderOptions readerOptions = new ReaderOptions();
                 readerOptions.setIgnoreSequence(true);
@@ -95,8 +101,12 @@ class FFToGFF3ConverterTest {
     }
 
     private void testConvert(Path inputFile, Path expectedFile, Path masterFile) {
-        ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
-        ValidationEngine engine = engineBuilder.build();
+        ValidationEngine engine = new ValidationEngineBuilder()
+                .withProvider(new TranslationProvider(TranslationContext.builder()
+                        .processDir(Path.of("."))
+                        .sequenceFastaPath(fastaPath)
+                        .build()))
+                .build();
         FFToGff3Converter converter = new FFToGff3Converter(engine, masterFile);
         try (BufferedReader testFileReader = Files.newBufferedReader(inputFile);
                 BufferedReader expectedFileReader = Files.newBufferedReader(expectedFile);

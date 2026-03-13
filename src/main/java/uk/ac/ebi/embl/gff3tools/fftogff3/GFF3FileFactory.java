@@ -22,15 +22,19 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationContext;
 
 public class GFF3FileFactory {
     ValidationEngine engine;
-    Path fastaFilePath = null;
+    ValidationContext context;
+    TranslationContext translationContext;
 
-    public GFF3FileFactory(ValidationEngine engine, Path fastaFilePath) {
+    public GFF3FileFactory(ValidationEngine engine) {
         this.engine = engine;
-        this.fastaFilePath = fastaFilePath;
+        context = engine.getContext();
+        translationContext = context.contains(TranslationContext.class) ? context.get(TranslationContext.class) : null;
     }
 
     public GFF3File from(EmblEntryReader entryReader, Entry masterEntry) throws ValidationException, ReadException {
@@ -38,7 +42,7 @@ public class GFF3FileFactory {
         GFF3Species species = null;
         List<GFF3Annotation> annotations = new ArrayList<>();
         GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
-        GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(engine, directivesFactory, fastaFilePath);
+        GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(engine, directivesFactory);
         try {
             while (entryReader.read() != null && entryReader.isEntry()) {
                 Entry entry = entryReader.getEntry();
@@ -55,7 +59,7 @@ public class GFF3FileFactory {
                 .header(header)
                 .species(species)
                 .annotations(annotations)
-                .fastaFilePath(fastaFilePath)
+                .fastaFilePath(translationContext!=null ? translationContext.getSequenceFastaPath(): null)
                 .parsingWarnings(engine.getParsingWarnings())
                 .build();
     }

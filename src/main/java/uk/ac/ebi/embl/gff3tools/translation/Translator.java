@@ -260,13 +260,6 @@ public class Translator {
 
             validateTranslation(translationResult);
 
-            if (translationResult.isFixedFivePrimePartial()) {
-                feature.setFivePrimePartial();
-            }
-
-            if (translationResult.isFixedThreePrimePartial()) {
-                feature.setThreePrimePartial();
-            }
 
             if (translationResult.isFixedPseudo()) {
                 feature.addAttribute("pseudo", "true");

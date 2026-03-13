@@ -44,4 +44,8 @@ public class ValidationContext {
     public <T> void register(Class<T> type, ContextProvider<T> provider) {
         providers.put(type, provider);
     }
+
+    public boolean contains(Class<?> type) {
+        return providers.containsKey(type);
+    }
 }
