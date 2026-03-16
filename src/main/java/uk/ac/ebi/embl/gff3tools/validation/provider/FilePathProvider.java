@@ -13,22 +13,22 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
-/** Provider that supplies a pre-built TranslationContext to the validation framework. */
-public class TranslationProvider implements ContextProvider<TranslationContext> {
+/** Provider that supplies a pre-built FilePathContext to the validation framework. */
+public class FilePathProvider implements ContextProvider<FilePathContext> {
 
-    private final TranslationContext translationContext;
+    private final FilePathContext filePathContext;
 
-    public TranslationProvider(TranslationContext translationContext) {
-        this.translationContext = translationContext;
+    public FilePathProvider(FilePathContext filePathContext) {
+        this.filePathContext = filePathContext;
     }
 
     @Override
-    public TranslationContext get(ValidationContext context) {
-        return translationContext;
+    public FilePathContext get(ValidationContext context) {
+        return filePathContext;
     }
 
     @Override
-    public Class<TranslationContext> type() {
-        return TranslationContext.class;
+    public Class<FilePathContext> type() {
+        return FilePathContext.class;
     }
 }

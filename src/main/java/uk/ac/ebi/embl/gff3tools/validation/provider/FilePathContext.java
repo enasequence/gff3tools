@@ -13,21 +13,28 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
 import java.nio.file.Path;
 import lombok.Builder;
 import lombok.Getter;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionType;
 
 /**
  * Holds all shared translation-related resources for a validation run.
- * and registered via TranslationProvider.
+ * and registered via FilePathProvider.
  *
  * <p>Retrieved by validators via:
- * <pre>context.get(TranslationContext.class)</pre>
+ * <pre>context.get(FilePathContext.class)</pre>
  */
 @Getter
 @Builder
-public class TranslationContext {
+public class FilePathContext {
 
     /** Working directory for this validation run. */
     private final Path processDir;
 
-    /** Temp FASTA file used to store downloaded sequences during translation. */
+    /** Temp FASTA file used to store downloaded sequences during translation. */ //TODO merge into one with upper thingy
     private final Path sequenceFastaPath;
+
+    /** Temp file used to store downloaded fasta stuff if needed */ //TODO rethink
+    private final Path downloadedJsonHeader;
+
+    /** Type of format the sequence is in */
+    private final SubmissionType fileFormat;
 }
