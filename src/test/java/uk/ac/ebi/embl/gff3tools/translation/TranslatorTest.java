@@ -632,6 +632,7 @@ public class TranslatorTest {
         assertTrue(result.isValid());
         assertTrue(translator.isFivePrimePartial());
         assertTrue(translator.getFixes().contains("fixCodonStartNotOneMake5Partial"));
+        assertTrue(translator.getFeature().isFivePrimePartial());
     }
 
     @Test
