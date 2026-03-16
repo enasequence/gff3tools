@@ -15,11 +15,14 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+
+import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.fastareader.SequenceReader;
 import uk.ac.ebi.embl.fastareader.exception.SequenceFileException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 
+@Slf4j
 public class FileSequenceProvider implements SequenceProvider {
 
     private final Path processDir;
@@ -32,7 +35,8 @@ public class FileSequenceProvider implements SequenceProvider {
     public byte[] getSequenceBytes(String accessionId, List<GFF3Feature> features) throws IOException {
         Path sequencePath = processDir.resolve(accessionId + ".seq");
         if (!Files.exists(sequencePath)) {
-            throw new IOException("Sequence file not found: " + sequencePath);
+            log.warn("Sequence file not found for accession {}", accessionId);
+            return null;
         }
         try (SequenceReader reader = new SequenceReader(sequencePath.toFile())) {
 

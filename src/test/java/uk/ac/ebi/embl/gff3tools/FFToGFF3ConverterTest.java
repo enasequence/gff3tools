@@ -102,10 +102,6 @@ class FFToGFF3ConverterTest {
 
     private void testConvert(Path inputFile, Path expectedFile, Path masterFile) {
         ValidationEngine engine = new ValidationEngineBuilder()
-                .withProvider(new TranslationProvider(TranslationContext.builder()
-                        .processDir(Path.of("."))
-                        .sequenceFastaPath(fastaPath)
-                        .build()))
                 .build();
         FFToGff3Converter converter = new FFToGff3Converter(engine, masterFile);
         try (BufferedReader testFileReader = Files.newBufferedReader(inputFile);

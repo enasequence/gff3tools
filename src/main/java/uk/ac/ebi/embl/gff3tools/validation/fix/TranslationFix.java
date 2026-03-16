@@ -88,8 +88,9 @@ public class TranslationFix {
 
         byte[] sequenceBytes = sequenceProvider.getSequenceBytes(gff3Feature.accession(), cdsFeatures);
 
+        if (sequenceBytes == null) return;
+
         Translator translator = new Translator(gff3Feature);
-        translator.enableAllFixes();
         TranslationResult translationResult = translator.translate(sequenceBytes);
 
         if (!translationResult.isValid() || translationResult.getConceptualTranslationCodons() <= 0) {
