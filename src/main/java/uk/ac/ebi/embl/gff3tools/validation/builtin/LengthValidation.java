@@ -26,11 +26,12 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation(name = "LENGTH")
-public class LengthValidation {
+public class LengthValidation implements Validation {
 
     private static final long INTRON_FEATURE_MIN_LENGTH = 10;
     private static final long EXON_FEATURE_MIN_LENGTH = 15;

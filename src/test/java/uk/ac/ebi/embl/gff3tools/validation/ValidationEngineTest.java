@@ -391,7 +391,7 @@ public class ValidationEngineTest {
     private static final List<String> executionLog = new ArrayList<>();
 
     @Gff3Fix(name = "CRITICAL_FIX")
-    static class CriticalFix {
+    static class CriticalFix implements Fix {
         @FixMethod(rule = "FIX_CRITICAL", type = ValidationType.FEATURE, priority = ValidationPriority.CRITICAL)
         public void fix(GFF3Feature f, int line) {
             executionLog.add("FIX_CRITICAL");
@@ -399,7 +399,7 @@ public class ValidationEngineTest {
     }
 
     @Gff3Fix(name = "NORMAL_FIX")
-    static class NormalFix {
+    static class NormalFix implements Fix {
         @FixMethod(rule = "FIX_NORMAL", type = ValidationType.FEATURE, priority = ValidationPriority.NORMAL)
         public void fix(GFF3Feature f, int line) {
             executionLog.add("FIX_NORMAL");
@@ -407,7 +407,7 @@ public class ValidationEngineTest {
     }
 
     @Gff3Validation(name = "CRITICAL_VAL")
-    static class CriticalValidation {
+    static class CriticalValidation implements Validation {
         @ValidationMethod(rule = "VAL_CRITICAL", type = ValidationType.FEATURE, priority = ValidationPriority.CRITICAL)
         public void validate(GFF3Feature f, int line) {
             executionLog.add("VAL_CRITICAL");
@@ -415,7 +415,7 @@ public class ValidationEngineTest {
     }
 
     @Gff3Validation(name = "NORMAL_VAL")
-    static class NormalValidation {
+    static class NormalValidation implements Validation {
         @ValidationMethod(rule = "VAL_NORMAL", type = ValidationType.FEATURE, priority = ValidationPriority.NORMAL)
         public void validate(GFF3Feature f, int line) {
             executionLog.add("VAL_NORMAL");
@@ -472,7 +472,7 @@ public class ValidationEngineTest {
     }
 
     @Gff3Validation(name = "CRITICAL_FAIL_VAL")
-    static class CriticalFailingValidation {
+    static class CriticalFailingValidation implements Validation {
         @ValidationMethod(
                 rule = "VAL_CRITICAL_FAIL",
                 type = ValidationType.FEATURE,

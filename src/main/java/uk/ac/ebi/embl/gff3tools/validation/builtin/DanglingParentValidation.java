@@ -17,6 +17,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
@@ -40,7 +41,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
  * will not inherit the /gene qualifier from their parent hierarchy.
  */
 @Gff3Validation(name = "DANGLING_PARENT")
-public class DanglingParentValidation {
+public class DanglingParentValidation implements Validation {
 
     public static final String VALIDATION_RULE = "DANGLING_PARENT";
 

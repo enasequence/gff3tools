@@ -22,11 +22,12 @@ import uk.ac.ebi.embl.gff3tools.translation.except.AminoAcidExcept;
 import uk.ac.ebi.embl.gff3tools.translation.except.AntiCodonAttribute;
 import uk.ac.ebi.embl.gff3tools.translation.except.TranslExceptAttribute;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation(name = "ATTRIBUTES_LOCATION")
-public class AttributesLocationValidation {
+public class AttributesLocationValidation implements Validation {
 
     private static final String INVALID_AMINO_ACID = "%s contains an invalid amino acid \"%s\" at location %s..%s";
     private static final String INVALID_LOCATION_RANGE = "%s location %s..%s is outside feature range %s..%s";
