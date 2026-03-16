@@ -35,7 +35,7 @@ ValidationEngine engine = new ValidationEngineBuilder()
     .build();
 ```
 
-Methods: `disableClasspathScanning()`, `withFix(Object)`, `withValidator(Object)`, `withProvider(ContextProvider<?>)`. All accept single instances (no bulk/varargs). Null arguments are rejected with `NullPointerException`.
+Methods: `disableClasspathScanning()`, `withFix(Fix)`, `withValidator(Validation)`, `withProvider(ContextProvider<?>)`. All accept single instances (no bulk/varargs). Null arguments are rejected with `NullPointerException`. Fix and Validation classes must implement the corresponding marker interface (`Fix` or `Validation`).
 
 ## Key Design Decisions
 
@@ -45,7 +45,7 @@ Methods: `disableClasspathScanning()`, `withFix(Object)`, `withValidator(Object)
 
 **Single builder, not a separate class.** A dedicated `ManualValidationEngineBuilder` would have duplicated config-loading, provider-wiring, and context-injection logic. A single builder with an opt-in flag keeps the public API surface smaller.
 
-**`Object` parameters, not typed interfaces.** `withFix()` and `withValidator()` accept `Object` because fixes and validators are plain annotated classes without a common interface. Annotation validation happens at build time.
+**Marker interfaces for type safety.** `withFix()` accepts `Fix` and `withValidator()` accepts `Validation`. All fix classes implement the `Fix` marker interface and all validation classes implement the `Validation` marker interface, enabling compile-time type checking.
 
 ## Invariants Preserved
 
@@ -63,7 +63,5 @@ Methods: `disableClasspathScanning()`, `withFix(Object)`, `withValidator(Object)
 # Future Considerations
 
 - **Engine reuse across requests.** `ValidationEngine` holds mutable per-request state (`parsingWarnings`, `collectedErrors`). A future `reset()` method or registry/engine separation could enable sharing. Currently, per-request engine creation with `disableClasspathScanning()` is cheap enough.
-
-- **Type safety on `withFix()` / `withValidator()`.** Marker interfaces (`Fix`, `Validator`) could enable compile-time checking but would be a breaking change.
 
 - **Merge semantics assume unique names.** If unnamed rules (empty `name` attribute) are ever supported, the merge logic would need a fallback strategy.

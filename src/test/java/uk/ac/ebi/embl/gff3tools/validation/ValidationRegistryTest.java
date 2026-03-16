@@ -21,6 +21,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.*;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 
 class ValidationRegistryTest {
 
@@ -35,7 +37,7 @@ class ValidationRegistryTest {
     }
 
     @Gff3Validation(name = "LENGTH", enabled = true)
-    static class DummyValidation {
+    static class DummyValidation implements Validation {
         public DummyValidation() {}
 
         @ValidationMethod(rule = "RULE_1", type = ValidationType.FEATURE)
@@ -46,7 +48,7 @@ class ValidationRegistryTest {
     }
 
     @Gff3Fix(name = "FIX_LENGTH", enabled = true)
-    static class DummyFix {
+    static class DummyFix implements Fix {
         public DummyFix() {}
 
         @FixMethod(rule = "FIX_RULE_1", type = ValidationType.FEATURE)

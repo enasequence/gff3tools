@@ -22,11 +22,12 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation(name = "ATTRIBUTES_RELATION")
-public class AttributesRelationValidation {
+public class AttributesRelationValidation implements Validation {
 
     private static final String ERROR_MUTUALLY_EXCLUSIVE_BY_VALUE =
             "Attribute \"%s\" must not exist when qualifier \"%s\" has value \"%s\"";

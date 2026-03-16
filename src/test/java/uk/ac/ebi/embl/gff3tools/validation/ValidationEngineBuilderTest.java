@@ -19,13 +19,15 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.exception.DuplicateValidationRuleException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 
 class ValidationEngineBuilderTest {
 
     // -- Test stub classes --
 
     @Gff3Fix(name = "TEST_FIX_A", description = "A test fix")
-    static class TestFixA {
+    static class TestFixA implements Fix {
         @InjectContext
         ValidationContext ctx;
 
@@ -34,19 +36,19 @@ class ValidationEngineBuilderTest {
     }
 
     @Gff3Fix(name = "TEST_FIX_B", description = "Another test fix")
-    static class TestFixB {
+    static class TestFixB implements Fix {
         @FixMethod(rule = "TEST_FIX_B_RULE", type = ValidationType.FEATURE)
         public void fix(GFF3Feature feature, int line) {}
     }
 
     @Gff3Fix(name = "TEST_FIX_A", description = "Duplicate name fix")
-    static class TestFixDuplicateA {
+    static class TestFixDuplicateA implements Fix {
         @FixMethod(rule = "TEST_FIX_A_DUP_RULE", type = ValidationType.FEATURE)
         public void fix(GFF3Feature feature, int line) {}
     }
 
     @Gff3Validation(name = "TEST_VALIDATION_A", description = "A test validation")
-    static class TestValidationA {
+    static class TestValidationA implements Validation {
         @InjectContext
         ValidationContext ctx;
 
@@ -55,7 +57,7 @@ class ValidationEngineBuilderTest {
     }
 
     @Gff3Fix(name = "LOCUS_TAG_TO_UPPERCASE", description = "Override for scanned LocusTagFix")
-    static class OverrideLocusTagFix {
+    static class OverrideLocusTagFix implements Fix {
         @FixMethod(rule = "LOCUS_TAG_TO_UPPERCASE", type = ValidationType.FEATURE)
         public void fixFeature(GFF3Feature feature, int line) {
             // custom implementation
@@ -63,18 +65,18 @@ class ValidationEngineBuilderTest {
     }
 
     @Gff3Fix(name = "CRITICAL_FIX", description = "A critical priority fix")
-    static class CriticalPriorityFix {
+    static class CriticalPriorityFix implements Fix {
         @FixMethod(rule = "CRITICAL_FIX_RULE", type = ValidationType.FEATURE, priority = ValidationPriority.CRITICAL)
         public void fix(GFF3Feature feature, int line) {}
     }
 
     @Gff3Fix(name = "LOW_FIX", description = "A low priority fix")
-    static class LowPriorityFix {
+    static class LowPriorityFix implements Fix {
         @FixMethod(rule = "LOW_FIX_RULE", type = ValidationType.FEATURE, priority = ValidationPriority.LOW)
         public void fix(GFF3Feature feature, int line) {}
     }
 
-    static class UnannotatedFix {
+    static class UnannotatedFix implements Fix {
         public void fix(GFF3Feature feature, int line) {}
     }
 

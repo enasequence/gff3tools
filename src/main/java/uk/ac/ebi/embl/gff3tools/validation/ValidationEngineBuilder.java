@@ -13,7 +13,9 @@ package uk.ac.ebi.embl.gff3tools.validation;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 
 public class ValidationEngineBuilder {
 
@@ -21,8 +23,8 @@ public class ValidationEngineBuilder {
     private boolean failFast = false;
     private final List<ContextProvider<?>> providerOverrides = new ArrayList<>();
     private boolean classpathScanningEnabled = true;
-    private final List<Object> fixOverrides = new ArrayList<>();
-    private final List<Object> validatorOverrides = new ArrayList<>();
+    private final List<Fix> fixOverrides = new ArrayList<>();
+    private final List<Validation> validatorOverrides = new ArrayList<>();
 
     public ValidationEngineBuilder() {
 
@@ -67,12 +69,12 @@ public class ValidationEngineBuilder {
 
     /**
      * Register an explicit fix instance. The instance must be annotated with
-     * {@code @Gff3Fix} and contain methods annotated with {@code @FixMethod}.
+     * {@code @Gff3Fix} and implement the {@link Fix} marker interface.
      *
      * @param instance the fix instance to register
      * @return this builder for chaining
      */
-    public ValidationEngineBuilder withFix(Object instance) {
+    public ValidationEngineBuilder withFix(Fix instance) {
         Objects.requireNonNull(instance, "fix instance must not be null");
         fixOverrides.add(instance);
         return this;
@@ -80,12 +82,12 @@ public class ValidationEngineBuilder {
 
     /**
      * Register an explicit validator instance. The instance must be annotated with
-     * {@code @Gff3Validation} and contain methods annotated with {@code @ValidationMethod}.
+     * {@code @Gff3Validation} and implement the {@link Validation} marker interface.
      *
      * @param instance the validator instance to register
      * @return this builder for chaining
      */
-    public ValidationEngineBuilder withValidator(Object instance) {
+    public ValidationEngineBuilder withValidator(Validation instance) {
         Objects.requireNonNull(instance, "validator instance must not be null");
         validatorOverrides.add(instance);
         return this;

@@ -19,12 +19,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 
 @Slf4j
 @Gff3Fix(name = "EC_NUMBER", description = "Remove the EC_number attribute if necessary conditions met")
-public class EcNumberValueFix {
+public class EcNumberValueFix implements Fix {
 
     record ProductEcResult(String product, List<String> ecNumbers) {}
 

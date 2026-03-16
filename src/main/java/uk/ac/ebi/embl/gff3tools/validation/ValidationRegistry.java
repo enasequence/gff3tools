@@ -89,8 +89,8 @@ public class ValidationRegistry {
             ValidationConfig config,
             @Singular List<ContextProvider<?>> providers,
             boolean classpathScanningEnabled,
-            @Singular("fix") List<Object> fixes,
-            @Singular("validator") List<Object> validators) {
+            @Singular("fix") List<Fix> fixes,
+            @Singular("validator") List<Validation> validators) {
         this.validationConfig = config;
 
         ValidationContext ctx = new ValidationContext();
@@ -135,13 +135,8 @@ public class ValidationRegistry {
         }
 
         // Build explicit descriptors
-        List<Object> allExplicitInstances = new ArrayList<>();
-        if (fixes != null) {
-            allExplicitInstances.addAll(fixes);
-        }
-        if (validators != null) {
-            allExplicitInstances.addAll(validators);
-        }
+        List<Object> allExplicitInstances = new ArrayList<>(fixes);
+        allExplicitInstances.addAll(validators);
         List<ValidatorDescriptor> explicitDescriptors =
                 buildDescriptorsFromInstances(allExplicitInstances, ctx, config);
 
