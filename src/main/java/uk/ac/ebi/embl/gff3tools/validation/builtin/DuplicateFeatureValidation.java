@@ -18,11 +18,12 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation(name = "DUPLICATE_FEATURE")
-public class DuplicateFeatureValidation {
+public class DuplicateFeatureValidation implements Validation {
 
     private static final String DUPLICATE_PROTEIN_ID_MESSAGE =
             "Duplicate Protein Id \"%s\" found in the \"%s\" at location \"%s\"";
