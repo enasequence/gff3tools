@@ -8,9 +8,12 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.sequence;
+package uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils;
 
-public enum IdType {
-    ACCESSION_ID,
-    SUBMISSION_ID
+import lombok.Value;
+
+@Value
+public class ParsedHeader {
+    String id;
+    FastaHeader header;
 }

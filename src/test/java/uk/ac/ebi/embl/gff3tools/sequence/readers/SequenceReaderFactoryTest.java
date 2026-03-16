@@ -8,7 +8,7 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.sequence;
+package uk.ac.ebi.embl.gff3tools.sequence.readers;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -17,8 +17,6 @@ import java.io.Reader;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionType;
 
 public class SequenceReaderFactoryTest {
 

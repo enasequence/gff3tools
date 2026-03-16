@@ -14,9 +14,7 @@ import java.io.Reader;
 import java.util.List;
 import java.util.Optional;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
-import uk.ac.ebi.embl.gff3tools.sequence.IdType;
-import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.FastaHeader;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 
 /**
  * Unified read-only abstraction over submission sequence inputs.

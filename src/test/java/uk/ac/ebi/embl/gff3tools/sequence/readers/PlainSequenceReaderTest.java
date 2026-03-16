@@ -23,8 +23,7 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.fastareader.exception.SequenceFileException;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
-import uk.ac.ebi.embl.gff3tools.sequence.IdType;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.FastaHeader;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 
 public class PlainSequenceReaderTest {
 

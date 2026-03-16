@@ -19,11 +19,9 @@ import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.fastareader.exception.FastaFileException;
 import uk.ac.ebi.embl.fastareader.sequenceutils.SequenceAlphabet;
 import uk.ac.ebi.embl.gff3tools.exception.FastaHeaderParserException;
-import uk.ac.ebi.embl.gff3tools.sequence.IdType;
-import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.FastaHeader;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.JsonHeaderParser;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.ParsedHeader;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.JsonHeaderParser;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ParsedHeader;
 
 public final class JsonHeaderFastaReader implements SequenceReader {
 

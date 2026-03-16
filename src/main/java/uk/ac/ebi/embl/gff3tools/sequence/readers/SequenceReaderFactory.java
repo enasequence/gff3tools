@@ -8,14 +8,12 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.sequence;
+package uk.ac.ebi.embl.gff3tools.sequence.readers;
 
 import java.io.File;
 import java.util.Objects;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.JsonHeaderFastaReader;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.PlainSequenceReader;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils.FastaHeader;
+
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 
 /**
  * Factory methods for opening {@link SequenceReader} instances.

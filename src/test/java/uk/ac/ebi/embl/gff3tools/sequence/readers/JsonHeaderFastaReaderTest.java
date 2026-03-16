@@ -20,7 +20,6 @@ import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.fastareader.exception.FastaFileException;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.FastaHeaderParserException;
-import uk.ac.ebi.embl.gff3tools.sequence.IdType;
 
 public class JsonHeaderFastaReaderTest {
 

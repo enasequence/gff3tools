@@ -8,12 +8,15 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.sequence.readers.fasta.header.utils;
+package uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.exception.FastaHeaderParserException;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.JsonHeaderParser;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ParsedHeader;
 
 public class JsonHeaderParserTest {
 
