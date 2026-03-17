@@ -25,4 +25,10 @@ public interface ContextProvider<T> {
 
     /** The value type this provider produces; used as the registration key. */
     Class<T> type();
+
+    /**
+     * Lifecycle hook called after all providers are registered in the context
+     * but before any fixes or validators are initialized.
+     */
+    default void initialize() {}
 }

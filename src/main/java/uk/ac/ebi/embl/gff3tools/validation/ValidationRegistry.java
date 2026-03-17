@@ -91,11 +91,20 @@ public class ValidationRegistry {
         this.validationConfig = config;
 
         ValidationContext ctx = new ValidationContext();
-        for (ContextProvider<?> provider : instantiateProviders()) {
+        List<ContextProvider<?>> allProviders = new ArrayList<>(instantiateProviders());
+        for (ContextProvider<?> provider : allProviders) {
             ctx.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
         }
         for (ContextProvider<?> provider : providers) {
             ctx.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
+        }
+
+        // Call initialize() on all providers after registration
+        for (ContextProvider<?> provider : allProviders) {
+            provider.initialize();
+        }
+        for (ContextProvider<?> provider : providers) {
+            provider.initialize();
         }
 
         this.context = ctx;

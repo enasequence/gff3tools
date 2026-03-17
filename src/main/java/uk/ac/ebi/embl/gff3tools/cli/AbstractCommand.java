@@ -76,6 +76,28 @@ public abstract class AbstractCommand implements Runnable {
                 .build();
     }
 
+    protected ValidationEngine initValidationEngine(
+            Map<String, RuleSeverity> ruleOverrides,
+            Path processDir,
+            uk.ac.ebi.embl.gff3tools.validation.ContextProvider<?>... additionalProviders) {
+
+        if (!Files.isDirectory(processDir) || !Files.isWritable(processDir)) {
+            throw new RuntimeException(String.format("The directory {%s} is not writable.", processDir));
+        }
+
+        log.info("Running with process directory: {}", processDir);
+        ValidationEngineBuilder builder = new ValidationEngineBuilder()
+                .overrideMethodRules(ruleOverrides)
+                .failFast(failFast)
+                .withProvider(getTranslationProvider(processDir));
+
+        for (uk.ac.ebi.embl.gff3tools.validation.ContextProvider<?> provider : additionalProviders) {
+            builder.withProvider(provider);
+        }
+
+        return builder.build();
+    }
+
     private TranslationProvider getTranslationProvider(Path processDir) {
         return new TranslationProvider(TranslationContext.builder()
                 .processDir(processDir)
