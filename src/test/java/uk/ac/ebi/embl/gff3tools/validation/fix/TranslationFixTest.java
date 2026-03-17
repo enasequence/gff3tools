@@ -21,10 +21,11 @@ import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.IdType;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionType;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
-import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationRegistry;
+import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceProvider;
 
 class TranslationFixTest {
@@ -37,11 +38,14 @@ class TranslationFixTest {
     void setUp() {
         fix = new TranslationFix();
         mockReader = mock(SequenceReader.class);
+        when(mockReader.submissionType()).thenReturn(SubmissionType.FASTA);
+        when(mockReader.getOrderedIds(any())).thenReturn(java.util.List.of("seq1"));
         context = new ValidationContext();
 
-        FileSequenceProvider provider = new FileSequenceProvider();
-        provider.setSequenceReader(mockReader);
-        context.register(SequenceReader.class, provider);
+        CompositeSequenceProvider compositeProvider = new CompositeSequenceProvider();
+        FileSequenceProvider fileProvider = new FileSequenceProvider(mockReader);
+        compositeProvider.addSource(fileProvider);
+        context.register(SequenceReader.class, compositeProvider);
 
         ValidationRegistry.injectContext(fix, context);
     }
@@ -66,16 +70,15 @@ class TranslationFixTest {
     }
 
     @Test
-    void skipsWhenReaderIsNull() throws Exception {
-        TranslationFix fixWithNullReader = new TranslationFix();
+    void skipsWhenNoSourcesRegistered() throws Exception {
+        TranslationFix fixWithEmptyComposite = new TranslationFix();
         ValidationContext ctx = new ValidationContext();
-        FileSequenceProvider provider = new FileSequenceProvider();
-        // Do not set a reader
-        ctx.register(SequenceReader.class, provider);
-        ValidationRegistry.injectContext(fixWithNullReader, ctx);
+        CompositeSequenceProvider emptyComposite = new CompositeSequenceProvider();
+        ctx.register(SequenceReader.class, emptyComposite);
+        ValidationRegistry.injectContext(fixWithEmptyComposite, ctx);
 
         GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
-        fixWithNullReader.fixFeature(feature, 1);
+        fixWithEmptyComposite.fixFeature(feature, 1);
     }
 
     @Test

@@ -75,18 +75,15 @@ public abstract class AbstractCommand implements Runnable {
     }
 
     protected ValidationEngine initValidationEngine(
-            Map<String, RuleSeverity> ruleOverrides,
-            Path processDir,
-            ContextProvider<?>... additionalProviders) {
+            Map<String, RuleSeverity> ruleOverrides, Path processDir, ContextProvider<?>... additionalProviders) {
 
         if (!Files.isDirectory(processDir) || !Files.isWritable(processDir)) {
             throw new RuntimeException(String.format("The directory {%s} is not writable.", processDir));
         }
 
         log.info("Running with process directory: {}", processDir);
-        ValidationEngineBuilder builder = new ValidationEngineBuilder()
-                .overrideMethodRules(ruleOverrides)
-                .failFast(failFast);
+        ValidationEngineBuilder builder =
+                new ValidationEngineBuilder().overrideMethodRules(ruleOverrides).failFast(failFast);
 
         for (ContextProvider<?> provider : additionalProviders) {
             builder.withProvider(provider);

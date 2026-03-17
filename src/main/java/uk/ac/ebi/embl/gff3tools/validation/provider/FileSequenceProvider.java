@@ -10,22 +10,25 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
+import uk.ac.ebi.embl.gff3tools.sequence.IdType;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
-import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
-import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionType;
 
 /**
- * Provides a {@link SequenceReader} to the validation/fix pipeline.
+ * A {@link SequenceSource} backed by a single file (FASTA or plain sequence).
  *
- * <p>When auto-discovered with no reader set, {@link #get} returns {@code null}.
- * The CLI sets the reader when {@code --sequence-fasta} is provided.
+ * <p>For {@link SubmissionType#PLAIN_SEQUENCE}, {@link #hasSequence} returns {@code true}
+ * for any ID since the single sequence serves all GFF3 seqIds. For {@link SubmissionType#FASTA},
+ * it checks whether the requested ID exists in the reader's index.
  */
-public class FileSequenceProvider implements ContextProvider<SequenceReader> {
+public class FileSequenceProvider implements SequenceSource {
 
     private SequenceReader sequenceReader;
 
-    public SequenceReader getSequenceReader() {
-        return sequenceReader;
+    public FileSequenceProvider() {}
+
+    public FileSequenceProvider(SequenceReader sequenceReader) {
+        this.sequenceReader = sequenceReader;
     }
 
     public void setSequenceReader(SequenceReader sequenceReader) {
@@ -33,12 +36,19 @@ public class FileSequenceProvider implements ContextProvider<SequenceReader> {
     }
 
     @Override
-    public SequenceReader get(ValidationContext context) {
-        return sequenceReader;
+    public boolean hasSequence(IdType idType, String id) {
+        if (sequenceReader == null) {
+            return false;
+        }
+        if (sequenceReader.submissionType() == SubmissionType.PLAIN_SEQUENCE) {
+            return true;
+        }
+        // FASTA: check whether the ID exists
+        return sequenceReader.getOrderedIds(idType).contains(id);
     }
 
     @Override
-    public Class<SequenceReader> type() {
-        return SequenceReader.class;
+    public SequenceReader getReader() {
+        return sequenceReader;
     }
 }
