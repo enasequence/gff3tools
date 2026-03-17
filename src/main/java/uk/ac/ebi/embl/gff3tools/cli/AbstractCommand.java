@@ -23,11 +23,10 @@ import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
+import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
-import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationContext;
-import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationProvider;
 
 @Slf4j
 public abstract class AbstractCommand implements Runnable {
@@ -72,14 +71,13 @@ public abstract class AbstractCommand implements Runnable {
         return new ValidationEngineBuilder()
                 .overrideMethodRules(ruleOverrides)
                 .failFast(failFast)
-                .withProvider(getTranslationProvider(processDir))
                 .build();
     }
 
     protected ValidationEngine initValidationEngine(
             Map<String, RuleSeverity> ruleOverrides,
             Path processDir,
-            uk.ac.ebi.embl.gff3tools.validation.ContextProvider<?>... additionalProviders) {
+            ContextProvider<?>... additionalProviders) {
 
         if (!Files.isDirectory(processDir) || !Files.isWritable(processDir)) {
             throw new RuntimeException(String.format("The directory {%s} is not writable.", processDir));
@@ -88,21 +86,13 @@ public abstract class AbstractCommand implements Runnable {
         log.info("Running with process directory: {}", processDir);
         ValidationEngineBuilder builder = new ValidationEngineBuilder()
                 .overrideMethodRules(ruleOverrides)
-                .failFast(failFast)
-                .withProvider(getTranslationProvider(processDir));
+                .failFast(failFast);
 
-        for (uk.ac.ebi.embl.gff3tools.validation.ContextProvider<?> provider : additionalProviders) {
+        for (ContextProvider<?> provider : additionalProviders) {
             builder.withProvider(provider);
         }
 
         return builder.build();
-    }
-
-    private TranslationProvider getTranslationProvider(Path processDir) {
-        return new TranslationProvider(TranslationContext.builder()
-                .processDir(processDir)
-                .sequenceFastaPath(processDir.resolve("gff3-translation.fasta"))
-                .build());
     }
 
     @FunctionalInterface
