@@ -13,31 +13,60 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.sequence.IdType;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
-import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionType;
 
 class FileSequenceProviderTest {
 
     @Test
-    void typeReturnsSequenceReaderClass() {
+    void hasSequenceReturnsFalseWhenNoReaderSet() {
         FileSequenceProvider provider = new FileSequenceProvider();
-        assertEquals(SequenceReader.class, provider.type());
+        assertFalse(provider.hasSequence(IdType.SUBMISSION_ID, "any"));
     }
 
     @Test
-    void getReturnsNullWhenNoReaderSet() {
+    void getReaderReturnsNullWhenNoReaderSet() {
         FileSequenceProvider provider = new FileSequenceProvider();
-        assertNull(provider.get(new ValidationContext()));
+        assertNull(provider.getReader());
     }
 
     @Test
-    void getReturnsReaderAfterSet() {
-        FileSequenceProvider provider = new FileSequenceProvider();
+    void hasSequenceReturnsTrueForPlainSequenceAnyId() {
         SequenceReader mockReader = mock(SequenceReader.class);
-        provider.setSequenceReader(mockReader);
+        when(mockReader.submissionType()).thenReturn(SubmissionType.PLAIN_SEQUENCE);
 
-        assertSame(mockReader, provider.get(new ValidationContext()));
-        assertSame(mockReader, provider.getSequenceReader());
+        FileSequenceProvider provider = new FileSequenceProvider(mockReader);
+        assertTrue(provider.hasSequence(IdType.SUBMISSION_ID, "any-id"));
+        assertTrue(provider.hasSequence(IdType.ACCESSION_ID, "other-id"));
+    }
+
+    @Test
+    void hasSequenceChecksFastaIndex() {
+        SequenceReader mockReader = mock(SequenceReader.class);
+        when(mockReader.submissionType()).thenReturn(SubmissionType.FASTA);
+        when(mockReader.getOrderedIds(IdType.SUBMISSION_ID)).thenReturn(List.of("seq1", "seq2"));
+
+        FileSequenceProvider provider = new FileSequenceProvider(mockReader);
+        assertTrue(provider.hasSequence(IdType.SUBMISSION_ID, "seq1"));
+        assertTrue(provider.hasSequence(IdType.SUBMISSION_ID, "seq2"));
+        assertFalse(provider.hasSequence(IdType.SUBMISSION_ID, "seq3"));
+    }
+
+    @Test
+    void getReaderReturnsSetReader() {
+        SequenceReader mockReader = mock(SequenceReader.class);
+        FileSequenceProvider provider = new FileSequenceProvider();
+        provider.setSequenceReader(mockReader);
+        assertSame(mockReader, provider.getReader());
+    }
+
+    @Test
+    void constructorSetsReader() {
+        SequenceReader mockReader = mock(SequenceReader.class);
+        FileSequenceProvider provider = new FileSequenceProvider(mockReader);
+        assertSame(mockReader, provider.getReader());
     }
 }
