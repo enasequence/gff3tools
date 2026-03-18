@@ -26,8 +26,8 @@ import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
-import uk.ac.ebi.embl.gff3tools.validation.provider.FilePathContext;
-import uk.ac.ebi.embl.gff3tools.validation.provider.FilePathProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationProvider;
 
 @Slf4j
 public abstract class AbstractCommand implements Runnable {
@@ -76,8 +76,8 @@ public abstract class AbstractCommand implements Runnable {
                 .build();
     }
 
-    private FilePathProvider getTranslationProvider(Path processDir) {
-        return new FilePathProvider(FilePathContext.builder()
+    private TranslationProvider getTranslationProvider(Path processDir) {
+        return new TranslationProvider(TranslationContext.builder()
                 .processDir(processDir)
                 .sequenceFastaPath(processDir.resolve("gff3-translation.fasta"))
                 .build());

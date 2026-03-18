@@ -8,11 +8,11 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 
-//todo revamp underlying class after fasta reader update is live
 public class SequenceReaderProvider implements ContextProvider<SequenceReader> {
 
-    private SequenceReader cached;
+    private HashMap<String, SequenceReader> cached;
 
     @Override
     public SequenceReader get(ValidationContext context) {
@@ -32,14 +32,14 @@ public class SequenceReaderProvider implements ContextProvider<SequenceReader> {
     }
 
     private void initialiseReader(ValidationContext context) throws Exception {
-        FilePathContext filePathContext = context.get(FilePathContext.class);
-        Path sequenceFilePath = filePathContext.getSequenceFastaPath();
+        TranslationContext translationContext = context.get(TranslationContext.class);
+        Path sequenceFilePath = translationContext.getSequenceFastaPath();
         if (!Files.exists(sequenceFilePath) || !Files.isRegularFile(sequenceFilePath)) {
             throw new IllegalArgumentException("Not a valid file: " + sequenceFilePath);
         }
         File sequenceFile = sequenceFilePath.toFile();
 
-        switch (filePathContext.getFileFormat()){
+        switch (translationContext()){
             case FASTA -> {
                 cached = SequenceReaderFactory.readFasta(sequenceFile); //todo revamp after fasta reader update live
             }

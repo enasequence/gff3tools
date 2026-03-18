@@ -17,24 +17,18 @@ import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionType;
 
 /**
  * Holds all shared translation-related resources for a validation run.
- * and registered via FilePathProvider.
+ * and registered via TranslationProvider.
  *
  * <p>Retrieved by validators via:
- * <pre>context.get(FilePathContext.class)</pre>
+ * <pre>context.get(TranslationContext.class)</pre>
  */
 @Getter
 @Builder
-public class FilePathContext {
+public class TranslationContext {
 
     /** Working directory for this validation run. */
     private final Path processDir;
 
-    /** Temp FASTA file used to store downloaded sequences during translation. */ //TODO merge into one with upper thingy
+    /** Temp FASTA file used to store downloaded sequences during translation. */
     private final Path sequenceFastaPath;
-
-    /** Temp file used to store downloaded fasta stuff if needed */ //TODO rethink
-    private final Path downloadedJsonHeader;
-
-    /** Type of format the sequence is in */
-    private final SubmissionType fileFormat;
 }
