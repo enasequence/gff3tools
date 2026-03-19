@@ -1,0 +1,4 @@
+##gff-version 3
+##sequence-region chr1 1 120
+chr1	.	CDS	4	21	.	+	0	ID=cds_alpha
+chr1	.	CDS	25	45	.	+	0	ID=cds_beta
