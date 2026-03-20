@@ -10,12 +10,14 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
-import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
+import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.IdType;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
@@ -33,6 +35,9 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
  *
  * <p>Runs at {@link ValidationPriority#LOW} so that structural fixes
  * (locus tag, pseudogene, attribute corrections) are applied first.
+ *
+ * <p>Operates at the ANNOTATION level so that multi-segment CDS features (joins)
+ * are translated as a single concatenated sequence rather than individually.
  */
 @Slf4j
 @Gff3Fix(name = "TRANSLATION", description = "Generate protein translations from CDS features")
@@ -44,36 +49,57 @@ public class TranslationFix {
     @FixMethod(
             rule = "TRANSLATION",
             description = "Translate CDS features and set the translation attribute",
-            type = FEATURE,
+            type = ANNOTATION,
             priority = ValidationPriority.LOW)
-    public void fixFeature(GFF3Feature feature, int line) throws ValidationException {
-        if (!OntologyTerm.CDS.name().equals(feature.getName())) {
-            return;
-        }
-
+    public void fixAnnotation(GFF3Annotation annotation, int line) throws ValidationException {
         SequenceReader sequenceReader;
         try {
             sequenceReader = context.get(SequenceReader.class);
         } catch (IllegalArgumentException e) {
-            // No SequenceReader provider registered — skip translation
             return;
         }
         if (sequenceReader == null) {
-            // Provider registered but no reader set — skip translation
             return;
         }
 
-        try {
-            String nucleotideSlice = sequenceReader.getSequenceSlice(
-                    IdType.SUBMISSION_ID,
-                    feature.getSeqId(),
-                    feature.getStart(),
-                    feature.getEnd(),
-                    SequenceRangeOption.WHOLE_SEQUENCE);
+        // Group CDS features by ID (features with the same ID form a join)
+        Map<String, List<GFF3Feature>> cdsGroups = annotation.getFeatures().stream()
+                .filter(f -> OntologyTerm.CDS.name().equals(f.getName()))
+                .collect(Collectors.groupingBy(
+                        f -> f.getId().orElse("__no_id_" + f.getStart() + "_" + f.getEnd()),
+                        LinkedHashMap::new,
+                        Collectors.toList()));
 
-            Translator translator = new Translator(feature);
+        for (List<GFF3Feature> segments : cdsGroups.values()) {
+            translateCdsGroup(segments, sequenceReader, line);
+        }
+    }
+
+    private void translateCdsGroup(List<GFF3Feature> segments, SequenceReader sequenceReader, int line)
+            throws ValidationException {
+        // Sort segments by genomic start position
+        List<GFF3Feature> sorted = new ArrayList<>(segments);
+        sorted.sort(Comparator.comparingLong(GFF3Feature::getStart));
+
+        GFF3Feature representative = sorted.get(0);
+
+        try {
+            // Concatenate sequence slices from all segments in genomic order
+            StringBuilder concatenated = new StringBuilder();
+            for (GFF3Feature segment : sorted) {
+                String slice = sequenceReader.getSequenceSlice(
+                        IdType.SUBMISSION_ID,
+                        segment.getSeqId(),
+                        segment.getStart(),
+                        segment.getEnd(),
+                        SequenceRangeOption.WHOLE_SEQUENCE);
+                concatenated.append(slice);
+            }
+
+            Translator translator = new Translator(representative);
             translator.enableAllFixes();
-            TranslationResult result = translator.translate(nucleotideSlice.getBytes());
+            TranslationResult result =
+                    translator.translate(concatenated.toString().getBytes());
 
             if (result.hasErrors()) {
                 throw new ValidationException(
@@ -82,8 +108,10 @@ public class TranslationFix {
 
             String translation = result.getConceptualTranslation();
             if (!translation.isEmpty()) {
-                feature.setAttributeList("translation", List.of(translation));
-                log.debug("Set translation attribute on CDS feature at line {}", line);
+                for (GFF3Feature segment : segments) {
+                    segment.setAttributeList("translation", List.of(translation));
+                }
+                log.debug("Set translation attribute on CDS feature group at line {}", line);
             }
         } catch (ValidationException e) {
             throw e;
@@ -92,7 +120,7 @@ public class TranslationFix {
                     "TRANSLATION",
                     line,
                     "Failed to translate CDS feature on sequence '%s': %s"
-                            .formatted(feature.getSeqId(), e.getMessage()));
+                            .formatted(representative.getSeqId(), e.getMessage()));
         }
     }
 }
