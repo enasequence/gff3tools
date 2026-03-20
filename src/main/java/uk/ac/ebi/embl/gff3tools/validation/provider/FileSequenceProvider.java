@@ -17,18 +17,33 @@ import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionType;
 /**
  * A {@link SequenceSource} backed by a single file (FASTA or plain sequence).
  *
- * <p>For {@link SubmissionType#PLAIN_SEQUENCE}, {@link #hasSequence} returns {@code true}
- * for any ID since the single sequence serves all GFF3 seqIds. For {@link SubmissionType#FASTA},
- * it checks whether the requested ID exists in the reader's index.
+ * <p>For {@link SubmissionType#PLAIN_SEQUENCE}:
+ * <ul>
+ *   <li>If a {@code sequenceKey} is set, {@link #hasSequence} matches only that key.</li>
+ *   <li>If no key is set, {@link #hasSequence} returns {@code true} for any ID
+ *       (single sequence serves all GFF3 seqIds).</li>
+ * </ul>
+ *
+ * <p>For {@link SubmissionType#FASTA}, it checks whether the requested ID exists
+ * in the reader's index.
  */
 public class FileSequenceProvider implements SequenceSource {
 
     private SequenceReader sequenceReader;
+    private final String sequenceKey;
 
-    public FileSequenceProvider() {}
+    public FileSequenceProvider() {
+        this.sequenceKey = null;
+    }
 
     public FileSequenceProvider(SequenceReader sequenceReader) {
         this.sequenceReader = sequenceReader;
+        this.sequenceKey = null;
+    }
+
+    public FileSequenceProvider(SequenceReader sequenceReader, String sequenceKey) {
+        this.sequenceReader = sequenceReader;
+        this.sequenceKey = sequenceKey;
     }
 
     public void setSequenceReader(SequenceReader sequenceReader) {
@@ -41,7 +56,8 @@ public class FileSequenceProvider implements SequenceSource {
             return false;
         }
         if (sequenceReader.submissionType() == SubmissionType.PLAIN_SEQUENCE) {
-            return true;
+            // If a key is set, match only that key; otherwise match any ID
+            return sequenceKey == null || sequenceKey.equals(id);
         }
         // FASTA: check whether the ID exists
         return sequenceReader.getOrderedIds(idType).contains(id);

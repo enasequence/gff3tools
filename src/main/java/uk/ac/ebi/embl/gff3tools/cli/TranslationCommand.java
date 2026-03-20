@@ -42,8 +42,12 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceProvider;
 @Slf4j
 public class TranslationCommand extends AbstractCommand {
 
-    @CommandLine.Option(names = "--sequence", description = "Path to a nucleotide sequence file (FASTA or plain)")
-    public Path sequencePath;
+    @CommandLine.Option(
+            names = "--sequence",
+            description = "Sequence source. Repeatable. Use path for FASTA files (IDs from headers) "
+                    + "or key:path for plain sequences (key = GFF3 seqId). "
+                    + "Examples: --sequence seqs.fasta --sequence chr1:chr1.seq")
+    public List<String> sequenceSpecs;
 
     @CommandLine.Option(
             names = "--sequence-format",
@@ -65,20 +69,25 @@ public class TranslationCommand extends AbstractCommand {
     public void run() {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
         Path processDir = Optional.ofNullable(inputFilePath.getParent()).orElse(Path.of("."));
+        List<SequenceReader> openedReaders = new ArrayList<>();
 
         try {
-            if (sequencePath == null) {
+            if (sequenceSpecs == null || sequenceSpecs.isEmpty()) {
                 throw new RuntimeException(
                         "A sequence source is required. Provide --sequence or ensure a plugin supplies sequences.");
             }
 
-            SequenceFormat resolvedFormat = resolveSequenceFormat(sequencePath);
+            CompositeSequenceProvider compositeProvider = new CompositeSequenceProvider();
 
-            try (SequenceReader sequenceReader = openSequenceReader(sequencePath, resolvedFormat)) {
+            for (String spec : sequenceSpecs) {
+                ParsedSequenceSpec parsed = parseSequenceSpec(spec);
+                SequenceFormat format = resolveSequenceFormat(parsed.path());
+                SequenceReader reader = openSequenceReader(parsed.path(), format, parsed.key());
+                openedReaders.add(reader);
+                compositeProvider.addSource(new FileSequenceProvider(reader, parsed.key()));
+            }
 
-                CompositeSequenceProvider compositeProvider = new CompositeSequenceProvider();
-                compositeProvider.addSource(new FileSequenceProvider(sequenceReader));
-
+            try {
                 ValidationEngine validationEngine = initValidationEngine(ruleOverrides, processDir, compositeProvider);
 
                 List<GFF3Annotation> annotations = new ArrayList<>();
@@ -112,11 +121,40 @@ public class TranslationCommand extends AbstractCommand {
                 }
 
                 writeOutput(annotations, header);
+            } finally {
+                for (SequenceReader reader : openedReaders) {
+                    try {
+                        reader.close();
+                    } catch (Exception e) {
+                        log.warn("Failed to close sequence reader: {}", e.getMessage());
+                    }
+                }
             }
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
     }
+
+    /**
+     * Parses a --sequence spec into an optional key and a path.
+     *
+     * <p>Format: {@code [key:]path}. The key is separated by the first colon that is not
+     * part of the path (i.e., the character before the colon contains no path separators).
+     */
+    private ParsedSequenceSpec parseSequenceSpec(String spec) {
+        int colonIdx = spec.indexOf(':');
+        if (colonIdx > 0) {
+            String possibleKey = spec.substring(0, colonIdx);
+            // If the part before the colon has no path separators, treat it as a key
+            if (!possibleKey.contains("/") && !possibleKey.contains("\\")) {
+                String pathStr = spec.substring(colonIdx + 1);
+                return new ParsedSequenceSpec(possibleKey, Path.of(pathStr));
+            }
+        }
+        return new ParsedSequenceSpec(null, Path.of(spec));
+    }
+
+    private record ParsedSequenceSpec(String key, Path path) {}
 
     private SequenceFormat resolveSequenceFormat(Path path) {
         if (sequenceFormat != null) {
@@ -134,10 +172,13 @@ public class TranslationCommand extends AbstractCommand {
         };
     }
 
-    private SequenceReader openSequenceReader(Path path, SequenceFormat format) throws Exception {
+    private SequenceReader openSequenceReader(Path path, SequenceFormat format, String key) throws Exception {
         return switch (format) {
             case fasta -> SequenceReaderFactory.readFasta(path.toFile());
-            case plain -> SequenceReaderFactory.readPlainSequence(path.toFile(), "0");
+            case plain -> {
+                String accessionId = (key != null) ? key : "0";
+                yield SequenceReaderFactory.readPlainSequence(path.toFile(), accessionId);
+            }
         };
     }
 
