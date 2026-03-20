@@ -18,6 +18,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.IdType;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
@@ -52,9 +53,8 @@ class TranslationFixTest {
 
     @Test
     void skipsNonCdsFeatures() throws Exception {
-        GFF3Feature feature = createFeature("gene", "seq1", 1, 100, "+");
-        fix.fixFeature(feature, 1);
-        // Should not interact with reader
+        GFF3Annotation annotation = createAnnotation(createFeature("gene", "seq1", 1, 100, "+"));
+        fix.fixAnnotation(annotation, 1);
         verifyNoInteractions(mockReader);
     }
 
@@ -64,9 +64,8 @@ class TranslationFixTest {
         ValidationContext emptyContext = new ValidationContext();
         ValidationRegistry.injectContext(fixWithoutProvider, emptyContext);
 
-        GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
-        // Should not throw — just skip
-        fixWithoutProvider.fixFeature(feature, 1);
+        GFF3Annotation annotation = createAnnotation(createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+"));
+        fixWithoutProvider.fixAnnotation(annotation, 1);
     }
 
     @Test
@@ -77,20 +76,20 @@ class TranslationFixTest {
         ctx.register(SequenceReader.class, emptyComposite);
         ValidationRegistry.injectContext(fixWithEmptyComposite, ctx);
 
-        GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
-        fixWithEmptyComposite.fixFeature(feature, 1);
+        GFF3Annotation annotation = createAnnotation(createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+"));
+        fixWithEmptyComposite.fixAnnotation(annotation, 1);
     }
 
     @Test
     void translatesCdsFeatureForwardStrand() throws Exception {
         // ATG = M (start), AAA = K, TAA = * (stop) → conceptual = "MK"
-        String sequence = "ATGAAATAA";
         when(mockReader.getSequenceSlice(
                         eq(IdType.SUBMISSION_ID), eq("seq1"), eq(1L), eq(9L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
-                .thenReturn(sequence);
+                .thenReturn("ATGAAATAA");
 
         GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
-        fix.fixFeature(feature, 1);
+        GFF3Annotation annotation = createAnnotation(feature);
+        fix.fixAnnotation(annotation, 1);
 
         assertTrue(feature.hasAttribute("translation"));
         assertEquals("MK", feature.getAttribute("translation").orElse(""));
@@ -99,13 +98,13 @@ class TranslationFixTest {
     @Test
     void translatesCdsFeatureComplementStrand() throws Exception {
         // Complement of TTA TTT CAT → ATG AAA TAA → M K *
-        String sequence = "TTATTTCAT";
         when(mockReader.getSequenceSlice(
                         eq(IdType.SUBMISSION_ID), eq("seq1"), eq(1L), eq(9L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
-                .thenReturn(sequence);
+                .thenReturn("TTATTTCAT");
 
         GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "-");
-        fix.fixFeature(feature, 1);
+        GFF3Annotation annotation = createAnnotation(feature);
+        fix.fixAnnotation(annotation, 1);
 
         assertTrue(feature.hasAttribute("translation"));
         assertEquals("MK", feature.getAttribute("translation").orElse(""));
@@ -113,22 +112,87 @@ class TranslationFixTest {
 
     @Test
     void skipsPseudoFeatures() throws Exception {
-        // Pseudo features produce empty conceptual translation
-        String sequence = "ATGAAATAA";
         when(mockReader.getSequenceSlice(any(), any(), anyLong(), anyLong(), any()))
-                .thenReturn(sequence);
+                .thenReturn("ATGAAATAA");
 
         GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
         feature.addAttribute("pseudo", "true");
-        fix.fixFeature(feature, 1);
+        GFF3Annotation annotation = createAnnotation(feature);
+        fix.fixAnnotation(annotation, 1);
 
-        // Pseudo features are non-translating: conceptual translation is empty
         assertFalse(feature.hasAttribute("translation"));
     }
 
+    @Test
+    void translatesMultiSegmentCdsJoin() throws Exception {
+        // Two segments: positions 1-6 and 10-15
+        // Concatenated: ATGAAA + CCCTAA = ATGAAACCCTAA
+        // ATG=M, AAA=K, CCC=P, TAA=* → conceptual = "MKP"
+        when(mockReader.getSequenceSlice(
+                        eq(IdType.SUBMISSION_ID), eq("seq1"), eq(1L), eq(6L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
+                .thenReturn("ATGAAA");
+        when(mockReader.getSequenceSlice(
+                        eq(IdType.SUBMISSION_ID), eq("seq1"), eq(10L), eq(15L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
+                .thenReturn("CCCTAA");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "+");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
+        GFF3Annotation annotation = createAnnotation(seg1, seg2);
+        fix.fixAnnotation(annotation, 1);
+
+        // Both segments should have the same translation
+        assertEquals("MKP", seg1.getAttribute("translation").orElse(""));
+        assertEquals("MKP", seg2.getAttribute("translation").orElse(""));
+    }
+
+    @Test
+    void translatesMultiSegmentCdsComplementJoin() throws Exception {
+        // Two segments on - strand: positions 1-6 and 10-15
+        // Concatenated in genomic order: bases[1..6] + bases[10..15]
+        // Then reverse complemented by Translator
+        // If reverse complement of "TTATTTCATGGG" = "CCCATGAAATAA"
+        // ATG=M, AAA=K → wait, let me think...
+        // Actually: concat = "TTATTT" + "CATGGG" = "TTATTTCATGGG" (12 bases)
+        // Rev comp = "CCCATGAAATAA"
+        // CCC=P, ATG=M(?), AAA=K, TAA=* → but P is not start codon
+        // Let's use: seg1 bases "TTTCAT" (pos 1-6), seg2 bases "TTATTT" (pos 10-15)
+        // Concat = "TTTCAT" + "TTATTT" = "TTTCATTTATTT" (12 bases)
+        // Rev comp = "AAATAAATGAAA" → AAA=K, TAA=stop... hmm
+        // Simpler: just test that slices are concatenated and translated
+        // Use: seg1="TTATTT" (1-6), seg2="CAT" (10-12) → concat "TTATTTCAT" (9 bases)
+        // Rev comp = "ATGAAATAA" → ATG=M, AAA=K, TAA=* → "MK"
+        when(mockReader.getSequenceSlice(
+                        eq(IdType.SUBMISSION_ID), eq("seq1"), eq(1L), eq(6L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
+                .thenReturn("TTATTT");
+        when(mockReader.getSequenceSlice(
+                        eq(IdType.SUBMISSION_ID), eq("seq1"), eq(10L), eq(12L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
+                .thenReturn("CAT");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "-");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 12, "-");
+        GFF3Annotation annotation = createAnnotation(seg1, seg2);
+        fix.fixAnnotation(annotation, 1);
+
+        assertEquals("MK", seg1.getAttribute("translation").orElse(""));
+        assertEquals("MK", seg2.getAttribute("translation").orElse(""));
+    }
+
+    private GFF3Annotation createAnnotation(GFF3Feature... features) {
+        GFF3Annotation annotation = new GFF3Annotation();
+        for (GFF3Feature feature : features) {
+            annotation.addFeature(feature);
+        }
+        return annotation;
+    }
+
     private GFF3Feature createFeature(String name, String seqId, long start, long end, String strand) {
+        return createFeature(name, name + "_id", seqId, start, end, strand);
+    }
+
+    private GFF3Feature createFeature(
+            String name, String featureId, String seqId, long start, long end, String strand) {
         return new GFF3Feature(
-                Optional.of(name + "_id"),
+                Optional.of(featureId),
                 Optional.empty(),
                 seqId,
                 Optional.empty(),
