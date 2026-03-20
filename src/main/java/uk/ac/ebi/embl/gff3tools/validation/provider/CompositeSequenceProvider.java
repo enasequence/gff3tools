@@ -59,4 +59,11 @@ public class CompositeSequenceProvider implements ContextProvider<SequenceReader
     public Class<SequenceReader> type() {
         return SequenceReader.class;
     }
+
+    @Override
+    public void close() {
+        for (SequenceSource source : sources) {
+            source.close();
+        }
+    }
 }

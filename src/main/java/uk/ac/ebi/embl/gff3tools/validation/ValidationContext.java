@@ -49,4 +49,11 @@ public class ValidationContext {
     public boolean contains(Class<?> type) {
         return providers.containsKey(type);
     }
+
+    /** Close all registered providers, releasing any held resources. */
+    public void close() {
+        for (ContextProvider<?> provider : providers.values()) {
+            provider.close();
+        }
+    }
 }

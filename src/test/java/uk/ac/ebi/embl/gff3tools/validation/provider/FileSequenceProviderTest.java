@@ -22,18 +22,6 @@ import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionType;
 class FileSequenceProviderTest {
 
     @Test
-    void hasSequenceReturnsFalseWhenNoReaderSet() {
-        FileSequenceProvider provider = new FileSequenceProvider();
-        assertFalse(provider.hasSequence(IdType.SUBMISSION_ID, "any"));
-    }
-
-    @Test
-    void getReaderReturnsNullWhenNoReaderSet() {
-        FileSequenceProvider provider = new FileSequenceProvider();
-        assertNull(provider.getReader());
-    }
-
-    @Test
     void hasSequenceReturnsTrueForPlainSequenceAnyId_noKey() {
         SequenceReader mockReader = mock(SequenceReader.class);
         when(mockReader.submissionType()).thenReturn(SubmissionType.PLAIN_SEQUENCE);
@@ -79,17 +67,17 @@ class FileSequenceProviderTest {
     }
 
     @Test
-    void getReaderReturnsSetReader() {
-        SequenceReader mockReader = mock(SequenceReader.class);
-        FileSequenceProvider provider = new FileSequenceProvider();
-        provider.setSequenceReader(mockReader);
-        assertSame(mockReader, provider.getReader());
-    }
-
-    @Test
     void constructorSetsReader() {
         SequenceReader mockReader = mock(SequenceReader.class);
         FileSequenceProvider provider = new FileSequenceProvider(mockReader);
         assertSame(mockReader, provider.getReader());
+    }
+
+    @Test
+    void closeClosesReader() throws Exception {
+        SequenceReader mockReader = mock(SequenceReader.class);
+        FileSequenceProvider provider = new FileSequenceProvider(mockReader);
+        provider.close();
+        verify(mockReader).close();
     }
 }

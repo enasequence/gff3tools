@@ -28,8 +28,6 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
-import uk.ac.ebi.embl.gff3tools.sequence.SequenceReaderFactory;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
@@ -69,7 +67,6 @@ public class TranslationCommand extends AbstractCommand {
     public void run() {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
         Path processDir = Optional.ofNullable(inputFilePath.getParent()).orElse(Path.of("."));
-        List<SequenceReader> openedReaders = new ArrayList<>();
 
         try {
             if (sequenceSpecs == null || sequenceSpecs.isEmpty()) {
@@ -82,16 +79,14 @@ public class TranslationCommand extends AbstractCommand {
             for (String spec : sequenceSpecs) {
                 ParsedSequenceSpec parsed = parseSequenceSpec(spec);
                 SequenceFormat format = resolveSequenceFormat(parsed.path());
-                SequenceReader reader = openSequenceReader(parsed.path(), format, parsed.key());
-                openedReaders.add(reader);
-                compositeProvider.addSource(new FileSequenceProvider(reader, parsed.key()));
+                compositeProvider.addSource(new FileSequenceProvider(parsed.path(), format, parsed.key()));
             }
 
-            try {
-                ValidationEngine validationEngine = initValidationEngine(ruleOverrides, processDir, compositeProvider);
+            List<GFF3Annotation> annotations = new ArrayList<>();
+            GFF3Header header;
 
-                List<GFF3Annotation> annotations = new ArrayList<>();
-                GFF3Header header;
+            try (ValidationEngine validationEngine =
+                    initValidationEngine(ruleOverrides, processDir, compositeProvider)) {
 
                 try (BufferedReader inputReader = getPipe(
                                 Files::newBufferedReader,
@@ -119,17 +114,9 @@ public class TranslationCommand extends AbstractCommand {
                         log.info("Translation completed successfully");
                     }
                 }
-
-                writeOutput(annotations, header);
-            } finally {
-                for (SequenceReader reader : openedReaders) {
-                    try {
-                        reader.close();
-                    } catch (Exception e) {
-                        log.warn("Failed to close sequence reader: {}", e.getMessage());
-                    }
-                }
             }
+
+            writeOutput(annotations, header);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
@@ -171,16 +158,6 @@ public class TranslationCommand extends AbstractCommand {
         }
         throw new RuntimeException("Unrecognized sequence file extension: ." + ext
                 + ". Use --sequence-format to specify the format explicitly.");
-    }
-
-    private SequenceReader openSequenceReader(Path path, SequenceFormat format, String key) throws Exception {
-        return switch (format) {
-            case fasta -> SequenceReaderFactory.readFasta(path.toFile());
-            case plain -> {
-                String accessionId = (key != null) ? key : "0";
-                yield SequenceReaderFactory.readPlainSequence(path.toFile(), accessionId);
-            }
-        };
     }
 
     private void writeOutput(List<GFF3Annotation> annotations, GFF3Header header) throws Exception {

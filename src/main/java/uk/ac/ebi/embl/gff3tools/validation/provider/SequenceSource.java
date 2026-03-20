@@ -30,4 +30,7 @@ public interface SequenceSource {
      * Returns the underlying {@link SequenceReader} for this source.
      */
     SequenceReader getReader();
+
+    /** Release any resources held by this source. */
+    default void close() {}
 }
