@@ -22,8 +22,20 @@ gff3tools translate --sequence /path/to/nucleotides.fasta input.gff3
 # Explicit format (when extension is ambiguous or missing)
 gff3tools translate --sequence /path/to/seqdata --sequence-format fasta input.gff3
 
-# Plain sequence input
+# Plain sequence input (without key — matches any GFF3 seqId)
 gff3tools translate --sequence /path/to/sequence.seq input.gff3
+
+# Multiple plain sequences with keys (key = GFF3 seqId)
+gff3tools translate \
+  --sequence chr1:/path/to/chr1.seq \
+  --sequence chr2:/path/to/chr2.seq \
+  input.gff3
+
+# Mix FASTA and keyed plain sequences
+gff3tools translate \
+  --sequence /path/to/multi.fasta \
+  --sequence chrX:/path/to/extra.seq \
+  input.gff3
 
 # Override the default output path
 gff3tools translate --sequence seq.fasta -o custom.gff3 input.gff3
@@ -44,8 +56,8 @@ Inherits `--fail-fast` and `--rules` from `AbstractCommand`.
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--sequence <path>` | Path to a nucleotide sequence file (FASTA or plain) | None (plugin must supply sequences) |
-| `--sequence-format <format>` | Sequence file format: `fasta` or `plain` | Inferred from file extension |
+| `--sequence <[key:]path>` | Sequence source (repeatable). Use `path` for FASTA files (IDs from headers) or `key:path` for plain sequences where `key` is the GFF3 seqId. Without a key, a plain sequence matches any seqId. | None (plugin must supply sequences) |
+| `--sequence-format <format>` | Sequence file format: `fasta` or `plain`. Applies to all `--sequence` entries. | Inferred from file extension |
 | `--translation-mode <mode>` | Output mode: `gff3-fasta`, `fasta`, or `attribute` | `gff3-fasta` |
 | `-o <path>` | Output file path for `fasta` and `gff3-fasta` modes | Derived from input file name |
 
@@ -75,9 +87,9 @@ Inherits `--fail-fast` and `--rules` from `AbstractCommand`.
 
 | Component | Role |
 |-----------|------|
-| **TranslationCommand** | Picocli `@Command` that opens a `SequenceReader` via `SequenceReaderFactory` (format inferred from extension or set via `--sequence-format`), registers it as a local source in the `CompositeSequenceProvider`, and runs the GFF3 pipeline. Handles output mode and file writing. |
+| **TranslationCommand** | Picocli `@Command` that parses one or more `--sequence` specs (`[key:]path`), opens a `SequenceReader` for each via `SequenceReaderFactory`, and registers them as local sources in the `CompositeSequenceProvider`. For keyed plain sequences, the key becomes the accession ID used for ID matching. Handles output mode and file writing. |
 | **CompositeSequenceProvider** | `ContextProvider<SequenceReader>` keyed on `SequenceReader.class`. Wraps an ordered list of `SequenceSource` instances. Resolves sequence IDs by trying each source in order until one succeeds. |
-| **FileSequenceProvider** | A `SequenceSource` backed by a local sequence file (FASTA or plain). Wraps a `SequenceReader` opened from `--sequence`. |
+| **FileSequenceProvider** | A `SequenceSource` backed by a local sequence file (FASTA or plain). Wraps a `SequenceReader` opened from `--sequence`. For plain sequences with a key, `hasSequence()` matches only that key; without a key it matches any ID (backward compatible single-sequence behavior). |
 | **SequenceSource** | Interface for sequence sources. Each source can report whether it has a given sequence ID and provide a `SequenceReader` for it. Plugin JARs implement this to add remote sources. |
 | **TranslationFix** | `@Gff3Fix` with `@FixMethod(priority = LOW)`. For each CDS feature: resolves the nucleotide sequence via `CompositeSequenceProvider`, runs `Translator.translate()`, sets the `translation` attribute. Gracefully skips when no sequence source is available. |
 | **ContextProvider.initialize()** | Lifecycle hook called after all providers are registered. Remote plugins use this to register themselves as additional sources in the `CompositeSequenceProvider`. |
