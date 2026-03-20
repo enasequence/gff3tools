@@ -30,6 +30,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 /**
  * Fix that generates protein translations from CDS features using a {@link SequenceReader}.
@@ -83,6 +84,7 @@ public class TranslationFix {
         sorted.sort(Comparator.comparingLong(GFF3Feature::getStart));
 
         GFF3Feature representative = sorted.get(0);
+        String oldTranslation = representative.getAttribute("translation").orElse(null);
 
         // Skip CDS features with exception attribute (e.g. ribosomal slippage)
         if (representative.getAttribute(GFF3Attributes.EXCEPTION).isPresent()) {
@@ -118,6 +120,7 @@ public class TranslationFix {
                     segment.setAttributeList("translation", List.of(translation));
                 }
                 log.debug("Set translation attribute on CDS feature group at line {}", line);
+                recordTranslationState(representative, line, oldTranslation, translation);
             }
 
             propagateJoinAttributes(segments);
@@ -165,5 +168,18 @@ public class TranslationFix {
                 segments.get(i).addAttribute(GFF3Attributes.PSEUDO, pseudoValue);
             }
         });
+    }
+
+    private void recordTranslationState(GFF3Feature feature, int line, String oldTranslation, String newTranslation) {
+        TranslationState state;
+        try {
+            state = context.get(TranslationState.class);
+        } catch (IllegalArgumentException e) {
+            // No TranslationState provider registered — skip recording
+            return;
+        }
+        String key =
+                TranslationState.buildKey(feature.getSeqId(), feature.getId().orElse(null), line);
+        state.record(key, oldTranslation, newTranslation);
     }
 }
