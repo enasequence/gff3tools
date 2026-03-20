@@ -44,4 +44,9 @@ public class ValidationContext {
     public <T> void register(Class<T> type, ContextProvider<T> provider) {
         providers.put(type, provider);
     }
+
+    /** Check whether a provider is registered for the given type. */
+    public boolean contains(Class<?> type) {
+        return providers.containsKey(type);
+    }
 }
