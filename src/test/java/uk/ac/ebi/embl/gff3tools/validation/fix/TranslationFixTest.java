@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,8 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationRegistry;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationStateProvider;
 
 class TranslationFixTest {
 
@@ -82,7 +85,6 @@ class TranslationFixTest {
 
     @Test
     void translatesCdsFeatureForwardStrand() throws Exception {
-        // ATG = M (start), AAA = K, TAA = * (stop) → conceptual = "MK"
         when(mockReader.getSequenceSlice(
                         eq(IdType.SUBMISSION_ID), eq("seq1"), eq(1L), eq(9L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
                 .thenReturn("ATGAAATAA");
@@ -97,7 +99,6 @@ class TranslationFixTest {
 
     @Test
     void translatesCdsFeatureComplementStrand() throws Exception {
-        // Complement of TTA TTT CAT → ATG AAA TAA → M K *
         when(mockReader.getSequenceSlice(
                         eq(IdType.SUBMISSION_ID), eq("seq1"), eq(1L), eq(9L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
                 .thenReturn("TTATTTCAT");
@@ -125,9 +126,6 @@ class TranslationFixTest {
 
     @Test
     void translatesMultiSegmentCdsJoin() throws Exception {
-        // Two segments: positions 1-6 and 10-15
-        // Concatenated: ATGAAA + CCCTAA = ATGAAACCCTAA
-        // ATG=M, AAA=K, CCC=P, TAA=* → conceptual = "MKP"
         when(mockReader.getSequenceSlice(
                         eq(IdType.SUBMISSION_ID), eq("seq1"), eq(1L), eq(6L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
                 .thenReturn("ATGAAA");
@@ -140,7 +138,6 @@ class TranslationFixTest {
         GFF3Annotation annotation = createAnnotation(seg1, seg2);
         fix.fixAnnotation(annotation, 1);
 
-        // Both segments should have the same translation
         assertEquals("MKP", seg1.getAttribute("translation").orElse(""));
         assertEquals("MKP", seg2.getAttribute("translation").orElse(""));
     }
@@ -187,9 +184,64 @@ class TranslationFixTest {
         GFF3Annotation annotation = createAnnotation(seg1, seg2);
         fix.fixAnnotation(annotation, 1);
 
-        // Pseudo features are non-translating but pseudo should be propagated
         assertTrue(seg1.hasAttribute("pseudo"));
         assertTrue(seg2.hasAttribute("pseudo"));
+    }
+
+    @Test
+    void recordsOldAndNewTranslationInState() throws Exception {
+        when(mockReader.getSequenceSlice(
+                        eq(IdType.SUBMISSION_ID), eq("seq1"), eq(1L), eq(9L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
+                .thenReturn("ATGAAATAA");
+
+        TranslationStateProvider stateProvider = new TranslationStateProvider();
+        context.register(TranslationState.class, stateProvider);
+        TranslationState state = context.get(TranslationState.class);
+
+        GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
+        feature.setAttributeList("translation", List.of("OLDVALUE"));
+        GFF3Annotation annotation = createAnnotation(feature);
+        fix.fixAnnotation(annotation, 1);
+
+        String key = TranslationState.buildKey("seq1", "CDS_id", 1);
+        TranslationState.TranslationEntry entry = state.get(key);
+        assertNotNull(entry);
+        assertEquals("OLDVALUE", entry.oldTranslation());
+        assertEquals("MK", entry.newTranslation());
+    }
+
+    @Test
+    void worksWithoutTranslationStateProvider() throws Exception {
+        when(mockReader.getSequenceSlice(any(), any(), anyLong(), anyLong(), any()))
+                .thenReturn("ATGAAATAA");
+
+        GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
+        GFF3Annotation annotation = createAnnotation(feature);
+        fix.fixAnnotation(annotation, 1);
+
+        assertTrue(feature.hasAttribute("translation"));
+        assertEquals("MK", feature.getAttribute("translation").orElse(""));
+    }
+
+    @Test
+    void recordsNullOldTranslationWhenNoPriorTranslation() throws Exception {
+        when(mockReader.getSequenceSlice(
+                        eq(IdType.SUBMISSION_ID), eq("seq1"), eq(1L), eq(9L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
+                .thenReturn("ATGAAATAA");
+
+        TranslationStateProvider stateProvider = new TranslationStateProvider();
+        context.register(TranslationState.class, stateProvider);
+        TranslationState state = context.get(TranslationState.class);
+
+        GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
+        GFF3Annotation annotation = createAnnotation(feature);
+        fix.fixAnnotation(annotation, 1);
+
+        String key = TranslationState.buildKey("seq1", "CDS_id", 1);
+        TranslationState.TranslationEntry entry = state.get(key);
+        assertNotNull(entry);
+        assertNull(entry.oldTranslation());
+        assertEquals("MK", entry.newTranslation());
     }
 
     private GFF3Annotation createAnnotation(GFF3Feature... features) {
