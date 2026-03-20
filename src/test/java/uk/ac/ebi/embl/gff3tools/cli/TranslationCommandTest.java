@@ -32,32 +32,38 @@ class TranslationCommandTest {
      */
     private Path createFastaFile(String seqId) throws Exception {
         Path fasta = tempDir.resolve("sequence.fasta");
-        // JsonHeaderFastaReader expects: >submissionId | {json}
-        Files.writeString(fasta, ">%s | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n".formatted(seqId)
-                + "ATGAAATAA\n");
+        Files.writeString(
+                fasta,
+                ">%s | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
+                                .formatted(seqId)
+                        + "ATGAAATAA\n");
         return fasta;
     }
 
     /**
      * Creates a plain sequence file (raw nucleotide, no header).
      */
-    private Path createPlainSequenceFile() throws Exception {
-        Path seq = tempDir.resolve("sequence.seq");
+    private Path createPlainSequenceFile(String filename) throws Exception {
+        Path seq = tempDir.resolve(filename);
         Files.writeString(seq, "ATGAAATAA\n");
         return seq;
     }
 
     /**
-     * Creates a minimal GFF3 file with a single CDS feature.
-     * Uses a standalone CDS (no Parent) to avoid DANGLING_PARENT validation errors.
+     * Creates a minimal GFF3 file with CDS features for the given seqIds.
+     * Each seqId gets one CDS at positions 1-9 on the + strand.
      */
-    private Path createGff3File(String seqId) throws Exception {
+    private Path createGff3File(String... seqIds) throws Exception {
         Path gff3 = tempDir.resolve("input.gff3");
-        Files.writeString(gff3, """
-                ##gff-version 3
-                ##sequence-region %s 1 9
-                %s\t.\tCDS\t1\t9\t.\t+\t0\tID=cds1
-                """.formatted(seqId, seqId));
+        StringBuilder sb = new StringBuilder("##gff-version 3\n");
+        for (String seqId : seqIds) {
+            sb.append("##sequence-region %s 1 9\n".formatted(seqId));
+        }
+        int cdsNum = 1;
+        for (String seqId : seqIds) {
+            sb.append("%s\t.\tCDS\t1\t9\t.\t+\t0\tID=cds%d\n".formatted(seqId, cdsNum++));
+        }
+        Files.writeString(gff3, sb.toString());
         return gff3;
     }
 
@@ -81,9 +87,13 @@ class TranslationCommandTest {
         Path output = tempDir.resolve("output.gff3");
 
         int exitCode = executeTranslate(
-                "translate", "--sequence", fasta.toString(),
-                "--translation-mode", "gff3_fasta",
-                "-o", output.toString(),
+                "translate",
+                "--sequence",
+                fasta.toString(),
+                "--translation-mode",
+                "gff3_fasta",
+                "-o",
+                output.toString(),
                 gff3.toString());
 
         assertEquals(0, exitCode, "Expected success exit code");
@@ -93,7 +103,8 @@ class TranslationCommandTest {
         assertTrue(content.contains("##gff-version"), "Output should contain GFF3 header");
         assertTrue(content.contains("##FASTA"), "Output should contain ##FASTA section");
         // Translation attributes should be stripped from features
-        assertFalse(content.contains("translation="), "Features should not have translation attribute in gff3-fasta mode");
+        assertFalse(
+                content.contains("translation="), "Features should not have translation attribute in gff3-fasta mode");
     }
 
     @Test
@@ -103,10 +114,8 @@ class TranslationCommandTest {
         Path output = tempDir.resolve("output.gff3");
 
         // No --translation-mode specified
-        int exitCode = executeTranslate(
-                "translate", "--sequence", fasta.toString(),
-                "-o", output.toString(),
-                gff3.toString());
+        int exitCode =
+                executeTranslate("translate", "--sequence", fasta.toString(), "-o", output.toString(), gff3.toString());
 
         assertEquals(0, exitCode, "Expected success exit code");
         assertTrue(Files.exists(output), "Output file should be created");
@@ -122,9 +131,7 @@ class TranslationCommandTest {
         // No -o specified, should default to <stem>.translated.gff3
         Path expectedOutput = tempDir.resolve("input.translated.gff3");
 
-        int exitCode = executeTranslate(
-                "translate", "--sequence", fasta.toString(),
-                gff3.toString());
+        int exitCode = executeTranslate("translate", "--sequence", fasta.toString(), gff3.toString());
 
         assertEquals(0, exitCode, "Expected success exit code");
         assertTrue(Files.exists(expectedOutput), "Default output file should be created at " + expectedOutput);
@@ -139,9 +146,13 @@ class TranslationCommandTest {
         Path output = tempDir.resolve("translations.fasta");
 
         int exitCode = executeTranslate(
-                "translate", "--sequence", fasta.toString(),
-                "--translation-mode", "fasta",
-                "-o", output.toString(),
+                "translate",
+                "--sequence",
+                fasta.toString(),
+                "--translation-mode",
+                "fasta",
+                "-o",
+                output.toString(),
                 gff3.toString());
 
         assertEquals(0, exitCode, "Expected success exit code");
@@ -160,9 +171,7 @@ class TranslationCommandTest {
         Path expectedOutput = tempDir.resolve("input.translation.fasta");
 
         int exitCode = executeTranslate(
-                "translate", "--sequence", fasta.toString(),
-                "--translation-mode", "fasta",
-                gff3.toString());
+                "translate", "--sequence", fasta.toString(), "--translation-mode", "fasta", gff3.toString());
 
         assertEquals(0, exitCode, "Expected success exit code");
         assertTrue(Files.exists(expectedOutput), "Default fasta output file should be created at " + expectedOutput);
@@ -176,9 +185,7 @@ class TranslationCommandTest {
         Path gff3 = createGff3File("seq1");
 
         int exitCode = executeTranslate(
-                "translate", "--sequence", fasta.toString(),
-                "--translation-mode", "attribute",
-                gff3.toString());
+                "translate", "--sequence", fasta.toString(), "--translation-mode", "attribute", gff3.toString());
 
         assertEquals(0, exitCode, "Expected success exit code");
         // No output file should be created for attribute mode
@@ -195,10 +202,8 @@ class TranslationCommandTest {
         Path output = tempDir.resolve("output.gff3");
 
         // .fasta extension should be auto-detected
-        int exitCode = executeTranslate(
-                "translate", "--sequence", fasta.toString(),
-                "-o", output.toString(),
-                gff3.toString());
+        int exitCode =
+                executeTranslate("translate", "--sequence", fasta.toString(), "-o", output.toString(), gff3.toString());
 
         assertEquals(0, exitCode, "Expected success exit code");
         assertTrue(Files.exists(output));
@@ -208,30 +213,28 @@ class TranslationCommandTest {
     void formatDetection_faExtension() throws Exception {
         // Create a .fa file (alias for FASTA)
         Path fa = tempDir.resolve("sequence.fa");
-        Files.writeString(fa, ">seq1 | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
-                + "ATGAAATAA\n");
+        Files.writeString(
+                fa,
+                ">seq1 | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
+                        + "ATGAAATAA\n");
         Path gff3 = createGff3File("seq1");
         Path output = tempDir.resolve("output.gff3");
 
-        int exitCode = executeTranslate(
-                "translate", "--sequence", fa.toString(),
-                "-o", output.toString(),
-                gff3.toString());
+        int exitCode =
+                executeTranslate("translate", "--sequence", fa.toString(), "-o", output.toString(), gff3.toString());
 
         assertEquals(0, exitCode, "Expected success exit code for .fa extension");
     }
 
     @Test
     void formatDetection_plainSequence() throws Exception {
-        Path seq = createPlainSequenceFile();
+        Path seq = createPlainSequenceFile("sequence.seq");
         Path gff3 = createGff3File("seq1");
         Path output = tempDir.resolve("output.gff3");
 
         // .seq extension should be detected as plain
-        int exitCode = executeTranslate(
-                "translate", "--sequence", seq.toString(),
-                "-o", output.toString(),
-                gff3.toString());
+        int exitCode =
+                executeTranslate("translate", "--sequence", seq.toString(), "-o", output.toString(), gff3.toString());
 
         assertEquals(0, exitCode, "Expected success exit code for plain sequence");
         assertTrue(Files.exists(output));
@@ -246,9 +249,13 @@ class TranslationCommandTest {
         Path output = tempDir.resolve("output.gff3");
 
         int exitCode = executeTranslate(
-                "translate", "--sequence", seq.toString(),
-                "--sequence-format", "plain",
-                "-o", output.toString(),
+                "translate",
+                "--sequence",
+                seq.toString(),
+                "--sequence-format",
+                "plain",
+                "-o",
+                output.toString(),
                 gff3.toString());
 
         assertEquals(0, exitCode, "Expected success with explicit format override");
@@ -260,11 +267,88 @@ class TranslationCommandTest {
         Files.writeString(unknown, "ATGAAATAA\n");
         Path gff3 = createGff3File("seq1");
 
-        int exitCode = executeTranslate(
-                "translate", "--sequence", unknown.toString(),
-                gff3.toString());
+        int exitCode = executeTranslate("translate", "--sequence", unknown.toString(), gff3.toString());
 
         assertNotEquals(0, exitCode, "Should fail for unrecognized extension");
+    }
+
+    // --- multiple sequence sources ---
+
+    @Test
+    void multipleSequences_multiplePlainWithKeys() throws Exception {
+        Path seq1 = createPlainSequenceFile("chr1.seq");
+        Path seq2 = createPlainSequenceFile("chr2.seq");
+        Path gff3 = createGff3File("chr1", "chr2");
+        Path output = tempDir.resolve("output.gff3");
+
+        int exitCode = executeTranslate(
+                "translate",
+                "--sequence",
+                "chr1:" + seq1,
+                "--sequence",
+                "chr2:" + seq2,
+                "-o",
+                output.toString(),
+                gff3.toString());
+
+        assertEquals(0, exitCode, "Expected success with multiple keyed plain sequences");
+        assertTrue(Files.exists(output));
+
+        String content = Files.readString(output);
+        assertTrue(content.contains("##FASTA"), "Output should contain ##FASTA section");
+    }
+
+    @Test
+    void multipleSequences_fastaAndPlainMixed() throws Exception {
+        // Create a FASTA with seq1
+        Path fasta = createFastaFile("seq1");
+        // Create a plain sequence for seq2
+        Path seq2 = createPlainSequenceFile("seq2.seq");
+        Path gff3 = createGff3File("seq1", "seq2");
+        Path output = tempDir.resolve("output.gff3");
+
+        int exitCode = executeTranslate(
+                "translate",
+                "--sequence",
+                fasta.toString(),
+                "--sequence",
+                "seq2:" + seq2,
+                "-o",
+                output.toString(),
+                gff3.toString());
+
+        assertEquals(0, exitCode, "Expected success with mixed FASTA + plain sequence");
+        assertTrue(Files.exists(output));
+
+        String content = Files.readString(output);
+        assertTrue(content.contains("##FASTA"), "Output should contain ##FASTA section");
+    }
+
+    @Test
+    void multipleSequences_keyedPlain_noMatch_fails() throws Exception {
+        // Plain sequence keyed to "chr1" but GFF3 references "chrX"
+        Path seq = createPlainSequenceFile("chr1.seq");
+        Path gff3 = createGff3File("chrX");
+
+        int exitCode = executeTranslate(
+                "translate", "--sequence", "chr1:" + seq, "--translation-mode", "attribute", gff3.toString());
+
+        // Translation should fail because no source matches "chrX"
+        assertNotEquals(0, exitCode, "Should fail when keyed sequence doesn't match GFF3 seqId");
+    }
+
+    @Test
+    void multipleSequences_plainWithoutKey_matchesAnySeqId() throws Exception {
+        // Plain sequence without key should match any seqId (backward compatible)
+        Path seq = createPlainSequenceFile("sequence.seq");
+        Path gff3 = createGff3File("anySeqId");
+        Path output = tempDir.resolve("output.gff3");
+
+        int exitCode =
+                executeTranslate("translate", "--sequence", seq.toString(), "-o", output.toString(), gff3.toString());
+
+        assertEquals(0, exitCode, "Plain sequence without key should match any seqId");
+        assertTrue(Files.exists(output));
     }
 
     // --- error cases ---
@@ -273,8 +357,7 @@ class TranslationCommandTest {
     void missingSequenceOption_fails() throws Exception {
         Path gff3 = createGff3File("seq1");
 
-        int exitCode = executeTranslate(
-                "translate", gff3.toString());
+        int exitCode = executeTranslate("translate", gff3.toString());
 
         assertNotEquals(0, exitCode, "Should fail when --sequence is not provided");
     }
@@ -283,9 +366,7 @@ class TranslationCommandTest {
     void nonExistentSequenceFile_fails() throws Exception {
         Path gff3 = createGff3File("seq1");
 
-        int exitCode = executeTranslate(
-                "translate", "--sequence", "/tmp/nonexistent.fasta",
-                gff3.toString());
+        int exitCode = executeTranslate("translate", "--sequence", "/tmp/nonexistent.fasta", gff3.toString());
 
         assertNotEquals(0, exitCode, "Should fail for non-existent sequence file");
     }

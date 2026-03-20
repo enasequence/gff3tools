@@ -34,13 +34,24 @@ class FileSequenceProviderTest {
     }
 
     @Test
-    void hasSequenceReturnsTrueForPlainSequenceAnyId() {
+    void hasSequenceReturnsTrueForPlainSequenceAnyId_noKey() {
         SequenceReader mockReader = mock(SequenceReader.class);
         when(mockReader.submissionType()).thenReturn(SubmissionType.PLAIN_SEQUENCE);
 
         FileSequenceProvider provider = new FileSequenceProvider(mockReader);
         assertTrue(provider.hasSequence(IdType.SUBMISSION_ID, "any-id"));
         assertTrue(provider.hasSequence(IdType.ACCESSION_ID, "other-id"));
+    }
+
+    @Test
+    void hasSequenceMatchesKeyForPlainSequence() {
+        SequenceReader mockReader = mock(SequenceReader.class);
+        when(mockReader.submissionType()).thenReturn(SubmissionType.PLAIN_SEQUENCE);
+
+        FileSequenceProvider provider = new FileSequenceProvider(mockReader, "chr1");
+        assertTrue(provider.hasSequence(IdType.SUBMISSION_ID, "chr1"));
+        assertFalse(provider.hasSequence(IdType.SUBMISSION_ID, "chr2"));
+        assertFalse(provider.hasSequence(IdType.ACCESSION_ID, "other"));
     }
 
     @Test
@@ -53,6 +64,18 @@ class FileSequenceProviderTest {
         assertTrue(provider.hasSequence(IdType.SUBMISSION_ID, "seq1"));
         assertTrue(provider.hasSequence(IdType.SUBMISSION_ID, "seq2"));
         assertFalse(provider.hasSequence(IdType.SUBMISSION_ID, "seq3"));
+    }
+
+    @Test
+    void fastaIgnoresKey() {
+        SequenceReader mockReader = mock(SequenceReader.class);
+        when(mockReader.submissionType()).thenReturn(SubmissionType.FASTA);
+        when(mockReader.getOrderedIds(IdType.SUBMISSION_ID)).thenReturn(List.of("seq1"));
+
+        // Key is ignored for FASTA — ID matching uses the reader's index
+        FileSequenceProvider provider = new FileSequenceProvider(mockReader, "irrelevant");
+        assertTrue(provider.hasSequence(IdType.SUBMISSION_ID, "seq1"));
+        assertFalse(provider.hasSequence(IdType.SUBMISSION_ID, "irrelevant"));
     }
 
     @Test
