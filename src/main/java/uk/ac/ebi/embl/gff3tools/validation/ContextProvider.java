@@ -31,4 +31,10 @@ public interface ContextProvider<T> {
      * but before any fixes or validators are initialized.
      */
     default void initialize() {}
+
+    /**
+     * Lifecycle hook called when the validation engine is closed.
+     * Implementations should release any resources (file handles, connections, etc.).
+     */
+    default void close() {}
 }
