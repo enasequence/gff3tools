@@ -23,6 +23,8 @@ import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceReaderFactory;
+import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
@@ -121,5 +123,57 @@ public abstract class AbstractCommand implements Runnable {
 
         int dot = name.lastIndexOf('.');
         return (dot > 0 && dot < name.length() - 1) ? Optional.of(name.substring(dot + 1)) : Optional.empty();
+    }
+
+    // ── Sequence helpers shared by translate / validation / conversion ──
+
+    protected record ParsedSequenceSpec(String key, Path path) {}
+
+    /**
+     * Parses a {@code --sequence} spec into an optional key and a path.
+     *
+     * <p>Format: {@code [key:]path}. The key is separated by the first colon that is not
+     * part of the path (i.e., the character before the colon contains no path separators).
+     */
+    protected ParsedSequenceSpec parseSequenceSpec(String spec) {
+        int colonIdx = spec.indexOf(':');
+        if (colonIdx > 0) {
+            String possibleKey = spec.substring(0, colonIdx);
+            if (!possibleKey.contains("/") && !possibleKey.contains("\\")) {
+                String pathStr = spec.substring(colonIdx + 1);
+                return new ParsedSequenceSpec(possibleKey, Path.of(pathStr));
+            }
+        }
+        return new ParsedSequenceSpec(null, Path.of(spec));
+    }
+
+    /**
+     * Resolve the sequence format from an explicit override or the file extension.
+     */
+    protected SequenceFormat resolveSequenceFormat(Path path, SequenceFormat explicitFormat) {
+        if (explicitFormat != null) {
+            return explicitFormat;
+        }
+        String ext = getFileExtension(path)
+                .orElseThrow(() -> new RuntimeException("Cannot infer sequence format from file extension. "
+                        + "Use --sequence-format to specify the format explicitly."));
+        String lower = ext.toLowerCase();
+        if (lower.equals("fasta") || lower.equals("fa") || lower.equals("fna")) {
+            return SequenceFormat.fasta;
+        } else if (lower.equals("seq")) {
+            return SequenceFormat.plain;
+        }
+        throw new RuntimeException("Unrecognized sequence file extension: ." + ext
+                + ". Use --sequence-format to specify the format explicitly.");
+    }
+
+    protected SequenceReader openSequenceReader(Path path, SequenceFormat format, String key) throws Exception {
+        return switch (format) {
+            case fasta -> SequenceReaderFactory.readFasta(path.toFile());
+            case plain -> {
+                String accessionId = (key != null) ? key : "0";
+                yield SequenceReaderFactory.readPlainSequence(path.toFile(), accessionId);
+            }
+        };
     }
 }

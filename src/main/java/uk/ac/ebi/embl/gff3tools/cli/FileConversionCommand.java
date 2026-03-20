@@ -20,6 +20,7 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,8 @@ import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceProvider;
 
 // Using pandoc CLI interface conventions
 @CommandLine.Command(name = "conversion", description = "Performs format conversions to or from gff3")
@@ -45,6 +48,25 @@ public class FileConversionCommand extends AbstractCommand {
             showDefaultValue = CommandLine.Help.Visibility.NEVER)
     public Path outputFilePath;
 
+    @CommandLine.Option(
+            names = "--sequence",
+            description = "Sequence source for translation validation. Repeatable. Use path for FASTA files "
+                    + "or key:path for plain sequences. "
+                    + "Examples: --sequence seqs.fasta --sequence chr1:chr1.seq")
+    public List<String> sequenceSpecs;
+
+    @CommandLine.Option(
+            names = "--sequence-format",
+            description = "Format of the sequence file: fasta, plain. Inferred from extension if omitted.")
+    public SequenceFormat sequenceFormat;
+
+    @CommandLine.Option(
+            names = "--translation-mode",
+            description =
+                    "Translation output mode when converting to GFF3: gff3-fasta, fasta, attribute (default: gff3-fasta)",
+            defaultValue = "gff3_fasta")
+    public TranslationMode translationMode;
+
     @Override
     public void run() {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
@@ -54,16 +76,21 @@ public class FileConversionCommand extends AbstractCommand {
         Path tempFile = null;
 
         try {
-            // Write to a temp file first to ensure atomic output: if conversion fails,
-            // no partial/corrupt output file is created. Only on success do we move the
-            // temp file to the final destination.
-            // Temp files are created in the system temp directory (controlled via -Djava.io.tmpdir)
-            // for better control in pipeline environments.
             if (writingToFile) {
                 tempFile = Files.createTempFile("gff3tools-", ".tmp");
             }
 
             final Path effectiveOutputPath = writingToFile ? tempFile : null;
+
+            CompositeSequenceProvider compositeProvider = null;
+            if (sequenceSpecs != null && !sequenceSpecs.isEmpty()) {
+                compositeProvider = new CompositeSequenceProvider();
+                for (String spec : sequenceSpecs) {
+                    ParsedSequenceSpec parsed = parseSequenceSpec(spec);
+                    SequenceFormat format = resolveSequenceFormat(parsed.path(), sequenceFormat);
+                    compositeProvider.addSource(new FileSequenceProvider(parsed.path(), format, parsed.key()));
+                }
+            }
 
             try (BufferedReader inputReader = getPipe(
                             Files::newBufferedReader,
@@ -73,11 +100,14 @@ public class FileConversionCommand extends AbstractCommand {
                             writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
                 fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
                 toFileType = validateFileType(toFileType, outputFilePath, "-t");
-                // The input file dir is used as the process dir, defaulting to the current dir if not set
                 Path processDir = Optional.ofNullable(inputFilePath.getParent()).orElse(Path.of("."));
-                ValidationEngine engine = initValidationEngine(ruleOverrides, processDir);
-                Converter converter = getConverter(engine, fromFileType, toFileType);
-                converter.convert(inputReader, outputWriter);
+
+                try (ValidationEngine engine = compositeProvider != null
+                        ? initValidationEngine(ruleOverrides, processDir, compositeProvider)
+                        : initValidationEngine(ruleOverrides, processDir)) {
+                    Converter converter = getConverter(engine, fromFileType, toFileType);
+                    converter.convert(inputReader, outputWriter);
+                }
             }
 
             // Conversion succeeded - move temp file to final destination atomically
@@ -89,13 +119,11 @@ public class FileConversionCommand extends AbstractCommand {
                             StandardCopyOption.REPLACE_EXISTING,
                             StandardCopyOption.ATOMIC_MOVE);
                 } catch (AtomicMoveNotSupportedException e) {
-                    // ATOMIC_MOVE fails across filesystems; fall back to a regular move
                     Files.move(tempFile, outputFilePath, StandardCopyOption.REPLACE_EXISTING);
                 }
-                tempFile = null; // Mark as successfully moved
+                tempFile = null;
             }
         } catch (Exception e) {
-            // Clean up temp file on error
             if (tempFile != null) {
                 try {
                     Files.deleteIfExists(tempFile);
@@ -108,8 +136,6 @@ public class FileConversionCommand extends AbstractCommand {
     }
 
     private BufferedWriter createStdoutWriter() {
-        // Set the log level to ERROR while writing the file to an output stream to
-        // ignore INFO, WARN logs
         LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
         ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
         return new BufferedWriter(new OutputStreamWriter(System.out));
@@ -119,14 +145,11 @@ public class FileConversionCommand extends AbstractCommand {
             ValidationEngine engine, ConversionFileFormat inputFileType, ConversionFileFormat outputFileType)
             throws FormatSupportException {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
-            // Need input file to random access the translation sequence.
             return new Gff3ToFFConverter(engine, inputFilePath);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
-            // FASTA path to write translation sequences
             return masterFilePath == null
                     ? new FFToGff3Converter(engine)
                     : new FFToGff3Converter(engine, masterFilePath);
-
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }
