@@ -78,7 +78,7 @@ public class TranslationCommand extends AbstractCommand {
 
             for (String spec : sequenceSpecs) {
                 ParsedSequenceSpec parsed = parseSequenceSpec(spec);
-                SequenceFormat format = resolveSequenceFormat(parsed.path());
+                SequenceFormat format = resolveSequenceFormat(parsed.path(), sequenceFormat);
                 compositeProvider.addSource(new FileSequenceProvider(parsed.path(), format, parsed.key()));
             }
 
@@ -120,44 +120,6 @@ public class TranslationCommand extends AbstractCommand {
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
-    }
-
-    /**
-     * Parses a --sequence spec into an optional key and a path.
-     *
-     * <p>Format: {@code [key:]path}. The key is separated by the first colon that is not
-     * part of the path (i.e., the character before the colon contains no path separators).
-     */
-    private ParsedSequenceSpec parseSequenceSpec(String spec) {
-        int colonIdx = spec.indexOf(':');
-        if (colonIdx > 0) {
-            String possibleKey = spec.substring(0, colonIdx);
-            // If the part before the colon has no path separators, treat it as a key
-            if (!possibleKey.contains("/") && !possibleKey.contains("\\")) {
-                String pathStr = spec.substring(colonIdx + 1);
-                return new ParsedSequenceSpec(possibleKey, Path.of(pathStr));
-            }
-        }
-        return new ParsedSequenceSpec(null, Path.of(spec));
-    }
-
-    private record ParsedSequenceSpec(String key, Path path) {}
-
-    private SequenceFormat resolveSequenceFormat(Path path) {
-        if (sequenceFormat != null) {
-            return sequenceFormat;
-        }
-        String ext = getFileExtension(path)
-                .orElseThrow(() -> new RuntimeException("Cannot infer sequence format from file extension. "
-                        + "Use --sequence-format to specify the format explicitly."));
-        String lower = ext.toLowerCase();
-        if (lower.equals("fasta") || lower.equals("fa") || lower.equals("fna")) {
-            return SequenceFormat.fasta;
-        } else if (lower.equals("seq")) {
-            return SequenceFormat.plain;
-        }
-        throw new RuntimeException("Unrecognized sequence file extension: ." + ext
-                + ". Use --sequence-format to specify the format explicitly.");
     }
 
     private void writeOutput(List<GFF3Annotation> annotations, GFF3Header header) throws Exception {

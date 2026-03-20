@@ -23,11 +23,25 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceProvider;
 
 // Using pandoc CLI interface conventions
 @CommandLine.Command(name = "validation", description = "Performs validations on gff3 files")
 @Slf4j
 public class ValidationCommand extends AbstractCommand {
+
+    @CommandLine.Option(
+            names = "--sequence",
+            description = "Sequence source for translation validation. Repeatable. Use path for FASTA files "
+                    + "or key:path for plain sequences. "
+                    + "Examples: --sequence seqs.fasta --sequence chr1:chr1.seq")
+    public List<String> sequenceSpecs;
+
+    @CommandLine.Option(
+            names = "--sequence-format",
+            description = "Format of the sequence file: fasta, plain. Inferred from extension if omitted.")
+    public SequenceFormat sequenceFormat;
 
     private int warningCount = 0;
 
@@ -39,44 +53,52 @@ public class ValidationCommand extends AbstractCommand {
     public void run() {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
 
-        ValidationEngine validationEngine;
-
         try {
-            // The input file dir is used as the process dir, defaulting to the current dir if not set
             Path processDir = Optional.ofNullable(inputFilePath.getParent()).orElse(Path.of("."));
-            validationEngine = initValidationEngine(ruleOverrides, processDir);
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
 
-        try (BufferedReader inputReader = getPipe(
-                        Files::newBufferedReader,
-                        () -> new BufferedReader(new InputStreamReader(System.in)),
-                        inputFilePath);
-                GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, inputReader, inputFilePath)) {
-            gff3Reader.readHeader();
-            gff3Reader.read(annotation -> {
-                List<ValidationException> warnings = validationEngine.getParsingWarnings();
-                if (warnings != null && warnings.size() > 0) {
-                    for (ValidationException e : warnings) {
-                        log.warn("WARNING: %s".formatted(e.getMessage()));
-                    }
-                    addToWarnCount(warnings.size());
-                    warnings.clear();
+            CompositeSequenceProvider compositeProvider = null;
+            if (sequenceSpecs != null && !sequenceSpecs.isEmpty()) {
+                compositeProvider = new CompositeSequenceProvider();
+                for (String spec : sequenceSpecs) {
+                    ParsedSequenceSpec parsed = parseSequenceSpec(spec);
+                    SequenceFormat format = resolveSequenceFormat(parsed.path(), sequenceFormat);
+                    compositeProvider.addSource(new FileSequenceProvider(parsed.path(), format, parsed.key()));
                 }
-            });
-
-            // Check for collected errors at end of processing
-            int errorCount = validationEngine.getCollectedErrors().size();
-            if (errorCount > 0) {
-                log.info("Validation completed with %d error(s)".formatted(errorCount));
-                validationEngine.throwIfErrorsCollected();
-            } else if (warningCount > 0) {
-                log.info("The file passed validations with %d warnings".formatted(warningCount));
-            } else {
-                log.info("The file has passed all validations!");
             }
 
+            try (ValidationEngine validationEngine = compositeProvider != null
+                    ? initValidationEngine(ruleOverrides, processDir, compositeProvider)
+                    : initValidationEngine(ruleOverrides, processDir)) {
+
+                try (BufferedReader inputReader = getPipe(
+                                Files::newBufferedReader,
+                                () -> new BufferedReader(new InputStreamReader(System.in)),
+                                inputFilePath);
+                        GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, inputReader, inputFilePath)) {
+                    gff3Reader.readHeader();
+                    gff3Reader.read(annotation -> {
+                        List<ValidationException> warnings = validationEngine.getParsingWarnings();
+                        if (warnings != null && warnings.size() > 0) {
+                            for (ValidationException e : warnings) {
+                                log.warn("WARNING: %s".formatted(e.getMessage()));
+                            }
+                            addToWarnCount(warnings.size());
+                            warnings.clear();
+                        }
+                    });
+
+                    // Check for collected errors at end of processing
+                    int errorCount = validationEngine.getCollectedErrors().size();
+                    if (errorCount > 0) {
+                        log.info("Validation completed with %d error(s)".formatted(errorCount));
+                        validationEngine.throwIfErrorsCollected();
+                    } else if (warningCount > 0) {
+                        log.info("The file passed validations with %d warnings".formatted(warningCount));
+                    } else {
+                        log.info("The file has passed all validations!");
+                    }
+                }
+            }
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
