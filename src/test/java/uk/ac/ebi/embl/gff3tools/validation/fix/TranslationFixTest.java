@@ -147,19 +147,7 @@ class TranslationFixTest {
 
     @Test
     void translatesMultiSegmentCdsComplementJoin() throws Exception {
-        // Two segments on - strand: positions 1-6 and 10-15
-        // Concatenated in genomic order: bases[1..6] + bases[10..15]
-        // Then reverse complemented by Translator
-        // If reverse complement of "TTATTTCATGGG" = "CCCATGAAATAA"
-        // ATG=M, AAA=K → wait, let me think...
-        // Actually: concat = "TTATTT" + "CATGGG" = "TTATTTCATGGG" (12 bases)
-        // Rev comp = "CCCATGAAATAA"
-        // CCC=P, ATG=M(?), AAA=K, TAA=* → but P is not start codon
-        // Let's use: seg1 bases "TTTCAT" (pos 1-6), seg2 bases "TTATTT" (pos 10-15)
-        // Concat = "TTTCAT" + "TTATTT" = "TTTCATTTATTT" (12 bases)
-        // Rev comp = "AAATAAATGAAA" → AAA=K, TAA=stop... hmm
-        // Simpler: just test that slices are concatenated and translated
-        // Use: seg1="TTATTT" (1-6), seg2="CAT" (10-12) → concat "TTATTTCAT" (9 bases)
+        // seg1="TTATTT" (1-6), seg2="CAT" (10-12) → concat "TTATTTCAT" (9 bases)
         // Rev comp = "ATGAAATAA" → ATG=M, AAA=K, TAA=* → "MK"
         when(mockReader.getSequenceSlice(
                         eq(IdType.SUBMISSION_ID), eq("seq1"), eq(1L), eq(6L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
@@ -175,6 +163,33 @@ class TranslationFixTest {
 
         assertEquals("MK", seg1.getAttribute("translation").orElse(""));
         assertEquals("MK", seg2.getAttribute("translation").orElse(""));
+    }
+
+    @Test
+    void skipsExceptionFeatures() throws Exception {
+        GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
+        feature.addAttribute("exception", "ribosomal slippage");
+        GFF3Annotation annotation = createAnnotation(feature);
+        fix.fixAnnotation(annotation, 1);
+
+        assertFalse(feature.hasAttribute("translation"));
+        verifyNoInteractions(mockReader);
+    }
+
+    @Test
+    void propagatesPseudoToAllJoinSegments() throws Exception {
+        when(mockReader.getSequenceSlice(any(), any(), anyLong(), anyLong(), any()))
+                .thenReturn("ATGAAATAA");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 9, "+");
+        seg1.addAttribute("pseudo", "true");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 20, 28, "+");
+        GFF3Annotation annotation = createAnnotation(seg1, seg2);
+        fix.fixAnnotation(annotation, 1);
+
+        // Pseudo features are non-translating but pseudo should be propagated
+        assertTrue(seg1.hasAttribute("pseudo"));
+        assertTrue(seg2.hasAttribute("pseudo"));
     }
 
     private GFF3Annotation createAnnotation(GFF3Feature... features) {

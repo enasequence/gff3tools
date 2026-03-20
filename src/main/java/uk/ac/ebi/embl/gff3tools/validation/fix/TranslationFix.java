@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.IdType;
 import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
@@ -83,6 +84,11 @@ public class TranslationFix {
 
         GFF3Feature representative = sorted.get(0);
 
+        // Skip CDS features with exception attribute (e.g. ribosomal slippage)
+        if (representative.getAttribute(GFF3Attributes.EXCEPTION).isPresent()) {
+            return;
+        }
+
         try {
             // Concatenate sequence slices from all segments in genomic order
             StringBuilder concatenated = new StringBuilder();
@@ -113,6 +119,8 @@ public class TranslationFix {
                 }
                 log.debug("Set translation attribute on CDS feature group at line {}", line);
             }
+
+            propagateJoinAttributes(segments);
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
@@ -122,5 +130,40 @@ public class TranslationFix {
                     "Failed to translate CDS feature on sequence '%s': %s"
                             .formatted(representative.getSeqId(), e.getMessage()));
         }
+    }
+
+    /**
+     * For multi-segment CDS (joins), the Translator computes partiality and pseudo on the
+     * first (representative) feature. This method moves 3' partial to the last segment where
+     * it semantically belongs, and propagates pseudo from the first segment to all others.
+     */
+    private void propagateJoinAttributes(List<GFF3Feature> segments) {
+        if (segments.size() <= 1) {
+            return;
+        }
+
+        GFF3Feature first = segments.get(0);
+        GFF3Feature last = segments.get(segments.size() - 1);
+
+        // 3' partiality is computed on the first feature by the Translator but belongs
+        // semantically to the last join segment — move it there.
+        if (first.isThreePrimePartial()) {
+            boolean preserveFivePrime = first.isFivePrimePartial();
+            first.removeAttributeList(GFF3Attributes.PARTIAL);
+            if (preserveFivePrime) {
+                first.setFivePrimePartial();
+            }
+            if (!last.isThreePrimePartial()) {
+                last.setThreePrimePartial();
+            }
+        }
+
+        // Propagate pseudo from the first CDS segment to all subsequent join segments.
+        first.getAttribute(GFF3Attributes.PSEUDO).ifPresent(pseudoValue -> {
+            for (int i = 1; i < segments.size(); i++) {
+                segments.get(i).removeAttributeList(GFF3Attributes.PSEUDO);
+                segments.get(i).addAttribute(GFF3Attributes.PSEUDO, pseudoValue);
+            }
+        });
     }
 }
