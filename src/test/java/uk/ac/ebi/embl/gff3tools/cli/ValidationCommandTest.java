@@ -13,13 +13,19 @@ package uk.ac.ebi.embl.gff3tools.cli;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
 
 public class ValidationCommandTest {
+
+    @TempDir
+    Path tempDir;
 
     private ValidationCommand validationCommand;
 
@@ -69,5 +75,53 @@ public class ValidationCommandTest {
                 new CommandLine(validationCommand).registerConverter(CliRulesOption.class, new RuleConverter());
         assertDoesNotThrow(() -> commandLine.parseArgs(new String[] {"non_existent_file.gff3 "}));
         assertThrows(RuntimeException.class, () -> validationCommand.run());
+    }
+
+    @Test
+    void validationWithSequence_succeeds() throws Exception {
+        Path fasta = tempDir.resolve("sequence.fasta");
+        Files.writeString(
+                fasta,
+                ">seq1 | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
+                        + "ATGAAATAA\n");
+
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 9
+                seq1\t.\tCDS\t1\t9\t.\t+\t0\tID=cds1
+                """);
+
+        int exitCode = executeValidation("validation", "--sequence", fasta.toString(), gff3.toString());
+        assertEquals(0, exitCode, "Validation with --sequence should succeed");
+    }
+
+    @Test
+    void validationWithSequence_noSequence_stillSucceeds() throws Exception {
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 9
+                seq1\t.\tCDS\t1\t9\t.\t+\t0\tID=cds1
+                """);
+
+        // Without --sequence, validation should still work (translation is skipped)
+        int exitCode = executeValidation("validation", gff3.toString());
+        assertEquals(0, exitCode, "Validation without --sequence should succeed");
+    }
+
+    private int executeValidation(String... args) {
+        StringWriter err = new StringWriter();
+        StringWriter out = new StringWriter();
+        CommandLine command = new CommandLine(new Main())
+                .registerConverter(CliRulesOption.class, new RuleConverter())
+                .setExecutionExceptionHandler(new ExecutionExceptionHandler());
+        command.setErr(new PrintWriter(err));
+        command.setOut(new PrintWriter(out));
+        return command.execute(args);
     }
 }
