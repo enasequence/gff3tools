@@ -92,6 +92,25 @@ class CompositeSequenceProviderTest {
     }
 
     @Test
+    void closeClosesSources() throws Exception {
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        SequenceReader reader1 = mock(SequenceReader.class);
+        when(reader1.submissionType()).thenReturn(SubmissionType.FASTA);
+        when(reader1.getOrderedIds(any())).thenReturn(List.of("seq1"));
+        SequenceReader reader2 = mock(SequenceReader.class);
+        when(reader2.submissionType()).thenReturn(SubmissionType.FASTA);
+        when(reader2.getOrderedIds(any())).thenReturn(List.of("seq2"));
+
+        provider.addSource(new FileSequenceProvider(reader1));
+        provider.addSource(new FileSequenceProvider(reader2));
+
+        provider.close();
+
+        verify(reader1).close();
+        verify(reader2).close();
+    }
+
+    @Test
     void getCachesSameInstance() {
         CompositeSequenceProvider provider = new CompositeSequenceProvider();
         SequenceReader mockReader = mock(SequenceReader.class);
