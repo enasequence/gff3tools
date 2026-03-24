@@ -127,6 +127,25 @@ class TranslationComparisonValidationTest {
         assertTrue(ex.getMessage().contains("cds_b"));
     }
 
+    @Test
+    void multipleMismatchesAllReported() {
+        // Both CDS groups mismatch — both should appear in the error message
+        GFF3Feature cdsA = createFeature(OntologyTerm.CDS.name(), "cds_a", "seq1", 1, 9);
+        GFF3Feature cdsB = createFeature(OntologyTerm.CDS.name(), "cds_b", "seq1", 20, 30);
+        GFF3Annotation annotation = createAnnotation(cdsA, cdsB);
+
+        String keyA = TranslationState.buildKey("seq1", "cds_a", 1);
+        state.record(keyA, "OLD_A", "NEW_A");
+
+        String keyB = TranslationState.buildKey("seq1", "cds_b", 1);
+        state.record(keyB, "OLD_B", "NEW_B");
+
+        ValidationException ex =
+                assertThrows(ValidationException.class, () -> validation.validateTranslation(annotation, 1));
+        assertTrue(ex.getMessage().contains("cds_a"), "Should report mismatch for cds_a");
+        assertTrue(ex.getMessage().contains("cds_b"), "Should report mismatch for cds_b");
+    }
+
     private GFF3Annotation createAnnotation(GFF3Feature... features) {
         GFF3Annotation annotation = new GFF3Annotation();
         for (GFF3Feature feature : features) {

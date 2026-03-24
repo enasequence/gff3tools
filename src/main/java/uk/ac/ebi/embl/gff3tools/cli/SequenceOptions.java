@@ -27,7 +27,7 @@ public class SequenceOptions {
     @CommandLine.Option(
             names = "--sequence",
             description = "Sequence source. Repeatable. Use path for FASTA files (IDs from headers) "
-                    + "or key:path for plain sequences (key = GFF3 seqId). "
+                    + "or key:path for plain sequences (key = GFF3 seqId, must not contain / or \\). "
                     + "Examples: --sequence seqs.fasta --sequence chr1:chr1.seq")
     public List<String> sequenceSpecs;
 

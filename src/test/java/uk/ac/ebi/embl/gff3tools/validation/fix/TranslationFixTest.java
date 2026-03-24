@@ -112,7 +112,9 @@ class TranslationFixTest {
     }
 
     @Test
-    void skipsPseudoFeatures() throws Exception {
+    void translatorSkipsNonTranslatingPseudoFeatures() throws Exception {
+        // Pseudo features are handled by the Translator constructor (sets nonTranslating=true),
+        // not by explicit logic in TranslationFix. This test verifies the end-to-end behavior.
         when(mockReader.getSequenceSlice(any(), any(), anyLong(), anyLong(), any()))
                 .thenReturn("ATGAAATAA");
 

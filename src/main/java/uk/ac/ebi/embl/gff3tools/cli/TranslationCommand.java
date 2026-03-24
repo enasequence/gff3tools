@@ -179,7 +179,14 @@ public class TranslationCommand extends AbstractCommand {
                 }
                 String featureId = feature.getId().orElse(feature.getName());
                 String key = TranslationWriter.getTranslationKey(accession, featureId);
-                TranslationWriter.writeTranslation(writer, key, translation.get());
+                try {
+                    TranslationWriter.writeTranslation(writer, key, translation.get());
+                } catch (Exception e) {
+                    throw new RuntimeException(
+                            "Failed to write translation for feature '%s' (accession: %s): %s"
+                                    .formatted(featureId, accession, e.getMessage()),
+                            e);
+                }
             }
         }
     }

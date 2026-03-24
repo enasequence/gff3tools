@@ -99,9 +99,14 @@ public class ValidationRegistry {
             ctx.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
         }
 
-        // Call initialize() on all providers after registration
+        // Call initialize() only on providers that are actually registered (not overwritten).
+        // Explicit providers take precedence, so skip classpath providers whose type was overridden.
+        Set<Class<?>> explicitTypes =
+                providers.stream().map(ContextProvider::type).collect(Collectors.toSet());
         for (ContextProvider<?> provider : allProviders) {
-            provider.initialize();
+            if (!explicitTypes.contains(provider.type())) {
+                provider.initialize();
+            }
         }
         for (ContextProvider<?> provider : providers) {
             provider.initialize();

@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +62,8 @@ public class TranslationComparisonValidation {
                 .filter(f -> OntologyTerm.CDS.name().equals(f.getName()))
                 .collect(Collectors.groupingBy(f -> f.getId().orElse("__no_id_" + f.getStart() + "_" + f.getEnd())));
 
+        List<String> mismatches = new ArrayList<>();
+
         for (Map.Entry<String, List<GFF3Feature>> entry : cdsGroups.entrySet()) {
             // Sort by start position to match TranslationFix's representative selection
             GFF3Feature representative = entry.getValue().stream()
@@ -75,17 +78,19 @@ public class TranslationComparisonValidation {
 
             if (!translationEntry.oldTranslation().equals(translationEntry.newTranslation())) {
                 String featureId = representative.getId().orElse("unknown");
-                throw new ValidationException(
-                        "TRANSLATION_COMPARISON",
-                        line,
-                        ("Translation mismatch for CDS feature \"%s\" on %s: "
-                                        + "existing translation length %d differs from computed translation length %d")
+                mismatches.add(
+                        ("CDS \"%s\" on %s: existing translation length %d differs from computed translation length %d")
                                 .formatted(
                                         featureId,
                                         representative.accession(),
                                         translationEntry.oldTranslation().length(),
                                         translationEntry.newTranslation().length()));
             }
+        }
+
+        if (!mismatches.isEmpty()) {
+            throw new ValidationException(
+                    "TRANSLATION_COMPARISON", line, "Translation mismatch(es): " + String.join("; ", mismatches));
         }
     }
 }

@@ -89,10 +89,13 @@ public class CompositeSequenceReader implements SequenceReader {
         return match.reader().getSequenceSliceReader(idType, match.resolvedId(), fromBase, toBase, option);
     }
 
+    /**
+     * No-op. Source lifecycle is managed by {@code CompositeSequenceProvider#close()},
+     * not by this reader. Callers obtaining a reader from the provider should NOT
+     * close it directly — the provider owns the sources.
+     */
     @Override
-    public void close() {
-        // Sources manage their own lifecycle
-    }
+    public void close() {}
 
     private SourceMatch findSource(IdType idType, String id) {
         for (SequenceSource source : sources) {

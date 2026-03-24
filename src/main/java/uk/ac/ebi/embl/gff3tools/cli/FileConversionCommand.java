@@ -49,14 +49,6 @@ public class FileConversionCommand extends AbstractCommand {
     @CommandLine.Mixin
     public SequenceOptions sequenceOptions;
 
-    @CommandLine.Option(
-            names = "--translation-mode",
-            description =
-                    "Translation output mode when converting to GFF3: gff3-fasta, fasta, attribute (default: gff3-fasta)",
-            defaultValue = "gff3_fasta",
-            converter = TranslationMode.Converter.class)
-    public TranslationMode translationMode;
-
     @Override
     public void run() {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
@@ -66,6 +58,11 @@ public class FileConversionCommand extends AbstractCommand {
         Path tempFile = null;
 
         try {
+            // Write to a temp file first to ensure atomic output: if conversion fails,
+            // no partial/corrupt output file is created. Only on success do we move the
+            // temp file to the final destination.
+            // Temp files are created in the system temp directory (controlled via -Djava.io.tmpdir)
+            // for better control in pipeline environments.
             if (writingToFile) {
                 tempFile = Files.createTempFile("gff3tools-", ".tmp");
             }
@@ -100,6 +97,7 @@ public class FileConversionCommand extends AbstractCommand {
                             StandardCopyOption.REPLACE_EXISTING,
                             StandardCopyOption.ATOMIC_MOVE);
                 } catch (AtomicMoveNotSupportedException e) {
+                    // ATOMIC_MOVE fails across filesystems; fall back to a regular move
                     Files.move(tempFile, outputFilePath, StandardCopyOption.REPLACE_EXISTING);
                 }
                 tempFile = null;
@@ -117,6 +115,7 @@ public class FileConversionCommand extends AbstractCommand {
     }
 
     private BufferedWriter createStdoutWriter() {
+        // Suppress INFO/WARN logs while writing to stdout to avoid mixing log output with file content
         LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
         ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
         return new BufferedWriter(new OutputStreamWriter(System.out));
