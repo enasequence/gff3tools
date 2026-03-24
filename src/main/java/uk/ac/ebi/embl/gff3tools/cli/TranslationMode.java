@@ -10,8 +10,28 @@
  */
 package uk.ac.ebi.embl.gff3tools.cli;
 
+import java.util.Arrays;
+import picocli.CommandLine;
+
 public enum TranslationMode {
     gff3_fasta,
     fasta,
-    attribute
+    attribute;
+
+    /**
+     * Custom picocli converter that accepts both hyphens and underscores,
+     * so users can write {@code --translation-mode gff3-fasta} or {@code gff3_fasta}.
+     */
+    public static class Converter implements CommandLine.ITypeConverter<TranslationMode> {
+        @Override
+        public TranslationMode convert(String value) {
+            String normalized = value.replace('-', '_');
+            try {
+                return TranslationMode.valueOf(normalized);
+            } catch (IllegalArgumentException e) {
+                throw new CommandLine.TypeConversionException(
+                        "expected one of " + Arrays.toString(TranslationMode.values()) + " but was '" + value + "'");
+            }
+        }
+    }
 }

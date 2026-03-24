@@ -35,7 +35,6 @@ import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
-import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceProvider;
 
 // Using pandoc CLI interface conventions
 @CommandLine.Command(name = "conversion", description = "Performs format conversions to or from gff3")
@@ -64,7 +63,8 @@ public class FileConversionCommand extends AbstractCommand {
             names = "--translation-mode",
             description =
                     "Translation output mode when converting to GFF3: gff3-fasta, fasta, attribute (default: gff3-fasta)",
-            defaultValue = "gff3_fasta")
+            defaultValue = "gff3_fasta",
+            converter = TranslationMode.Converter.class)
     public TranslationMode translationMode;
 
     @Override
@@ -82,15 +82,7 @@ public class FileConversionCommand extends AbstractCommand {
 
             final Path effectiveOutputPath = writingToFile ? tempFile : null;
 
-            CompositeSequenceProvider compositeProvider = null;
-            if (sequenceSpecs != null && !sequenceSpecs.isEmpty()) {
-                compositeProvider = new CompositeSequenceProvider();
-                for (String spec : sequenceSpecs) {
-                    ParsedSequenceSpec parsed = parseSequenceSpec(spec);
-                    SequenceFormat format = resolveSequenceFormat(parsed.path(), sequenceFormat);
-                    compositeProvider.addSource(new FileSequenceProvider(parsed.path(), format, parsed.key()));
-                }
-            }
+            CompositeSequenceProvider compositeProvider = buildCompositeProvider(sequenceSpecs, sequenceFormat);
 
             try (BufferedReader inputReader = getPipe(
                             Files::newBufferedReader,

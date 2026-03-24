@@ -12,12 +12,16 @@ package uk.ac.ebi.embl.gff3tools.validation;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Holds a registry of {@link ContextProvider} instances and provides lazy,
  * type-safe resolution.
  */
 public class ValidationContext {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ValidationContext.class);
 
     private final Map<Class<?>, ContextProvider<?>> providers = new HashMap<>();
 
@@ -65,7 +69,11 @@ public class ValidationContext {
     /** Close all registered providers, releasing any held resources. */
     public void close() {
         for (ContextProvider<?> provider : providers.values()) {
-            provider.close();
+            try {
+                provider.close();
+            } catch (Exception e) {
+                LOG.warn("Failed to close provider {}: {}", provider.type().getSimpleName(), e.getMessage());
+            }
         }
     }
 }

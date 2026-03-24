@@ -23,12 +23,12 @@ import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
-import uk.ac.ebi.embl.gff3tools.sequence.SequenceReaderFactory;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceProvider;
 
 @Slf4j
 public abstract class AbstractCommand implements Runnable {
@@ -167,13 +167,21 @@ public abstract class AbstractCommand implements Runnable {
                 + ". Use --sequence-format to specify the format explicitly.");
     }
 
-    protected SequenceReader openSequenceReader(Path path, SequenceFormat format, String key) throws Exception {
-        return switch (format) {
-            case fasta -> SequenceReaderFactory.readFasta(path.toFile());
-            case plain -> {
-                String accessionId = (key != null) ? key : "0";
-                yield SequenceReaderFactory.readPlainSequence(path.toFile(), accessionId);
-            }
-        };
+    /**
+     * Builds a {@link CompositeSequenceProvider} from parsed {@code --sequence} specs,
+     * or returns {@code null} if no specs are provided.
+     */
+    protected CompositeSequenceProvider buildCompositeProvider(
+            List<String> sequenceSpecs, SequenceFormat sequenceFormat) {
+        if (sequenceSpecs == null || sequenceSpecs.isEmpty()) {
+            return null;
+        }
+        CompositeSequenceProvider compositeProvider = new CompositeSequenceProvider();
+        for (String spec : sequenceSpecs) {
+            ParsedSequenceSpec parsed = parseSequenceSpec(spec);
+            SequenceFormat format = resolveSequenceFormat(parsed.path(), sequenceFormat);
+            compositeProvider.addSource(new FileSequenceProvider(parsed.path(), format, parsed.key()));
+        }
+        return compositeProvider;
     }
 }

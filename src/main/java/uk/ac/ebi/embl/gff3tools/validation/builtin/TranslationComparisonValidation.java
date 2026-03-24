@@ -50,12 +50,10 @@ public class TranslationComparisonValidation {
             severity = RuleSeverity.WARN,
             priority = ValidationPriority.LOW)
     public void validateTranslation(GFF3Annotation annotation, int line) throws ValidationException {
-        TranslationState state;
-        try {
-            state = context.get(TranslationState.class);
-        } catch (IllegalArgumentException e) {
+        if (!context.contains(TranslationState.class)) {
             return;
         }
+        TranslationState state = context.get(TranslationState.class);
 
         // Group CDS features by ID, same as TranslationFix
         Map<String, List<GFF3Feature>> cdsGroups = annotation.getFeatures().stream()

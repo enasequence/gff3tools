@@ -24,7 +24,6 @@ import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
-import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceProvider;
 
 // Using pandoc CLI interface conventions
 @CommandLine.Command(name = "validation", description = "Performs validations on gff3 files")
@@ -56,15 +55,7 @@ public class ValidationCommand extends AbstractCommand {
         try {
             Path processDir = Optional.ofNullable(inputFilePath.getParent()).orElse(Path.of("."));
 
-            CompositeSequenceProvider compositeProvider = null;
-            if (sequenceSpecs != null && !sequenceSpecs.isEmpty()) {
-                compositeProvider = new CompositeSequenceProvider();
-                for (String spec : sequenceSpecs) {
-                    ParsedSequenceSpec parsed = parseSequenceSpec(spec);
-                    SequenceFormat format = resolveSequenceFormat(parsed.path(), sequenceFormat);
-                    compositeProvider.addSource(new FileSequenceProvider(parsed.path(), format, parsed.key()));
-                }
-            }
+            CompositeSequenceProvider compositeProvider = buildCompositeProvider(sequenceSpecs, sequenceFormat);
 
             try (ValidationEngine validationEngine = compositeProvider != null
                     ? initValidationEngine(ruleOverrides, processDir, compositeProvider)

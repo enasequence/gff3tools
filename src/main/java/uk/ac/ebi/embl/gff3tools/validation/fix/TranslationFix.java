@@ -54,12 +54,10 @@ public class TranslationFix {
             type = ANNOTATION,
             priority = ValidationPriority.LOW)
     public void fixAnnotation(GFF3Annotation annotation, int line) throws ValidationException {
-        SequenceReader sequenceReader;
-        try {
-            sequenceReader = context.get(SequenceReader.class);
-        } catch (IllegalArgumentException e) {
+        if (!context.contains(SequenceReader.class)) {
             return;
         }
+        SequenceReader sequenceReader = context.get(SequenceReader.class);
         if (sequenceReader == null) {
             return;
         }
@@ -123,7 +121,7 @@ public class TranslationFix {
                 recordTranslationState(representative, line, oldTranslation, translation);
             }
 
-            propagateJoinAttributes(segments);
+            propagateJoinAttributes(sorted);
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
@@ -171,13 +169,10 @@ public class TranslationFix {
     }
 
     private void recordTranslationState(GFF3Feature feature, int line, String oldTranslation, String newTranslation) {
-        TranslationState state;
-        try {
-            state = context.get(TranslationState.class);
-        } catch (IllegalArgumentException e) {
-            // No TranslationState provider registered — skip recording
+        if (!context.contains(TranslationState.class)) {
             return;
         }
+        TranslationState state = context.get(TranslationState.class);
         String key =
                 TranslationState.buildKey(feature.getSeqId(), feature.getId().orElse(null), line);
         state.record(key, oldTranslation, newTranslation);

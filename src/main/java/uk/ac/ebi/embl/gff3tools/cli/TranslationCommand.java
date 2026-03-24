@@ -32,7 +32,6 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
-import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceProvider;
 
 @CommandLine.Command(
         name = "translate",
@@ -55,7 +54,8 @@ public class TranslationCommand extends AbstractCommand {
     @CommandLine.Option(
             names = "--translation-mode",
             description = "Output mode: gff3-fasta, fasta, attribute (default: gff3-fasta)",
-            defaultValue = "gff3_fasta")
+            defaultValue = "gff3_fasta",
+            converter = TranslationMode.Converter.class)
     public TranslationMode translationMode;
 
     @CommandLine.Option(
@@ -69,17 +69,10 @@ public class TranslationCommand extends AbstractCommand {
         Path processDir = Optional.ofNullable(inputFilePath.getParent()).orElse(Path.of("."));
 
         try {
-            if (sequenceSpecs == null || sequenceSpecs.isEmpty()) {
+            CompositeSequenceProvider compositeProvider = buildCompositeProvider(sequenceSpecs, sequenceFormat);
+            if (compositeProvider == null) {
                 throw new RuntimeException(
                         "A sequence source is required. Provide --sequence or ensure a plugin supplies sequences.");
-            }
-
-            CompositeSequenceProvider compositeProvider = new CompositeSequenceProvider();
-
-            for (String spec : sequenceSpecs) {
-                ParsedSequenceSpec parsed = parseSequenceSpec(spec);
-                SequenceFormat format = resolveSequenceFormat(parsed.path(), sequenceFormat);
-                compositeProvider.addSource(new FileSequenceProvider(parsed.path(), format, parsed.key()));
             }
 
             List<GFF3Annotation> annotations = new ArrayList<>();
