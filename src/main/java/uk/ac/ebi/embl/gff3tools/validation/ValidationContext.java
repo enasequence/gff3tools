@@ -45,6 +45,18 @@ public class ValidationContext {
         providers.put(type, provider);
     }
 
+    /**
+     * Returns the raw {@link ContextProvider} registered for the given type,
+     * without resolving its value.
+     *
+     * @param type the value type to look up
+     * @return the provider, or {@code null} if none is registered
+     */
+    @SuppressWarnings("unchecked")
+    public <T> ContextProvider<T> getProvider(Class<T> type) {
+        return (ContextProvider<T>) providers.get(type);
+    }
+
     /** Check whether a provider is registered for the given type. */
     public boolean contains(Class<?> type) {
         return providers.containsKey(type);
