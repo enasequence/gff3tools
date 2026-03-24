@@ -28,7 +28,7 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationRegistry;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
-import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationStateProvider;
 
@@ -47,7 +47,7 @@ class TranslationFixTest {
         context = new ValidationContext();
 
         CompositeSequenceProvider compositeProvider = new CompositeSequenceProvider();
-        FileSequenceProvider fileProvider = new FileSequenceProvider(mockReader);
+        FileSequenceSource fileProvider = new FileSequenceSource(mockReader);
         compositeProvider.addSource(fileProvider);
         context.register(SequenceReader.class, compositeProvider);
 

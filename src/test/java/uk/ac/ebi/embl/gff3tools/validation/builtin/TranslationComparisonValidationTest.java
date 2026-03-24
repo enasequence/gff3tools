@@ -93,6 +93,40 @@ class TranslationComparisonValidationTest {
         assertTrue(ex.getMessage().contains("seq1"));
     }
 
+    @Test
+    void usesLowestStartSegmentAsRepresentative() throws Exception {
+        // Add segments in reverse order (higher start first) to verify sorting
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 100, 200);
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 50);
+        GFF3Annotation annotation = createAnnotation(seg2, seg1);
+
+        // Key built from the lowest-start segment (seg1: seqId=seq1)
+        String key = TranslationState.buildKey("seq1", "cds1", 1);
+        state.record(key, "OLD", "NEW");
+
+        ValidationException ex =
+                assertThrows(ValidationException.class, () -> validation.validateTranslation(annotation, 1));
+        assertTrue(ex.getMessage().contains("TRANSLATION_COMPARISON"));
+    }
+
+    @Test
+    void multipleCdsGroupsOneMismatchThrows() {
+        // Two CDS groups: cds_a matches, cds_b mismatches
+        GFF3Feature cdsA = createFeature(OntologyTerm.CDS.name(), "cds_a", "seq1", 1, 9);
+        GFF3Feature cdsB = createFeature(OntologyTerm.CDS.name(), "cds_b", "seq1", 20, 30);
+        GFF3Annotation annotation = createAnnotation(cdsA, cdsB);
+
+        String keyA = TranslationState.buildKey("seq1", "cds_a", 1);
+        state.record(keyA, "MK", "MK"); // match
+
+        String keyB = TranslationState.buildKey("seq1", "cds_b", 1);
+        state.record(keyB, "WRONG", "MK"); // mismatch
+
+        ValidationException ex =
+                assertThrows(ValidationException.class, () -> validation.validateTranslation(annotation, 1));
+        assertTrue(ex.getMessage().contains("cds_b"));
+    }
+
     private GFF3Annotation createAnnotation(GFF3Feature... features) {
         GFF3Annotation annotation = new GFF3Annotation();
         for (GFF3Feature feature : features) {
@@ -102,7 +136,21 @@ class TranslationComparisonValidationTest {
     }
 
     private GFF3Feature createFeature(String name, String seqId) {
+        return createFeature(name, name + "_id", seqId, 1, 9);
+    }
+
+    private GFF3Feature createFeature(String name, String featureId, String seqId, long start, long end) {
         return new GFF3Feature(
-                Optional.of(name + "_id"), Optional.empty(), seqId, Optional.empty(), ".", name, 1, 9, ".", "+", "0");
+                Optional.of(featureId),
+                Optional.empty(),
+                seqId,
+                Optional.empty(),
+                ".",
+                name,
+                start,
+                end,
+                ".",
+                "+",
+                "0");
     }
 }

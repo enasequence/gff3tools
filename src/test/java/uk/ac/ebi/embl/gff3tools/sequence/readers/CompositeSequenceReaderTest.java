@@ -17,7 +17,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.sequence.IdType;
-import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 import uk.ac.ebi.embl.gff3tools.validation.provider.SequenceSource;
 
 class CompositeSequenceReaderTest {
@@ -34,8 +34,8 @@ class CompositeSequenceReaderTest {
         when(reader2.getSequenceSlice(IdType.SUBMISSION_ID, "seq2", 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE))
                 .thenReturn("ATGAAATAA");
 
-        SequenceSource source1 = new FileSequenceProvider(reader1);
-        SequenceSource source2 = new FileSequenceProvider(reader2);
+        SequenceSource source1 = new FileSequenceSource(reader1);
+        SequenceSource source2 = new FileSequenceSource(reader2);
 
         CompositeSequenceReader composite = new CompositeSequenceReader(List.of(source1, source2));
 
@@ -53,7 +53,7 @@ class CompositeSequenceReaderTest {
         when(reader.submissionType()).thenReturn(SubmissionType.FASTA);
         when(reader.getOrderedIds(IdType.SUBMISSION_ID)).thenReturn(List.of("seq1"));
 
-        SequenceSource source = new FileSequenceProvider(reader);
+        SequenceSource source = new FileSequenceSource(reader);
         CompositeSequenceReader composite = new CompositeSequenceReader(List.of(source));
 
         assertThrows(
@@ -72,8 +72,8 @@ class CompositeSequenceReaderTest {
         when(reader2.submissionType()).thenReturn(SubmissionType.FASTA);
         when(reader2.getOrderedIds(IdType.SUBMISSION_ID)).thenReturn(List.of("seq2", "seq3"));
 
-        SequenceSource source1 = new FileSequenceProvider(reader1);
-        SequenceSource source2 = new FileSequenceProvider(reader2);
+        SequenceSource source1 = new FileSequenceSource(reader1);
+        SequenceSource source2 = new FileSequenceSource(reader2);
 
         CompositeSequenceReader composite = new CompositeSequenceReader(List.of(source1, source2));
         List<String> ids = composite.getOrderedIds(IdType.SUBMISSION_ID);
@@ -89,7 +89,7 @@ class CompositeSequenceReaderTest {
         when(plainReader.getSequenceSlice(IdType.SUBMISSION_ID, "0", 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE))
                 .thenReturn("ATGAAATAA");
 
-        SequenceSource source = new FileSequenceProvider(plainReader);
+        SequenceSource source = new FileSequenceSource(plainReader);
         CompositeSequenceReader composite = new CompositeSequenceReader(List.of(source));
 
         // Request with arbitrary ID "chr1" — should be translated to "0" for plain reader

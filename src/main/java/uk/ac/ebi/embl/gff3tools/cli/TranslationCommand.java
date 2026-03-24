@@ -39,17 +39,8 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
 @Slf4j
 public class TranslationCommand extends AbstractCommand {
 
-    @CommandLine.Option(
-            names = "--sequence",
-            description = "Sequence source. Repeatable. Use path for FASTA files (IDs from headers) "
-                    + "or key:path for plain sequences (key = GFF3 seqId). "
-                    + "Examples: --sequence seqs.fasta --sequence chr1:chr1.seq")
-    public List<String> sequenceSpecs;
-
-    @CommandLine.Option(
-            names = "--sequence-format",
-            description = "Format of the sequence file: fasta, plain. Inferred from extension if omitted.")
-    public SequenceFormat sequenceFormat;
+    @CommandLine.Mixin
+    public SequenceOptions sequenceOptions;
 
     @CommandLine.Option(
             names = "--translation-mode",
@@ -69,8 +60,9 @@ public class TranslationCommand extends AbstractCommand {
         Path processDir = Optional.ofNullable(inputFilePath.getParent()).orElse(Path.of("."));
 
         try {
-            CompositeSequenceProvider compositeProvider = buildCompositeProvider(sequenceSpecs, sequenceFormat);
-            if (compositeProvider == null) {
+            CompositeSequenceProvider compositeProvider =
+                    buildCompositeProvider(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
+            if (!compositeProvider.hasSources()) {
                 throw new RuntimeException(
                         "A sequence source is required. Provide --sequence or ensure a plugin supplies sequences.");
             }

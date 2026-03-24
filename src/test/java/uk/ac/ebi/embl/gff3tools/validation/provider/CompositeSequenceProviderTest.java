@@ -36,7 +36,7 @@ class CompositeSequenceProviderTest {
         when(mockReader.submissionType()).thenReturn(SubmissionType.FASTA);
         when(mockReader.getOrderedIds(any())).thenReturn(List.of("seq1"));
 
-        FileSequenceProvider source = new FileSequenceProvider(mockReader);
+        FileSequenceSource source = new FileSequenceSource(mockReader);
         provider.addSource(source);
 
         assertTrue(provider.hasSources());
@@ -56,7 +56,7 @@ class CompositeSequenceProviderTest {
         when(mockReader.submissionType()).thenReturn(SubmissionType.FASTA);
         when(mockReader.getOrderedIds(IdType.SUBMISSION_ID)).thenReturn(List.of("seq1"));
 
-        FileSequenceProvider source = new FileSequenceProvider(mockReader);
+        FileSequenceSource source = new FileSequenceSource(mockReader);
         provider.addSource(source);
 
         SequenceReader composite = provider.get(new ValidationContext());
@@ -72,13 +72,13 @@ class CompositeSequenceProviderTest {
         SequenceReader reader1 = mock(SequenceReader.class);
         when(reader1.submissionType()).thenReturn(SubmissionType.FASTA);
         when(reader1.getOrderedIds(IdType.SUBMISSION_ID)).thenReturn(List.of("seq1"));
-        FileSequenceProvider source1 = new FileSequenceProvider(reader1);
+        FileSequenceSource source1 = new FileSequenceSource(reader1);
 
         // Second source: FASTA with "seq2"
         SequenceReader reader2 = mock(SequenceReader.class);
         when(reader2.submissionType()).thenReturn(SubmissionType.FASTA);
         when(reader2.getOrderedIds(IdType.SUBMISSION_ID)).thenReturn(List.of("seq2"));
-        FileSequenceProvider source2 = new FileSequenceProvider(reader2);
+        FileSequenceSource source2 = new FileSequenceSource(reader2);
 
         provider.addSource(source1);
         provider.addSource(source2);
@@ -101,8 +101,8 @@ class CompositeSequenceProviderTest {
         when(reader2.submissionType()).thenReturn(SubmissionType.FASTA);
         when(reader2.getOrderedIds(any())).thenReturn(List.of("seq2"));
 
-        provider.addSource(new FileSequenceProvider(reader1));
-        provider.addSource(new FileSequenceProvider(reader2));
+        provider.addSource(new FileSequenceSource(reader1));
+        provider.addSource(new FileSequenceSource(reader2));
 
         provider.close();
 
@@ -116,7 +116,7 @@ class CompositeSequenceProviderTest {
         SequenceReader mockReader = mock(SequenceReader.class);
         when(mockReader.submissionType()).thenReturn(SubmissionType.FASTA);
         when(mockReader.getOrderedIds(any())).thenReturn(List.of("seq1"));
-        provider.addSource(new FileSequenceProvider(mockReader));
+        provider.addSource(new FileSequenceSource(mockReader));
 
         ValidationContext ctx = new ValidationContext();
         SequenceReader first = provider.get(ctx);

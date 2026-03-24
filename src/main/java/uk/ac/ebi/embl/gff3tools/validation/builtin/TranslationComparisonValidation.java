@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -61,7 +62,10 @@ public class TranslationComparisonValidation {
                 .collect(Collectors.groupingBy(f -> f.getId().orElse("__no_id_" + f.getStart() + "_" + f.getEnd())));
 
         for (Map.Entry<String, List<GFF3Feature>> entry : cdsGroups.entrySet()) {
-            GFF3Feature representative = entry.getValue().get(0);
+            // Sort by start position to match TranslationFix's representative selection
+            GFF3Feature representative = entry.getValue().stream()
+                    .min(Comparator.comparingLong(GFF3Feature::getStart))
+                    .orElseThrow();
             String key = TranslationState.buildKey(
                     representative.getSeqId(), representative.getId().orElse(null), line);
             TranslationState.TranslationEntry translationEntry = state.get(key);

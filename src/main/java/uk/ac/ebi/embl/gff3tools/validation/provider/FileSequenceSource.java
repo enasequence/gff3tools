@@ -11,6 +11,10 @@
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
 import uk.ac.ebi.embl.gff3tools.sequence.IdType;
@@ -34,12 +38,13 @@ import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionType;
  * in the reader's index.
  */
 @Slf4j
-public class FileSequenceProvider implements SequenceSource {
+public class FileSequenceSource implements SequenceSource {
 
     private final Path path;
     private final SequenceFormat format;
     private final String sequenceKey;
     private SequenceReader sequenceReader;
+    private final Map<IdType, Set<String>> idCache = new HashMap<>();
 
     /**
      * Creates a provider that will lazily open the sequence file on first access.
@@ -48,19 +53,19 @@ public class FileSequenceProvider implements SequenceSource {
      * @param format the sequence format (fasta or plain)
      * @param sequenceKey optional key for plain sequences (GFF3 seqId); null to match any ID
      */
-    public FileSequenceProvider(Path path, SequenceFormat format, String sequenceKey) {
+    public FileSequenceSource(Path path, SequenceFormat format, String sequenceKey) {
         this.path = path;
         this.format = format;
         this.sequenceKey = sequenceKey;
     }
 
     /** Convenience constructor for tests that supply a pre-opened reader. */
-    public FileSequenceProvider(SequenceReader sequenceReader) {
+    public FileSequenceSource(SequenceReader sequenceReader) {
         this(sequenceReader, null);
     }
 
     /** Convenience constructor for tests that supply a pre-opened reader with a key. */
-    public FileSequenceProvider(SequenceReader sequenceReader, String sequenceKey) {
+    public FileSequenceSource(SequenceReader sequenceReader, String sequenceKey) {
         this.path = null;
         this.format = null;
         this.sequenceKey = sequenceKey;
@@ -76,7 +81,8 @@ public class FileSequenceProvider implements SequenceSource {
         if (reader.submissionType() == SubmissionType.PLAIN_SEQUENCE) {
             return sequenceKey == null || sequenceKey.equals(id);
         }
-        return reader.getOrderedIds(idType).contains(id);
+        return idCache.computeIfAbsent(idType, k -> new HashSet<>(reader.getOrderedIds(k)))
+                .contains(id);
     }
 
     @Override

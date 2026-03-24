@@ -30,17 +30,8 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
 @Slf4j
 public class ValidationCommand extends AbstractCommand {
 
-    @CommandLine.Option(
-            names = "--sequence",
-            description = "Sequence source for translation validation. Repeatable. Use path for FASTA files "
-                    + "or key:path for plain sequences. "
-                    + "Examples: --sequence seqs.fasta --sequence chr1:chr1.seq")
-    public List<String> sequenceSpecs;
-
-    @CommandLine.Option(
-            names = "--sequence-format",
-            description = "Format of the sequence file: fasta, plain. Inferred from extension if omitted.")
-    public SequenceFormat sequenceFormat;
+    @CommandLine.Mixin
+    public SequenceOptions sequenceOptions;
 
     private int warningCount = 0;
 
@@ -55,11 +46,11 @@ public class ValidationCommand extends AbstractCommand {
         try {
             Path processDir = Optional.ofNullable(inputFilePath.getParent()).orElse(Path.of("."));
 
-            CompositeSequenceProvider compositeProvider = buildCompositeProvider(sequenceSpecs, sequenceFormat);
+            CompositeSequenceProvider compositeProvider =
+                    buildCompositeProvider(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
 
-            try (ValidationEngine validationEngine = compositeProvider != null
-                    ? initValidationEngine(ruleOverrides, processDir, compositeProvider)
-                    : initValidationEngine(ruleOverrides, processDir)) {
+            try (ValidationEngine validationEngine =
+                    initValidationEngine(ruleOverrides, processDir, compositeProvider)) {
 
                 try (BufferedReader inputReader = getPipe(
                                 Files::newBufferedReader,

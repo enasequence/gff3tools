@@ -20,7 +20,6 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -47,17 +46,8 @@ public class FileConversionCommand extends AbstractCommand {
             showDefaultValue = CommandLine.Help.Visibility.NEVER)
     public Path outputFilePath;
 
-    @CommandLine.Option(
-            names = "--sequence",
-            description = "Sequence source for translation validation. Repeatable. Use path for FASTA files "
-                    + "or key:path for plain sequences. "
-                    + "Examples: --sequence seqs.fasta --sequence chr1:chr1.seq")
-    public List<String> sequenceSpecs;
-
-    @CommandLine.Option(
-            names = "--sequence-format",
-            description = "Format of the sequence file: fasta, plain. Inferred from extension if omitted.")
-    public SequenceFormat sequenceFormat;
+    @CommandLine.Mixin
+    public SequenceOptions sequenceOptions;
 
     @CommandLine.Option(
             names = "--translation-mode",
@@ -82,7 +72,8 @@ public class FileConversionCommand extends AbstractCommand {
 
             final Path effectiveOutputPath = writingToFile ? tempFile : null;
 
-            CompositeSequenceProvider compositeProvider = buildCompositeProvider(sequenceSpecs, sequenceFormat);
+            CompositeSequenceProvider compositeProvider =
+                    buildCompositeProvider(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
 
             try (BufferedReader inputReader = getPipe(
                             Files::newBufferedReader,
@@ -94,9 +85,7 @@ public class FileConversionCommand extends AbstractCommand {
                 toFileType = validateFileType(toFileType, outputFilePath, "-t");
                 Path processDir = Optional.ofNullable(inputFilePath.getParent()).orElse(Path.of("."));
 
-                try (ValidationEngine engine = compositeProvider != null
-                        ? initValidationEngine(ruleOverrides, processDir, compositeProvider)
-                        : initValidationEngine(ruleOverrides, processDir)) {
+                try (ValidationEngine engine = initValidationEngine(ruleOverrides, processDir, compositeProvider)) {
                     Converter converter = getConverter(engine, fromFileType, toFileType);
                     converter.convert(inputReader, outputWriter);
                 }

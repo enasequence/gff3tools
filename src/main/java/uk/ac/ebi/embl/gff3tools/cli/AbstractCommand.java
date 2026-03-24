@@ -28,7 +28,7 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
-import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 
 @Slf4j
 public abstract class AbstractCommand implements Runnable {
@@ -61,19 +61,6 @@ public abstract class AbstractCommand implements Runnable {
 
     protected Map<String, RuleSeverity> getRuleOverrides() {
         return Optional.ofNullable(rules).map((r) -> r.rules()).orElse(new HashMap<>());
-    }
-
-    protected ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides, Path processDir) {
-
-        if (!Files.isDirectory(processDir) || !Files.isWritable(processDir)) {
-            throw new RuntimeException(String.format("The directory {%s} is not writable.", processDir));
-        }
-
-        log.info("Running with process directory: {}", processDir);
-        return new ValidationEngineBuilder()
-                .overrideMethodRules(ruleOverrides)
-                .failFast(failFast)
-                .build();
     }
 
     protected ValidationEngine initValidationEngine(
@@ -168,19 +155,19 @@ public abstract class AbstractCommand implements Runnable {
     }
 
     /**
-     * Builds a {@link CompositeSequenceProvider} from parsed {@code --sequence} specs,
-     * or returns {@code null} if no specs are provided.
+     * Builds a {@link CompositeSequenceProvider} from parsed {@code --sequence} specs.
+     * Returns an empty provider (no sources) if no specs are provided.
      */
     protected CompositeSequenceProvider buildCompositeProvider(
             List<String> sequenceSpecs, SequenceFormat sequenceFormat) {
-        if (sequenceSpecs == null || sequenceSpecs.isEmpty()) {
-            return null;
-        }
         CompositeSequenceProvider compositeProvider = new CompositeSequenceProvider();
+        if (sequenceSpecs == null || sequenceSpecs.isEmpty()) {
+            return compositeProvider;
+        }
         for (String spec : sequenceSpecs) {
             ParsedSequenceSpec parsed = parseSequenceSpec(spec);
             SequenceFormat format = resolveSequenceFormat(parsed.path(), sequenceFormat);
-            compositeProvider.addSource(new FileSequenceProvider(parsed.path(), format, parsed.key()));
+            compositeProvider.addSource(new FileSequenceSource(parsed.path(), format, parsed.key()));
         }
         return compositeProvider;
     }
