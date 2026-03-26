@@ -13,12 +13,10 @@ package uk.ac.ebi.embl.gff3tools.translation;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Locale;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.fastareader.FastaReader;
-import uk.ac.ebi.embl.fastareader.exception.FastaFileException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.translation.except.TranslExceptAttribute;
 
@@ -860,7 +858,7 @@ public class TranslatorTest {
     }
 
     @Test
-    public void testWithFile() throws TranslationException, FastaFileException, IOException {
+    public void testWithFile() throws Exception {
 
         GFF3Feature feature = new GFF3Feature(
                 Optional.of("id"),
@@ -884,7 +882,7 @@ public class TranslatorTest {
 
         Translator translator = new Translator(feature);
         translator.setThreePrimePartial(true);
-        String sequence = reader.getSequenceSliceString(0L, 4798, 5460).toUpperCase(Locale.ROOT);
+        String sequence = reader.getSequenceSlice(0L, 4798, 5460).toUpperCase(Locale.ROOT);
 
         TranslationResult result = translator.translate(sequence.getBytes());
         Translator.TranslationComparison comparison =
@@ -893,7 +891,7 @@ public class TranslatorTest {
     }
 
     @Test
-    public void testWithFileActual() throws TranslationException, FastaFileException, IOException {
+    public void testWithFileActual() throws Exception {
 
         GFF3Feature feature = new GFF3Feature(
                 Optional.of("id"),
@@ -921,7 +919,7 @@ public class TranslatorTest {
         Translator translator = new Translator(feature);
         translator.setThreePrimePartial(true);
         // String sequence = reader.getSequenceSliceString(0L,999,1979).toUpperCase(Locale.ROOT);
-        String sequence = reader.getSequenceSliceString(0L, 480, 836).toUpperCase(Locale.ROOT);
+        String sequence = reader.getSequenceSlice(0L, 480, 836).toUpperCase(Locale.ROOT);
 
         TranslationResult result = translator.translate(sequence.getBytes());
         assertEquals(expectedTranslation, result.getConceptualTranslation());
