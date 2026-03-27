@@ -8,26 +8,9 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.validation.provider;
+package uk.ac.ebi.embl.gff3tools.cli;
 
-import java.nio.file.Path;
-import lombok.Builder;
-import lombok.Getter;
-
-/**
- * Holds all shared translation-related resources for a validation run.
- * and registered via TranslationProvider.
- *
- * <p>Retrieved by validators via:
- * <pre>context.get(TranslationContext.class)</pre>
- */
-@Getter
-@Builder
-public class TranslationContext {
-
-    /** Working directory for this validation run. */
-    private final Path processDir;
-
-    /** Temp FASTA file used to store downloaded sequences during translation. */
-    private final Path sequenceFastaPath;
+public enum SequenceFormat {
+    fasta,
+    plain
 }

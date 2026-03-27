@@ -12,12 +12,16 @@ package uk.ac.ebi.embl.gff3tools.validation;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Holds a registry of {@link ContextProvider} instances and provides lazy,
  * type-safe resolution.
  */
 public class ValidationContext {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ValidationContext.class);
 
     private final Map<Class<?>, ContextProvider<?>> providers = new HashMap<>();
 
@@ -43,5 +47,33 @@ public class ValidationContext {
      */
     public <T> void register(Class<T> type, ContextProvider<T> provider) {
         providers.put(type, provider);
+    }
+
+    /**
+     * Returns the raw {@link ContextProvider} registered for the given type,
+     * without resolving its value.
+     *
+     * @param type the value type to look up
+     * @return the provider, or {@code null} if none is registered
+     */
+    @SuppressWarnings("unchecked")
+    public <T> ContextProvider<T> getProvider(Class<T> type) {
+        return (ContextProvider<T>) providers.get(type);
+    }
+
+    /** Check whether a provider is registered for the given type. */
+    public boolean contains(Class<?> type) {
+        return providers.containsKey(type);
+    }
+
+    /** Close all registered providers, releasing any held resources. */
+    public void close() {
+        for (ContextProvider<?> provider : providers.values()) {
+            try {
+                provider.close();
+            } catch (Exception e) {
+                LOG.warn("Failed to close provider {}: {}", provider.type().getSimpleName(), e.getMessage());
+            }
+        }
     }
 }

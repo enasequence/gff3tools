@@ -1,0 +1,4 @@
+>seq1 | {"description":"Test sequence 1 - forward strand CDS", "molecule_type":"dna", "topology":"linear"}
+GGGCCCTCCATGAAAGGGCCCTTCAAATAACCCGGGTTTAAAGGGCCCAAATTTGGGCCC
+>seq2 | {"description":"Test sequence 2 - reverse strand CDS", "molecule_type":"dna", "topology":"linear"}
+AAACCCGGGTTATTTGAAGGGCCCTTTCATGGGAAACCCGGGTTTAAAGGGCCCAAATTT

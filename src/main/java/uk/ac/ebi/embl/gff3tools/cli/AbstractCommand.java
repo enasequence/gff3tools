@@ -23,11 +23,12 @@ import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
+import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
-import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationContext;
-import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 
 @Slf4j
 public abstract class AbstractCommand implements Runnable {
@@ -62,25 +63,22 @@ public abstract class AbstractCommand implements Runnable {
         return Optional.ofNullable(rules).map((r) -> r.rules()).orElse(new HashMap<>());
     }
 
-    protected ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides, Path processDir) {
+    protected ValidationEngine initValidationEngine(
+            Map<String, RuleSeverity> ruleOverrides, Path processDir, ContextProvider<?>... additionalProviders) {
 
         if (!Files.isDirectory(processDir) || !Files.isWritable(processDir)) {
             throw new RuntimeException(String.format("The directory {%s} is not writable.", processDir));
         }
 
         log.info("Running with process directory: {}", processDir);
-        return new ValidationEngineBuilder()
-                .overrideMethodRules(ruleOverrides)
-                .failFast(failFast)
-                .withProvider(getTranslationProvider(processDir))
-                .build();
-    }
+        ValidationEngineBuilder builder =
+                new ValidationEngineBuilder().overrideMethodRules(ruleOverrides).failFast(failFast);
 
-    private TranslationProvider getTranslationProvider(Path processDir) {
-        return new TranslationProvider(TranslationContext.builder()
-                .processDir(processDir)
-                .sequenceFastaPath(processDir.resolve("gff3-translation.fasta"))
-                .build());
+        for (ContextProvider<?> provider : additionalProviders) {
+            builder.withProvider(provider);
+        }
+
+        return builder.build();
     }
 
     @FunctionalInterface
@@ -112,5 +110,64 @@ public abstract class AbstractCommand implements Runnable {
 
         int dot = name.lastIndexOf('.');
         return (dot > 0 && dot < name.length() - 1) ? Optional.of(name.substring(dot + 1)) : Optional.empty();
+    }
+
+    // ── Sequence helpers shared by translate / validation / conversion ──
+
+    protected record ParsedSequenceSpec(String key, Path path) {}
+
+    /**
+     * Parses a {@code --sequence} spec into an optional key and a path.
+     *
+     * <p>Format: {@code [key:]path}. The key is separated by the first colon that is not
+     * part of the path (i.e., the character before the colon contains no path separators).
+     */
+    protected ParsedSequenceSpec parseSequenceSpec(String spec) {
+        int colonIdx = spec.indexOf(':');
+        if (colonIdx > 0) {
+            String possibleKey = spec.substring(0, colonIdx);
+            if (!possibleKey.contains("/") && !possibleKey.contains("\\")) {
+                String pathStr = spec.substring(colonIdx + 1);
+                return new ParsedSequenceSpec(possibleKey, Path.of(pathStr));
+            }
+        }
+        return new ParsedSequenceSpec(null, Path.of(spec));
+    }
+
+    /**
+     * Resolve the sequence format from an explicit override or the file extension.
+     */
+    protected SequenceFormat resolveSequenceFormat(Path path, SequenceFormat explicitFormat) {
+        if (explicitFormat != null) {
+            return explicitFormat;
+        }
+        String ext = getFileExtension(path)
+                .orElseThrow(() -> new RuntimeException("Cannot infer sequence format from file extension. "
+                        + "Use --sequence-format to specify the format explicitly."));
+        return switch (ext.toLowerCase()) {
+            case "fasta", "fa", "fna" -> SequenceFormat.fasta;
+            case "seq" -> SequenceFormat.plain;
+            default ->
+                throw new RuntimeException("Unrecognized sequence file extension: ." + ext
+                        + ". Use --sequence-format to specify the format explicitly.");
+        };
+    }
+
+    /**
+     * Builds a {@link CompositeSequenceProvider} from parsed {@code --sequence} specs.
+     * Returns an empty provider (no sources) if no specs are provided.
+     */
+    protected CompositeSequenceProvider buildCompositeProvider(
+            List<String> sequenceSpecs, SequenceFormat sequenceFormat) {
+        CompositeSequenceProvider compositeProvider = new CompositeSequenceProvider();
+        if (sequenceSpecs == null || sequenceSpecs.isEmpty()) {
+            return compositeProvider;
+        }
+        for (String spec : sequenceSpecs) {
+            ParsedSequenceSpec parsed = parseSequenceSpec(spec);
+            SequenceFormat format = resolveSequenceFormat(parsed.path(), sequenceFormat);
+            compositeProvider.addSource(new FileSequenceSource(parsed.path(), format, parsed.key()));
+        }
+        return compositeProvider;
     }
 }

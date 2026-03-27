@@ -13,22 +13,22 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
-/** Provider that supplies a pre-built TranslationContext to the validation framework. */
-public class TranslationProvider implements ContextProvider<TranslationContext> {
+/**
+ * Auto-discovered provider that supplies a shared {@link TranslationState} instance.
+ *
+ * <p>The state is eagerly created and shared across the fix and validation phases.
+ */
+public class TranslationStateProvider implements ContextProvider<TranslationState> {
 
-    private final TranslationContext translationContext;
+    private final TranslationState state = new TranslationState();
 
-    public TranslationProvider(TranslationContext translationContext) {
-        this.translationContext = translationContext;
+    @Override
+    public TranslationState get(ValidationContext context) {
+        return state;
     }
 
     @Override
-    public TranslationContext get(ValidationContext context) {
-        return translationContext;
-    }
-
-    @Override
-    public Class<TranslationContext> type() {
-        return TranslationContext.class;
+    public Class<TranslationState> type() {
+        return TranslationState.class;
     }
 }
