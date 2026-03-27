@@ -101,6 +101,8 @@ public class ValidationRegistry {
 
         // Call initialize() only on providers that are actually registered (not overwritten).
         // Explicit providers take precedence, so skip classpath providers whose type was overridden.
+        // Ordering: classpath providers initialize first, then explicit providers. If a classpath
+        // provider's initialize() depends on an explicit provider, it will NOT see it yet.
         Set<Class<?>> explicitTypes =
                 providers.stream().map(ContextProvider::type).collect(Collectors.toSet());
         for (ContextProvider<?> provider : allProviders) {

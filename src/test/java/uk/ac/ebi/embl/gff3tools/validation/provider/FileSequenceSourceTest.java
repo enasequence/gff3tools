@@ -96,6 +96,20 @@ class FileSequenceSourceTest {
         verify(mockReader).close();
     }
 
+    @Test
+    void duplicateFastaIdsThrowsRuntimeException() {
+        SequenceFormatReader mockReader = mock(SequenceFormatReader.class);
+        when(mockReader.getSequenceFileFormat()).thenReturn(SequenceFileFormat.FASTA);
+        when(mockReader.getOrderedIds()).thenReturn(List.of(0L, 1L));
+        when(mockReader.getHeaderline(0L)).thenReturn(Optional.of(">dup_id|{\"description\":\"first\"}"));
+        when(mockReader.getHeaderline(1L)).thenReturn(Optional.of(">dup_id|{\"description\":\"second\"}"));
+
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> source.hasSequence("dup_id"));
+        assertTrue(ex.getMessage().contains("Duplicate submission ID"));
+    }
+
     /** Creates a mock plain sequence reader with a single ordinal 0. */
     private SequenceFormatReader mockPlainReader() {
         SequenceFormatReader reader = mock(SequenceFormatReader.class);

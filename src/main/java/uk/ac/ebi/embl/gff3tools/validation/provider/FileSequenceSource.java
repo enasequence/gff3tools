@@ -137,7 +137,10 @@ public class FileSequenceSource implements SequenceSource {
                     seqIdToOrdinal.put(submissionId, ordinal);
                 } catch (Exception e) {
                     throw new RuntimeException(
-                            "Failed to parse FASTA header at ordinal %d: %s".formatted(ordinal, e.getMessage()), e);
+                            ("Failed to parse FASTA header at ordinal %d: %s. "
+                                            + "Expected format: >ID | {\"key\":\"value\",...}")
+                                    .formatted(ordinal, e.getMessage()),
+                            e);
                 }
             }
         }

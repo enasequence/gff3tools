@@ -57,7 +57,9 @@ public class TranslationComparisonValidation {
         }
         TranslationState state = context.get(TranslationState.class);
 
-        // Group CDS features by ID, same as TranslationFix
+        // Group CDS features by ID, using the same fallback key as TranslationFix so that
+        // groups match 1:1. This relies on no fix modifying feature coordinates before these
+        // LOW-priority rules execute.
         Map<String, List<GFF3Feature>> cdsGroups = annotation.getFeatures().stream()
                 .filter(f -> OntologyTerm.CDS.name().equals(f.getName()))
                 .collect(Collectors.groupingBy(f -> f.getId().orElse("__no_id_" + f.getStart() + "_" + f.getEnd())));
