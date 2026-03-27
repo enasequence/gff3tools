@@ -14,70 +14,109 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.gff3tools.sequence.IdType;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionType;
+import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
+import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
+import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
 
 class FileSequenceSourceTest {
 
     @Test
     void hasSequenceReturnsTrueForPlainSequenceAnyId_noKey() {
-        SequenceReader mockReader = mock(SequenceReader.class);
-        when(mockReader.submissionType()).thenReturn(SubmissionType.PLAIN_SEQUENCE);
+        SequenceFormatReader mockReader = mockPlainReader();
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.plain, null);
 
-        FileSequenceSource provider = new FileSequenceSource(mockReader);
-        assertTrue(provider.hasSequence(IdType.SUBMISSION_ID, "any-id"));
-        assertTrue(provider.hasSequence(IdType.ACCESSION_ID, "other-id"));
+        assertTrue(source.hasSequence("any-id"));
+        assertTrue(source.hasSequence("other-id"));
     }
 
     @Test
     void hasSequenceMatchesKeyForPlainSequence() {
-        SequenceReader mockReader = mock(SequenceReader.class);
-        when(mockReader.submissionType()).thenReturn(SubmissionType.PLAIN_SEQUENCE);
+        SequenceFormatReader mockReader = mockPlainReader();
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.plain, "chr1");
 
-        FileSequenceSource provider = new FileSequenceSource(mockReader, "chr1");
-        assertTrue(provider.hasSequence(IdType.SUBMISSION_ID, "chr1"));
-        assertFalse(provider.hasSequence(IdType.SUBMISSION_ID, "chr2"));
-        assertFalse(provider.hasSequence(IdType.ACCESSION_ID, "other"));
+        assertTrue(source.hasSequence("chr1"));
+        assertFalse(source.hasSequence("chr2"));
     }
 
     @Test
-    void hasSequenceChecksFastaIndex() {
-        SequenceReader mockReader = mock(SequenceReader.class);
-        when(mockReader.submissionType()).thenReturn(SubmissionType.FASTA);
-        when(mockReader.getOrderedIds(IdType.SUBMISSION_ID)).thenReturn(List.of("seq1", "seq2"));
+    void hasSequenceChecksFastaHeaders() {
+        SequenceFormatReader mockReader = mockFastaReader("seq1", "seq2");
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
 
-        FileSequenceSource provider = new FileSequenceSource(mockReader);
-        assertTrue(provider.hasSequence(IdType.SUBMISSION_ID, "seq1"));
-        assertTrue(provider.hasSequence(IdType.SUBMISSION_ID, "seq2"));
-        assertFalse(provider.hasSequence(IdType.SUBMISSION_ID, "seq3"));
+        assertTrue(source.hasSequence("seq1"));
+        assertTrue(source.hasSequence("seq2"));
+        assertFalse(source.hasSequence("seq3"));
     }
 
     @Test
     void fastaIgnoresKey() {
-        SequenceReader mockReader = mock(SequenceReader.class);
-        when(mockReader.submissionType()).thenReturn(SubmissionType.FASTA);
-        when(mockReader.getOrderedIds(IdType.SUBMISSION_ID)).thenReturn(List.of("seq1"));
+        SequenceFormatReader mockReader = mockFastaReader("seq1");
+        // Key is ignored for FASTA — ID matching uses parsed headers
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, "irrelevant");
 
-        // Key is ignored for FASTA — ID matching uses the reader's index
-        FileSequenceSource provider = new FileSequenceSource(mockReader, "irrelevant");
-        assertTrue(provider.hasSequence(IdType.SUBMISSION_ID, "seq1"));
-        assertFalse(provider.hasSequence(IdType.SUBMISSION_ID, "irrelevant"));
+        assertTrue(source.hasSequence("seq1"));
+        assertFalse(source.hasSequence("irrelevant"));
     }
 
     @Test
-    void constructorSetsReader() {
-        SequenceReader mockReader = mock(SequenceReader.class);
-        FileSequenceSource provider = new FileSequenceSource(mockReader);
-        assertSame(mockReader, provider.getReader());
+    void getSequenceSliceDelegatesForFasta() throws Exception {
+        SequenceFormatReader mockReader = mockFastaReader("seq1");
+        when(mockReader.getSequenceSlice(0L, 1L, 9L)).thenReturn("ATGAAATAA");
+
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+        assertEquals("ATGAAATAA", source.getSequenceSlice("seq1", 1L, 9L));
+    }
+
+    @Test
+    void getSequenceSliceDelegatesForPlain() throws Exception {
+        SequenceFormatReader mockReader = mockPlainReader();
+        when(mockReader.getSequenceSlice(0L, 1L, 9L)).thenReturn("ATGAAATAA");
+
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.plain, null);
+        assertEquals("ATGAAATAA", source.getSequenceSlice("any-id", 1L, 9L));
+    }
+
+    @Test
+    void getSequenceSliceThrowsForUnknownFastaSeqId() {
+        SequenceFormatReader mockReader = mockFastaReader("seq1");
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+
+        assertThrows(IllegalArgumentException.class, () -> source.getSequenceSlice("unknown", 1L, 9L));
     }
 
     @Test
     void closeClosesReader() throws Exception {
-        SequenceReader mockReader = mock(SequenceReader.class);
-        FileSequenceSource provider = new FileSequenceSource(mockReader);
-        provider.close();
+        SequenceFormatReader mockReader = mockPlainReader();
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.plain, null);
+        // Trigger initialization
+        source.hasSequence("x");
+        source.close();
         verify(mockReader).close();
+    }
+
+    /** Creates a mock plain sequence reader with a single ordinal 0. */
+    private SequenceFormatReader mockPlainReader() {
+        SequenceFormatReader reader = mock(SequenceFormatReader.class);
+        when(reader.getSequenceFileFormat()).thenReturn(SequenceFileFormat.PLAIN_SEQUENCE);
+        when(reader.getOrderedIds()).thenReturn(List.of(0L));
+        return reader;
+    }
+
+    /** Creates a mock FASTA reader with headers like ">seqId|{}" for each ID. */
+    private SequenceFormatReader mockFastaReader(String... seqIds) {
+        SequenceFormatReader reader = mock(SequenceFormatReader.class);
+        when(reader.getSequenceFileFormat()).thenReturn(SequenceFileFormat.FASTA);
+
+        List<Long> ordinals = new java.util.ArrayList<>();
+        for (int i = 0; i < seqIds.length; i++) {
+            long ordinal = i;
+            ordinals.add(ordinal);
+            when(reader.getHeaderline(ordinal))
+                    .thenReturn(Optional.of(">" + seqIds[i] + "|{\"description\":\"test\"}"));
+        }
+        when(reader.getOrderedIds()).thenReturn(ordinals);
+        return reader;
     }
 }

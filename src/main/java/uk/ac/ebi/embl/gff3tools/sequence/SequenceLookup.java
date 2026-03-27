@@ -8,26 +8,23 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.validation.provider;
+package uk.ac.ebi.embl.gff3tools.sequence;
 
 /**
- * A source of nucleotide sequences that can be queried by GFF3 seqId.
+ * Minimal interface for looking up nucleotide sequence slices by GFF3 seqId.
  *
- * <p>Used by {@link CompositeSequenceProvider} to chain multiple sequence sources
- * (local files, plugins, etc.) in a chain-of-responsibility pattern.
+ * <p>Backed by the library's {@code SequenceFormatReader}; the string-to-ordinal
+ * ID mapping is handled by the implementing provider layer.
  */
-public interface SequenceSource {
-
-    /**
-     * Returns {@code true} if this source can provide a sequence for the given seqId.
-     */
-    boolean hasSequence(String seqId);
+public interface SequenceLookup {
 
     /**
      * Returns a nucleotide subsequence for the given GFF3 sequence ID.
+     *
+     * @param seqId the GFF3 seqId (e.g. chromosome name)
+     * @param fromBase 1-based start position (inclusive)
+     * @param toBase 1-based end position (inclusive)
+     * @return the nucleotide string
      */
     String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception;
-
-    /** Release any resources held by this source. */
-    default void close() {}
 }

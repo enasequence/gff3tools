@@ -26,7 +26,7 @@ class TranslationCommandTest {
     Path tempDir;
 
     /**
-     * Creates a FASTA file with JSON headers as expected by JsonHeaderFastaReader.
+     * Creates a FASTA file with JSON headers for sequence lookup.
      * The sequence contains a CDS region at positions 1-9: ATGAAATAA
      * which translates to MK (ATG=M, AAA=K, TAA=stop).
      */

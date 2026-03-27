@@ -12,29 +12,28 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
 
 import java.util.ArrayList;
 import java.util.List;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.CompositeSequenceReader;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 /**
  * A {@link ContextProvider} that aggregates multiple {@link SequenceSource} instances
- * and exposes them as a single {@link SequenceReader} via {@link CompositeSequenceReader}.
+ * and exposes them as a single {@link SequenceLookup} using chain-of-responsibility delegation.
  *
  * <p>Returns {@code null} from {@link #get} when no sources have been added,
  * allowing downstream consumers (e.g. TranslationFix) to skip gracefully.
  */
-public class CompositeSequenceProvider implements ContextProvider<SequenceReader> {
+public class CompositeSequenceProvider implements ContextProvider<SequenceLookup> {
 
     private final List<SequenceSource> sources = new ArrayList<>();
-    private CompositeSequenceReader cachedReader;
+    private SequenceLookup cachedLookup;
 
     /**
      * Registers a sequence source. Sources are queried in registration order.
      */
     public void addSource(SequenceSource source) {
         this.sources.add(source);
-        this.cachedReader = null; // invalidate cache
+        this.cachedLookup = null; // invalidate cache
     }
 
     /**
@@ -45,19 +44,26 @@ public class CompositeSequenceProvider implements ContextProvider<SequenceReader
     }
 
     @Override
-    public SequenceReader get(ValidationContext context) {
+    public SequenceLookup get(ValidationContext context) {
         if (sources.isEmpty()) {
             return null;
         }
-        if (cachedReader == null) {
-            cachedReader = new CompositeSequenceReader(sources);
+        if (cachedLookup == null) {
+            cachedLookup = (seqId, fromBase, toBase) -> {
+                for (SequenceSource source : sources) {
+                    if (source.hasSequence(seqId)) {
+                        return source.getSequenceSlice(seqId, fromBase, toBase);
+                    }
+                }
+                throw new IllegalArgumentException("No sequence source found for seqId: " + seqId);
+            };
         }
-        return cachedReader;
+        return cachedLookup;
     }
 
     @Override
-    public Class<SequenceReader> type() {
-        return SequenceReader.class;
+    public Class<SequenceLookup> type() {
+        return SequenceLookup.class;
     }
 
     @Override

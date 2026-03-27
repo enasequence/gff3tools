@@ -18,38 +18,42 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.sequence.IdType;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionType;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationRegistry;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
-import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
+import uk.ac.ebi.embl.gff3tools.validation.provider.SequenceSource;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationStateProvider;
 
 class TranslationFixTest {
 
     private TranslationFix fix;
-    private SequenceReader mockReader;
+    private SequenceLookup mockLookup;
     private ValidationContext context;
 
     @BeforeEach
     void setUp() {
         fix = new TranslationFix();
-        mockReader = mock(SequenceReader.class);
-        when(mockReader.submissionType()).thenReturn(SubmissionType.FASTA);
-        when(mockReader.getOrderedIds(any())).thenReturn(java.util.List.of("seq1"));
+        mockLookup = mock(SequenceLookup.class);
         context = new ValidationContext();
 
         CompositeSequenceProvider compositeProvider = new CompositeSequenceProvider();
-        FileSequenceSource fileProvider = new FileSequenceSource(mockReader);
-        compositeProvider.addSource(fileProvider);
-        context.register(SequenceReader.class, compositeProvider);
+        compositeProvider.addSource(new SequenceSource() {
+            @Override
+            public boolean hasSequence(String seqId) {
+                return true;
+            }
+
+            @Override
+            public String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception {
+                return mockLookup.getSequenceSlice(seqId, fromBase, toBase);
+            }
+        });
+        context.register(SequenceLookup.class, compositeProvider);
 
         ValidationRegistry.injectContext(fix, context);
     }
@@ -58,7 +62,7 @@ class TranslationFixTest {
     void skipsNonCdsFeatures() throws Exception {
         GFF3Annotation annotation = createAnnotation(createFeature("gene", "seq1", 1, 100, "+"));
         fix.fixAnnotation(annotation, 1);
-        verifyNoInteractions(mockReader);
+        verifyNoInteractions(mockLookup);
     }
 
     @Test
@@ -76,7 +80,7 @@ class TranslationFixTest {
         TranslationFix fixWithEmptyComposite = new TranslationFix();
         ValidationContext ctx = new ValidationContext();
         CompositeSequenceProvider emptyComposite = new CompositeSequenceProvider();
-        ctx.register(SequenceReader.class, emptyComposite);
+        ctx.register(SequenceLookup.class, emptyComposite);
         ValidationRegistry.injectContext(fixWithEmptyComposite, ctx);
 
         GFF3Annotation annotation = createAnnotation(createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+"));
@@ -85,9 +89,7 @@ class TranslationFixTest {
 
     @Test
     void translatesCdsFeatureForwardStrand() throws Exception {
-        when(mockReader.getSequenceSlice(
-                        eq(IdType.SUBMISSION_ID), eq("seq1"), eq(1L), eq(9L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
-                .thenReturn("ATGAAATAA");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 9L)).thenReturn("ATGAAATAA");
 
         GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
         GFF3Annotation annotation = createAnnotation(feature);
@@ -99,9 +101,7 @@ class TranslationFixTest {
 
     @Test
     void translatesCdsFeatureComplementStrand() throws Exception {
-        when(mockReader.getSequenceSlice(
-                        eq(IdType.SUBMISSION_ID), eq("seq1"), eq(1L), eq(9L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
-                .thenReturn("TTATTTCAT");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 9L)).thenReturn("TTATTTCAT");
 
         GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "-");
         GFF3Annotation annotation = createAnnotation(feature);
@@ -115,8 +115,7 @@ class TranslationFixTest {
     void translatorSkipsNonTranslatingPseudoFeatures() throws Exception {
         // Pseudo features are handled by the Translator constructor (sets nonTranslating=true),
         // not by explicit logic in TranslationFix. This test verifies the end-to-end behavior.
-        when(mockReader.getSequenceSlice(any(), any(), anyLong(), anyLong(), any()))
-                .thenReturn("ATGAAATAA");
+        when(mockLookup.getSequenceSlice(any(), anyLong(), anyLong())).thenReturn("ATGAAATAA");
 
         GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
         feature.addAttribute("pseudo", "true");
@@ -128,12 +127,8 @@ class TranslationFixTest {
 
     @Test
     void translatesMultiSegmentCdsJoin() throws Exception {
-        when(mockReader.getSequenceSlice(
-                        eq(IdType.SUBMISSION_ID), eq("seq1"), eq(1L), eq(6L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
-                .thenReturn("ATGAAA");
-        when(mockReader.getSequenceSlice(
-                        eq(IdType.SUBMISSION_ID), eq("seq1"), eq(10L), eq(15L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
-                .thenReturn("CCCTAA");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("ATGAAA");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("CCCTAA");
 
         GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "+");
         GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
@@ -148,12 +143,8 @@ class TranslationFixTest {
     void translatesMultiSegmentCdsComplementJoin() throws Exception {
         // seg1="TTATTT" (1-6), seg2="CAT" (10-12) → concat "TTATTTCAT" (9 bases)
         // Rev comp = "ATGAAATAA" → ATG=M, AAA=K, TAA=* → "MK"
-        when(mockReader.getSequenceSlice(
-                        eq(IdType.SUBMISSION_ID), eq("seq1"), eq(1L), eq(6L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
-                .thenReturn("TTATTT");
-        when(mockReader.getSequenceSlice(
-                        eq(IdType.SUBMISSION_ID), eq("seq1"), eq(10L), eq(12L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
-                .thenReturn("CAT");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("TTATTT");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 12L)).thenReturn("CAT");
 
         GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "-");
         GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 12, "-");
@@ -172,13 +163,12 @@ class TranslationFixTest {
         fix.fixAnnotation(annotation, 1);
 
         assertFalse(feature.hasAttribute("translation"));
-        verifyNoInteractions(mockReader);
+        verifyNoInteractions(mockLookup);
     }
 
     @Test
     void propagatesPseudoToAllJoinSegments() throws Exception {
-        when(mockReader.getSequenceSlice(any(), any(), anyLong(), anyLong(), any()))
-                .thenReturn("ATGAAATAA");
+        when(mockLookup.getSequenceSlice(any(), anyLong(), anyLong())).thenReturn("ATGAAATAA");
 
         GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 9, "+");
         seg1.addAttribute("pseudo", "true");
@@ -192,9 +182,7 @@ class TranslationFixTest {
 
     @Test
     void recordsOldAndNewTranslationInState() throws Exception {
-        when(mockReader.getSequenceSlice(
-                        eq(IdType.SUBMISSION_ID), eq("seq1"), eq(1L), eq(9L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
-                .thenReturn("ATGAAATAA");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 9L)).thenReturn("ATGAAATAA");
 
         TranslationStateProvider stateProvider = new TranslationStateProvider();
         context.register(TranslationState.class, stateProvider);
@@ -214,8 +202,7 @@ class TranslationFixTest {
 
     @Test
     void worksWithoutTranslationStateProvider() throws Exception {
-        when(mockReader.getSequenceSlice(any(), any(), anyLong(), anyLong(), any()))
-                .thenReturn("ATGAAATAA");
+        when(mockLookup.getSequenceSlice(any(), anyLong(), anyLong())).thenReturn("ATGAAATAA");
 
         GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
         GFF3Annotation annotation = createAnnotation(feature);
@@ -227,9 +214,7 @@ class TranslationFixTest {
 
     @Test
     void recordsNullOldTranslationWhenNoPriorTranslation() throws Exception {
-        when(mockReader.getSequenceSlice(
-                        eq(IdType.SUBMISSION_ID), eq("seq1"), eq(1L), eq(9L), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
-                .thenReturn("ATGAAATAA");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 9L)).thenReturn("ATGAAATAA");
 
         TranslationStateProvider stateProvider = new TranslationStateProvider();
         context.register(TranslationState.class, stateProvider);

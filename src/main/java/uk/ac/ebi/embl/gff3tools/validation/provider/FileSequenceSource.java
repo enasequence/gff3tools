@@ -12,30 +12,29 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
 
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
+import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
+import uk.ac.ebi.embl.fastareader.api.SequenceFormatReaderFactory;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
-import uk.ac.ebi.embl.gff3tools.sequence.IdType;
-import uk.ac.ebi.embl.gff3tools.sequence.SequenceReaderFactory;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionType;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.JsonHeaderParser;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ParsedHeader;
 
 /**
  * A {@link SequenceSource} backed by a single file (FASTA or plain sequence).
  *
  * <p>The reader is opened lazily on first access and closed when {@link #close()} is called.
  *
- * <p>For {@link SubmissionType#PLAIN_SEQUENCE}:
+ * <p>For plain sequences:
  * <ul>
  *   <li>If a {@code sequenceKey} is set, {@link #hasSequence} matches only that key.</li>
  *   <li>If no key is set, {@link #hasSequence} returns {@code true} for any ID
  *       (single sequence serves all GFF3 seqIds).</li>
  * </ul>
  *
- * <p>For {@link SubmissionType#FASTA}, it checks whether the requested ID exists
- * in the reader's index.
+ * <p>For FASTA, it parses headers to extract submission IDs and maps them
+ * to the library's ordinal IDs for sequence retrieval.
  */
 @Slf4j
 public class FileSequenceSource implements SequenceSource {
@@ -43,8 +42,9 @@ public class FileSequenceSource implements SequenceSource {
     private final Path path;
     private final SequenceFormat format;
     private final String sequenceKey;
-    private SequenceReader sequenceReader;
-    private final Map<IdType, Set<String>> idCache = new HashMap<>();
+    private SequenceFormatReader formatReader;
+    private final Map<String, Long> seqIdToOrdinal = new HashMap<>();
+    private boolean initialized;
 
     /**
      * Creates a provider that will lazily open the sequence file on first access.
@@ -60,61 +60,98 @@ public class FileSequenceSource implements SequenceSource {
     }
 
     /** Convenience constructor for tests that supply a pre-opened reader. */
-    public FileSequenceSource(SequenceReader sequenceReader) {
-        this(sequenceReader, null);
-    }
-
-    /** Convenience constructor for tests that supply a pre-opened reader with a key. */
-    public FileSequenceSource(SequenceReader sequenceReader, String sequenceKey) {
+    public FileSequenceSource(SequenceFormatReader formatReader, SequenceFormat format, String sequenceKey) {
         this.path = null;
-        this.format = null;
+        this.format = format;
         this.sequenceKey = sequenceKey;
-        this.sequenceReader = sequenceReader;
+        this.formatReader = formatReader;
     }
 
     @Override
-    public boolean hasSequence(IdType idType, String id) {
-        SequenceReader reader = getReader();
-        if (reader == null) {
+    public boolean hasSequence(String seqId) {
+        ensureInitialized();
+        if (formatReader == null) {
             return false;
         }
-        if (reader.submissionType() == SubmissionType.PLAIN_SEQUENCE) {
-            return sequenceKey == null || sequenceKey.equals(id);
+        if (formatReader.getSequenceFileFormat() == SequenceFileFormat.PLAIN_SEQUENCE) {
+            return sequenceKey == null || sequenceKey.equals(seqId);
         }
-        return idCache.computeIfAbsent(idType, k -> new HashSet<>(reader.getOrderedIds(k)))
-                .contains(id);
+        return seqIdToOrdinal.containsKey(seqId);
     }
 
     @Override
-    public SequenceReader getReader() {
-        if (sequenceReader == null && path != null) {
-            try {
-                sequenceReader = openReader();
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to open sequence file '%s': %s".formatted(path, e.getMessage()), e);
-            }
-        }
-        return sequenceReader;
-    }
-
-    private SequenceReader openReader() throws Exception {
-        return switch (format) {
-            case fasta -> SequenceReaderFactory.readFasta(path.toFile());
-            case plain -> {
-                String accessionId = (sequenceKey != null) ? sequenceKey : "0";
-                yield SequenceReaderFactory.readPlainSequence(path.toFile(), accessionId);
-            }
-        };
+    public String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception {
+        ensureInitialized();
+        long ordinal = resolveOrdinal(seqId);
+        return formatReader.getSequenceSlice(ordinal, fromBase, toBase);
     }
 
     @Override
     public void close() {
-        if (sequenceReader != null) {
+        if (formatReader != null) {
             try {
-                sequenceReader.close();
+                formatReader.close();
             } catch (Exception e) {
                 log.warn("Failed to close sequence reader: {}", e.getMessage());
             }
         }
+    }
+
+    private void ensureInitialized() {
+        if (initialized) {
+            return;
+        }
+        initialized = true;
+        if (formatReader == null && path != null) {
+            try {
+                formatReader = openReader();
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to open sequence file '%s': %s".formatted(path, e.getMessage()), e);
+            }
+        }
+        if (formatReader != null) {
+            buildIdMapping();
+        }
+    }
+
+    private SequenceFormatReader openReader() throws Exception {
+        return switch (format) {
+            case fasta -> SequenceFormatReaderFactory.readFasta(path.toFile());
+            case plain -> SequenceFormatReaderFactory.readPlainSequence(path.toFile());
+        };
+    }
+
+    private void buildIdMapping() {
+        if (formatReader.getSequenceFileFormat() == SequenceFileFormat.FASTA) {
+            JsonHeaderParser headerParser = new JsonHeaderParser();
+            for (long ordinal : formatReader.getOrderedIds()) {
+                String headerLine = formatReader
+                        .getHeaderline(ordinal)
+                        .orElseThrow(() -> new RuntimeException("No header found for ordinal " + ordinal));
+                try {
+                    ParsedHeader parsed = headerParser.parse(headerLine);
+                    String submissionId = parsed.getId();
+                    if (seqIdToOrdinal.containsKey(submissionId)) {
+                        throw new RuntimeException("Duplicate submission ID in FASTA: " + submissionId);
+                    }
+                    seqIdToOrdinal.put(submissionId, ordinal);
+                } catch (Exception e) {
+                    throw new RuntimeException(
+                            "Failed to parse FASTA header at ordinal %d: %s".formatted(ordinal, e.getMessage()), e);
+                }
+            }
+        }
+        // For plain sequences, no ID mapping needed — resolveOrdinal uses the single ordinal directly
+    }
+
+    private long resolveOrdinal(String seqId) {
+        if (formatReader.getSequenceFileFormat() == SequenceFileFormat.PLAIN_SEQUENCE) {
+            return formatReader.getOrderedIds().get(0);
+        }
+        Long ordinal = seqIdToOrdinal.get(seqId);
+        if (ordinal == null) {
+            throw new IllegalArgumentException("No sequence found for seqId: " + seqId);
+        }
+        return ordinal;
     }
 }

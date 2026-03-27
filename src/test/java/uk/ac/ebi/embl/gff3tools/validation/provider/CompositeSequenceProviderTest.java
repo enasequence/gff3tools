@@ -11,13 +11,9 @@
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
-import java.util.List;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.gff3tools.sequence.IdType;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SubmissionType;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 class CompositeSequenceProviderTest {
@@ -30,97 +26,125 @@ class CompositeSequenceProviderTest {
     }
 
     @Test
-    void getReturnsReaderWhenSourceAdded() {
+    void getReturnsLookupWhenSourceAdded() {
         CompositeSequenceProvider provider = new CompositeSequenceProvider();
-        SequenceReader mockReader = mock(SequenceReader.class);
-        when(mockReader.submissionType()).thenReturn(SubmissionType.FASTA);
-        when(mockReader.getOrderedIds(any())).thenReturn(List.of("seq1"));
-
-        FileSequenceSource source = new FileSequenceSource(mockReader);
-        provider.addSource(source);
+        provider.addSource(stubSource("seq1", "ATGAAA"));
 
         assertTrue(provider.hasSources());
         assertNotNull(provider.get(new ValidationContext()));
     }
 
     @Test
-    void typeReturnsSequenceReaderClass() {
+    void typeReturnsSequenceLookupClass() {
         CompositeSequenceProvider provider = new CompositeSequenceProvider();
-        assertEquals(SequenceReader.class, provider.type());
+        assertEquals(SequenceLookup.class, provider.type());
     }
 
     @Test
     void singleSourceDelegatesCorrectly() throws Exception {
         CompositeSequenceProvider provider = new CompositeSequenceProvider();
-        SequenceReader mockReader = mock(SequenceReader.class);
-        when(mockReader.submissionType()).thenReturn(SubmissionType.FASTA);
-        when(mockReader.getOrderedIds(IdType.SUBMISSION_ID)).thenReturn(List.of("seq1"));
+        provider.addSource(stubSource("seq1", "ATGAAA"));
 
-        FileSequenceSource source = new FileSequenceSource(mockReader);
-        provider.addSource(source);
-
-        SequenceReader composite = provider.get(new ValidationContext());
-        assertNotNull(composite);
-        assertEquals(List.of("seq1"), composite.getOrderedIds(IdType.SUBMISSION_ID));
+        SequenceLookup lookup = provider.get(new ValidationContext());
+        assertEquals("ATGAAA", lookup.getSequenceSlice("seq1", 1L, 6L));
     }
 
     @Test
-    void chainFirstSourceMissesSecondSourceHits() {
+    void chainFirstSourceMissesSecondSourceHits() throws Exception {
         CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        provider.addSource(stubSource("seq1", "AAA"));
+        provider.addSource(stubSource("seq2", "TTT"));
 
-        // First source: FASTA with only "seq1"
-        SequenceReader reader1 = mock(SequenceReader.class);
-        when(reader1.submissionType()).thenReturn(SubmissionType.FASTA);
-        when(reader1.getOrderedIds(IdType.SUBMISSION_ID)).thenReturn(List.of("seq1"));
-        FileSequenceSource source1 = new FileSequenceSource(reader1);
-
-        // Second source: FASTA with "seq2"
-        SequenceReader reader2 = mock(SequenceReader.class);
-        when(reader2.submissionType()).thenReturn(SubmissionType.FASTA);
-        when(reader2.getOrderedIds(IdType.SUBMISSION_ID)).thenReturn(List.of("seq2"));
-        FileSequenceSource source2 = new FileSequenceSource(reader2);
-
-        provider.addSource(source1);
-        provider.addSource(source2);
-
-        SequenceReader composite = provider.get(new ValidationContext());
-        // Aggregates IDs from both sources
-        List<String> ids = composite.getOrderedIds(IdType.SUBMISSION_ID);
-        assertTrue(ids.contains("seq1"));
-        assertTrue(ids.contains("seq2"));
-        assertEquals(2, ids.size());
+        SequenceLookup lookup = provider.get(new ValidationContext());
+        assertEquals("TTT", lookup.getSequenceSlice("seq2", 1L, 3L));
     }
 
     @Test
-    void closeClosesSources() throws Exception {
+    void throwsWhenNoSourceMatches() {
         CompositeSequenceProvider provider = new CompositeSequenceProvider();
-        SequenceReader reader1 = mock(SequenceReader.class);
-        when(reader1.submissionType()).thenReturn(SubmissionType.FASTA);
-        when(reader1.getOrderedIds(any())).thenReturn(List.of("seq1"));
-        SequenceReader reader2 = mock(SequenceReader.class);
-        when(reader2.submissionType()).thenReturn(SubmissionType.FASTA);
-        when(reader2.getOrderedIds(any())).thenReturn(List.of("seq2"));
+        provider.addSource(stubSource("seq1", "AAA"));
 
-        provider.addSource(new FileSequenceSource(reader1));
-        provider.addSource(new FileSequenceSource(reader2));
+        SequenceLookup lookup = provider.get(new ValidationContext());
+        assertThrows(IllegalArgumentException.class, () -> lookup.getSequenceSlice("unknown", 1L, 3L));
+    }
+
+    @Test
+    void closeClosesSources() {
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        boolean[] closed = {false, false};
+        provider.addSource(new SequenceSource() {
+            @Override
+            public boolean hasSequence(String seqId) {
+                return false;
+            }
+
+            @Override
+            public String getSequenceSlice(String seqId, long fromBase, long toBase) {
+                return "";
+            }
+
+            @Override
+            public void close() {
+                closed[0] = true;
+            }
+        });
+        provider.addSource(new SequenceSource() {
+            @Override
+            public boolean hasSequence(String seqId) {
+                return false;
+            }
+
+            @Override
+            public String getSequenceSlice(String seqId, long fromBase, long toBase) {
+                return "";
+            }
+
+            @Override
+            public void close() {
+                closed[1] = true;
+            }
+        });
 
         provider.close();
-
-        verify(reader1).close();
-        verify(reader2).close();
+        assertTrue(closed[0]);
+        assertTrue(closed[1]);
     }
 
     @Test
     void getCachesSameInstance() {
         CompositeSequenceProvider provider = new CompositeSequenceProvider();
-        SequenceReader mockReader = mock(SequenceReader.class);
-        when(mockReader.submissionType()).thenReturn(SubmissionType.FASTA);
-        when(mockReader.getOrderedIds(any())).thenReturn(List.of("seq1"));
-        provider.addSource(new FileSequenceSource(mockReader));
+        provider.addSource(stubSource("seq1", "AAA"));
 
         ValidationContext ctx = new ValidationContext();
-        SequenceReader first = provider.get(ctx);
-        SequenceReader second = provider.get(ctx);
+        SequenceLookup first = provider.get(ctx);
+        SequenceLookup second = provider.get(ctx);
         assertSame(first, second);
+    }
+
+    @Test
+    void addSourceInvalidatesCache() {
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        provider.addSource(stubSource("seq1", "AAA"));
+
+        ValidationContext ctx = new ValidationContext();
+        SequenceLookup first = provider.get(ctx);
+
+        provider.addSource(stubSource("seq2", "TTT"));
+        SequenceLookup second = provider.get(ctx);
+        assertNotSame(first, second);
+    }
+
+    private SequenceSource stubSource(String seqId, String sequence) {
+        return new SequenceSource() {
+            @Override
+            public boolean hasSequence(String id) {
+                return seqId.equals(id);
+            }
+
+            @Override
+            public String getSequenceSlice(String id, long fromBase, long toBase) {
+                return sequence;
+            }
+        };
     }
 }

@@ -15,13 +15,11 @@ import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.sequence.IdType;
-import uk.ac.ebi.embl.gff3tools.sequence.readers.SequenceReader;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.translation.TranslationResult;
 import uk.ac.ebi.embl.gff3tools.translation.Translator;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -33,7 +31,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 /**
- * Fix that generates protein translations from CDS features using a {@link SequenceReader}.
+ * Fix that generates protein translations from CDS features using a {@link SequenceLookup}.
  *
  * <p>Runs at {@link ValidationPriority#LOW} so that structural fixes
  * (locus tag, pseudogene, attribute corrections) are applied first.
@@ -54,11 +52,11 @@ public class TranslationFix {
             type = ANNOTATION,
             priority = ValidationPriority.LOW)
     public void fixAnnotation(GFF3Annotation annotation, int line) throws ValidationException {
-        if (!context.contains(SequenceReader.class)) {
+        if (!context.contains(SequenceLookup.class)) {
             return;
         }
-        SequenceReader sequenceReader = context.get(SequenceReader.class);
-        if (sequenceReader == null) {
+        SequenceLookup sequenceLookup = context.get(SequenceLookup.class);
+        if (sequenceLookup == null) {
             return;
         }
 
@@ -71,11 +69,11 @@ public class TranslationFix {
                         Collectors.toList()));
 
         for (List<GFF3Feature> segments : cdsGroups.values()) {
-            translateCdsGroup(segments, sequenceReader, line);
+            translateCdsGroup(segments, sequenceLookup, line);
         }
     }
 
-    private void translateCdsGroup(List<GFF3Feature> segments, SequenceReader sequenceReader, int line)
+    private void translateCdsGroup(List<GFF3Feature> segments, SequenceLookup sequenceLookup, int line)
             throws ValidationException {
         // Sort segments by genomic start position
         List<GFF3Feature> sorted = new ArrayList<>(segments);
@@ -93,12 +91,8 @@ public class TranslationFix {
             // Concatenate sequence slices from all segments in genomic order
             StringBuilder concatenated = new StringBuilder();
             for (GFF3Feature segment : sorted) {
-                String slice = sequenceReader.getSequenceSlice(
-                        IdType.SUBMISSION_ID,
-                        segment.getSeqId(),
-                        segment.getStart(),
-                        segment.getEnd(),
-                        SequenceRangeOption.WHOLE_SEQUENCE);
+                String slice =
+                        sequenceLookup.getSequenceSlice(segment.getSeqId(), segment.getStart(), segment.getEnd());
                 concatenated.append(slice);
             }
 
