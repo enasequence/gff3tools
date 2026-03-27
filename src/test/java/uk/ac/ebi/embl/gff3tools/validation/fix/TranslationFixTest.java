@@ -167,6 +167,20 @@ class TranslationFixTest {
     }
 
     @Test
+    void skipsEntireJoinGroupWhenLaterSegmentHasException() throws Exception {
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "+");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
+        seg2.addAttribute("exception", "ribosomal slippage");
+        GFF3Annotation annotation = createAnnotation(seg1, seg2);
+
+        fix.fixAnnotation(annotation, 1);
+
+        assertFalse(seg1.hasAttribute("translation"));
+        assertFalse(seg2.hasAttribute("translation"));
+        verifyNoInteractions(mockLookup);
+    }
+
+    @Test
     void propagatesPseudoToAllJoinSegments() throws Exception {
         when(mockLookup.getSequenceSlice(any(), anyLong(), anyLong())).thenReturn("ATGAAATAA");
 

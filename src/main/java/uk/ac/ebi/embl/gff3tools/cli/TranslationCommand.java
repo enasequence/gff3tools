@@ -59,6 +59,10 @@ public class TranslationCommand extends AbstractCommand {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
         Path processDir = Optional.ofNullable(inputFilePath.getParent()).orElse(Path.of("."));
 
+        if (translationMode == TranslationMode.attribute && outputPath != null) {
+            log.warn("Output path (-o) is ignored in 'attribute' mode.");
+        }
+
         try {
             CompositeSequenceProvider compositeProvider =
                     buildCompositeProvider(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
@@ -67,6 +71,9 @@ public class TranslationCommand extends AbstractCommand {
                         "A sequence source is required. Provide --sequence or ensure a plugin supplies sequences.");
             }
 
+            // All annotations are held in memory for output writing. For very large GFF3 files
+            // a streaming approach would reduce the footprint but requires rethinking the
+            // gff3-fasta output mode which needs the FASTA section after all GFF3 records.
             List<GFF3Annotation> annotations = new ArrayList<>();
             GFF3Header header;
 

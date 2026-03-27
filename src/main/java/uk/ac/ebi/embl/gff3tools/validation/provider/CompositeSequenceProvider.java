@@ -33,7 +33,8 @@ public class CompositeSequenceProvider implements ContextProvider<SequenceLookup
      */
     public void addSource(SequenceSource source) {
         this.sources.add(source);
-        this.cachedLookup = null; // invalidate cache
+        // Invalidate cached lookup so the new source is visible via get().
+        this.cachedLookup = null;
     }
 
     /**

@@ -82,8 +82,11 @@ public class TranslationFix {
         GFF3Feature representative = sorted.get(0);
         String oldTranslation = representative.getAttribute("translation").orElse(null);
 
-        // Skip CDS features with exception attribute (e.g. ribosomal slippage)
-        if (representative.getAttribute(GFF3Attributes.EXCEPTION).isPresent()) {
+        // Skip CDS features with exception attribute (e.g. ribosomal slippage).
+        // Check ALL segments — any segment carrying the exception applies to the whole join.
+        boolean hasException = sorted.stream()
+                .anyMatch(s -> s.getAttribute(GFF3Attributes.EXCEPTION).isPresent());
+        if (hasException) {
             return;
         }
 

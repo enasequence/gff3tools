@@ -144,14 +144,13 @@ public abstract class AbstractCommand implements Runnable {
         String ext = getFileExtension(path)
                 .orElseThrow(() -> new RuntimeException("Cannot infer sequence format from file extension. "
                         + "Use --sequence-format to specify the format explicitly."));
-        String lower = ext.toLowerCase();
-        if (lower.equals("fasta") || lower.equals("fa") || lower.equals("fna")) {
-            return SequenceFormat.fasta;
-        } else if (lower.equals("seq")) {
-            return SequenceFormat.plain;
-        }
-        throw new RuntimeException("Unrecognized sequence file extension: ." + ext
-                + ". Use --sequence-format to specify the format explicitly.");
+        return switch (ext.toLowerCase()) {
+            case "fasta", "fa", "fna" -> SequenceFormat.fasta;
+            case "seq" -> SequenceFormat.plain;
+            default ->
+                throw new RuntimeException("Unrecognized sequence file extension: ." + ext
+                        + ". Use --sequence-format to specify the format explicitly.");
+        };
     }
 
     /**

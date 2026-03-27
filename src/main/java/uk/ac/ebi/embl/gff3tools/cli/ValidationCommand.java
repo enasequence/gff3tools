@@ -60,7 +60,7 @@ public class ValidationCommand extends AbstractCommand {
                     gff3Reader.readHeader();
                     gff3Reader.read(annotation -> {
                         List<ValidationException> warnings = validationEngine.getParsingWarnings();
-                        if (warnings != null && warnings.size() > 0) {
+                        if (warnings != null && !warnings.isEmpty()) {
                             for (ValidationException e : warnings) {
                                 log.warn("WARNING: %s".formatted(e.getMessage()));
                             }
