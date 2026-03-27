@@ -94,6 +94,7 @@ remotes {
 test {
     useJUnitPlatform()
     maxHeapSize = "1g"
+    dependsOn jar
 }
 
 

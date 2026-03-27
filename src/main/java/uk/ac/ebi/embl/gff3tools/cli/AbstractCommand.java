@@ -62,7 +62,8 @@ public abstract class AbstractCommand implements Runnable {
         return Optional.ofNullable(rules).map((r) -> r.rules()).orElse(new HashMap<>());
     }
 
-    protected ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides, Path processDir) {
+    protected ValidationEngine initValidationEngine(Map<String, RuleSeverity> ruleOverrides, Path processDir)
+            throws IOException {
 
         if (!Files.isDirectory(processDir) || !Files.isWritable(processDir)) {
             throw new RuntimeException(String.format("The directory {%s} is not writable.", processDir));
@@ -76,10 +77,18 @@ public abstract class AbstractCommand implements Runnable {
                 .build();
     }
 
-    private TranslationProvider getTranslationProvider(Path processDir) {
+    private TranslationProvider getTranslationProvider(Path processDir) throws IOException {
+
+        Path translationFastaPath = processDir.resolve("gff3-translation.fasta");
+        // Delete translation FASTA file if it exists. This is to ensure that the translation is re-generated.
+        if (Files.exists(translationFastaPath)) {
+            log.info("Deleting translation FASTA file to ensure translation re-generation: {}", translationFastaPath);
+            Files.delete(translationFastaPath);
+        }
+
         return new TranslationProvider(TranslationContext.builder()
                 .processDir(processDir)
-                .sequenceFastaPath(processDir.resolve("gff3-translation.fasta"))
+                .sequenceFastaPath(translationFastaPath)
                 .build());
     }
 
