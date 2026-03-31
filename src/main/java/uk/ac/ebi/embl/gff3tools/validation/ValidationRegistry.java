@@ -107,11 +107,11 @@ public class ValidationRegistry {
                 providers.stream().map(ContextProvider::type).collect(Collectors.toSet());
         for (ContextProvider<?> provider : allProviders) {
             if (!explicitTypes.contains(provider.type())) {
-                initializeProvider(provider);
+                initializeProvider(provider, ctx);
             }
         }
         for (ContextProvider<?> provider : providers) {
-            initializeProvider(provider);
+            initializeProvider(provider, ctx);
         }
 
         this.context = ctx;
@@ -126,8 +126,9 @@ public class ValidationRegistry {
                 .collect(Collectors.groupingBy(ValidatorDescriptor::priority, Collectors.toUnmodifiableList()));
     }
 
-    private static void initializeProvider(ContextProvider<?> provider) {
+    private static void initializeProvider(ContextProvider<?> provider, ValidationContext ctx) {
         try {
+            injectContext(provider, ctx);
             provider.initialize();
         } catch (Exception e) {
             throw new IllegalStateException(
