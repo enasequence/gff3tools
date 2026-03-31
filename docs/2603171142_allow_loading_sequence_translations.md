@@ -1,15 +1,15 @@
 - Feature Name: Allow loading sequence translations from CLI argument
-- Status: In Progress
+- Status: Implemented
 - Document Date: 2026-03-17
-- Last Updated: 2026-03-17
+- Last Updated: 2026-03-31
 
 # Summary
 
-The `translate` CLI subcommand accepts `--sequence` pointing to a nucleotide sequence file (FASTA or plain), translates CDS features into proteins via the validation/fix pipeline, and writes the results according to a configurable `--translation-mode`. The sequence format is inferred from file extension (`.fasta` → FASTA, `.seq` → plain) or set explicitly via `--sequence-format`. A `CompositeSequenceProvider` resolves sequences through an ordered chain of sources — local file first, then plugin-supplied providers (e.g., remote fetching) — so the command remains agnostic to where sequences originate.
+The `translate` CLI subcommand accepts `--sequence` pointing to a nucleotide sequence file (FASTA or plain), translates CDS features into proteins via the validation/fix pipeline, and writes the results according to a configurable `--translation-mode`. A `CompositeSequenceProvider` resolves sequences through an ordered chain of sources — local file first, then plugin-supplied providers — so the command remains agnostic to where sequences originate.
 
 # Motivation & Rationale
 
-gff3tools can translate nucleotide sequences into proteins (`Translator`) and read FASTA files (`SequenceReaderFactory`), but had no CLI entry point wiring these together. The `translate` command closes this gap and establishes the foundation for downstream features such as translation comparison against `##FASTA`-embedded proteins.
+gff3tools can translate nucleotide sequences into proteins (`Translator`) and read FASTA files, but had no CLI entry point wiring these together. The `translate` command closes this gap and establishes the foundation for downstream features such as translation comparison against `##FASTA`-embedded proteins.
 
 Sequences may come from different sources: a local FASTA file supplied by the user, or a remote service that downloads sequences on demand. The `CompositeSequenceProvider` handles this transparently via a chain of responsibility — sources are tried in order until one resolves the requested sequence ID. This keeps the core module lean while allowing EBI-internal plugins to add remote fetching without modifying the main codebase.
 
@@ -19,57 +19,18 @@ Sequences may come from different sources: a local FASTA file supplied by the us
 # Default: format inferred from extension, translations in ##FASTA section
 gff3tools translate --sequence /path/to/nucleotides.fasta input.gff3
 
-# Explicit format (when extension is ambiguous or missing)
-gff3tools translate --sequence /path/to/seqdata --sequence-format fasta input.gff3
-
-# Plain sequence input (without key — matches any GFF3 seqId)
-gff3tools translate --sequence /path/to/sequence.seq input.gff3
-
 # Multiple plain sequences with keys (key = GFF3 seqId)
 gff3tools translate \
   --sequence chr1:/path/to/chr1.seq \
   --sequence chr2:/path/to/chr2.seq \
   input.gff3
 
-# Mix FASTA and keyed plain sequences
-gff3tools translate \
-  --sequence /path/to/multi.fasta \
-  --sequence chrX:/path/to/extra.seq \
-  input.gff3
-
-# Override the default output path
-gff3tools translate --sequence seq.fasta -o custom.gff3 input.gff3
-
-# Write translations to a separate FASTA file (default: input.translation.fasta)
+# Write translations to a separate FASTA file
 gff3tools translate --sequence seq.fasta --translation-mode fasta input.gff3
 
 # Translations as inline feature attributes (no output file)
 gff3tools translate --sequence seq.fasta --translation-mode attribute input.gff3
-
-# Without --sequence (requires a plugin that provides sequences)
-gff3tools translate --translation-mode fasta input.gff3
 ```
-
-Inherits `--fail-fast` and `--rules` from `AbstractCommand`.
-
-## CLI Options
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--sequence <[key:]path>` | Sequence source (repeatable). Use `path` for FASTA files (IDs from headers) or `key:path` for plain sequences where `key` is the GFF3 seqId. Without a key, a plain sequence matches any seqId. | None (plugin must supply sequences) |
-| `--sequence-format <format>` | Sequence file format: `fasta` or `plain`. Applies to all `--sequence` entries. | Inferred from file extension |
-| `--translation-mode <mode>` | Output mode: `gff3-fasta`, `fasta`, or `attribute` | `gff3-fasta` |
-| `-o <path>` | Output file path for `fasta` and `gff3-fasta` modes | Derived from input file name |
-
-**Sequence format resolution** (follows the same pattern as `-f` in the `conversion` command):
-1. If `--sequence-format` is provided, use it
-2. Otherwise, infer from file extension: `.fasta`, `.fa`, `.fna` → `fasta`; `.seq` → `plain`
-3. If neither is available, fail with a message suggesting `--sequence-format`
-
-**Default output paths when `-o` is not specified:**
-- `gff3-fasta` mode: `<input>.translated.gff3`
-- `fasta` mode: `<input>.translation.fasta`
-- `attribute` mode: `-o` is ignored
 
 # Architecture
 
@@ -77,69 +38,50 @@ Inherits `--fail-fast` and `--rules` from `AbstractCommand`.
  CLI Layer                    Provider Layer                         Fix Layer
 +-----------------------+    +----------------------------------+   +------------------+
 | TranslationCommand    |    | CompositeSequenceProvider        |   | TranslationFix   |
-| (Picocli @Command)    |--->| (ContextProvider<SequenceReader>)|<--| (@Gff3Fix)       |
-| --sequence opt  |    | Chain of Responsibility:         |   | @InjectContext   |
-| --translation-mode    |    |  1. FileSequenceProvider (local) |   | reads sequences  |
-| -o output path        |    |  2. (plugin sources)             |   | calls Translator |
-| extends AbstractCommand|   +----------------------------------+   +------------------+
-+-----------------------+
+| (Picocli @Command)    |--->| (ContextProvider<SequenceLookup>)|<--| (@Gff3Fix)       |
+| --sequence opt        |    | Chain of Responsibility:         |   | @InjectContext   |
+| --translation-mode    |    |  1. FileSequenceSource (local)   |   | reads sequences  |
+| extends AbstractCommand|   |  2. (plugin sources)             |   | calls Translator |
++-----------------------+    +----------------------------------+   +------------------+
 ```
 
 | Component | Role |
 |-----------|------|
-| **TranslationCommand** | Picocli `@Command` that parses one or more `--sequence` specs (`[key:]path`), opens a `SequenceReader` for each via `SequenceReaderFactory`, and registers them as local sources in the `CompositeSequenceProvider`. For keyed plain sequences, the key becomes the accession ID used for ID matching. Handles output mode and file writing. |
-| **CompositeSequenceProvider** | `ContextProvider<SequenceReader>` keyed on `SequenceReader.class`. Wraps an ordered list of `SequenceSource` instances. Resolves sequence IDs by trying each source in order until one succeeds. |
-| **FileSequenceProvider** | A `SequenceSource` backed by a local sequence file (FASTA or plain). Takes `(Path, SequenceFormat, key)` and opens the `SequenceReader` lazily on first access. For plain sequences with a key, `hasSequence()` matches only that key; without a key it matches any ID (backward compatible single-sequence behavior). Closes the reader on `close()`. |
-| **SequenceSource** | Interface for sequence sources. Each source can report whether it has a given sequence ID, provide a `SequenceReader` for it, and release resources via `close()`. Plugin JARs implement this to add remote sources. |
-| **TranslationFix** | `@Gff3Fix` with `@FixMethod(type = ANNOTATION, priority = LOW)`. Groups CDS features by ID (same ID = join segments), concatenates sequence slices in genomic order, and translates the combined sequence once. Sets the translation attribute on all segments. Skips CDS with `exception` attribute (e.g. ribosomal slippage). For multi-segment joins, propagates 3' partial to the last segment and pseudo to all segments. Gracefully skips when no sequence source is available. |
-| **ContextProvider lifecycle** | `initialize()` called after all providers are registered; `close()` called when the engine is closed. Remote plugins use `initialize()` to register themselves as additional sources in the `CompositeSequenceProvider`. |
-| **ValidationEngine** | Implements `AutoCloseable`. Closing the engine propagates `close()` through `ValidationContext` to all providers, releasing file handles and connections. Commands use `try (ValidationEngine engine = ...)`. |
+| **TranslationCommand** | Picocli `@Command` that parses `--sequence` specs, registers sources in the `CompositeSequenceProvider`, and handles output mode and file writing. |
+| **CompositeSequenceProvider** | `ContextProvider<SequenceLookup>` that wraps an ordered list of `SequenceSource` instances. Resolves sequence IDs by trying each source in order. |
+| **FileSequenceSource** | A `SequenceSource` backed by a local file (FASTA or plain). Opens the reader lazily on first access. Thread-safe initialization via `synchronized`. |
+| **SequenceSource** | Interface for sequence sources. Plugin JARs implement this to add remote sources. |
+| **TranslationFix** | `@Gff3Fix` at `ANNOTATION` level, `LOW` priority. Groups CDS by ID (join segments), concatenates slices, translates once, propagates join attributes. |
+| **TranslationKey** | Shared utility for consistent `accession|urlEncode(featureId)` key format across translation writer and validation state. |
+| **TranslationState** | In-memory state shared between `TranslationFix` (records old/new translations) and `TranslationComparisonValidation` (compares them). |
 
 # Key Design Decisions
 
-**Chain of Responsibility for sequence resolution.** Sequence sources are tried in order (local file → plugin sources). This avoids coupling between providers — each source is independent and doesn't know about others. The composite assembles them and handles fallback.
+**Chain of Responsibility for sequence resolution.** Sources are tried in order (local file → plugin sources). Each source is independent; the composite handles fallback.
 
-**Plugin sources register during `initialize()`.** Remote plugins discover the `CompositeSequenceProvider` via the `ValidationContext` during the `initialize()` lifecycle hook and add themselves as additional sources. No modification to the core module is needed.
+**Plugin sources register during `initialize()`.** Remote plugins discover the `CompositeSequenceProvider` via `ValidationContext` during the `initialize()` lifecycle hook. No core module changes needed.
 
-**TranslationFix operates at the ANNOTATION level.** This allows it to see all CDS features in an annotation at once, group segments with the same ID (join features), concatenate their sequences, and translate once. The translation attribute is set on all segments in the group.
+**TranslationFix operates at ANNOTATION level, LOW priority.** Sees all CDS features at once for join grouping. Runs after structural fixes that affect translation behavior (pseudo, locus tag).
 
-**TranslationFix runs at LOW priority.** Structural fixes (locus tag, pseudogene, attribute corrections) must be applied before translation because they affect translation behavior (e.g., pseudo features skip translation).
+**Translation runs through the fix pipeline, not directly.** Ensures structural fixes are applied first and allows translation validation rules to be added incrementally.
 
-**TranslationFix skips gracefully when no sequence source is available.** Since it's auto-discovered via classpath scanning, it runs in all pipelines (validation, translate). It catches missing/null providers and returns silently, only performing work when a source is available.
+**Lazy reader opening and AutoCloseable engine.** `FileSequenceSource` opens lazily; `ValidationEngine` propagates `close()` through the provider chain, eliminating manual lifecycle management.
 
-**TranslationFix skips CDS with `exception` attribute.** Features like ribosomal slippage require special handling that the standard translator cannot provide.
+**Three output modes.** `attribute` (inline), `fasta` (separate file), `gff3-fasta` (embedded `##FASTA` section).
 
-**Join attribute propagation.** The `Translator` computes partiality and pseudo on the first (representative) feature. For multi-segment CDS joins, the fix moves 3' partial to the last segment (where it semantically belongs) and propagates pseudo from the first segment to all others.
-
-**Translation runs through the fix pipeline, not directly.** Running through the validation/fix engine ensures structural fixes are applied first and allows translation validation rules to be added incrementally without changing the command.
-
-**Lazy reader opening and AutoCloseable engine.** `FileSequenceProvider` opens the `SequenceReader` lazily on first access rather than at construction time. `ValidationEngine` implements `AutoCloseable`, propagating `close()` through the provider chain. This eliminates manual reader lifecycle management in commands.
-
-**Three output modes for flexibility.** `attribute` keeps translations inline (useful for programmatic access). `fasta` writes a separate file (matches the FF→GFF3 conversion pattern via `TranslationWriter`). `gff3-fasta` embeds in the `##FASTA` section (standard GFF3 format for associated sequences).
+**Shared translation key format.** `TranslationKey.of(accession, featureId)` provides a single source of truth used by the FASTA writer, translation state, and comparison validation.
 
 # Alternatives Considered
 
-**Observer/Subject pattern between FileSequenceProvider and RemoteSequenceProvider.** Rejected because Observer is for broadcasting events, not for "can anyone handle this?" requests. Chain of Responsibility is a better fit for ordered fallback resolution.
+**Observer/Subject pattern** for sequence resolution — rejected; Chain of Responsibility better fits ordered fallback.
 
-**Embedding SequenceReader in a configuration context.** Rejected because coupling an `AutoCloseable` resource with lifecycle management into a simple configuration holder would complicate usage.
+**Calling Translator directly** without the fix pipeline — rejected; structural fixes affect translation behavior.
 
-**Calling Translator directly without the fix pipeline.** Rejected because structural fixes affect translation behavior and the pipeline enables incremental addition of translation validation rules.
-
-**Adding --sequence to the existing validation command.** Rejected to maintain separation of concerns. Validation focuses on correctness checks; translation is a data transformation.
+**Adding --sequence to the validation command** — rejected; translation is a data transformation, not a correctness check.
 
 # Future Considerations
 
-- **RemoteSequenceProvider plugin**: Implements `SequenceSource`, packaged as a separate JAR. During `initialize()`, registers itself with the `CompositeSequenceProvider`. Downloads sequences on demand when the local file doesn't have a requested ID.
-- **Translation comparison**: A `TranslationComparisonValidation` (on the `translation_validation` branch) compares proteins produced by `TranslationFix` against pre-existing translations, warning on mismatches via shared `TranslationState`.
-
-# Implementation Plan
-
-| Phase | Focus | Effort |
-|-------|-------|--------|
-| Phase 1 | `SequenceSource` interface and `CompositeSequenceProvider` | 1 day |
-| Phase 2 | Refactor `FileSequenceProvider` as a `SequenceSource`, update `TranslationFix` | 1 day |
-| Phase 3 | `--translation-mode` and `-o` output options in `TranslationCommand` | 1 day |
-| Phase 4 | Tests and edge case coverage | 1 day |
+- **RemoteSequenceProvider plugin**: Implements `SequenceSource`, registers with `CompositeSequenceProvider` during `initialize()`, downloads sequences on demand.
 
 # Related Documentation
 
