@@ -25,9 +25,9 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
+import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
@@ -76,8 +76,7 @@ public class TranslationCommand extends AbstractCommand {
             List<GFF3Annotation> annotations = new ArrayList<>();
             GFF3Header header;
 
-            try (ValidationEngine validationEngine =
-                    initValidationEngine(ruleOverrides, compositeProvider)) {
+            try (ValidationEngine validationEngine = initValidationEngine(ruleOverrides, compositeProvider)) {
 
                 try (BufferedReader inputReader = getPipe(
                                 Files::newBufferedReader,

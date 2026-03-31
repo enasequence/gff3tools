@@ -80,7 +80,8 @@ public class TranslationFix {
         sorted.sort(Comparator.comparingLong(GFF3Feature::getStart));
 
         GFF3Feature representative = sorted.get(0);
-        String oldTranslation = representative.getAttribute(GFF3Attributes.TRANSLATION).orElse(null);
+        String oldTranslation =
+                representative.getAttribute(GFF3Attributes.TRANSLATION).orElse(null);
 
         // Skip CDS features with exception attribute (e.g. ribosomal slippage).
         // Check ALL segments — any segment carrying the exception applies to the whole join.
@@ -169,7 +170,8 @@ public class TranslationFix {
         if (!context.contains(TranslationState.class)) {
             return;
         }
-        String key = TranslationState.buildKey(feature.accession(), feature.getId().orElse(null));
+        String key =
+                TranslationState.buildKey(feature.accession(), feature.getId().orElse(null));
         if (key == null) {
             return;
         }
