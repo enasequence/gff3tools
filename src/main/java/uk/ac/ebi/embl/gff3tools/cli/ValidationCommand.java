@@ -16,7 +16,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -44,13 +43,11 @@ public class ValidationCommand extends AbstractCommand {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
 
         try {
-            Path processDir = Optional.ofNullable(inputFilePath.getParent()).orElse(Path.of("."));
-
             CompositeSequenceProvider compositeProvider =
                     buildCompositeProvider(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
 
             try (ValidationEngine validationEngine =
-                    initValidationEngine(ruleOverrides, processDir, compositeProvider)) {
+                    initValidationEngine(ruleOverrides, compositeProvider)) {
 
                 try (BufferedReader inputReader = getPipe(
                                 Files::newBufferedReader,

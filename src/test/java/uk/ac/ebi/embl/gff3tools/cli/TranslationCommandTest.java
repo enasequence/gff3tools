@@ -91,7 +91,7 @@ class TranslationCommandTest {
                 "--sequence",
                 fasta.toString(),
                 "--translation-mode",
-                "gff3_fasta",
+                "gff3-fasta",
                 "-o",
                 output.toString(),
                 gff3.toString());

@@ -107,11 +107,11 @@ public class ValidationRegistry {
                 providers.stream().map(ContextProvider::type).collect(Collectors.toSet());
         for (ContextProvider<?> provider : allProviders) {
             if (!explicitTypes.contains(provider.type())) {
-                provider.initialize();
+                initializeProvider(provider);
             }
         }
         for (ContextProvider<?> provider : providers) {
-            provider.initialize();
+            initializeProvider(provider);
         }
 
         this.context = ctx;
@@ -124,6 +124,15 @@ public class ValidationRegistry {
                 .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Fix.class))
                 .filter(vd -> vd.method().isAnnotationPresent(FixMethod.class))
                 .collect(Collectors.groupingBy(ValidatorDescriptor::priority, Collectors.toUnmodifiableList()));
+    }
+
+    private static void initializeProvider(ContextProvider<?> provider) {
+        try {
+            provider.initialize();
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Failed to initialize provider " + provider.type().getSimpleName(), e);
+        }
     }
 
     public ValidationContext getContext() {

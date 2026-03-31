@@ -49,7 +49,7 @@ public class TranslationComparisonValidation {
             rule = "TRANSLATION_COMPARISON",
             description = "Compare existing translation with newly computed translation",
             type = ANNOTATION,
-            severity = RuleSeverity.WARN,
+            severity = RuleSeverity.ERROR,
             priority = ValidationPriority.LOW)
     public void validateTranslation(GFF3Annotation annotation, int line) throws ValidationException {
         if (!context.contains(TranslationState.class)) {

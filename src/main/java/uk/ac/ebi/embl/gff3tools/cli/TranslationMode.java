@@ -14,24 +14,35 @@ import java.util.Arrays;
 import picocli.CommandLine;
 
 public enum TranslationMode {
-    gff3_fasta,
-    fasta,
-    attribute;
+    gff3_fasta("gff3-fasta"),
+    fasta("fasta"),
+    attribute("attribute");
+
+    private final String cliName;
+
+    TranslationMode(String cliName) {
+        this.cliName = cliName;
+    }
+
+    @Override
+    public String toString() {
+        return cliName;
+    }
 
     /**
-     * Custom picocli converter that accepts both hyphens and underscores,
-     * so users can write {@code --translation-mode gff3-fasta} or {@code gff3_fasta}.
+     * Custom picocli converter that accepts only the hyphenated CLI names
+     * (e.g. {@code gff3-fasta}, not {@code gff3_fasta}).
      */
     public static class Converter implements CommandLine.ITypeConverter<TranslationMode> {
         @Override
         public TranslationMode convert(String value) {
-            String normalized = value.replace('-', '_');
-            try {
-                return TranslationMode.valueOf(normalized);
-            } catch (IllegalArgumentException e) {
-                throw new CommandLine.TypeConversionException(
-                        "expected one of " + Arrays.toString(TranslationMode.values()) + " but was '" + value + "'");
+            for (TranslationMode mode : values()) {
+                if (mode.cliName.equals(value)) {
+                    return mode;
+                }
             }
+            throw new CommandLine.TypeConversionException(
+                    "expected one of " + Arrays.toString(TranslationMode.values()) + " but was '" + value + "'");
         }
     }
 }

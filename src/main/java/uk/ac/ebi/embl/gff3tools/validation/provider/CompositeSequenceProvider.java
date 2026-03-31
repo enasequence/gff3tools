@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
@@ -32,6 +33,7 @@ public class CompositeSequenceProvider implements ContextProvider<SequenceLookup
      * Registers a sequence source. Sources are queried in registration order.
      */
     public void addSource(SequenceSource source) {
+        Objects.requireNonNull(source, "source must not be null");
         this.sources.add(source);
         // Invalidate cached lookup so the new source is visible via get().
         this.cachedLookup = null;

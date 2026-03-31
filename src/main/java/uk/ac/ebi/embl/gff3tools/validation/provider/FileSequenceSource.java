@@ -97,7 +97,7 @@ public class FileSequenceSource implements SequenceSource {
         }
     }
 
-    private void ensureInitialized() {
+    private synchronized void ensureInitialized() {
         if (initialized) {
             return;
         }

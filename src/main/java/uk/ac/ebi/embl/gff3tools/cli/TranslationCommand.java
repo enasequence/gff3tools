@@ -45,7 +45,7 @@ public class TranslationCommand extends AbstractCommand {
     @CommandLine.Option(
             names = "--translation-mode",
             description = "Output mode: gff3-fasta, fasta, attribute (default: gff3-fasta)",
-            defaultValue = "gff3_fasta",
+            defaultValue = "gff3-fasta",
             converter = TranslationMode.Converter.class)
     public TranslationMode translationMode;
 
@@ -57,8 +57,6 @@ public class TranslationCommand extends AbstractCommand {
     @Override
     public void run() {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
-        Path processDir = Optional.ofNullable(inputFilePath.getParent()).orElse(Path.of("."));
-
         if (translationMode == TranslationMode.attribute && outputPath != null) {
             log.warn("Output path (-o) is ignored in 'attribute' mode.");
         }
@@ -78,7 +76,7 @@ public class TranslationCommand extends AbstractCommand {
             GFF3Header header;
 
             try (ValidationEngine validationEngine =
-                    initValidationEngine(ruleOverrides, processDir, compositeProvider)) {
+                    initValidationEngine(ruleOverrides, compositeProvider)) {
 
                 try (BufferedReader inputReader = getPipe(
                                 Files::newBufferedReader,

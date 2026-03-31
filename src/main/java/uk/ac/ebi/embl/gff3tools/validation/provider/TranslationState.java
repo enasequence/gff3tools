@@ -10,8 +10,8 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Shared state for old/new translation pairs, allowing {@code TranslationFix} to record
@@ -21,7 +21,7 @@ public class TranslationState {
 
     public record TranslationEntry(String oldTranslation, String newTranslation) {}
 
-    private final Map<String, TranslationEntry> entries = new ConcurrentHashMap<>();
+    private final Map<String, TranslationEntry> entries = new HashMap<>();
 
     /**
      * Build a consistent lookup key for a feature.

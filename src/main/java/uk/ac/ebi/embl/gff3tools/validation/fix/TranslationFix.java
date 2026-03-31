@@ -80,7 +80,7 @@ public class TranslationFix {
         sorted.sort(Comparator.comparingLong(GFF3Feature::getStart));
 
         GFF3Feature representative = sorted.get(0);
-        String oldTranslation = representative.getAttribute("translation").orElse(null);
+        String oldTranslation = representative.getAttribute(GFF3Attributes.TRANSLATION).orElse(null);
 
         // Skip CDS features with exception attribute (e.g. ribosomal slippage).
         // Check ALL segments — any segment carrying the exception applies to the whole join.
@@ -104,7 +104,7 @@ public class TranslationFix {
             TranslationResult result =
                     translator.translate(concatenated.toString().getBytes());
 
-            if (result.hasErrors()) {
+            if (!result.isValid()) {
                 throw new ValidationException(
                         "TRANSLATION", line, "Translation failed for CDS: " + result.getErrorMessages());
             }
@@ -112,7 +112,7 @@ public class TranslationFix {
             String translation = result.getConceptualTranslation();
             if (!translation.isEmpty()) {
                 for (GFF3Feature segment : segments) {
-                    segment.setAttributeList("translation", List.of(translation));
+                    segment.setAttributeList(GFF3Attributes.TRANSLATION, List.of(translation));
                 }
                 log.debug("Set translation attribute on CDS feature group at line {}", line);
                 recordTranslationState(representative, line, oldTranslation, translation);

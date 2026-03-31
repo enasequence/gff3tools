@@ -14,7 +14,6 @@ import io.vavr.Function0;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.*;
@@ -64,13 +63,8 @@ public abstract class AbstractCommand implements Runnable {
     }
 
     protected ValidationEngine initValidationEngine(
-            Map<String, RuleSeverity> ruleOverrides, Path processDir, ContextProvider<?>... additionalProviders) {
+            Map<String, RuleSeverity> ruleOverrides, ContextProvider<?>... additionalProviders) {
 
-        if (!Files.isDirectory(processDir) || !Files.isWritable(processDir)) {
-            throw new RuntimeException(String.format("The directory {%s} is not writable.", processDir));
-        }
-
-        log.info("Running with process directory: {}", processDir);
         ValidationEngineBuilder builder =
                 new ValidationEngineBuilder().overrideMethodRules(ruleOverrides).failFast(failFast);
 
@@ -165,8 +159,8 @@ public abstract class AbstractCommand implements Runnable {
         }
         for (String spec : sequenceSpecs) {
             ParsedSequenceSpec parsed = parseSequenceSpec(spec);
-            SequenceFormat format = resolveSequenceFormat(parsed.path(), sequenceFormat);
-            compositeProvider.addSource(new FileSequenceSource(parsed.path(), format, parsed.key()));
+            SequenceFormat resolvedFormat = resolveSequenceFormat(parsed.path(), sequenceFormat);
+            compositeProvider.addSource(new FileSequenceSource(parsed.path(), resolvedFormat, parsed.key()));
         }
         return compositeProvider;
     }
