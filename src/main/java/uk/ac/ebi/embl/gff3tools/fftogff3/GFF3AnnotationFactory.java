@@ -32,6 +32,7 @@ import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
+import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
@@ -204,7 +205,7 @@ public class GFF3AnnotationFactory {
             Optional<String> featureId,
             GFF3SequenceRegion sequenceRegion) {
         if (baseAttributes.containsKey("translation") && featureId.isPresent()) {
-            String translationKey = TranslationWriter.getTranslationKey(sequenceRegion.accession(), featureId.get());
+            String translationKey = TranslationKey.of(sequenceRegion.accession(), featureId.get());
             List<String> translation = baseAttributes.get("translation");
             TranslationWriter.writeTranslation(fastaWriter, translationKey, translation.get(0));
             baseAttributes.remove("translation");

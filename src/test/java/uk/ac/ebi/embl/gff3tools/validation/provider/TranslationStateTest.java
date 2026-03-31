@@ -17,15 +17,14 @@ import org.junit.jupiter.api.Test;
 class TranslationStateTest {
 
     @Test
-    void buildKeyUsesFeatureIdWhenPresent() {
-        String key = TranslationState.buildKey("seq1", "cds-1", 10);
-        assertEquals("seq1:cds-1", key);
+    void buildKeyUsesTranslationKeyWhenFeatureIdPresent() {
+        String key = TranslationState.buildKey("seq1", "cds-1");
+        assertEquals("seq1|cds-1", key);
     }
 
     @Test
-    void buildKeyUsesLineFallbackWhenFeatureIdNull() {
-        String key = TranslationState.buildKey("seq1", null, 42);
-        assertEquals("seq1:line_42", key);
+    void buildKeyReturnsNullWhenFeatureIdNull() {
+        assertNull(TranslationState.buildKey("seq1", null));
     }
 
     @Test

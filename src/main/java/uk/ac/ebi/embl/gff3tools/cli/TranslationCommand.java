@@ -27,6 +27,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
@@ -183,7 +184,7 @@ public class TranslationCommand extends AbstractCommand {
                     continue;
                 }
                 String featureId = feature.getId().orElse(feature.getName());
-                String key = TranslationWriter.getTranslationKey(accession, featureId);
+                String key = TranslationKey.of(accession, featureId);
                 try {
                     TranslationWriter.writeTranslation(writer, key, translation.get());
                 } catch (Exception e) {

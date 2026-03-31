@@ -169,9 +169,11 @@ public class TranslationFix {
         if (!context.contains(TranslationState.class)) {
             return;
         }
+        String key = TranslationState.buildKey(feature.accession(), feature.getId().orElse(null));
+        if (key == null) {
+            return;
+        }
         TranslationState state = context.get(TranslationState.class);
-        String key =
-                TranslationState.buildKey(feature.getSeqId(), feature.getId().orElse(null), line);
         state.record(key, oldTranslation, newTranslation);
     }
 }

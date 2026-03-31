@@ -64,7 +64,7 @@ class TranslationComparisonValidationTest {
 
     @Test
     void noOpWhenOldTranslationIsNull() throws Exception {
-        String key = TranslationState.buildKey("seq1", "CDS_id", 1);
+        String key = TranslationState.buildKey("seq1", "CDS_id");
         state.record(key, null, "MK");
 
         GFF3Annotation annotation = createAnnotation(createFeature(OntologyTerm.CDS.name(), "seq1"));
@@ -73,7 +73,7 @@ class TranslationComparisonValidationTest {
 
     @Test
     void noWarningWhenTranslationsMatch() throws Exception {
-        String key = TranslationState.buildKey("seq1", "CDS_id", 1);
+        String key = TranslationState.buildKey("seq1", "CDS_id");
         state.record(key, "MK", "MK");
 
         GFF3Annotation annotation = createAnnotation(createFeature(OntologyTerm.CDS.name(), "seq1"));
@@ -82,7 +82,7 @@ class TranslationComparisonValidationTest {
 
     @Test
     void warnsWhenTranslationsDiffer() {
-        String key = TranslationState.buildKey("seq1", "CDS_id", 1);
+        String key = TranslationState.buildKey("seq1", "CDS_id");
         state.record(key, "WRONG", "MK");
 
         GFF3Annotation annotation = createAnnotation(createFeature(OntologyTerm.CDS.name(), "seq1"));
@@ -101,7 +101,7 @@ class TranslationComparisonValidationTest {
         GFF3Annotation annotation = createAnnotation(seg2, seg1);
 
         // Key built from the lowest-start segment (seg1: seqId=seq1)
-        String key = TranslationState.buildKey("seq1", "cds1", 1);
+        String key = TranslationState.buildKey("seq1", "cds1");
         state.record(key, "OLD", "NEW");
 
         ValidationException ex =
@@ -116,10 +116,10 @@ class TranslationComparisonValidationTest {
         GFF3Feature cdsB = createFeature(OntologyTerm.CDS.name(), "cds_b", "seq1", 20, 30);
         GFF3Annotation annotation = createAnnotation(cdsA, cdsB);
 
-        String keyA = TranslationState.buildKey("seq1", "cds_a", 1);
+        String keyA = TranslationState.buildKey("seq1", "cds_a");
         state.record(keyA, "MK", "MK"); // match
 
-        String keyB = TranslationState.buildKey("seq1", "cds_b", 1);
+        String keyB = TranslationState.buildKey("seq1", "cds_b");
         state.record(keyB, "WRONG", "MK"); // mismatch
 
         ValidationException ex =
@@ -134,10 +134,10 @@ class TranslationComparisonValidationTest {
         GFF3Feature cdsB = createFeature(OntologyTerm.CDS.name(), "cds_b", "seq1", 20, 30);
         GFF3Annotation annotation = createAnnotation(cdsA, cdsB);
 
-        String keyA = TranslationState.buildKey("seq1", "cds_a", 1);
+        String keyA = TranslationState.buildKey("seq1", "cds_a");
         state.record(keyA, "OLD_A", "NEW_A");
 
-        String keyB = TranslationState.buildKey("seq1", "cds_b", 1);
+        String keyB = TranslationState.buildKey("seq1", "cds_b");
         state.record(keyB, "OLD_B", "NEW_B");
 
         ValidationException ex =

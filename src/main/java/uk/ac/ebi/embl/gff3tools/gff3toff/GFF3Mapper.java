@@ -29,6 +29,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
+import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
@@ -190,7 +191,7 @@ public class GFF3Mapper {
      */
     private void mapTranslation(
             GFF3Feature gff3Feature, Feature ffFeature, String featureId, Map<String, OffsetRange> translationMap) {
-        String translationKey = TranslationWriter.getTranslationKey(gff3Feature.accession(), featureId);
+        String translationKey = TranslationKey.of(gff3Feature.accession(), featureId);
         if (translationMap.get(translationKey) != null) {
             ffFeature.addQualifier("translation", gff3FileReader.getTranslation(translationMap.get(translationKey)));
         }

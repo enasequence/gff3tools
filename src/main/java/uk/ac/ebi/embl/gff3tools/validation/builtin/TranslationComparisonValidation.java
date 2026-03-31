@@ -72,7 +72,10 @@ public class TranslationComparisonValidation {
                     .min(Comparator.comparingLong(GFF3Feature::getStart))
                     .orElseThrow();
             String key = TranslationState.buildKey(
-                    representative.getSeqId(), representative.getId().orElse(null), line);
+                    representative.accession(), representative.getId().orElse(null));
+            if (key == null) {
+                continue;
+            }
             TranslationState.TranslationEntry translationEntry = state.get(key);
             if (translationEntry == null || translationEntry.oldTranslation() == null) {
                 continue;

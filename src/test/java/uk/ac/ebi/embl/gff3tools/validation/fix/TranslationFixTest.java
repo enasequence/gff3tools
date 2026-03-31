@@ -207,7 +207,7 @@ class TranslationFixTest {
         GFF3Annotation annotation = createAnnotation(feature);
         fix.fixAnnotation(annotation, 1);
 
-        String key = TranslationState.buildKey("seq1", "CDS_id", 1);
+        String key = TranslationState.buildKey("seq1", "CDS_id");
         TranslationState.TranslationEntry entry = state.get(key);
         assertNotNull(entry);
         assertEquals("OLDVALUE", entry.oldTranslation());
@@ -238,7 +238,7 @@ class TranslationFixTest {
         GFF3Annotation annotation = createAnnotation(feature);
         fix.fixAnnotation(annotation, 1);
 
-        String key = TranslationState.buildKey("seq1", "CDS_id", 1);
+        String key = TranslationState.buildKey("seq1", "CDS_id");
         TranslationState.TranslationEntry entry = state.get(key);
         assertNotNull(entry);
         assertNull(entry.oldTranslation());

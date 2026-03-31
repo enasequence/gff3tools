@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
 
 import java.util.HashMap;
 import java.util.Map;
+import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 
 /**
  * Shared state for old/new translation pairs, allowing {@code TranslationFix} to record
@@ -25,14 +26,19 @@ public class TranslationState {
 
     /**
      * Build a consistent lookup key for a feature.
+     * Returns {@code null} when {@code featureId} is absent — callers should
+     * skip recording/lookup in that case since ID-less features cannot be
+     * reliably matched between the fix and validation passes.
      *
-     * @param seqId the sequence ID
+     * @param accession the sequence accession (including version suffix)
      * @param featureId the feature ID, or null if absent
-     * @param line the GFF3 line number (used as fallback when featureId is null)
+     * @return a translation key, or {@code null} if featureId is null
      */
-    public static String buildKey(String seqId, String featureId, int line) {
-        String id = featureId != null ? featureId : "line_" + line;
-        return seqId + ":" + id;
+    public static String buildKey(String accession, String featureId) {
+        if (featureId == null) {
+            return null;
+        }
+        return TranslationKey.of(accession, featureId);
     }
 
     /** Record old and new translations for a feature. */
