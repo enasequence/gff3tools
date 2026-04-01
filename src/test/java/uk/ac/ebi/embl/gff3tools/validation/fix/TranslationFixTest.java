@@ -204,6 +204,8 @@ class TranslationFixTest {
 
         GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
         feature.setAttributeList("translation", List.of("OLDVALUE"));
+        // fixFeature captures the old translation into TranslationState and removes the attribute
+        fix.fixFeature(feature, 1);
         GFF3Annotation annotation = createAnnotation(feature);
         fix.fixAnnotation(annotation, 1);
 

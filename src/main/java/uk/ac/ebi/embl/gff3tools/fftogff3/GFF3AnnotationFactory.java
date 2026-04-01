@@ -197,7 +197,7 @@ public class GFF3AnnotationFactory {
     }
 
     /**
-     * Write translation to fasta and remove from attribute map.
+     * Write translation to fasta.
      */
     private void handleTranslation(
             Writer fastaWriter,
@@ -208,7 +208,6 @@ public class GFF3AnnotationFactory {
             String translationKey = TranslationKey.of(sequenceRegion.accession(), featureId.get());
             List<String> translation = baseAttributes.get("translation");
             TranslationWriter.writeTranslation(fastaWriter, translationKey, translation.get(0));
-            baseAttributes.remove("translation");
         }
     }
 

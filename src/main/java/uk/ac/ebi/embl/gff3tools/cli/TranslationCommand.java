@@ -148,7 +148,7 @@ public class TranslationCommand extends AbstractCommand {
                 writeTranslationEntries(fastaWriter, annotations);
             }
 
-            // Strip translation attributes from features
+            // Strip translation attributes from features — translations are in the FASTA section
             for (GFF3Annotation annotation : annotations) {
                 for (GFF3Feature feature : annotation.getFeatures()) {
                     feature.removeAttributeList("translation");

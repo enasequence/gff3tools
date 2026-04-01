@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.validation.fix;
 
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION;
+import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -47,6 +48,29 @@ public class TranslationFix {
     private ValidationContext context;
 
     @FixMethod(
+            rule = "REMOVE_TRANSLATION_ATTRIBUTE",
+            description = "Capture existing translation attribute into TranslationState and remove it from the feature",
+            type = FEATURE,
+            priority = ValidationPriority.HIGH)
+    public void fixFeature(GFF3Feature feature, int line) {
+        if (!feature.hasAttribute(GFF3Attributes.TRANSLATION)) {
+            return;
+        }
+
+        String translation = feature.getAttribute(GFF3Attributes.TRANSLATION).orElse(null);
+        if (translation != null && context.contains(TranslationState.class)) {
+            String key = TranslationState.buildKey(feature.accession(), feature.getId().orElse(null));
+            if (key != null) {
+                TranslationState state = context.get(TranslationState.class);
+                state.record(key, translation, null);
+            }
+        }
+
+        log.debug("Removing translation attribute from feature at line {}", line);
+        feature.removeAttributeList(GFF3Attributes.TRANSLATION);
+    }
+
+    @FixMethod(
             rule = "TRANSLATION",
             description = "Translate CDS features and set the translation attribute",
             type = ANNOTATION,
@@ -80,8 +104,7 @@ public class TranslationFix {
         sorted.sort(Comparator.comparingLong(GFF3Feature::getStart));
 
         GFF3Feature representative = sorted.get(0);
-        String oldTranslation =
-                representative.getAttribute(GFF3Attributes.TRANSLATION).orElse(null);
+        String oldTranslation = lookupOldTranslation(representative);
 
         // Skip CDS features with exception attribute (e.g. ribosomal slippage).
         // Check ALL segments — any segment carrying the exception applies to the whole join.
@@ -164,6 +187,18 @@ public class TranslationFix {
                 segments.get(i).addAttribute(GFF3Attributes.PSEUDO, pseudoValue);
             }
         });
+    }
+
+    private String lookupOldTranslation(GFF3Feature feature) {
+        if (!context.contains(TranslationState.class)) {
+            return null;
+        }
+        String key = TranslationState.buildKey(feature.accession(), feature.getId().orElse(null));
+        if (key == null) {
+            return null;
+        }
+        TranslationState.TranslationEntry entry = context.get(TranslationState.class).get(key);
+        return entry != null ? entry.oldTranslation() : null;
     }
 
     private void recordTranslationState(GFF3Feature feature, int line, String oldTranslation, String newTranslation) {

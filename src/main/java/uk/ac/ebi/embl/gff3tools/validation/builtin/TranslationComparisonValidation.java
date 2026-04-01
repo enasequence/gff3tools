@@ -77,7 +77,9 @@ public class TranslationComparisonValidation {
                 continue;
             }
             TranslationState.TranslationEntry translationEntry = state.get(key);
-            if (translationEntry == null || translationEntry.oldTranslation() == null) {
+            if (translationEntry == null
+                    || translationEntry.oldTranslation() == null
+                    || translationEntry.newTranslation() == null) {
                 continue;
             }
 
