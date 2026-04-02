@@ -41,20 +41,15 @@ public class FFToGff3Converter implements Converter {
     public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException {
 
-        Path fastaPath = getFastaPath();
-        try {
-            EmblEntryReader entryReader =
-                    new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
+        EmblEntryReader entryReader =
+                new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
-            GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine, fastaPath);
-            GFF3File file = fftogff3.from(entryReader, getMasterEntry(masterFilePath));
-            file.writeGFF3String(writer);
+        GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine);
+        GFF3File file = fftogff3.from(entryReader, getMasterEntry(masterFilePath));
+        file.writeGFF3String(writer);
 
-            // Check for collected errors at end of processing
-            validationEngine.throwIfErrorsCollected();
-        } finally {
-            deleteFastaFile(fastaPath);
-        }
+        // Check for collected errors at end of processing
+        validationEngine.throwIfErrorsCollected();
     }
 
     private ReaderOptions getReaderOptions() {
