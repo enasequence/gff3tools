@@ -106,8 +106,14 @@ public class GFF3File implements IGFF3Feature {
     private void writeFastaFromTranslationState(Writer writer) throws IOException {
         List<Map.Entry<String, String>> toWrite = new java.util.ArrayList<>();
         translationState.forEach((key, entry) -> {
-            if (entry.newTranslation() != null && !entry.newTranslation().isEmpty()) {
-                toWrite.add(Map.entry(key, entry.newTranslation()));
+            // Prefer new translation; fall back to old (e.g. FF→GFF3 path where no
+            // re-translation occurs because no sequence source is available).
+            String translation = entry.newTranslation();
+            if (translation == null || translation.isEmpty()) {
+                translation = entry.oldTranslation();
+            }
+            if (translation != null && !translation.isEmpty()) {
+                toWrite.add(Map.entry(key, translation));
             }
         });
 

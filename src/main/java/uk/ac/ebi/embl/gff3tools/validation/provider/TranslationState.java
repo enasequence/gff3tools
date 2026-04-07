@@ -10,7 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
@@ -23,7 +23,7 @@ public class TranslationState {
 
     public record TranslationEntry(String oldTranslation, String newTranslation) {}
 
-    private final Map<String, TranslationEntry> entries = new HashMap<>();
+    private final Map<String, TranslationEntry> entries = new LinkedHashMap<>();
 
     /**
      * Build a consistent lookup key for a feature.

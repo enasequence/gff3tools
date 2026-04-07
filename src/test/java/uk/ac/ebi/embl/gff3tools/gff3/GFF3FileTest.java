@@ -88,9 +88,9 @@ public class GFF3FileTest {
     }
 
     @Test
-    void writeGFF3String_skipsEntryWithNullNewTranslation() throws Exception {
+    void writeGFF3String_skipsEntryWithNullTranslations() throws Exception {
         TranslationState state = new TranslationState();
-        state.record("acc1|cds-1", "OLD", null);
+        state.record("acc1|cds-1", null, null);
 
         GFF3File file = GFF3File.builder()
                 .annotations(List.of())
@@ -101,5 +101,23 @@ public class GFF3FileTest {
         file.writeGFF3String(writer);
 
         assertFalse(writer.toString().contains("##FASTA"));
+    }
+
+    @Test
+    void writeGFF3String_fallsBackToOldTranslation() throws Exception {
+        TranslationState state = new TranslationState();
+        state.record("acc1|cds-1", "MKOLD", null);
+
+        GFF3File file = GFF3File.builder()
+                .annotations(List.of())
+                .translationState(state)
+                .build();
+
+        StringWriter writer = new StringWriter();
+        file.writeGFF3String(writer);
+
+        String output = writer.toString();
+        assertTrue(output.contains("##FASTA"));
+        assertTrue(output.contains("MKOLD"));
     }
 }

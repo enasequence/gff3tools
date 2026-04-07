@@ -21,7 +21,7 @@ import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.gff3tools.Converter;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
-import uk.ac.ebi.embl.gff3tools.validation.*;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 
 public class FFToGff3Converter implements Converter {
     // MasterFile will be used when converting reduced flatfile tto GFF3
@@ -41,20 +41,15 @@ public class FFToGff3Converter implements Converter {
     public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException {
 
-        Path fastaPath = getFastaPath();
-        try {
-            EmblEntryReader entryReader =
-                    new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
+        EmblEntryReader entryReader =
+                new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
-            GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine, fastaPath);
-            GFF3File file = fftogff3.from(entryReader, getMasterEntry(masterFilePath));
-            file.writeGFF3String(writer);
+        GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine);
+        GFF3File file = fftogff3.from(entryReader, getMasterEntry(masterFilePath));
+        file.writeGFF3String(writer);
 
-            // Check for collected errors at end of processing
-            validationEngine.throwIfErrorsCollected();
-        } finally {
-            deleteFastaFile(fastaPath);
-        }
+        // Check for collected errors at end of processing
+        validationEngine.throwIfErrorsCollected();
     }
 
     private ReaderOptions getReaderOptions() {
@@ -77,28 +72,6 @@ public class FFToGff3Converter implements Converter {
             return masterEntry;
         } catch (IOException e) {
             throw new ReadException("Error opening master file: " + masterFilePath, e);
-        }
-    }
-
-    /**
-     * Create  FASTA in the  system temp directory.
-     */
-    private Path getFastaPath() {
-        try {
-            return Files.createTempFile("gff3-translation", ".fasta");
-        } catch (Exception e) {
-            throw new RuntimeException("Unable to create temp fasta file.", e);
-        }
-    }
-
-    /**
-     * Delete FASTA file in the  system temp directory.
-     */
-    private void deleteFastaFile(Path fastaPath) {
-        try {
-            Files.deleteIfExists(fastaPath);
-        } catch (Exception e) {
-            throw new RuntimeException("Unable to create temp fasta file.", e);
         }
     }
 }

@@ -23,16 +23,14 @@ import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
-import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
-import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 @CommandLine.Command(
         name = "translate",
@@ -70,11 +68,9 @@ public class TranslationCommand extends AbstractCommand {
                         "A sequence source is required. Provide --sequence or ensure a plugin supplies sequences.");
             }
 
-            // All annotations are held in memory for output writing. For very large GFF3 files
-            // a streaming approach would reduce the footprint but requires rethinking the
-            // gff3-fasta output mode which needs the FASTA section after all GFF3 records.
             List<GFF3Annotation> annotations = new ArrayList<>();
             GFF3Header header;
+            TranslationState translationState = null;
 
             try (ValidationEngine validationEngine = initValidationEngine(ruleOverrides, compositeProvider)) {
 
@@ -104,19 +100,24 @@ public class TranslationCommand extends AbstractCommand {
                         log.info("Translation completed successfully");
                     }
                 }
+
+                if (validationEngine.getContext().contains(TranslationState.class)) {
+                    translationState = validationEngine.getContext().get(TranslationState.class);
+                }
             }
 
-            writeOutput(annotations, header);
+            writeOutput(annotations, header, translationState);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
     }
 
-    private void writeOutput(List<GFF3Annotation> annotations, GFF3Header header) throws Exception {
+    private void writeOutput(List<GFF3Annotation> annotations, GFF3Header header, TranslationState translationState)
+            throws Exception {
         switch (translationMode) {
             case attribute -> log.info("Translation mode 'attribute': translations set as in-memory attributes only.");
-            case fasta -> writeFastaOutput(annotations);
-            case gff3_fasta -> writeGff3FastaOutput(annotations, header);
+            case fasta -> writeFastaOutput(translationState);
+            case gff3_fasta -> writeGff3FastaOutput(annotations, header, translationState);
         }
     }
 
@@ -131,68 +132,47 @@ public class TranslationCommand extends AbstractCommand {
         return parent.resolve(stem + suffix);
     }
 
-    private void writeFastaOutput(List<GFF3Annotation> annotations) throws Exception {
+    private void writeFastaOutput(TranslationState translationState) throws Exception {
         Path outPath = resolveOutputPath(".translation.fasta");
         try (BufferedWriter writer = Files.newBufferedWriter(outPath)) {
-            writeTranslationEntries(writer, annotations);
+            writeFastaFromTranslationState(writer, translationState);
         }
         log.info("Translation FASTA written to: {}", outPath);
     }
 
-    private void writeGff3FastaOutput(List<GFF3Annotation> annotations, GFF3Header header) throws Exception {
+    private void writeGff3FastaOutput(
+            List<GFF3Annotation> annotations, GFF3Header header, TranslationState translationState) throws Exception {
         Path outPath = resolveOutputPath(".translated.gff3");
-        Path tempFasta = Files.createTempFile("gff3-translation", ".fasta");
-        try {
-            // Write translations to temp FASTA file
-            try (BufferedWriter fastaWriter = Files.newBufferedWriter(tempFasta)) {
-                writeTranslationEntries(fastaWriter, annotations);
-            }
 
-            // Strip translation attributes from features — translations are in the FASTA section
-            for (GFF3Annotation annotation : annotations) {
-                for (GFF3Feature feature : annotation.getFeatures()) {
-                    feature.removeAttributeList("translation");
-                }
-            }
+        GFF3File gff3File = GFF3File.builder()
+                .header(header)
+                .annotations(annotations)
+                .translationState(translationState)
+                .build();
 
-            // Build GFF3File with FASTA section and write
-            GFF3File gff3File = GFF3File.builder()
-                    .header(header)
-                    .annotations(annotations)
-                    .fastaFilePath(tempFasta)
-                    .build();
-
-            try (BufferedWriter outputWriter = Files.newBufferedWriter(outPath)) {
-                gff3File.writeGFF3String(outputWriter);
-            }
-            log.info("GFF3 with FASTA section written to: {}", outPath);
-        } finally {
-            Files.deleteIfExists(tempFasta);
+        try (BufferedWriter outputWriter = Files.newBufferedWriter(outPath)) {
+            gff3File.writeGFF3String(outputWriter);
         }
+        log.info("GFF3 with FASTA section written to: {}", outPath);
     }
 
-    private void writeTranslationEntries(BufferedWriter writer, List<GFF3Annotation> annotations) {
-        for (GFF3Annotation annotation : annotations) {
-            String accession = annotation.getAccession();
-            for (GFF3Feature feature : annotation.getFeatures()) {
-                if (!OntologyTerm.CDS.name().equals(feature.getName())) {
-                    continue;
-                }
-                Optional<String> translation = feature.getAttribute("translation");
-                if (translation.isEmpty() || translation.get().isEmpty()) {
-                    continue;
-                }
-                String featureId = feature.getId().orElse(feature.getName());
-                String key = TranslationKey.of(accession, featureId);
+    private void writeFastaFromTranslationState(BufferedWriter writer, TranslationState translationState) {
+        if (translationState == null) {
+            return;
+        }
+        translationState.forEach((key, entry) -> {
+            String translation = entry.newTranslation();
+            if (translation == null || translation.isEmpty()) {
+                translation = entry.oldTranslation();
+            }
+            if (translation != null && !translation.isEmpty()) {
                 try {
-                    TranslationWriter.writeTranslation(writer, key, translation.get());
+                    TranslationWriter.writeTranslation(writer, key, translation);
                 } catch (Exception e) {
                     throw new RuntimeException(
-                            "Failed to write translation for feature '%s' (accession: %s): %s"
-                                    .formatted(featureId, accession, e.getMessage()),
-                            e);
+                            "Failed to write translation for key '%s': %s".formatted(key, e.getMessage()), e);
                 }
             }
-        }
+        });
     }
 }
