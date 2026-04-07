@@ -34,6 +34,7 @@ class TranslationFixTest {
     private TranslationFix fix;
     private SequenceLookup mockLookup;
     private ValidationContext context;
+    private TranslationState translationState;
 
     @BeforeEach
     void setUp() {
@@ -54,6 +55,10 @@ class TranslationFixTest {
             }
         });
         context.register(SequenceLookup.class, compositeProvider);
+
+        TranslationStateProvider stateProvider = new TranslationStateProvider();
+        context.register(TranslationState.class, stateProvider);
+        translationState = context.get(TranslationState.class);
 
         ValidationRegistry.injectContext(fix, context);
     }
@@ -95,8 +100,7 @@ class TranslationFixTest {
         GFF3Annotation annotation = createAnnotation(feature);
         fix.fixAnnotation(annotation, 1);
 
-        assertTrue(feature.hasAttribute("translation"));
-        assertEquals("MK", feature.getAttribute("translation").orElse(""));
+        assertFalse(feature.hasAttribute("translation"));
     }
 
     @Test
@@ -107,8 +111,7 @@ class TranslationFixTest {
         GFF3Annotation annotation = createAnnotation(feature);
         fix.fixAnnotation(annotation, 1);
 
-        assertTrue(feature.hasAttribute("translation"));
-        assertEquals("MK", feature.getAttribute("translation").orElse(""));
+        assertFalse(feature.hasAttribute("translation"));
     }
 
     @Test
@@ -135,8 +138,10 @@ class TranslationFixTest {
         GFF3Annotation annotation = createAnnotation(seg1, seg2);
         fix.fixAnnotation(annotation, 1);
 
-        assertEquals("MKP", seg1.getAttribute("translation").orElse(""));
-        assertEquals("MKP", seg2.getAttribute("translation").orElse(""));
+        assertFalse(seg1.hasAttribute("translation"));
+        assertFalse(seg2.hasAttribute("translation"));
+        String key = TranslationState.buildKey(seg1.accession(), "cds1");
+        assertEquals("MKP", translationState.get(key).newTranslation());
     }
 
     @Test
@@ -151,8 +156,10 @@ class TranslationFixTest {
         GFF3Annotation annotation = createAnnotation(seg1, seg2);
         fix.fixAnnotation(annotation, 1);
 
-        assertEquals("MK", seg1.getAttribute("translation").orElse(""));
-        assertEquals("MK", seg2.getAttribute("translation").orElse(""));
+        assertFalse(seg1.hasAttribute("translation"));
+        assertFalse(seg2.hasAttribute("translation"));
+        String key = TranslationState.buildKey(seg1.accession(), "cds1");
+        assertEquals("MK", translationState.get(key).newTranslation());
     }
 
     @Test
@@ -218,14 +225,32 @@ class TranslationFixTest {
 
     @Test
     void worksWithoutTranslationStateProvider() throws Exception {
+        // Create a fix with a context that has no TranslationState registered
+        TranslationFix fixNoState = new TranslationFix();
+        ValidationContext ctxNoState = new ValidationContext();
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        provider.addSource(new SequenceSource() {
+            @Override
+            public boolean hasSequence(String seqId) {
+                return true;
+            }
+
+            @Override
+            public String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception {
+                return mockLookup.getSequenceSlice(seqId, fromBase, toBase);
+            }
+        });
+        ctxNoState.register(SequenceLookup.class, provider);
+        ValidationRegistry.injectContext(fixNoState, ctxNoState);
+
         when(mockLookup.getSequenceSlice(any(), anyLong(), anyLong())).thenReturn("ATGAAATAA");
 
         GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
         GFF3Annotation annotation = createAnnotation(feature);
-        fix.fixAnnotation(annotation, 1);
+        fixNoState.fixAnnotation(annotation, 1);
 
-        assertTrue(feature.hasAttribute("translation"));
-        assertEquals("MK", feature.getAttribute("translation").orElse(""));
+        // Translation is not set on the feature (no TranslationState to record it either)
+        assertFalse(feature.hasAttribute("translation"));
     }
 
     @Test

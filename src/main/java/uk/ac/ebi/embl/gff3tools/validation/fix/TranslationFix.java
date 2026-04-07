@@ -59,7 +59,8 @@ public class TranslationFix {
 
         String translation = feature.getAttribute(GFF3Attributes.TRANSLATION).orElse(null);
         if (translation != null && context.contains(TranslationState.class)) {
-            String key = TranslationState.buildKey(feature.accession(), feature.getId().orElse(null));
+            String key = TranslationState.buildKey(
+                    feature.accession(), feature.getId().orElse(null));
             if (key != null) {
                 TranslationState state = context.get(TranslationState.class);
                 state.record(key, translation, null);
@@ -135,10 +136,7 @@ public class TranslationFix {
 
             String translation = result.getConceptualTranslation();
             if (!translation.isEmpty()) {
-                for (GFF3Feature segment : segments) {
-                    segment.setAttributeList(GFF3Attributes.TRANSLATION, List.of(translation));
-                }
-                log.debug("Set translation attribute on CDS feature group at line {}", line);
+                log.debug("Recording translation for CDS feature group at line {}", line);
                 recordTranslationState(representative, line, oldTranslation, translation);
             }
 
@@ -193,11 +191,13 @@ public class TranslationFix {
         if (!context.contains(TranslationState.class)) {
             return null;
         }
-        String key = TranslationState.buildKey(feature.accession(), feature.getId().orElse(null));
+        String key =
+                TranslationState.buildKey(feature.accession(), feature.getId().orElse(null));
         if (key == null) {
             return null;
         }
-        TranslationState.TranslationEntry entry = context.get(TranslationState.class).get(key);
+        TranslationState.TranslationEntry entry =
+                context.get(TranslationState.class).get(key);
         return entry != null ? entry.oldTranslation() : null;
     }
 

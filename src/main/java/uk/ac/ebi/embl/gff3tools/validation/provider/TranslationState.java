@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 
 /**
@@ -49,5 +50,10 @@ public class TranslationState {
     /** Retrieve the recorded entry, or {@code null} if not present. */
     public TranslationEntry get(String key) {
         return entries.get(key);
+    }
+
+    /** Iterate all recorded translation entries. */
+    public void forEach(BiConsumer<String, TranslationEntry> action) {
+        entries.forEach(action);
     }
 }

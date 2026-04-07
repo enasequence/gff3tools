@@ -10,7 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.StringWriter;
 import java.io.Writer;
@@ -19,8 +19,10 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 public class GFF3FileTest {
 
@@ -54,5 +56,50 @@ public class GFF3FileTest {
         String output = writer.toString();
         assertEquals(expectedOutput, output);
         Files.deleteIfExists(Path.of("translation.fasta"));
+    }
+
+    @Test
+    void writeGFF3String_writesFastaFromTranslationState() throws Exception {
+        TranslationState state = new TranslationState();
+        state.record("acc1|cds-1", "OLD", "MKTRANS");
+
+        GFF3File file = GFF3File.builder()
+                .annotations(List.of())
+                .translationState(state)
+                .build();
+
+        StringWriter writer = new StringWriter();
+        file.writeGFF3String(writer);
+
+        String output = writer.toString();
+        assertTrue(output.contains("##FASTA"));
+        assertTrue(output.contains(">acc1|cds-1"));
+        assertTrue(output.contains("MKTRANS"));
+    }
+
+    @Test
+    void writeGFF3String_noFastaWhenTranslationStateIsNull() throws Exception {
+        GFF3File file = GFF3File.builder().annotations(List.of()).build();
+
+        StringWriter writer = new StringWriter();
+        file.writeGFF3String(writer);
+
+        assertFalse(writer.toString().contains("##FASTA"));
+    }
+
+    @Test
+    void writeGFF3String_skipsEntryWithNullNewTranslation() throws Exception {
+        TranslationState state = new TranslationState();
+        state.record("acc1|cds-1", "OLD", null);
+
+        GFF3File file = GFF3File.builder()
+                .annotations(List.of())
+                .translationState(state)
+                .build();
+
+        StringWriter writer = new StringWriter();
+        file.writeGFF3String(writer);
+
+        assertFalse(writer.toString().contains("##FASTA"));
     }
 }
