@@ -33,5 +33,5 @@ Translation FASTA writing was split across two layers with inconsistent approach
 
 ## Open Questions (resolved during implementation)
 
-- **Multi-segment CDS dedup**: `TranslationState`'s map keying naturally deduplicates. Noted in `docs/notes/multi_segment_cds_dedup.md` for expert validation.
+- **Multi-segment CDS dedup**: `TranslationState`'s map keying naturally deduplicates — multiple CDS segments sharing the same ID resolve to one entry.
 - **TranslationState in FF->GFF3 path**: `TranslationFix.fixFeature()` captures the flat file's translation qualifier into `TranslationState` during validation, so translations are available for `GFF3File` to write even without a sequence source for re-translation.

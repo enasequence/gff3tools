@@ -75,6 +75,7 @@ public class GFF3FileTest {
         assertTrue(output.contains("##FASTA"));
         assertTrue(output.contains(">acc1|cds-1"));
         assertTrue(output.contains("MKTRANS"));
+        assertFalse(output.contains("OLD"), "New translation should be preferred over old");
     }
 
     @Test

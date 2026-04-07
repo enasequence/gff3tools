@@ -41,6 +41,11 @@ public class GFF3File implements IGFF3Feature {
     List<ValidationException> parsingWarnings;
     TranslationState translationState;
 
+    /**
+     * @param translationState when non-null, the FASTA section is written from this state;
+     *                         mutually exclusive with {@code fastaFilePath} — if both are set,
+     *                         {@code translationState} takes priority.
+     */
     public GFF3File(
             GFF3Header header,
             GFF3Species species,
@@ -105,17 +110,7 @@ public class GFF3File implements IGFF3Feature {
 
     private void writeFastaFromTranslationState(Writer writer) throws IOException {
         List<Map.Entry<String, String>> toWrite = new java.util.ArrayList<>();
-        translationState.forEach((key, entry) -> {
-            // Prefer new translation; fall back to old (e.g. FF→GFF3 path where no
-            // re-translation occurs because no sequence source is available).
-            String translation = entry.newTranslation();
-            if (translation == null || translation.isEmpty()) {
-                translation = entry.oldTranslation();
-            }
-            if (translation != null && !translation.isEmpty()) {
-                toWrite.add(Map.entry(key, translation));
-            }
-        });
+        translationState.forEachResolved((key, translation) -> toWrite.add(Map.entry(key, translation)));
 
         if (toWrite.isEmpty()) {
             return;

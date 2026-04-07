@@ -56,4 +56,20 @@ public class TranslationState {
     public void forEach(BiConsumer<String, TranslationEntry> action) {
         entries.forEach(action);
     }
+
+    /**
+     * Iterate resolved translations: prefers {@code newTranslation}, falls back to
+     * {@code oldTranslation}, skips entries where both are null/empty.
+     */
+    public void forEachResolved(BiConsumer<String, String> action) {
+        entries.forEach((key, entry) -> {
+            String translation = entry.newTranslation();
+            if (translation == null || translation.isEmpty()) {
+                translation = entry.oldTranslation();
+            }
+            if (translation != null && !translation.isEmpty()) {
+                action.accept(key, translation);
+            }
+        });
+    }
 }

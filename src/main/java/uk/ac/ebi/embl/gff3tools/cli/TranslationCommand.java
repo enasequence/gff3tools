@@ -160,18 +160,12 @@ public class TranslationCommand extends AbstractCommand {
         if (translationState == null) {
             return;
         }
-        translationState.forEach((key, entry) -> {
-            String translation = entry.newTranslation();
-            if (translation == null || translation.isEmpty()) {
-                translation = entry.oldTranslation();
-            }
-            if (translation != null && !translation.isEmpty()) {
-                try {
-                    TranslationWriter.writeTranslation(writer, key, translation);
-                } catch (Exception e) {
-                    throw new RuntimeException(
-                            "Failed to write translation for key '%s': %s".formatted(key, e.getMessage()), e);
-                }
+        translationState.forEachResolved((key, translation) -> {
+            try {
+                TranslationWriter.writeTranslation(writer, key, translation);
+            } catch (Exception e) {
+                throw new RuntimeException(
+                        "Failed to write translation for key '%s': %s".formatted(key, e.getMessage()), e);
             }
         });
     }
