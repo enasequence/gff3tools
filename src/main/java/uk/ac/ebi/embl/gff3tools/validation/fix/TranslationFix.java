@@ -63,6 +63,7 @@ public class TranslationFix {
                     feature.accession(), feature.getId().orElse(null));
             if (key != null) {
                 TranslationState state = context.get(TranslationState.class);
+                // Record the pre-existing translation; new translation computed later by TranslationFix
                 state.record(key, translation, null);
             }
         }
@@ -194,6 +195,8 @@ public class TranslationFix {
         String key =
                 TranslationState.buildKey(feature.accession(), feature.getId().orElse(null));
         if (key == null) {
+            log.debug("Could not build translation key for feature {} — skipping lookup",
+                    feature.getId().orElse("unknown"));
             return null;
         }
         TranslationState.TranslationEntry entry =

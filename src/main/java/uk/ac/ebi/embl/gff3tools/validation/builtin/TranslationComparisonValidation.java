@@ -79,16 +79,11 @@ public class TranslationComparisonValidation {
                 continue;
             }
             TranslationState.TranslationEntry translationEntry = state.get(key);
-            if (translationEntry == null
-                    || translationEntry.oldTranslation() == null
-                    || translationEntry.newTranslation() == null) {
-                if (translationEntry != null
-                        && translationEntry.oldTranslation() != null
-                        && translationEntry.newTranslation() == null) {
-                    log.debug(
-                            "Skipping translation comparison for {}: old translation present but no new translation computed",
-                            key);
-                }
+            if (translationEntry == null || translationEntry.oldTranslation() == null) {
+                continue;
+            }
+            if (translationEntry.newTranslation() == null) {
+                log.debug("Skipping translation comparison for {}: old translation present but no new translation computed", key);
                 continue;
             }
 
