@@ -17,6 +17,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
@@ -39,6 +40,7 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
  *
  * <p>If no old translation existed, this validation is a no-op.
  */
+@Slf4j
 @Gff3Validation(name = "TRANSLATION_COMPARISON")
 public class TranslationComparisonValidation {
 
@@ -78,6 +80,10 @@ public class TranslationComparisonValidation {
             }
             TranslationState.TranslationEntry translationEntry = state.get(key);
             if (translationEntry == null || translationEntry.oldTranslation() == null) {
+                continue;
+            }
+            if (translationEntry.newTranslation() == null) {
+                log.debug("Skipping translation comparison for {}: old translation present but no new translation computed", key);
                 continue;
             }
 
