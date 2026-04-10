@@ -121,7 +121,7 @@ public class TranslationFix {
             StringBuilder concatenated = new StringBuilder();
             for (GFF3Feature segment : sorted) {
                 String slice =
-                        sequenceLookup.getSequenceSlice(segment.getSeqId(), segment.getStart(), segment.getEnd());
+                        sequenceLookup.getSequenceSlice(segment.accession(), segment.getStart(), segment.getEnd());
                 concatenated.append(slice);
             }
 
@@ -195,7 +195,8 @@ public class TranslationFix {
         String key =
                 TranslationState.buildKey(feature.accession(), feature.getId().orElse(null));
         if (key == null) {
-            log.debug("Could not build translation key for feature {} — skipping lookup",
+            log.debug(
+                    "Could not build translation key for feature {} — skipping lookup",
                     feature.getId().orElse("unknown"));
             return null;
         }

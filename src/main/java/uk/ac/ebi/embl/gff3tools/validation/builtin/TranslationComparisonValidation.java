@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
@@ -83,11 +84,18 @@ public class TranslationComparisonValidation {
                 continue;
             }
             if (translationEntry.newTranslation() == null) {
-                log.debug("Skipping translation comparison for {}: old translation present but no new translation computed", key);
+                if (context.contains(SequenceLookup.class) && context.get(SequenceLookup.class) != null) {
+                    String featureId = representative.getId().orElse("unknown");
+                    mismatches.add(
+                            ("CDS \"%s\" on %s: existing translation present but no new translation was computed")
+                                    .formatted(featureId, representative.accession()));
+                }
                 continue;
             }
 
-            if (!translationEntry.oldTranslation().equals(translationEntry.newTranslation())) {
+            if (translationEntry.oldTranslation().equals(translationEntry.newTranslation())) {
+                log.info("Successfully compared translation for: {}", key);
+            } else {
                 String featureId = representative.getId().orElse("unknown");
                 mismatches.add(
                         ("CDS \"%s\" on %s: existing translation length %d differs from computed translation length %d")
