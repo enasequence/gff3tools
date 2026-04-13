@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3toff;
 
+import java.nio.ByteBuffer;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -48,6 +49,8 @@ import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.metadata.ReferenceData;
 import uk.ac.ebi.embl.gff3tools.metadata.SubmissionAccount;
 import uk.ac.ebi.embl.gff3tools.metadata.SubmitterDetails;
+import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -73,14 +76,20 @@ public class GFF3Mapper {
     Entry entry;
     GFF3FileReader gff3FileReader;
     private final MasterMetadataProvider metadataProvider;
+    private final SequenceLookup sequenceLookup;
 
     public GFF3Mapper(GFF3FileReader gff3FileReader, ValidationContext context) {
+        this(gff3FileReader, context, null);
+    }
+
+    public GFF3Mapper(GFF3FileReader gff3FileReader, ValidationContext context, SequenceLookup sequenceLookup) {
         parentFeatures = new HashMap<>();
         joinableFeatureMap = new HashMap<>();
         entry = null;
         this.gff3FileReader = gff3FileReader;
         this.metadataProvider =
                 context.contains(MasterMetadataProvider.class) ? context.get(MasterMetadataProvider.class) : null;
+        this.sequenceLookup = sequenceLookup;
     }
 
     public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) throws ValidationException {
@@ -115,6 +124,9 @@ public class GFF3Mapper {
 
             mapGFF3Feature(gff3Feature, gff3FileReader.getTranslationOffsetMap());
         }
+
+        // Load sequence data after feature mapping to minimise time it spends in memory.
+        applySequenceData(sequenceRegion, sequence);
 
         return entry;
     }
@@ -298,6 +310,33 @@ public class GFF3Mapper {
      * @param gff3Feature the GFF3 feature to extract attributes from
      * @return a map of attribute names to their values
      */
+    /**
+     * Populates the nucleotide sequence data on the Sequence object from the SequenceLookup.
+     * Gracefully skips if no lookup is available or no sequence region is defined.
+     */
+    private void applySequenceData(GFF3SequenceRegion sequenceRegion, Sequence sequence) {
+        if (sequenceLookup == null || sequenceRegion == null) {
+            return;
+        }
+        try {
+            String nucleotides = sequenceLookup.getSequenceSlice(
+                    sequenceRegion.accessionId(),
+                    sequenceRegion.start(),
+                    sequenceRegion.end(),
+                    SequenceRangeOption.WHOLE_SEQUENCE);
+            // Convert to lowercase bytes in a single pass to avoid an intermediate
+            // String allocation from toLowerCase() (saves ~2N bytes of peak memory).
+            byte[] seqBytes = new byte[nucleotides.length()];
+            for (int i = 0; i < nucleotides.length(); i++) {
+                seqBytes[i] = (byte) Character.toLowerCase(nucleotides.charAt(i));
+            }
+            sequence.setSequence(ByteBuffer.wrap(seqBytes));
+            sequence.setLength((long) seqBytes.length);
+        } catch (Exception e) {
+            LOGGER.warn("Failed to retrieve sequence for '{}': {}", sequenceRegion.accessionId(), e.getMessage());
+        }
+    }
+
     private Map<String, List<String>> getAttributesMap(GFF3Feature gff3Feature) {
         Map<String, List<String>> attributesMap = new HashMap<>();
         for (String key : gff3Feature.getAttributeKeys()) {
