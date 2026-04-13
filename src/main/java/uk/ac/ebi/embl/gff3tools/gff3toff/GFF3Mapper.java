@@ -383,8 +383,7 @@ public class GFF3Mapper {
                 // Monopartite is a valid type but produces no source qualifier
                 return;
             default:
-                LOGGER.warn(
-                        "Unrecognised chromosome_type value '{}'; skipping qualifier mapping", chromosomeType);
+                LOGGER.warn("Unrecognised chromosome_type value '{}'; skipping qualifier mapping", chromosomeType);
                 return;
         }
 

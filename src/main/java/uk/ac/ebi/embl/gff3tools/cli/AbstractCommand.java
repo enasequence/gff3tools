@@ -148,9 +148,8 @@ public abstract class AbstractCommand implements Runnable {
         return switch (ext.toLowerCase()) {
             case "fasta", "fa", "fna" -> SequenceFormat.fasta;
             case "seq" -> SequenceFormat.plain;
-            default ->
-                throw new RuntimeException("Unrecognized sequence file extension: ." + ext
-                        + ". Use --sequence-format to specify the format explicitly.");
+            default -> throw new RuntimeException("Unrecognized sequence file extension: ." + ext
+                    + ". Use --sequence-format to specify the format explicitly.");
         };
     }
 
@@ -158,8 +157,7 @@ public abstract class AbstractCommand implements Runnable {
      * Builds a list of {@link FileSequenceSource} instances from the parsed {@code --sequence} specs.
      * Returns an empty list if no specs are provided. Sources are created but not yet initialized.
      */
-    protected List<FileSequenceSource> buildFastaSourceList(
-            List<String> sequenceSpecs, SequenceFormat sequenceFormat) {
+    protected List<FileSequenceSource> buildFastaSourceList(List<String> sequenceSpecs, SequenceFormat sequenceFormat) {
         if (sequenceSpecs == null || sequenceSpecs.isEmpty()) {
             return List.of();
         }
@@ -199,8 +197,7 @@ public abstract class AbstractCommand implements Runnable {
      * <p>Callers should pass the same sources list they used for
      * {@link #buildCompositeProvider(List)} so each FASTA file is opened only once.
      */
-    protected FastaHeaderProvider buildHeaderProvider(
-            List<FileSequenceSource> sources, Path fastaHeaderPath) {
+    protected FastaHeaderProvider buildHeaderProvider(List<FileSequenceSource> sources, Path fastaHeaderPath) {
         FastaHeaderProvider headerProvider = new FastaHeaderProvider();
 
         // Register FASTA-embedded header sources (highest priority).
