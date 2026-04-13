@@ -24,6 +24,7 @@ import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.CliFastaHeaderSource;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FileFastaHeaderSource;
@@ -502,5 +503,75 @@ class GFF3MapperTest {
         List<Qualifier> quals = source.getQualifiers("organelle");
         assertFalse(quals.isEmpty(), "Expected /organelle qualifier for uppercase location");
         assertEquals("mitochondrion", quals.get(0).getValue());
+    }
+
+    // ── Sequence data population tests ──
+
+    @Test
+    void populatesSequenceDataFromLookup() throws Exception {
+        String nucleotides = "ATCGATCG";
+        SequenceLookup lookup = (seqId, from, to) -> nucleotides;
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), null, lookup);
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 8));
+
+        Sequence seq = entry.getSequence();
+        assertNotNull(seq.getSequenceByte(), "Sequence byte buffer should be populated");
+        assertEquals(8L, seq.getLength(), "Sequence length should match nucleotide count");
+    }
+
+    @Test
+    void sequenceDataIsLowercased() throws Exception {
+        String nucleotides = "ATCG";
+        SequenceLookup lookup = (seqId, from, to) -> nucleotides;
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), null, lookup);
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 4));
+
+        byte[] bytes = entry.getSequence().getSequenceByte();
+        assertEquals("atcg", new String(bytes));
+    }
+
+    @Test
+    void noSequenceLookupLeavesSequenceEmpty() throws Exception {
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), null, null);
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 100));
+
+        assertNull(entry.getSequence().getSequenceByte(), "Sequence byte buffer should remain null");
+        assertEquals(0L, entry.getSequence().getLength());
+    }
+
+    @Test
+    void sequenceLookupFailureIsHandledGracefully() throws Exception {
+        SequenceLookup lookup = (seqId, from, to) -> {
+            throw new RuntimeException("FASTA file not found");
+        };
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), null, lookup);
+        Entry entry = assertDoesNotThrow(() -> mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 100)));
+
+        assertNull(entry.getSequence().getSequenceByte(), "Sequence should remain empty on lookup failure");
+    }
+
+    @Test
+    void sequenceLookupPassesCorrectCoordinates() throws Exception {
+        SequenceLookup lookup = mock(SequenceLookup.class);
+        when(lookup.getSequenceSlice("seq1", 1L, 500L)).thenReturn("a".repeat(500));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), null, lookup);
+        mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 500));
+
+        verify(lookup).getSequenceSlice("seq1", 1L, 500L);
+    }
+
+    @Test
+    void nullSequenceRegionSkipsSequenceLookup() throws Exception {
+        SequenceLookup lookup = mock(SequenceLookup.class);
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), null, lookup);
+        GFF3Annotation annotation = new GFF3Annotation(); // no sequence region
+        mapper.mapGFF3ToEntry(annotation);
+
+        verifyNoInteractions(lookup);
     }
 }
