@@ -47,22 +47,6 @@ public class GFF3Mapper {
     private final SequenceFactory sequenceFactory = new SequenceFactory();
     private static final Logger LOGGER = LoggerFactory.getLogger(GFF3Mapper.class);
 
-    /** INSDC controlled vocabulary for /organelle qualifier values. */
-    private static final Set<String> VALID_ORGANELLE_VALUES = Set.of(
-            "mitochondrion",
-            "kinetoplast",
-            "chloroplast",
-            "chromoplast",
-            "plastid",
-            "macronuclear",
-            "nucleomorph",
-            "hydrogenosome",
-            "cyanelle",
-            "apicoplast",
-            "leucoplast",
-            "proplastid",
-            "chromatophore");
-
     Map<String, GFF3Feature> parentFeatures;
     // Used to keep track of features that will be merged using a location join
     Map<String, Feature> joinableFeatureMap;
@@ -426,12 +410,6 @@ public class GFF3Mapper {
             return;
         }
 
-        if (VALID_ORGANELLE_VALUES.contains(normalised)) {
-            sourceFt.addQualifier("organelle", normalised);
-        } else {
-            LOGGER.warn(
-                    "Unrecognised chromosome_location value '{}'; skipping organelle qualifier mapping",
-                    chromosomeLocation);
-        }
+        sourceFt.addQualifier("organelle", normalised);
     }
 }
