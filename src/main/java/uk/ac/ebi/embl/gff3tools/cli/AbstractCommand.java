@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
+import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
@@ -197,7 +198,8 @@ public abstract class AbstractCommand implements Runnable {
      * <p>Callers should pass the same sources list they used for
      * {@link #buildCompositeProvider(List)} so each FASTA file is opened only once.
      */
-    protected FastaHeaderProvider buildHeaderProvider(List<FileSequenceSource> sources, Path fastaHeaderPath) {
+    protected FastaHeaderProvider buildHeaderProvider(List<FileSequenceSource> sources, Path fastaHeaderPath)
+            throws CLIException {
         FastaHeaderProvider headerProvider = new FastaHeaderProvider();
 
         // Register FASTA-embedded header sources (highest priority).
@@ -222,14 +224,14 @@ public abstract class AbstractCommand implements Runnable {
      * Parses a JSON file at the given path into a {@link FastaHeader}.
      * Fails fast with a descriptive error if the file is missing or malformed.
      */
-    private FastaHeader parseFastaHeaderJson(Path path) {
+    private FastaHeader parseFastaHeaderJson(Path path) throws CLIException {
         try {
             ObjectMapper mapper = JsonMapper.builder()
                     .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
                     .build();
             return mapper.readValue(path.toFile(), FastaHeader.class);
         } catch (Exception e) {
-            throw new RuntimeException(
+            throw new CLIException(
                     "Failed to parse --fasta-header JSON file '%s': %s".formatted(path, e.getMessage()), e);
         }
     }

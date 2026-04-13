@@ -51,8 +51,6 @@ public class FileConversionCommand extends AbstractCommand {
     @CommandLine.Mixin
     public SequenceOptions sequenceOptions;
 
-    private FastaHeaderProvider headerProvider;
-
     @Override
     public void run() {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
@@ -76,7 +74,7 @@ public class FileConversionCommand extends AbstractCommand {
             List<FileSequenceSource> sources =
                     buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
             CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
-            headerProvider = buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
+            FastaHeaderProvider headerProvider = buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
 
             try (BufferedReader inputReader = getPipe(
                             Files::newBufferedReader,
@@ -87,7 +85,7 @@ public class FileConversionCommand extends AbstractCommand {
                 fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
                 toFileType = validateFileType(toFileType, outputFilePath, "-t");
                 try (ValidationEngine engine = initValidationEngine(ruleOverrides, compositeProvider)) {
-                    Converter converter = getConverter(engine, fromFileType, toFileType);
+                    Converter converter = getConverter(engine, fromFileType, toFileType, headerProvider);
                     converter.convert(inputReader, outputWriter);
                 }
             }
@@ -126,7 +124,10 @@ public class FileConversionCommand extends AbstractCommand {
     }
 
     private Converter getConverter(
-            ValidationEngine engine, ConversionFileFormat inputFileType, ConversionFileFormat outputFileType)
+            ValidationEngine engine,
+            ConversionFileFormat inputFileType,
+            ConversionFileFormat outputFileType,
+            FastaHeaderProvider headerProvider)
             throws FormatSupportException {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
             return new Gff3ToFFConverter(engine, inputFilePath, headerProvider);

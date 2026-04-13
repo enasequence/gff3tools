@@ -124,9 +124,8 @@ class GFF3MapperTest {
         GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
         // Should not throw
         Entry entry = assertDoesNotThrow(() -> mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000)));
-        // Topology should not be set to LINEAR or CIRCULAR
-        assertNotEquals(Sequence.Topology.LINEAR, entry.getSequence().getTopology());
-        assertNotEquals(Sequence.Topology.CIRCULAR, entry.getSequence().getTopology());
+        // Topology should remain at its default (null)
+        assertNull(entry.getSequence().getTopology());
     }
 
     @Test
@@ -474,17 +473,19 @@ class GFF3MapperTest {
     }
 
     @Test
-    void unrecognisedChromosomeLocationIsSkipped() throws Exception {
+    void unrecognisedChromosomeLocationIsPassedThrough() throws Exception {
         FastaHeader h = createHeaderWithChromosome(null, "Unknown", null);
 
         FastaHeaderProvider provider = new FastaHeaderProvider();
         provider.addSource(new FileFastaHeaderSource(Map.of("seq1", h)));
 
         GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
-        Entry entry = assertDoesNotThrow(() -> mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000)));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
-        assertTrue(source.getQualifiers("organelle").isEmpty());
+        List<Qualifier> quals = source.getQualifiers("organelle");
+        assertFalse(quals.isEmpty(), "Expected /organelle qualifier for unrecognised location");
+        assertEquals("unknown", quals.get(0).getValue());
     }
 
     @Test

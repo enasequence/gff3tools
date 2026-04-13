@@ -29,10 +29,6 @@ public class FastaHeaderProvider {
         this.sources = new ArrayList<>();
     }
 
-    public FastaHeaderProvider(List<FastaHeaderSource> sources) {
-        this.sources = new ArrayList<>(sources);
-    }
-
     /**
      * Registers a header source. Sources are queried in registration order.
      */

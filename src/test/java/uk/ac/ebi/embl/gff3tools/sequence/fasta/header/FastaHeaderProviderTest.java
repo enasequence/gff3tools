@@ -12,7 +12,6 @@ package uk.ac.ebi.embl.gff3tools.sequence.fasta.header;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
@@ -46,7 +45,8 @@ class FastaHeaderProviderTest {
     @Test
     void cliSourceReturnsHeaderForAnyId() {
         FastaHeader h = createHeader("CLI header");
-        FastaHeaderProvider provider = new FastaHeaderProvider(List.of(new CliFastaHeaderSource(h)));
+        FastaHeaderProvider provider = new FastaHeaderProvider();
+        provider.addSource(new CliFastaHeaderSource(h));
 
         assertEquals("CLI header", provider.getHeader("anyId").orElseThrow().getDescription());
         assertEquals("CLI header", provider.getHeader("otherId").orElseThrow().getDescription());
