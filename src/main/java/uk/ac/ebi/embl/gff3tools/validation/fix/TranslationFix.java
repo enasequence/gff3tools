@@ -101,9 +101,14 @@ public class TranslationFix {
 
     private void translateCdsGroup(List<GFF3Feature> segments, SequenceLookup sequenceLookup, int line)
             throws ValidationException {
-        // Sort segments by genomic start position
+
+        boolean isTransSpliced = segments.stream().anyMatch(s -> s.hasAttribute(GFF3Attributes.TRANS_SPLICING));
+
         List<GFF3Feature> sorted = new ArrayList<>(segments);
-        sorted.sort(Comparator.comparingLong(GFF3Feature::getStart));
+        if (!isTransSpliced) {
+            // Sort segments by genomic start position when they are not trans-spliced.
+            sorted.sort(Comparator.comparingLong(GFF3Feature::getStart));
+        }
 
         GFF3Feature representative = sorted.get(0);
         String oldTranslation = lookupOldTranslation(representative);
@@ -113,6 +118,7 @@ public class TranslationFix {
         boolean hasException = sorted.stream()
                 .anyMatch(s -> s.getAttribute(GFF3Attributes.EXCEPTION).isPresent());
         if (hasException) {
+            recordTranslationState(representative, line, oldTranslation, oldTranslation);
             return;
         }
 
@@ -141,7 +147,7 @@ public class TranslationFix {
                 recordTranslationState(representative, line, oldTranslation, translation);
             }
 
-            propagateJoinAttributes(sorted);
+            propagateJoinAttributes(sorted, result);
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
@@ -158,7 +164,7 @@ public class TranslationFix {
      * first (representative) feature. This method moves 3' partial to the last segment where
      * it semantically belongs, and propagates pseudo from the first segment to all others.
      */
-    private void propagateJoinAttributes(List<GFF3Feature> segments) {
+    private void propagateJoinAttributes(List<GFF3Feature> segments, TranslationResult result) {
         if (segments.size() <= 1) {
             return;
         }
@@ -166,16 +172,18 @@ public class TranslationFix {
         GFF3Feature first = segments.get(0);
         GFF3Feature last = segments.get(segments.size() - 1);
 
-        // 3' partiality is computed on the first feature by the Translator but belongs
-        // semantically to the last join segment — move it there.
-        if (first.isThreePrimePartial()) {
-            boolean preserveFivePrime = first.isFivePrimePartial();
-            first.removeAttributeList(GFF3Attributes.PARTIAL);
-            if (preserveFivePrime) {
-                first.setFivePrimePartial();
+        // Partiality based on translation is set to first or last segment based on strand
+        if (result.isFixedFivePrimePartial()) {
+            GFF3Feature fivePrimeTarget = first.isComplement() ? last : first;
+            if (!fivePrimeTarget.isFivePrimePartial()) {
+                fivePrimeTarget.setFivePrimePartial();
             }
-            if (!last.isThreePrimePartial()) {
-                last.setThreePrimePartial();
+        }
+
+        if (result.isFixedThreePrimePartial()) {
+            GFF3Feature threePrimeTarget = first.isComplement() ? first : last;
+            if (!threePrimeTarget.isThreePrimePartial()) {
+                threePrimeTarget.setThreePrimePartial();
             }
         }
 

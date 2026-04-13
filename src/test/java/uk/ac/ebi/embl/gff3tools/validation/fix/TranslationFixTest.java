@@ -19,6 +19,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -271,6 +272,43 @@ class TranslationFixTest {
         assertNull(entry.oldTranslation());
         assertEquals("MK", entry.newTranslation());
     }
+
+    @Test
+    void sortsNonTransSplicedSegmentsByGenomicPosition() throws Exception {
+        // Segments added in reverse genomic order — without trans_splicing they must be sorted
+        when(mockLookup.getSequenceSlice("seq1", 1L, 9L)).thenReturn("ATGAAAAAA");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 18L)).thenReturn("CCCGGGTAA");
+
+        GFF3Feature segHigh = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 18, "+");
+        GFF3Feature segLow  = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1",  1,  9, "+");
+        // Add high-coord segment first (reverse genomic order)
+        GFF3Annotation annotation = createAnnotation(segHigh, segLow);
+        fix.fixAnnotation(annotation, 1);
+
+        // After sort: segLow(1-9) first → "ATGAAATAA"+"CCCGGGAAA" → translation "MKKPG"
+        String key = TranslationState.buildKey("seq1", "cds1");
+        assertEquals("MKKPG", translationState.get(key).newTranslation());
+    }
+
+    @Test
+    void preservesOriginalOrderForTransSplicedSegments() throws Exception {
+        // Trans-spliced join: ATG is at the high-coord segment which appears first in the join
+        // Original order must be preserved — sorting by genomic position would break the translation
+        when(mockLookup.getSequenceSlice("seq1", 10L, 18L)).thenReturn("ATGAAAAAA");
+        when(mockLookup.getSequenceSlice("seq1",  1L,  9L)).thenReturn("CCCGGGTAA");
+
+        GFF3Feature segHigh = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 18, "+");
+        GFF3Feature segLow  = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1",  1,  9, "+");
+        segHigh.addAttribute(GFF3Attributes.TRANS_SPLICING, "true");
+        // Add high-coord segment first — this is the intended trans-spliced order
+        GFF3Annotation annotation = createAnnotation(segHigh, segLow);
+        fix.fixAnnotation(annotation, 1);
+
+        // Original order preserved: segHigh(10-18) first → "ATGAAATAA"+"CCCGGGAAA" → "MKKPG"
+        String key = TranslationState.buildKey("seq1", "cds1");
+        assertEquals("MKKPG", translationState.get(key).newTranslation());
+    }
+
 
     private GFF3Annotation createAnnotation(GFF3Feature... features) {
         GFF3Annotation annotation = new GFF3Annotation();
