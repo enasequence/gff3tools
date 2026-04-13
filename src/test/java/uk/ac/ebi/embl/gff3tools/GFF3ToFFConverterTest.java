@@ -63,5 +63,4 @@ class GFF3ToFFConverterTest {
             Files.deleteIfExists(Paths.get(outFile));
         }
     }
-
 }
