@@ -18,6 +18,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
@@ -26,7 +27,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
         name = "GENE_ASSOCIATED_FEATURE_REMOVAL",
         description =
                 "Removes gene features entry if locations are identical with gene associated features (CDS, RRNA, TRNA)")
-public class GeneAssociatedFeatureRemoval {
+public class GeneAssociatedFeatureRemoval implements Fix {
 
     @InjectContext
     private ValidationContext context;

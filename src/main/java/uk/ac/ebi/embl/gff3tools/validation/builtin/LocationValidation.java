@@ -23,11 +23,12 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation(name = "LOCATION")
-public class LocationValidation {
+public class LocationValidation implements Validation {
 
     private static final String INVALID_START_END_MESSAGE = "Invalid start/end for accession \"%s\"";
     private static final String INVALID_PROPEPTIDE_CDS_LOCATION_MESSAGE = "Propeptide [%d %d] not inside any CDS";

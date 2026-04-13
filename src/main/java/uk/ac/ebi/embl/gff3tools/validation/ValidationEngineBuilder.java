@@ -13,17 +13,22 @@ package uk.ac.ebi.embl.gff3tools.validation;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 
 public class ValidationEngineBuilder {
 
     private final ValidationConfig validationConfig;
     private boolean failFast = false;
     private final List<ContextProvider<?>> providerOverrides = new ArrayList<>();
+    private boolean classpathScanningEnabled = true;
+    private final List<Fix> fixOverrides = new ArrayList<>();
+    private final List<Validation> validatorOverrides = new ArrayList<>();
 
     public ValidationEngineBuilder() {
 
-        // Loads default severity rules and validatorOverrides
+        // Loads default severity rules from properties
         validationConfig = getValidationConfig();
     }
 
@@ -31,6 +36,9 @@ public class ValidationEngineBuilder {
         ValidationRegistry registry = ValidationRegistry.builder()
                 .config(validationConfig)
                 .providers(providerOverrides)
+                .classpathScanningEnabled(classpathScanningEnabled)
+                .fixes(fixOverrides)
+                .validators(validatorOverrides)
                 .build();
         return new ValidationEngine(validationConfig, registry, registry.getContext(), failFast);
     }
@@ -43,7 +51,45 @@ public class ValidationEngineBuilder {
      * @return this builder for chaining
      */
     public ValidationEngineBuilder withProvider(ContextProvider<?> provider) {
+        Objects.requireNonNull(provider, "provider must not be null");
         providerOverrides.add(provider);
+        return this;
+    }
+
+    /**
+     * Disable classpath scanning. When disabled, only explicitly registered
+     * fixes, validators, and providers participate in the engine.
+     *
+     * @return this builder for chaining
+     */
+    public ValidationEngineBuilder disableClasspathScanning() {
+        this.classpathScanningEnabled = false;
+        return this;
+    }
+
+    /**
+     * Register an explicit fix instance. The instance must be annotated with
+     * {@code @Gff3Fix} and implement the {@link Fix} marker interface.
+     *
+     * @param instance the fix instance to register
+     * @return this builder for chaining
+     */
+    public ValidationEngineBuilder withFix(Fix instance) {
+        Objects.requireNonNull(instance, "fix instance must not be null");
+        fixOverrides.add(instance);
+        return this;
+    }
+
+    /**
+     * Register an explicit validator instance. The instance must be annotated with
+     * {@code @Gff3Validation} and implement the {@link Validation} marker interface.
+     *
+     * @param instance the validator instance to register
+     * @return this builder for chaining
+     */
+    public ValidationEngineBuilder withValidator(Validation instance) {
+        Objects.requireNonNull(instance, "validator instance must not be null");
+        validatorOverrides.add(instance);
         return this;
     }
 

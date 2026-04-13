@@ -16,11 +16,12 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation(name = "DUPLICATE_SEQ_ID")
-public class DuplicateSeqIdValidation {
+public class DuplicateSeqIdValidation implements Validation {
 
     private HashSet<String> processedAnnotations = new HashSet<>();
     private String currentAccession = null;

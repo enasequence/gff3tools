@@ -23,12 +23,13 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Slf4j
 @Gff3Validation(name = "ATTRIBUTES_VALUE")
-public class AttributesValueValidation {
+public class AttributesValueValidation implements Validation {
 
     private static final String INVALID_FEATURE_PRODUCT_PATTERN =
             "Feature \"%s\" requires \"%s\" attributes with value matching the pattern \"%s\"";

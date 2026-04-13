@@ -19,13 +19,14 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 
 @Slf4j
 @Gff3Fix(name = "GAP_ESTIMATED_LENGTH", description = "Set estimated_length for a gap or assembly_gap feature")
-public class GapEstimatedLengthFix {
+public class GapEstimatedLengthFix implements Fix {
 
     @InjectContext
     private ValidationContext context;

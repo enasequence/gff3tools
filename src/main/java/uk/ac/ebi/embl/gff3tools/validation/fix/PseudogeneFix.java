@@ -17,12 +17,13 @@ import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 
 @Slf4j
 @Gff3Fix(name = "REMOVE_PSEUDOGENE_QUOTE", description = "Remove single quotes from Pseudogene value")
-public class PseudogeneFix {
+public class PseudogeneFix implements Fix {
 
     @FixMethod(
             rule = "REMOVE_PSEUDOGENE_QUOTE",
