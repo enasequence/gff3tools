@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.EntryFactory;
+import uk.ac.ebi.embl.api.entry.Text;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.feature.FeatureFactory;
 import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
@@ -30,6 +31,8 @@ import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -44,18 +47,40 @@ public class GFF3Mapper {
     private final SequenceFactory sequenceFactory = new SequenceFactory();
     private static final Logger LOGGER = LoggerFactory.getLogger(GFF3Mapper.class);
 
+    /** INSDC controlled vocabulary for /organelle qualifier values. */
+    private static final Set<String> VALID_ORGANELLE_VALUES = Set.of(
+            "mitochondrion",
+            "kinetoplast",
+            "chloroplast",
+            "chromoplast",
+            "plastid",
+            "macronuclear",
+            "nucleomorph",
+            "hydrogenosome",
+            "cyanelle",
+            "apicoplast",
+            "leucoplast",
+            "proplastid",
+            "chromatophore");
+
     Map<String, GFF3Feature> parentFeatures;
     // Used to keep track of features that will be merged using a location join
     Map<String, Feature> joinableFeatureMap;
 
     Entry entry;
     GFF3FileReader gff3FileReader;
+    private final FastaHeaderProvider headerProvider;
 
     public GFF3Mapper(GFF3FileReader gff3FileReader) {
+        this(gff3FileReader, null);
+    }
+
+    public GFF3Mapper(GFF3FileReader gff3FileReader, FastaHeaderProvider headerProvider) {
         parentFeatures = new HashMap<>();
         joinableFeatureMap = new HashMap<>();
         entry = null;
         this.gff3FileReader = gff3FileReader;
+        this.headerProvider = headerProvider;
     }
 
     public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) throws ValidationException {
@@ -80,6 +105,8 @@ public class GFF3Mapper {
 
         entry.addFeature(sourceFeature);
         entry.setSequence(sequence);
+
+        applyFastaHeader(sequenceRegion, entry, sequence, sourceFeature);
 
         for (GFF3Feature gff3Feature : gff3Annotation.getFeatures()) {
             if (gff3Feature.getId().isPresent()) {
@@ -277,5 +304,134 @@ public class GFF3Mapper {
             gff3Feature.getAttributeList(key).ifPresent(values -> attributesMap.put(key, values));
         }
         return attributesMap;
+    }
+
+    /**
+     * Applies FASTA header metadata to the EMBL entry, sequence, and source feature.
+     * Gracefully skips if no header provider is available or no header is found for the seqId.
+     */
+    private void applyFastaHeader(
+            GFF3SequenceRegion sequenceRegion, Entry entry, Sequence sequence, SourceFeature sourceFt) {
+        if (headerProvider == null) {
+            return;
+        }
+        if (sequenceRegion == null) {
+            return;
+        }
+
+        String seqId = sequenceRegion.accessionId();
+        Optional<FastaHeader> opt = headerProvider.getHeader(seqId);
+        if (opt.isEmpty()) {
+            LOGGER.debug("No FASTA header found for seqId '{}'; skipping header mapping", seqId);
+            return;
+        }
+
+        FastaHeader h = opt.get();
+
+        // FR-1: Description mapping (DE line)
+        if (h.getDescription() != null) {
+            entry.setDescription(new Text(h.getDescription()));
+        }
+
+        // FR-2: Molecule type mapping (ID line field 4 + source qualifier)
+        if (h.getMoleculeType() != null) {
+            sequence.setMoleculeType(h.getMoleculeType());
+            sourceFt.addQualifier("mol_type", h.getMoleculeType());
+        }
+
+        // FR-3: Topology mapping (ID line field 3)
+        if (h.getTopology() != null) {
+            mapTopology(h.getTopology(), sequence);
+        }
+
+        // FR-4 + FR-5: Chromosome type and name mapping
+        if (h.getChromosomeType() != null) {
+            mapChromosomeType(h.getChromosomeType(), h.getChromosomeName(), sourceFt);
+        } else if (h.getChromosomeName() != null) {
+            // FR-4: Standalone chromosome name (no type specified)
+            sourceFt.addQualifier("chromosome", h.getChromosomeName());
+        }
+
+        // FR-5: Chromosome location mapping
+        if (h.getChromosomeLocation() != null) {
+            mapChromosomeLocation(h.getChromosomeLocation(), sourceFt);
+        }
+    }
+
+    /**
+     * Maps topology string to {@link Sequence.Topology} enum.
+     * Case-insensitive; logs a warning and skips on unrecognised values (FR-8).
+     */
+    private void mapTopology(String topology, Sequence sequence) {
+        if ("linear".equalsIgnoreCase(topology)) {
+            sequence.setTopology(Sequence.Topology.LINEAR);
+        } else if ("circular".equalsIgnoreCase(topology)) {
+            sequence.setTopology(Sequence.Topology.CIRCULAR);
+        } else {
+            LOGGER.warn("Unrecognised topology value '{}'; skipping topology mapping", topology);
+        }
+    }
+
+    /**
+     * Maps chromosome_type to the appropriate EMBL source feature qualifier.
+     * Uses chromosome_name as the qualifier value when available.
+     *
+     * @param chromosomeType  the chromosome type string from the FASTA header
+     * @param chromosomeName  the chromosome name (nullable) used as qualifier value
+     * @param sourceFt        the source feature to add the qualifier to
+     */
+    private void mapChromosomeType(String chromosomeType, String chromosomeName, SourceFeature sourceFt) {
+        String qualifierName;
+        switch (chromosomeType.toLowerCase()) {
+            case "chromosome":
+                qualifierName = "chromosome";
+                break;
+            case "plasmid":
+                qualifierName = "plasmid";
+                break;
+            case "segment":
+                qualifierName = "segment";
+                break;
+            case "linkage group":
+                qualifierName = "linkage_group";
+                break;
+            case "monopartite":
+                // Monopartite is a valid type but produces no source qualifier
+                return;
+            default:
+                LOGGER.warn(
+                        "Unrecognised chromosome_type value '{}'; skipping qualifier mapping", chromosomeType);
+                return;
+        }
+
+        if (chromosomeName != null) {
+            sourceFt.addQualifier(qualifierName, chromosomeName);
+        } else {
+            sourceFt.addQualifier(qualifierName);
+        }
+    }
+
+    /**
+     * Maps chromosome_location to the EMBL /organelle qualifier on the source feature.
+     * "Nuclear" is the default and produces no qualifier. Unrecognised values log a warning.
+     *
+     * @param chromosomeLocation  the chromosome location string from the FASTA header
+     * @param sourceFt            the source feature to add the qualifier to
+     */
+    private void mapChromosomeLocation(String chromosomeLocation, SourceFeature sourceFt) {
+        String normalised = chromosomeLocation.toLowerCase();
+
+        if ("nuclear".equals(normalised)) {
+            // Nuclear is the default — no organelle qualifier needed
+            return;
+        }
+
+        if (VALID_ORGANELLE_VALUES.contains(normalised)) {
+            sourceFt.addQualifier("organelle", normalised);
+        } else {
+            LOGGER.warn(
+                    "Unrecognised chromosome_location value '{}'; skipping organelle qualifier mapping",
+                    chromosomeLocation);
+        }
     }
 }
