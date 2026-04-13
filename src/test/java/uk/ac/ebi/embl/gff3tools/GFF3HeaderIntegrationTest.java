@@ -137,7 +137,8 @@ class GFF3HeaderIntegrationTest {
             String expectedFilePath = getResourcePath("gff3toff_header_tests/fasta_header_plasmid_mito.embl")
                     .toString();
             String expected = Files.readString(Path.of(expectedFilePath));
-            assertEquals(expected.trim(), actual.trim(), "EMBL output mismatch for plasmid + mitochondrion header test");
+            assertEquals(
+                    expected.trim(), actual.trim(), "EMBL output mismatch for plasmid + mitochondrion header test");
         } finally {
             Files.deleteIfExists(outFile);
         }
