@@ -21,4 +21,8 @@ public class CLIException extends ExitException {
     public CLIException(String message) {
         super(message);
     }
+
+    public CLIException(String message, Exception cause) {
+        super(message, cause);
+    }
 }

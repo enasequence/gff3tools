@@ -18,7 +18,10 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import org.junit.jupiter.api.Test;
+import java.util.stream.Stream;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.cli.Main;
 
@@ -31,39 +34,38 @@ class GFF3HeaderIntegrationTest {
         return Paths.get(resource.getPath());
     }
 
-    @Test
-    void testWriteEMBLWithFastaHeaderLinear() throws Exception {
-        Path gff3 = getResourcePath("gff3toff_header_tests/fasta_header_basic.gff3");
-        Path headerJson = getResourcePath("sequence/fasta/header_test.json");
-        Path outFile = Files.createTempFile("header-test-linear-", ".embl");
-
-        try {
-            String[] args = {"conversion", "--fasta-header", headerJson.toString(), gff3.toString(), outFile.toString()
-            };
-            StringWriter err = new StringWriter();
-            StringWriter out = new StringWriter();
-            CommandLine command = new CommandLine(new Main());
-            command.setErr(new PrintWriter(err));
-            command.setOut(new PrintWriter(out));
-
-            int exitCode = command.execute(args);
-            assertEquals(0, exitCode, "Wrong exit code.\nout: " + out.toString() + "\nerr: " + err.toString());
-
-            String actual = Files.readString(outFile);
-            String expectedFilePath = getResourcePath("gff3toff_header_tests/fasta_header_basic.embl")
-                    .toString();
-            String expected = Files.readString(Path.of(expectedFilePath));
-            assertEquals(expected.trim(), actual.trim(), "EMBL output mismatch for linear header test");
-        } finally {
-            Files.deleteIfExists(outFile);
-        }
+    static Stream<Arguments> headerTestCases() {
+        return Stream.of(
+                Arguments.of(
+                        "gff3toff_header_tests/fasta_header_basic.gff3",
+                        "sequence/fasta/header_test.json",
+                        "gff3toff_header_tests/fasta_header_basic.embl",
+                        "linear basic header"),
+                Arguments.of(
+                        "gff3toff_header_tests/fasta_header_circular.gff3",
+                        "sequence/fasta/header_circular.json",
+                        "gff3toff_header_tests/fasta_header_circular.embl",
+                        "circular header"),
+                Arguments.of(
+                        "gff3toff_header_tests/fasta_header_chromosome.gff3",
+                        "sequence/fasta/header_chromosome.json",
+                        "gff3toff_header_tests/fasta_header_chromosome.embl",
+                        "chromosome header"),
+                Arguments.of(
+                        "gff3toff_header_tests/fasta_header_plasmid_mito.gff3",
+                        "sequence/fasta/header_plasmid_mito.json",
+                        "gff3toff_header_tests/fasta_header_plasmid_mito.embl",
+                        "plasmid + mitochondrion header"));
     }
 
-    @Test
-    void testWriteEMBLWithFastaHeaderCircular() throws Exception {
-        Path gff3 = getResourcePath("gff3toff_header_tests/fasta_header_circular.gff3");
-        Path headerJson = getResourcePath("sequence/fasta/header_circular.json");
-        Path outFile = Files.createTempFile("header-test-circular-", ".embl");
+    @ParameterizedTest(name = "{3}")
+    @MethodSource("headerTestCases")
+    void testWriteEMBLWithFastaHeader(
+            String gff3Resource, String headerJsonResource, String expectedEmblResource, String label)
+            throws Exception {
+        Path gff3 = getResourcePath(gff3Resource);
+        Path headerJson = getResourcePath(headerJsonResource);
+        Path outFile = Files.createTempFile("header-test-", ".embl");
 
         try {
             String[] args = {"conversion", "--fasta-header", headerJson.toString(), gff3.toString(), outFile.toString()
@@ -75,70 +77,11 @@ class GFF3HeaderIntegrationTest {
             command.setOut(new PrintWriter(out));
 
             int exitCode = command.execute(args);
-            assertEquals(0, exitCode, "Wrong exit code.\nout: " + out.toString() + "\nerr: " + err.toString());
+            assertEquals(0, exitCode, "Wrong exit code.\nout: " + out + "\nerr: " + err);
 
             String actual = Files.readString(outFile);
-            String expectedFilePath = getResourcePath("gff3toff_header_tests/fasta_header_circular.embl")
-                    .toString();
-            String expected = Files.readString(Path.of(expectedFilePath));
-            assertEquals(expected.trim(), actual.trim(), "EMBL output mismatch for circular header test");
-        } finally {
-            Files.deleteIfExists(outFile);
-        }
-    }
-
-    @Test
-    void testWriteEMBLWithFastaHeaderChromosome() throws Exception {
-        Path gff3 = getResourcePath("gff3toff_header_tests/fasta_header_chromosome.gff3");
-        Path headerJson = getResourcePath("sequence/fasta/header_chromosome.json");
-        Path outFile = Files.createTempFile("header-test-chromosome-", ".embl");
-
-        try {
-            String[] args = {"conversion", "--fasta-header", headerJson.toString(), gff3.toString(), outFile.toString()
-            };
-            StringWriter err = new StringWriter();
-            StringWriter out = new StringWriter();
-            CommandLine command = new CommandLine(new Main());
-            command.setErr(new PrintWriter(err));
-            command.setOut(new PrintWriter(out));
-
-            int exitCode = command.execute(args);
-            assertEquals(0, exitCode, "Wrong exit code.\nout: " + out.toString() + "\nerr: " + err.toString());
-
-            String actual = Files.readString(outFile);
-            String expectedFilePath = getResourcePath("gff3toff_header_tests/fasta_header_chromosome.embl")
-                    .toString();
-            String expected = Files.readString(Path.of(expectedFilePath));
-            assertEquals(expected.trim(), actual.trim(), "EMBL output mismatch for chromosome header test");
-        } finally {
-            Files.deleteIfExists(outFile);
-        }
-    }
-
-    @Test
-    void testWriteEMBLWithFastaHeaderPlasmidMitochondrion() throws Exception {
-        Path gff3 = getResourcePath("gff3toff_header_tests/fasta_header_plasmid_mito.gff3");
-        Path headerJson = getResourcePath("sequence/fasta/header_plasmid_mito.json");
-        Path outFile = Files.createTempFile("header-test-plasmid-mito-", ".embl");
-
-        try {
-            String[] args = {"conversion", "--fasta-header", headerJson.toString(), gff3.toString(), outFile.toString()
-            };
-            StringWriter err = new StringWriter();
-            StringWriter out = new StringWriter();
-            CommandLine command = new CommandLine(new Main());
-            command.setErr(new PrintWriter(err));
-            command.setOut(new PrintWriter(out));
-
-            int exitCode = command.execute(args);
-            assertEquals(0, exitCode, "Wrong exit code.\nout: " + out.toString() + "\nerr: " + err.toString());
-
-            String actual = Files.readString(outFile);
-            String expectedFilePath = getResourcePath("gff3toff_header_tests/fasta_header_plasmid_mito.embl")
-                    .toString();
-            String expected = Files.readString(Path.of(expectedFilePath));
-            assertEquals(
-                    expected.trim(), actual.trim(), "EMBL output mismatch for plasmid + mitochondrion header test");
+            String expected = Files.readString(getResourcePath(expectedEmblResource));
+            assertEquals(expected.trim(), actual.trim(), "EMBL output mismatch for " + label);
         } finally {
             Files.deleteIfExists(outFile);
         }

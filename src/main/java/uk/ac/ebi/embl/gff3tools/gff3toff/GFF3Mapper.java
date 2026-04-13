@@ -396,7 +396,8 @@ public class GFF3Mapper {
 
     /**
      * Maps chromosome_location to the EMBL /organelle qualifier on the source feature.
-     * "Nuclear" is the default and produces no qualifier. Unrecognised values log a warning.
+     * "Nuclear" is the default and produces no qualifier. All other values are passed through
+     * as-is (lowercased); downstream EMBL validation checks qualifier values.
      *
      * @param chromosomeLocation  the chromosome location string from the FASTA header
      * @param sourceFt            the source feature to add the qualifier to
