@@ -309,6 +309,66 @@ class TranslationFixTest {
         assertEquals("MKKPG", translationState.get(key).newTranslation());
     }
 
+    @Test
+    void fivePrimePartialAssignedToFirstSegmentOnForwardStrand() throws Exception {
+        // No ATG start codon → Translator fixes 5' partial
+        // Forward strand → 5' partial belongs on the first (lowest coord) segment
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("AAACAA");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("CCCTAA");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "+");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
+        fix.fixAnnotation(createAnnotation(seg1, seg2), 1);
+
+        assertTrue(seg1.isFivePrimePartial());
+        assertFalse(seg2.isFivePrimePartial());
+    }
+
+    @Test
+    void threePrimePartialAssignedToLastSegmentOnForwardStrand() throws Exception {
+        // Has ATG but no stop codon → Translator fixes 3' partial
+        // Forward strand → 3' partial belongs on the last (highest coord) segment
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("ATGAAA");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("CCCCCC");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "+");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
+        fix.fixAnnotation(createAnnotation(seg1, seg2), 1);
+
+        assertFalse(seg1.isThreePrimePartial());
+        assertTrue(seg2.isThreePrimePartial());
+    }
+
+    @Test
+    void fivePrimePartialAssignedToLastSegmentOnComplementStrand() throws Exception {
+        // Concat "TTATTGTTT" → RC "AAACAATAA" → no ATG, has stop → 5' partial
+        // Complement strand → 5' partial belongs on the last (highest coord) segment
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("TTATTG");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 12L)).thenReturn("TTT");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "-");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 12, "-");
+        fix.fixAnnotation(createAnnotation(seg1, seg2), 1);
+
+        assertFalse(seg1.isFivePrimePartial());
+        assertTrue(seg2.isFivePrimePartial());
+    }
+
+    @Test
+    void threePrimePartialAssignedToFirstSegmentOnComplementStrand() throws Exception {
+        // Concat "GGGTTTCAT" → RC "ATGAAACCC" → has ATG, no stop → 3' partial
+        // Complement strand → 3' partial belongs on the first (lowest coord) segment
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("GGGTTT");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 12L)).thenReturn("CAT");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "-");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 12, "-");
+        fix.fixAnnotation(createAnnotation(seg1, seg2), 1);
+
+        assertTrue(seg1.isThreePrimePartial());
+        assertFalse(seg2.isThreePrimePartial());
+    }
+
     private GFF3Annotation createAnnotation(GFF3Feature... features) {
         GFF3Annotation annotation = new GFF3Annotation();
         for (GFF3Feature feature : features) {

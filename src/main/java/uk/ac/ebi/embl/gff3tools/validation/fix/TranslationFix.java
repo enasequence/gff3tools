@@ -118,6 +118,7 @@ public class TranslationFix {
         boolean hasException = sorted.stream()
                 .anyMatch(s -> s.getAttribute(GFF3Attributes.EXCEPTION).isPresent());
         if (hasException) {
+            // record the old translation as new translation in case of exception
             recordTranslationState(representative, line, oldTranslation, oldTranslation);
             return;
         }
@@ -160,12 +161,12 @@ public class TranslationFix {
     }
 
     /**
-     * For multi-segment CDS (joins), the Translator computes partiality and pseudo on the
-     * first (representative) feature. This method moves 3' partial to the last segment where
-     * it semantically belongs, and propagates pseudo from the first segment to all others.
+     * Redistributes partiality and pseudo attributes across multi-segment CDS join segments.
+     * 5'/3' partial are assigned to the strand-correct segment (first/last depends on strand),
+     * and pseudo is propagated from the first segment to all others.
      */
     private void propagateJoinAttributes(List<GFF3Feature> segments, TranslationResult result) {
-        if (segments.size() <= 1) {
+        if (segments.isEmpty()) {
             return;
         }
 
