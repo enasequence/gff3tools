@@ -20,6 +20,7 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -30,9 +31,11 @@ import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.exception.FormatSupportException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 
 // Using pandoc CLI interface conventions
 @CommandLine.Command(name = "conversion", description = "Performs format conversions to or from gff3")
@@ -47,6 +50,8 @@ public class FileConversionCommand extends AbstractCommand {
 
     @CommandLine.Mixin
     public SequenceOptions sequenceOptions;
+
+    private FastaHeaderProvider headerProvider;
 
     @Override
     public void run() {
@@ -68,8 +73,10 @@ public class FileConversionCommand extends AbstractCommand {
 
             final Path effectiveOutputPath = writingToFile ? tempFile : null;
 
-            CompositeSequenceProvider compositeProvider =
-                    buildCompositeProvider(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
+            List<FileSequenceSource> sources =
+                    buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
+            CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
+            headerProvider = buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
 
             try (BufferedReader inputReader = getPipe(
                             Files::newBufferedReader,
@@ -122,7 +129,7 @@ public class FileConversionCommand extends AbstractCommand {
             ValidationEngine engine, ConversionFileFormat inputFileType, ConversionFileFormat outputFileType)
             throws FormatSupportException {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
-            return new Gff3ToFFConverter(engine, inputFilePath);
+            return new Gff3ToFFConverter(engine, inputFilePath, headerProvider);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
             return masterFilePath == null
                     ? new FFToGff3Converter(engine)

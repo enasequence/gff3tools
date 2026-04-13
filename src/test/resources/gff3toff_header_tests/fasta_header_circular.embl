@@ -1,0 +1,16 @@
+ID   SEQID1; SV 1; circular; genomic DNA; XXX; XXX; 0 BP.
+XX
+AC   SEQID1;
+XX
+DE   Plasmid pBR322 complete sequence
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..1000
+FT                   /mol_type="genomic DNA"
+FT   gene            100..500
+FT                   /gene="testGene"
+XX
+//

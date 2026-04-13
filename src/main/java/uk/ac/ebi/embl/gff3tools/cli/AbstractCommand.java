@@ -10,6 +10,9 @@
  */
 package uk.ac.ebi.embl.gff3tools.cli;
 
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import io.vavr.Function0;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -22,6 +25,10 @@ import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.CliFastaHeaderSource;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FileFastaHeaderSource;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
@@ -141,9 +148,28 @@ public abstract class AbstractCommand implements Runnable {
         return switch (ext.toLowerCase()) {
             case "fasta", "fa", "fna" -> SequenceFormat.fasta;
             case "seq" -> SequenceFormat.plain;
-            default -> throw new RuntimeException("Unrecognized sequence file extension: ." + ext
-                    + ". Use --sequence-format to specify the format explicitly.");
+            default ->
+                throw new RuntimeException("Unrecognized sequence file extension: ." + ext
+                        + ". Use --sequence-format to specify the format explicitly.");
         };
+    }
+
+    /**
+     * Builds a list of {@link FileSequenceSource} instances from the parsed {@code --sequence} specs.
+     * Returns an empty list if no specs are provided. Sources are created but not yet initialized.
+     */
+    protected List<FileSequenceSource> buildFastaSourceList(
+            List<String> sequenceSpecs, SequenceFormat sequenceFormat) {
+        if (sequenceSpecs == null || sequenceSpecs.isEmpty()) {
+            return List.of();
+        }
+        List<FileSequenceSource> sources = new ArrayList<>();
+        for (String spec : sequenceSpecs) {
+            ParsedSequenceSpec parsed = parseSequenceSpec(spec);
+            SequenceFormat resolvedFormat = resolveSequenceFormat(parsed.path(), sequenceFormat);
+            sources.add(new FileSequenceSource(parsed.path(), resolvedFormat, parsed.key()));
+        }
+        return sources;
     }
 
     /**
@@ -152,15 +178,62 @@ public abstract class AbstractCommand implements Runnable {
      */
     protected CompositeSequenceProvider buildCompositeProvider(
             List<String> sequenceSpecs, SequenceFormat sequenceFormat) {
+        return buildCompositeProvider(buildFastaSourceList(sequenceSpecs, sequenceFormat));
+    }
+
+    /**
+     * Builds a {@link CompositeSequenceProvider} from pre-built sequence sources.
+     */
+    protected CompositeSequenceProvider buildCompositeProvider(List<FileSequenceSource> sources) {
         CompositeSequenceProvider compositeProvider = new CompositeSequenceProvider();
-        if (sequenceSpecs == null || sequenceSpecs.isEmpty()) {
-            return compositeProvider;
-        }
-        for (String spec : sequenceSpecs) {
-            ParsedSequenceSpec parsed = parseSequenceSpec(spec);
-            SequenceFormat resolvedFormat = resolveSequenceFormat(parsed.path(), sequenceFormat);
-            compositeProvider.addSource(new FileSequenceSource(parsed.path(), resolvedFormat, parsed.key()));
+        for (FileSequenceSource source : sources) {
+            compositeProvider.addSource(source);
         }
         return compositeProvider;
+    }
+
+    /**
+     * Builds a {@link FastaHeaderProvider} from pre-built sequence sources and optional
+     * {@code --fasta-header} path. FASTA-embedded headers take precedence over the CLI header.
+     *
+     * <p>Callers should pass the same sources list they used for
+     * {@link #buildCompositeProvider(List)} so each FASTA file is opened only once.
+     */
+    protected FastaHeaderProvider buildHeaderProvider(
+            List<FileSequenceSource> sources, Path fastaHeaderPath) {
+        FastaHeaderProvider headerProvider = new FastaHeaderProvider();
+
+        // Register FASTA-embedded header sources (highest priority).
+        // getSeqIdToHeader() returns an empty map for non-FASTA sources, so no format check needed.
+        for (FileSequenceSource fss : sources) {
+            Map<String, FastaHeader> headerMap = fss.getSeqIdToHeader();
+            if (!headerMap.isEmpty()) {
+                headerProvider.addSource(new FileFastaHeaderSource(headerMap));
+            }
+        }
+
+        // Register CLI global header source (lowest priority / fallback)
+        if (fastaHeaderPath != null) {
+            FastaHeader cliHeader = parseFastaHeaderJson(fastaHeaderPath);
+            headerProvider.addSource(new CliFastaHeaderSource(cliHeader));
+        }
+
+        return headerProvider;
+    }
+
+    /**
+     * Parses a JSON file at the given path into a {@link FastaHeader}.
+     * Fails fast with a descriptive error if the file is missing or malformed.
+     */
+    private FastaHeader parseFastaHeaderJson(Path path) {
+        try {
+            ObjectMapper mapper = JsonMapper.builder()
+                    .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
+                    .build();
+            return mapper.readValue(path.toFile(), FastaHeader.class);
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Failed to parse --fasta-header JSON file '%s': %s".formatted(path, e.getMessage()), e);
+        }
     }
 }
