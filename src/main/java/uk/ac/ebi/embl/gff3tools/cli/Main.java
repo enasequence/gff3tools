@@ -27,6 +27,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
             FileConversionCommand.class,
             FileProcessCommand.class,
             ValidationCommand.class,
+            TranslationCommand.class,
             CommandLine.HelpCommand.class
         },
         description = "Utility to convert and validate gff3 files")

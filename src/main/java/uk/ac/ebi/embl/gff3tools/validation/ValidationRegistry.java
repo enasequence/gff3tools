@@ -91,11 +91,27 @@ public class ValidationRegistry {
         this.validationConfig = config;
 
         ValidationContext ctx = new ValidationContext();
-        for (ContextProvider<?> provider : instantiateProviders()) {
+        List<ContextProvider<?>> allProviders = new ArrayList<>(instantiateProviders());
+        for (ContextProvider<?> provider : allProviders) {
             ctx.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
         }
         for (ContextProvider<?> provider : providers) {
             ctx.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
+        }
+
+        // Call initialize() only on providers that are actually registered (not overwritten).
+        // Explicit providers take precedence, so skip classpath providers whose type was overridden.
+        // Ordering: classpath providers initialize first, then explicit providers. If a classpath
+        // provider's initialize() depends on an explicit provider, it will NOT see it yet.
+        Set<Class<?>> explicitTypes =
+                providers.stream().map(ContextProvider::type).collect(Collectors.toSet());
+        for (ContextProvider<?> provider : allProviders) {
+            if (!explicitTypes.contains(provider.type())) {
+                initializeProvider(provider, ctx);
+            }
+        }
+        for (ContextProvider<?> provider : providers) {
+            initializeProvider(provider, ctx);
         }
 
         this.context = ctx;
@@ -108,6 +124,16 @@ public class ValidationRegistry {
                 .filter(vd -> vd.clazz().isAnnotationPresent(Gff3Fix.class))
                 .filter(vd -> vd.method().isAnnotationPresent(FixMethod.class))
                 .collect(Collectors.groupingBy(ValidatorDescriptor::priority, Collectors.toUnmodifiableList()));
+    }
+
+    private static void initializeProvider(ContextProvider<?> provider, ValidationContext ctx) {
+        try {
+            injectContext(provider, ctx);
+            provider.initialize();
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Failed to initialize provider " + provider.type().getSimpleName(), e);
+        }
     }
 
     public ValidationContext getContext() {

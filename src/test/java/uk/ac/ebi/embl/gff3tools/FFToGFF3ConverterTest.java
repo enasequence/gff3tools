@@ -18,7 +18,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
@@ -28,13 +27,6 @@ import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.builtin.*;
 
 class FFToGFF3ConverterTest {
-
-    static Path fastaPath = Path.of("translation.fasta");
-
-    @BeforeAll
-    public static void setUp() throws Exception {
-        Files.deleteIfExists(fastaPath);
-    }
 
     @Test
     void testWriteGFF3() throws Exception {
@@ -49,7 +41,7 @@ class FFToGFF3ConverterTest {
                     testFiles.get(filePrefix).toString())) {
 
                 // We need new ValidationEngine each time as we cache data in our tests.
-                GFF3FileFactory rule = new GFF3FileFactory(builder.build(), fastaPath);
+                GFF3FileFactory rule = new GFF3FileFactory(builder.build());
 
                 ReaderOptions readerOptions = new ReaderOptions();
                 readerOptions.setIgnoreSequence(true);
@@ -67,7 +59,6 @@ class FFToGFF3ConverterTest {
 
                 assertEquals(expected.trim(), gff3Writer.toString().trim(), "Error on test case: " + filePrefix);
                 gff3Writer.close();
-                Files.deleteIfExists(fastaPath);
             } catch (Exception e) {
                 fail("Error on test case: " + filePrefix + " - " + e.getMessage());
             }
@@ -91,7 +82,6 @@ class FFToGFF3ConverterTest {
 
         testConvert(scaffoldPath, expectedScaffoldPath, masterPath);
         testConvert(contigPath, expectedContigPath, masterPath);
-        Files.deleteIfExists(fastaPath);
     }
 
     private void testConvert(Path inputFile, Path expectedFile, Path masterFile) {

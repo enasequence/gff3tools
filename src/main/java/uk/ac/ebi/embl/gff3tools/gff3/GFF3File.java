@@ -26,6 +26,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
 import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 @Slf4j
 @Builder
@@ -38,7 +39,13 @@ public class GFF3File implements IGFF3Feature {
     Path fastaFilePath;
     boolean writeAnnotationFasta;
     List<ValidationException> parsingWarnings;
+    TranslationState translationState;
 
+    /**
+     * @param translationState when non-null, the FASTA section is written from this state;
+     *                         mutually exclusive with {@code fastaFilePath} — if both are set,
+     *                         {@code translationState} takes priority.
+     */
     public GFF3File(
             GFF3Header header,
             GFF3Species species,
@@ -46,7 +53,8 @@ public class GFF3File implements IGFF3Feature {
             GFF3FileReader gff3FileReader,
             Path fastaFilePath,
             boolean writeAnnotationFasta,
-            List<ValidationException> parsingWarnings) {
+            List<ValidationException> parsingWarnings,
+            TranslationState translationState) {
 
         this.header = header;
         this.species = species;
@@ -55,6 +63,7 @@ public class GFF3File implements IGFF3Feature {
         this.parsingWarnings = parsingWarnings;
         this.gff3Reader = gff3FileReader;
         this.writeAnnotationFasta = writeAnnotationFasta;
+        this.translationState = translationState;
     }
 
     @Override
@@ -88,15 +97,31 @@ public class GFF3File implements IGFF3Feature {
     }
 
     private void writeTranslationSection(Writer writer) throws IOException {
-        if (fastaFilePath != null) {
-            // Write translation from FASTA file to GFF3 file
+        if (translationState != null) {
+            writeFastaFromTranslationState(writer);
+        } else if (fastaFilePath != null) {
             writeFastaFromExistingFile(writer);
         } else if (gff3Reader != null
                 && gff3Reader.getTranslationOffsetMap() != null
                 && !gff3Reader.getTranslationOffsetMap().isEmpty()) {
-            // Write translation by GFF3 file offset map
             writeFastaFromOffsets(writer, gff3Reader.getTranslationOffsetMap());
         }
+    }
+
+    private void writeFastaFromTranslationState(Writer writer) throws IOException {
+        List<Map.Entry<String, String>> toWrite = new java.util.ArrayList<>();
+        translationState.forEachResolved((key, translation) -> toWrite.add(Map.entry(key, translation)));
+
+        if (toWrite.isEmpty()) {
+            return;
+        }
+
+        writer.write("##FASTA\n");
+        for (Map.Entry<String, String> e : toWrite) {
+            TranslationWriter.writeTranslation(writer, e.getKey(), e.getValue());
+        }
+        log.info("Written {} translation sequences from TranslationState", toWrite.size());
+        writer.write("\n");
     }
 
     private void writeFastaFromExistingFile(Writer writer) throws IOException {

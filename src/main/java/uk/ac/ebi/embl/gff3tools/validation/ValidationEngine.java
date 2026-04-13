@@ -20,7 +20,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
-public class ValidationEngine {
+public class ValidationEngine implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(ValidationEngine.class);
 
     private final List<ValidationException> parsingWarnings;
@@ -199,5 +199,10 @@ public class ValidationEngine {
             collectedErrors.add(ve);
             LOG.error(ve.getMessage());
         }
+    }
+
+    @Override
+    public void close() {
+        context.close();
     }
 }

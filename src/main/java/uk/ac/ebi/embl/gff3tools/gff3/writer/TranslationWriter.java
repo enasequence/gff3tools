@@ -20,16 +20,11 @@ import uk.ac.ebi.embl.api.entry.EntryFactory;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.fasta.writer.FastaFileWriter;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 
 public class TranslationWriter {
 
     private static final EntryFactory ENTRY_FACTORY = new EntryFactory();
     private static final SequenceFactory SEQ_FACTORY = new SequenceFactory();
-
-    public static String getTranslationKey(String accession, String featureId) {
-        return String.format("%s|%s", accession, GFF3Annotation.urlEncode(featureId));
-    }
 
     public static void writeTranslation(Writer writer, String featureId, String translation) {
 

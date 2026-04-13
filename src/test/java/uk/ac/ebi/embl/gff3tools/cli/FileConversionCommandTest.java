@@ -171,6 +171,53 @@ class FileConversionCommandTest {
     }
 
     @Test
+    void conversionToEmbl_withSequence_succeeds() throws Exception {
+        Path fasta = tempDir.resolve("sequence.fasta");
+        Files.writeString(
+                fasta,
+                ">seq1 | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
+                        + "ATGAAATAAGGGCCCAAATTT\n");
+
+        Path inputFile = tempDir.resolve("valid.gff3");
+        Files.writeString(
+                inputFile,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 21
+                seq1\t.\tgene\t1\t21\t.\t+\t.\tID=gene1
+                seq1\t.\tCDS\t1\t9\t.\t+\t0\tID=cds1;Parent=gene1
+                """);
+
+        Path outputFile = tempDir.resolve("output.embl");
+
+        int exitCode = executeConversion(
+                "conversion", "--sequence", fasta.toString(), inputFile.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "Conversion with --sequence should succeed");
+        assertTrue(Files.exists(outputFile), "Output file should be created");
+    }
+
+    @Test
+    void conversionToEmbl_withoutSequence_succeeds() throws Exception {
+        Path inputFile = tempDir.resolve("valid.gff3");
+        Files.writeString(
+                inputFile,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 1000
+                seq1\t.\tgene\t1\t100\t.\t+\t.\tID=gene1
+                """);
+
+        Path outputFile = tempDir.resolve("output.embl");
+
+        // Without --sequence, conversion should still work (translation is skipped)
+        int exitCode = executeConversion("conversion", inputFile.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "Conversion without --sequence should succeed");
+        assertTrue(Files.exists(outputFile), "Output file should be created");
+    }
+
+    @Test
     void conversion_withUnmappedFeature_collectsErrors() throws Exception {
         // Create a GFF3 file with an unmapped feature (misc_RNA has no INSDC mapping)
         Path inputFile = tempDir.resolve("unmapped_feature.gff3");
@@ -206,5 +253,16 @@ class FileConversionCommandTest {
 
         // Output file should NOT exist
         assertFalse(Files.exists(outputFile), "Output file should not be created when errors occur");
+    }
+
+    private int executeConversion(String... args) {
+        StringWriter err = new StringWriter();
+        StringWriter out = new StringWriter();
+        CommandLine command = new CommandLine(new Main())
+                .registerConverter(CliRulesOption.class, new RuleConverter())
+                .setExecutionExceptionHandler(new ExecutionExceptionHandler());
+        command.setErr(new PrintWriter(err));
+        command.setOut(new PrintWriter(out));
+        return command.execute(args);
     }
 }
