@@ -100,7 +100,6 @@ public class GFF3Mapper {
         entry.setSequence(sequence);
 
         applyFastaHeader(sequenceRegion, entry, sequence, sourceFeature);
-        applySequenceData(sequenceRegion, sequence);
 
         for (GFF3Feature gff3Feature : gff3Annotation.getFeatures()) {
             if (gff3Feature.getId().isPresent()) {
@@ -109,6 +108,10 @@ public class GFF3Mapper {
 
             mapGFF3Feature(gff3Feature, gff3FileReader.getTranslationOffsetMap());
         }
+
+        // Load sequence data as late as possible to minimise time it spends in memory.
+        // The Entry is written and becomes GC-eligible immediately after this method returns.
+        applySequenceData(sequenceRegion, sequence);
 
         return entry;
     }
@@ -311,7 +314,12 @@ public class GFF3Mapper {
         try {
             String nucleotides = sequenceLookup.getSequenceSlice(
                     sequenceRegion.accessionId(), sequenceRegion.start(), sequenceRegion.end());
-            byte[] seqBytes = nucleotides.toLowerCase().getBytes();
+            // Convert to lowercase bytes in a single pass to avoid an intermediate
+            // String allocation from toLowerCase() (saves ~2N bytes of peak memory).
+            byte[] seqBytes = new byte[nucleotides.length()];
+            for (int i = 0; i < nucleotides.length(); i++) {
+                seqBytes[i] = (byte) Character.toLowerCase(nucleotides.charAt(i));
+            }
             sequence.setSequence(ByteBuffer.wrap(seqBytes));
             sequence.setLength((long) seqBytes.length);
         } catch (Exception e) {
