@@ -73,7 +73,7 @@ public class JsonHeaderParserTest {
     @Test
     void normalizesKeyVariantsAndChromosomeOptionals() {
         String line = ">ID2 | { \"Description\":\"Desc\", \"molecule-type\":\"rna\", \"topology\":\"linear\", "
-                + "\"Chromosome-Type\":\"plasmid\", \"chromosome_location\":\"Kinetoplast\", \"CHROMOSOME_NAME\":\"pX\" }";
+                + "\"Chromosome-Type\":\"plasmid\", \"chromosome_location\":\"chr12:100-200\", \"CHROMOSOME_NAME\":\"pX\" }";
 
         ParsedHeader ph = assertDoesNotThrow(() -> parser.parse(line));
         FastaHeader h = ph.getHeader();
@@ -82,7 +82,7 @@ public class JsonHeaderParserTest {
         assertEquals("rna", h.getMoleculeType());
         assertEquals("linear", h.getTopology());
         assertEquals("plasmid", h.getChromosomeType());
-        assertEquals("Kinetoplast", h.getChromosomeLocation());
+        assertEquals("chr12:100-200", h.getChromosomeLocation());
         assertEquals("pX", h.getChromosomeName());
     }
 
