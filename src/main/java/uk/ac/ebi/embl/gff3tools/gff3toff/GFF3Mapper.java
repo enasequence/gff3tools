@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3toff;
 
+import java.nio.ByteBuffer;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
@@ -54,17 +56,24 @@ public class GFF3Mapper {
     Entry entry;
     GFF3FileReader gff3FileReader;
     private final FastaHeaderProvider headerProvider;
+    private final SequenceLookup sequenceLookup;
 
     public GFF3Mapper(GFF3FileReader gff3FileReader) {
-        this(gff3FileReader, null);
+        this(gff3FileReader, null, null);
     }
 
     public GFF3Mapper(GFF3FileReader gff3FileReader, FastaHeaderProvider headerProvider) {
+        this(gff3FileReader, headerProvider, null);
+    }
+
+    public GFF3Mapper(
+            GFF3FileReader gff3FileReader, FastaHeaderProvider headerProvider, SequenceLookup sequenceLookup) {
         parentFeatures = new HashMap<>();
         joinableFeatureMap = new HashMap<>();
         entry = null;
         this.gff3FileReader = gff3FileReader;
         this.headerProvider = headerProvider;
+        this.sequenceLookup = sequenceLookup;
     }
 
     public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) throws ValidationException {
@@ -99,6 +108,10 @@ public class GFF3Mapper {
 
             mapGFF3Feature(gff3Feature, gff3FileReader.getTranslationOffsetMap());
         }
+
+        // Load sequence data as late as possible to minimise time it spends in memory.
+        // The Entry is written and becomes GC-eligible immediately after this method returns.
+        applySequenceData(sequenceRegion, sequence);
 
         return entry;
     }
@@ -288,6 +301,30 @@ public class GFF3Mapper {
             gff3Feature.getAttributeList(key).ifPresent(values -> attributesMap.put(key, values));
         }
         return attributesMap;
+    }
+
+    /**
+     * Populates the nucleotide sequence data on the Sequence object from the SequenceLookup.
+     * Gracefully skips if no lookup is available or no sequence region is defined.
+     */
+    private void applySequenceData(GFF3SequenceRegion sequenceRegion, Sequence sequence) {
+        if (sequenceLookup == null || sequenceRegion == null) {
+            return;
+        }
+        try {
+            String nucleotides = sequenceLookup.getSequenceSlice(
+                    sequenceRegion.accessionId(), sequenceRegion.start(), sequenceRegion.end());
+            // Convert to lowercase bytes in a single pass to avoid an intermediate
+            // String allocation from toLowerCase() (saves ~2N bytes of peak memory).
+            byte[] seqBytes = new byte[nucleotides.length()];
+            for (int i = 0; i < nucleotides.length(); i++) {
+                seqBytes[i] = (byte) Character.toLowerCase(nucleotides.charAt(i));
+            }
+            sequence.setSequence(ByteBuffer.wrap(seqBytes));
+            sequence.setLength((long) seqBytes.length);
+        } catch (Exception e) {
+            LOGGER.warn("Failed to retrieve sequence for '{}': {}", sequenceRegion.accessionId(), e.getMessage());
+        }
     }
 
     /**

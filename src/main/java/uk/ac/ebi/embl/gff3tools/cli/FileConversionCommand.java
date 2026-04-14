@@ -31,6 +31,7 @@ import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.exception.FormatSupportException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
@@ -84,8 +85,10 @@ public class FileConversionCommand extends AbstractCommand {
                             writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
                 fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
                 toFileType = validateFileType(toFileType, outputFilePath, "-t");
+                SequenceLookup sequenceLookup = compositeProvider.hasSources() ? compositeProvider.get(null) : null;
                 try (ValidationEngine engine = initValidationEngine(ruleOverrides, compositeProvider)) {
-                    Converter converter = getConverter(engine, fromFileType, toFileType, headerProvider);
+                    Converter converter =
+                            getConverter(engine, fromFileType, toFileType, headerProvider, sequenceLookup);
                     converter.convert(inputReader, outputWriter);
                 }
             }
@@ -127,10 +130,11 @@ public class FileConversionCommand extends AbstractCommand {
             ValidationEngine engine,
             ConversionFileFormat inputFileType,
             ConversionFileFormat outputFileType,
-            FastaHeaderProvider headerProvider)
+            FastaHeaderProvider headerProvider,
+            SequenceLookup sequenceLookup)
             throws FormatSupportException {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
-            return new Gff3ToFFConverter(engine, inputFilePath, headerProvider);
+            return new Gff3ToFFConverter(engine, inputFilePath, headerProvider, sequenceLookup);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
             return masterFilePath == null
                     ? new FFToGff3Converter(engine)

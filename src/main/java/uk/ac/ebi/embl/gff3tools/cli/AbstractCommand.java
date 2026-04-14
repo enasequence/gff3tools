@@ -149,8 +149,9 @@ public abstract class AbstractCommand implements Runnable {
         return switch (ext.toLowerCase()) {
             case "fasta", "fa", "fna" -> SequenceFormat.fasta;
             case "seq" -> SequenceFormat.plain;
-            default -> throw new RuntimeException("Unrecognized sequence file extension: ." + ext
-                    + ". Use --sequence-format to specify the format explicitly.");
+            default ->
+                throw new RuntimeException("Unrecognized sequence file extension: ." + ext
+                        + ". Use --sequence-format to specify the format explicitly.");
         };
     }
 
