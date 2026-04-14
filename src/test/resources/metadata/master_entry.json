@@ -1,0 +1,43 @@
+{
+  "id": "GCA_000001405.29",
+  "accession": "CAXMMS010000001",
+  "secondaryAccessions": ["CAXMMS000000000"],
+  "description": "Homo sapiens genome assembly",
+  "title": "Human Genome Assembly",
+  "version": 1,
+  "moleculeType": "genomic DNA",
+  "topology": "linear",
+  "division": "HUM",
+  "dataClass": "STD",
+  "project": "PRJEB12345",
+  "sample": "SAMEA12345",
+  "taxon": "9606",
+  "scientificName": "Homo sapiens",
+  "commonName": "human",
+  "lineage": "Eukaryota; Metazoa; Chordata; Mammalia; Primates; Hominidae; Homo.",
+  "keywords": ["WGS", "genome"],
+  "comment": "This is a test assembly",
+  "chromosomeName": "chr1",
+  "chromosomeType": "Chromosome",
+  "chromosomeLocation": "Nuclear",
+  "firstPublic": "2024-01-15T00:00:00Z",
+  "lastUpdated": "2024-06-01T00:00:00Z",
+  "assemblyLevel": "chromosome",
+  "assemblyType": "primary metagenome",
+  "publications": [
+    {
+      "id": "PMC12345",
+      "source": "PUBMED",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/12345"
+    }
+  ],
+  "references": [
+    {
+      "referenceNumber": 1,
+      "title": "The human genome",
+      "authors": "Smith J., Doe A.",
+      "location": "Nature 2024",
+      "consortium": "Human Genome Consortium"
+    }
+  ]
+}

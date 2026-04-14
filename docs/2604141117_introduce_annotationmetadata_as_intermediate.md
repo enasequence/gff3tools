@@ -24,7 +24,7 @@ The result is that users converting pipeline-generated GFF3 files must either co
 ### Requirements
 
 **R1 — AnnotationMetadata model**
-Introduce `AnnotationMetadata` as a new POJO that is the union of all metadata fields needed by both conversion directions. The model must cover every field in the MasterEntry JSON schema (`id`, `accession`, `secondaryAccessions`, `description`, `title`, `version`, `moleculeType`, `dataClass`, `project`, `sample`, `taxon`, `scientificName`, `commonName`, `lineage`, `keywords`, `comment`, `publications`, `chromosomeName`, `chromosomeType`, `chromosomeLocation`, `references`, `firstPublic`, `lastUpdated`, `assemblyLevel`, `assemblyType`) plus the fields from `FastaHeader` that have no MasterEntry equivalent (`topology`). Fields present in both use the same semantics.
+Introduce `AnnotationMetadata` as a new POJO that is the union of all metadata fields needed by both conversion directions. The model must cover every field in the MasterEntry JSON schema (`id`, `accession`, `secondaryAccessions`, `description`, `title`, `version`, `moleculeType`, `topology`, `division`, `dataClass`, `project`, `sample`, `taxon`, `scientificName`, `commonName`, `lineage`, `keywords`, `comment`, `publications`, `chromosomeName`, `chromosomeType`, `chromosomeLocation`, `references`, `firstPublic`, `lastUpdated`, `assemblyLevel`, `assemblyType`). `topology` and `division` are optional fields in the MasterEntry JSON schema. `topology` defaults to `LINEAR` when absent from all sources. Fields present in both FastaHeader and MasterEntry use the same semantics.
 
 **R2 — AnnotationMetadataProvider (chain-of-responsibility)**
 Replace `FastaHeaderProvider` with `AnnotationMetadataProvider`, a chain-of-responsibility provider that:
@@ -51,6 +51,7 @@ Three built-in sources replace the existing `FastaHeaderSource` implementations:
 | `topology` | ID line field 3 (`LINEAR` / `CIRCULAR`) |
 | `chromosomeType` + `chromosomeName` | source feature qualifier (existing logic unchanged) |
 | `chromosomeLocation` | `/organelle` source qualifier (existing logic unchanged) |
+| `division` | ID line taxonomic division field |
 | `dataClass` | ID line data class field |
 | `accession` | primary accession (`entry.setPrimaryAccession`) when GFF3 `##sequence-region` provides no accession |
 | `secondaryAccessions` | AC line (`entry.setSecondaryAccessions`) |
@@ -66,10 +67,9 @@ Three built-in sources replace the existing `FastaHeaderSource` implementations:
 | `publications` | DR lines (source + id as cross-reference) |
 | `firstPublic` | DT first public line |
 | `lastUpdated` | DT last updated line |
-| `assemblyLevel` | ST * assembly_level structured comment |
-| `assemblyType` | ST * assembly_type structured comment |
-
 Fields absent from a source (null) are silently skipped; no error is raised for missing optional fields.
+
+Note: `assemblyLevel` and `assemblyType` are present in `AnnotationMetadata` (for completeness and round-tripping) but are **not mapped** to any EMBL line — they are assembly-wide metadata with no standard per-sequence EMBL representation.
 
 **R5 — --master-entry CLI option**
 Add `--master-entry` as a new named CLI option (with `-m` as the short alias, replacing the existing unnamed `-m` master file path parameter in `AbstractCommand`). The option accepts a file path. File type is inferred from extension:
@@ -114,17 +114,17 @@ All existing test scenarios using `FastaHeader` JSON or EMBL flatfile master ent
 
 ### Open Questions
 
-**OQ1 — `topology` field in MasterEntry**
-The MasterEntry JSON schema does not include a `topology` field, but `FastaHeader` requires it as mandatory for the ID line. For sequences converted from GFF3 with a MasterEntry JSON but no FASTA-embedded header, topology will default to `LINEAR`. Is this acceptable, or should `topology` be added as an optional field to the MasterEntry schema?
+**~~OQ1~~ — `topology` field in MasterEntry** *(Resolved)*
+The MasterEntry JSON schema will include an optional `topology` field. When no topology is provided by any source (neither MasterEntry JSON nor FASTA-embedded header), the default is `LINEAR`.
 
-**OQ2 — `assemblyLevel` / `assemblyType` EMBL encoding**
-The correct EMBL representation for assembly-level metadata is not firmly established. The spec above proposes structured comment (ST *) lines, consistent with how ENA currently encodes assembly metadata. This should be confirmed against current ENA flatfile production output before implementation.
+**~~OQ2~~ — `assemblyLevel` / `assemblyType` EMBL encoding** *(Resolved)*
+These are assembly-wide metadata with no standard per-sequence EMBL representation. They are carried on `AnnotationMetadata` for completeness but not mapped to any EMBL line.
 
-**OQ3 — `EmblEntryMetadataSource` field coverage**
-Converting an EMBL `Entry` to `AnnotationMetadata` for the EMBL → GFF3 backward-compat path currently only needs `organism`/`taxon` to populate `GFF3Species`. Should the `EmblEntryMetadataSource` adapter map all available `Entry` fields to `AnnotationMetadata` (enabling a richer round-trip), or only the fields actually consumed by `GFF3DirectivesFactory`?
+**~~OQ3~~ — `EmblEntryMetadataSource` field coverage** *(Resolved)*
+`EmblEntryMetadataSource` must map all available `Entry` fields to `AnnotationMetadata` (not just the subset consumed by `GFF3DirectivesFactory`). This enables a richer round-trip and keeps the adapter consistent with the full `AnnotationMetadata` model.
 
-**OQ4 — `publications` (CrossReference) DR line format**
-MasterEntry `publications` is an array of `CrossReference` objects with `id`, `source`, and `url` fields. The standard EMBL DR line format is `DR   <database>; <primary-id>[; <secondary-id>].`. Confirm that `source` maps to the database name and `id` to the primary identifier, and that `url` is not written to the DR line.
+**~~OQ4~~ — `publications` (CrossReference) DR line format** *(Resolved)*
+`publications` maps to DR lines. `source` maps to the database name, `id` to the primary identifier. `url` is not written to the DR line.
 
 ---
 

@@ -14,18 +14,24 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import io.vavr.Function0;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
+import uk.ac.ebi.embl.api.entry.Entry;
+import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
+import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
+import uk.ac.ebi.embl.gff3tools.metadata.*;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.CliFastaHeaderSource;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FileFastaHeaderSource;
@@ -57,7 +63,9 @@ public abstract class AbstractCommand implements Runnable {
     @CommandLine.Option(names = "-t", description = "The type of the file to convert to")
     public ConversionFileFormat toFileType;
 
-    @CommandLine.Option(names = "-m", description = "Optional master file")
+    @CommandLine.Option(
+            names = {"--master-entry", "-m"},
+            description = "Optional master entry file. Accepts MasterEntry JSON (.json) or EMBL flatfile (.embl/.ff).")
     public Path masterFilePath;
 
     @CommandLine.Parameters(
@@ -114,7 +122,7 @@ public abstract class AbstractCommand implements Runnable {
         return (dot > 0 && dot < name.length() - 1) ? Optional.of(name.substring(dot + 1)) : Optional.empty();
     }
 
-    // ── Sequence helpers shared by translate / validation / conversion ──
+    // -- Sequence helpers shared by translate / validation / conversion --
 
     protected record ParsedSequenceSpec(String key, Path path) {}
 
@@ -218,6 +226,100 @@ public abstract class AbstractCommand implements Runnable {
         }
 
         return headerProvider;
+    }
+
+    /**
+     * Builds an {@link AnnotationMetadataProvider} from pre-built sequence sources and optional
+     * {@code --fasta-header} and {@code --master-entry} paths.
+     *
+     * <p>Priority order (highest first):
+     * <ol>
+     *   <li>FASTA-embedded headers (per-seqId)</li>
+     *   <li>CLI --fasta-header JSON (global fallback)</li>
+     *   <li>MasterEntry JSON or EMBL flatfile (global fallback)</li>
+     * </ol>
+     */
+    protected AnnotationMetadataProvider buildMetadataProvider(
+            List<FileSequenceSource> sources, Path fastaHeaderPath, Path masterEntryPath) throws CLIException {
+        AnnotationMetadataProvider provider = new AnnotationMetadataProvider();
+
+        // Register FASTA-embedded header sources (highest priority).
+        for (FileSequenceSource fss : sources) {
+            Map<String, FastaHeader> headerMap = fss.getSeqIdToHeader();
+            if (!headerMap.isEmpty()) {
+                provider.addSource(new EmbeddedFastaMetadataSource(headerMap));
+            }
+        }
+
+        // Register CLI --fasta-header JSON (medium priority)
+        if (fastaHeaderPath != null) {
+            FastaHeader cliHeader = parseFastaHeaderJson(fastaHeaderPath);
+            provider.addSource(new CliJsonMetadataSource(cliHeader));
+        }
+
+        // Register --master-entry source (lowest priority)
+        if (masterEntryPath != null) {
+            provider.addSource(parseMasterEntrySource(masterEntryPath));
+        }
+
+        return provider;
+    }
+
+    /**
+     * Parses a master entry file based on its extension.
+     * .json -> MasterEntry JSON deserialized into AnnotationMetadata
+     * .embl/.ff -> EMBL flatfile parsed into Entry and adapted to AnnotationMetadata
+     */
+    protected AnnotationMetadataSource parseMasterEntrySource(Path path) throws CLIException {
+        String ext = getFileExtension(path).orElse("").toLowerCase();
+        return switch (ext) {
+            case "json" -> parseMasterEntryJson(path);
+            case "embl", "ff" -> parseMasterEntryEmbl(path);
+            default ->
+                throw new CLIException("Unrecognized --master-entry file extension '." + ext
+                        + "'. Supported: .json (MasterEntry JSON), .embl/.ff (EMBL flatfile).");
+        };
+    }
+
+    /**
+     * Parses a MasterEntry JSON file into an AnnotationMetadata.
+     */
+    private MasterEntryJsonMetadataSource parseMasterEntryJson(Path path) throws CLIException {
+        try {
+            ObjectMapper mapper = JsonMapper.builder()
+                    .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
+                    .build();
+            AnnotationMetadata meta = mapper.readValue(path.toFile(), AnnotationMetadata.class);
+            return new MasterEntryJsonMetadataSource(meta);
+        } catch (Exception e) {
+            throw new CLIException(
+                    "Failed to parse --master-entry JSON file '%s': %s".formatted(path, e.getMessage()), e);
+        }
+    }
+
+    /**
+     * Parses an EMBL flatfile master entry into an EmblEntryMetadataSource adapter.
+     */
+    private EmblEntryMetadataSource parseMasterEntryEmbl(Path path) throws CLIException {
+        try (BufferedReader reader = Files.newBufferedReader(path)) {
+            ReaderOptions readerOptions = new ReaderOptions();
+            readerOptions.setIgnoreSequence(true);
+            EmblEntryReader entryReader =
+                    new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "master_reader", readerOptions);
+            Entry masterEntry = null;
+            while (entryReader.read() != null && entryReader.isEntry()) {
+                masterEntry = entryReader.getEntry();
+            }
+            if (masterEntry == null) {
+                throw new CLIException("No entry found in --master-entry EMBL file: " + path);
+            }
+            return new EmblEntryMetadataSource(masterEntry);
+        } catch (CLIException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new CLIException(
+                    "Failed to parse --master-entry EMBL file '%s': %s".formatted(path, e.getMessage()), e);
+        }
     }
 
     /**

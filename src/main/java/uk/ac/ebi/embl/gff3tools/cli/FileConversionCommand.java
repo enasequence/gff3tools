@@ -31,7 +31,10 @@ import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.exception.FormatSupportException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadata;
+import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadataProvider;
+import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadataSource;
+import uk.ac.ebi.embl.gff3tools.metadata.EmblEntryMetadataSource;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
@@ -55,6 +58,14 @@ public class FileConversionCommand extends AbstractCommand {
     public void run() {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
 
+        // Enforce mutual exclusion: --fasta-header and --master-entry cannot be used together
+        if (sequenceOptions.fastaHeaderPath != null && masterFilePath != null) {
+            throw new RuntimeException(
+                    new CLIException("Options --fasta-header and --master-entry (-m) are mutually exclusive. "
+                            + "Use --fasta-header for legacy FastaHeader JSON or --master-entry for "
+                            + "MasterEntry JSON / EMBL flatfile, but not both."));
+        }
+
         // Determine if we're writing to a file or stdout
         boolean writingToFile = !outputFilePath.toString().isEmpty();
         Path tempFile = null;
@@ -74,7 +85,8 @@ public class FileConversionCommand extends AbstractCommand {
             List<FileSequenceSource> sources =
                     buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
             CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
-            FastaHeaderProvider headerProvider = buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
+            AnnotationMetadataProvider metadataProvider =
+                    buildMetadataProvider(sources, sequenceOptions.fastaHeaderPath, masterFilePath);
 
             try (BufferedReader inputReader = getPipe(
                             Files::newBufferedReader,
@@ -85,7 +97,8 @@ public class FileConversionCommand extends AbstractCommand {
                 fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
                 toFileType = validateFileType(toFileType, outputFilePath, "-t");
                 try (ValidationEngine engine = initValidationEngine(ruleOverrides, compositeProvider)) {
-                    Converter converter = getConverter(engine, fromFileType, toFileType, headerProvider);
+                    Converter converter =
+                            getConverter(engine, fromFileType, toFileType, metadataProvider);
                     converter.convert(inputReader, outputWriter);
                 }
             }
@@ -127,16 +140,35 @@ public class FileConversionCommand extends AbstractCommand {
             ValidationEngine engine,
             ConversionFileFormat inputFileType,
             ConversionFileFormat outputFileType,
-            FastaHeaderProvider headerProvider)
-            throws FormatSupportException {
+            AnnotationMetadataProvider metadataProvider)
+            throws FormatSupportException, CLIException {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
-            return new Gff3ToFFConverter(engine, inputFilePath, headerProvider);
+            return new Gff3ToFFConverter(engine, inputFilePath, metadataProvider);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
-            return masterFilePath == null
-                    ? new FFToGff3Converter(engine)
-                    : new FFToGff3Converter(engine, masterFilePath);
+            return buildFFToGff3Converter(engine, metadataProvider);
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
+        }
+    }
+
+    /**
+     * Builds an FFToGff3Converter using AnnotationMetadata.
+     * Extracts AnnotationMetadata from the provider (if available) and passes it to the converter.
+     */
+    private Converter buildFFToGff3Converter(ValidationEngine engine, AnnotationMetadataProvider metadataProvider)
+            throws CLIException {
+        if (masterFilePath == null) {
+            return new FFToGff3Converter(engine);
+        }
+        // For EMBL -> GFF3, we need to pass AnnotationMetadata to the converter
+        AnnotationMetadataSource masterSource = parseMasterEntrySource(masterFilePath);
+        if (masterSource instanceof EmblEntryMetadataSource emblSource) {
+            // Backward compat: use the AnnotationMetadata from the EMBL adapter
+            return new FFToGff3Converter(engine, emblSource.getMetadata());
+        } else {
+            // MasterEntry JSON: get metadata and pass it
+            AnnotationMetadata meta = masterSource.getMetadata("__global__").orElse(null);
+            return new FFToGff3Converter(engine, meta);
         }
     }
 
