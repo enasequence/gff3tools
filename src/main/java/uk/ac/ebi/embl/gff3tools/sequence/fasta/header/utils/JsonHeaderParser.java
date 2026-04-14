@@ -68,10 +68,11 @@ public class JsonHeaderParser {
                     "Malformed FASTA header JSON: " + normalised + " due to " + e.getMessage(), e);
         }
 
-        var errorList = FastaHeaderValidator.validate(header);
-        if (!errorList.isEmpty()) {
-            throw new FastaHeaderParserException("Fasta header is invalid due to following errors:" + String.join(", ", errorList));
+        // post-processing for neatness
+        if (header.topology != null) {
+            header.topology = header.topology.toLowerCase(Locale.ROOT);
         }
+
         return header;
     }
 
