@@ -601,12 +601,12 @@ class GFF3MapperTest {
     }
 
     @Test
-    void fieldLevelMergingAcrossSources() throws Exception {
+    void firstMatchingSourceWinsEntirely() throws Exception {
         // Source 1: has description but no taxon
         AnnotationMetadata source1 = new AnnotationMetadata();
         source1.setDescription("From source 1");
 
-        // Source 2: has description AND taxon
+        // Source 2: has description AND taxon — should not be reached
         AnnotationMetadata source2 = new AnnotationMetadata();
         source2.setDescription("From source 2");
         source2.setTaxon("9606");
@@ -618,11 +618,11 @@ class GFF3MapperTest {
         GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
-        // Description should come from source 1 (highest priority)
+        // Description should come from source 1 (first match wins)
         assertEquals("From source 1", entry.getDescription().getText());
-        // Taxon should come from source 2 (source 1 had null)
+        // Taxon should NOT be set — source 2 is never consulted
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
-        assertFalse(source.getQualifiers("db_xref").isEmpty());
-        assertEquals("taxon:9606", source.getQualifiers("db_xref").get(0).getValue());
+        assertTrue(source.getQualifiers("db_xref").isEmpty(),
+                "Source 2 should not contribute fields when source 1 matched");
     }
 }

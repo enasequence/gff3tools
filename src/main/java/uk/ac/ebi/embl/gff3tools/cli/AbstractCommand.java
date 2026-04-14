@@ -234,16 +234,24 @@ public abstract class AbstractCommand implements Runnable {
      *
      * <p>Priority order (highest first):
      * <ol>
+     *   <li>MasterEntry JSON or EMBL flatfile (--master-entry)</li>
      *   <li>FASTA-embedded headers (per-seqId)</li>
      *   <li>CLI --fasta-header JSON (global fallback)</li>
-     *   <li>MasterEntry JSON or EMBL flatfile (global fallback)</li>
      * </ol>
+     *
+     * <p>The first source that returns metadata for a given seqId wins entirely;
+     * no field-level merging is performed.
      */
     protected AnnotationMetadataProvider buildMetadataProvider(
             List<FileSequenceSource> sources, Path fastaHeaderPath, Path masterEntryPath) throws CLIException {
         AnnotationMetadataProvider provider = new AnnotationMetadataProvider();
 
-        // Register FASTA-embedded header sources (highest priority).
+        // Register --master-entry source (highest priority)
+        if (masterEntryPath != null) {
+            provider.addSource(parseMasterEntrySource(masterEntryPath));
+        }
+
+        // Register FASTA-embedded header sources (medium priority)
         for (FileSequenceSource fss : sources) {
             Map<String, FastaHeader> headerMap = fss.getSeqIdToHeader();
             if (!headerMap.isEmpty()) {
@@ -251,15 +259,10 @@ public abstract class AbstractCommand implements Runnable {
             }
         }
 
-        // Register CLI --fasta-header JSON (medium priority)
+        // Register CLI --fasta-header JSON (lowest priority)
         if (fastaHeaderPath != null) {
             FastaHeader cliHeader = parseFastaHeaderJson(fastaHeaderPath);
             provider.addSource(new CliJsonMetadataSource(cliHeader));
-        }
-
-        // Register --master-entry source (lowest priority)
-        if (masterEntryPath != null) {
-            provider.addSource(parseMasterEntrySource(masterEntryPath));
         }
 
         return provider;

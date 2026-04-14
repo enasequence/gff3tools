@@ -57,19 +57,17 @@ public class FileConversionCommand extends AbstractCommand {
     public void run() {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
 
-        // Enforce mutual exclusion: --fasta-header and --master-entry cannot be used together
-        if (sequenceOptions.fastaHeaderPath != null && masterFilePath != null) {
-            throw new RuntimeException(
-                    new CLIException("Options --fasta-header and --master-entry (-m) are mutually exclusive. "
-                            + "Use --fasta-header for legacy FastaHeader JSON or --master-entry for "
-                            + "MasterEntry JSON / EMBL flatfile, but not both."));
-        }
-
         // Determine if we're writing to a file or stdout
         boolean writingToFile = !outputFilePath.toString().isEmpty();
         Path tempFile = null;
 
         try {
+            // Enforce mutual exclusion: --fasta-header and --master-entry cannot be used together
+            if (sequenceOptions.fastaHeaderPath != null && masterFilePath != null) {
+                throw new CLIException("Options --fasta-header and --master-entry (-m) are mutually exclusive. "
+                        + "Use --fasta-header for legacy FastaHeader JSON or --master-entry for "
+                        + "MasterEntry JSON / EMBL flatfile, but not both.");
+            }
             // Write to a temp file first to ensure atomic output: if conversion fails,
             // no partial/corrupt output file is created. Only on success do we move the
             // temp file to the final destination.
@@ -159,9 +157,7 @@ public class FileConversionCommand extends AbstractCommand {
         if (metadataProvider == null) {
             return new FFToGff3Converter(engine);
         }
-        // Extract metadata from the already-built provider using a sentinel key.
-        // The provider returns merged metadata from all registered sources.
-        AnnotationMetadata meta = metadataProvider.getMetadata("__global__").orElse(null);
+        AnnotationMetadata meta = metadataProvider.getGlobalMetadata().orElse(null);
         if (meta == null) {
             return new FFToGff3Converter(engine);
         }

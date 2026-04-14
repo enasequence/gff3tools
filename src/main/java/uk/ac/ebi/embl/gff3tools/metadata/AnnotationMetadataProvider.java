@@ -15,10 +15,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Chain-of-responsibility provider that merges {@link AnnotationMetadata} from multiple
- * {@link AnnotationMetadataSource} instances. Sources are queried in registration order
- * (highest-priority first). Merging is field-level: a null field in a higher-priority source
- * does not shadow a non-null field in a lower-priority source.
+ * Chain-of-responsibility provider that returns {@link AnnotationMetadata} from the first
+ * {@link AnnotationMetadataSource} that has data for a given seqId. Sources are queried in
+ * registration order (first registered = highest priority). No field-level merging is performed;
+ * the first source that returns a non-empty result wins entirely.
  */
 public class AnnotationMetadataProvider {
 
@@ -37,57 +37,26 @@ public class AnnotationMetadataProvider {
     }
 
     /**
-     * Returns a merged {@link AnnotationMetadata} for the given seqId. Fields are merged
-     * across all sources: the first non-null value for each field wins.
+     * Returns metadata without a specific seqId context. Useful for the EMBL-to-GFF3 direction
+     * where metadata is needed before any per-sequence processing. Queries sources with an
+     * empty seqId; global sources (MasterEntry, CLI JSON) will respond, per-seqId sources
+     * (FASTA-embedded) will not.
      */
-    public Optional<AnnotationMetadata> getMetadata(String seqId) {
-        AnnotationMetadata merged = null;
-
-        for (AnnotationMetadataSource source : sources) {
-            Optional<AnnotationMetadata> opt = source.getMetadata(seqId);
-            if (opt.isEmpty()) {
-                continue;
-            }
-            if (merged == null) {
-                merged = new AnnotationMetadata();
-            }
-            mergeFields(merged, opt.get());
-        }
-
-        return Optional.ofNullable(merged);
+    public Optional<AnnotationMetadata> getGlobalMetadata() {
+        return getMetadata("");
     }
 
     /**
-     * Merges non-null fields from {@code source} into {@code target}. Only fills fields
-     * that are currently null in {@code target} (first-writer-wins semantics).
+     * Returns the {@link AnnotationMetadata} from the first source that has data for the
+     * given seqId. Sources are queried in registration order; the first non-empty result wins.
      */
-    private void mergeFields(AnnotationMetadata target, AnnotationMetadata source) {
-        if (target.getId() == null) target.setId(source.getId());
-        if (target.getAccession() == null) target.setAccession(source.getAccession());
-        if (target.getSecondaryAccessions() == null) target.setSecondaryAccessions(source.getSecondaryAccessions());
-        if (target.getDescription() == null) target.setDescription(source.getDescription());
-        if (target.getTitle() == null) target.setTitle(source.getTitle());
-        if (target.getVersion() == null) target.setVersion(source.getVersion());
-        if (target.getMoleculeType() == null) target.setMoleculeType(source.getMoleculeType());
-        if (target.getTopology() == null) target.setTopology(source.getTopology());
-        if (target.getDivision() == null) target.setDivision(source.getDivision());
-        if (target.getDataClass() == null) target.setDataClass(source.getDataClass());
-        if (target.getProject() == null) target.setProject(source.getProject());
-        if (target.getSample() == null) target.setSample(source.getSample());
-        if (target.getTaxon() == null) target.setTaxon(source.getTaxon());
-        if (target.getScientificName() == null) target.setScientificName(source.getScientificName());
-        if (target.getCommonName() == null) target.setCommonName(source.getCommonName());
-        if (target.getLineage() == null) target.setLineage(source.getLineage());
-        if (target.getKeywords() == null) target.setKeywords(source.getKeywords());
-        if (target.getComment() == null) target.setComment(source.getComment());
-        if (target.getPublications() == null) target.setPublications(source.getPublications());
-        if (target.getReferences() == null) target.setReferences(source.getReferences());
-        if (target.getChromosomeName() == null) target.setChromosomeName(source.getChromosomeName());
-        if (target.getChromosomeType() == null) target.setChromosomeType(source.getChromosomeType());
-        if (target.getChromosomeLocation() == null) target.setChromosomeLocation(source.getChromosomeLocation());
-        if (target.getFirstPublic() == null) target.setFirstPublic(source.getFirstPublic());
-        if (target.getLastUpdated() == null) target.setLastUpdated(source.getLastUpdated());
-        if (target.getAssemblyLevel() == null) target.setAssemblyLevel(source.getAssemblyLevel());
-        if (target.getAssemblyType() == null) target.setAssemblyType(source.getAssemblyType());
+    public Optional<AnnotationMetadata> getMetadata(String seqId) {
+        for (AnnotationMetadataSource source : sources) {
+            Optional<AnnotationMetadata> opt = source.getMetadata(seqId);
+            if (opt.isPresent()) {
+                return opt;
+            }
+        }
+        return Optional.empty();
     }
 }

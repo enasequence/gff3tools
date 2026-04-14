@@ -26,11 +26,11 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 
 public class FFToGff3Converter implements Converter {
 
-    ValidationEngine validationEngine;
-    AnnotationMetadata masterMetadata;
+    private final ValidationEngine validationEngine;
+    private AnnotationMetadata masterMetadata;
 
     /** Legacy field: kept only for backward compat with the Path-based constructor. */
-    Path masterFilePath = null;
+    private Path masterFilePath = null;
 
     public FFToGff3Converter(ValidationEngine validationEngine) {
         this.validationEngine = validationEngine;

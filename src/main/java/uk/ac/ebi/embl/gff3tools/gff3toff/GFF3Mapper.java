@@ -10,7 +10,11 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3toff;
 
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -519,19 +523,36 @@ public class GFF3Mapper {
         entry.addReference(reference);
     }
 
+    private static final DateTimeFormatter[] DATE_FORMATTERS = {
+        DateTimeFormatter.ISO_DATE_TIME,
+        DateTimeFormatter.ISO_DATE,
+        DateTimeFormatter.ofPattern("dd-MMM-yyyy", Locale.ENGLISH),
+    };
+
     /**
-     * Parses a date string. Supports ISO-8601 datetime and simple date formats.
+     * Parses a date string into a {@link Date}. Supports ISO-8601 datetime (with timezone)
+     * and simple date formats. Uses {@code java.time} to correctly handle timezone offsets
+     * including the UTC 'Z' suffix.
      */
     private Date parseDate(String dateStr) {
-        String[] formats = {
-            "yyyy-MM-dd'T'HH:mm:ss'Z'", "yyyy-MM-dd'T'HH:mm:ssXXX", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd", "dd-MMM-yyyy"
-        };
-        for (String format : formats) {
+        // Try ISO-8601 instant first (handles "2024-01-15T00:00:00Z" and offset variants)
+        try {
+            return Date.from(Instant.parse(dateStr));
+        } catch (DateTimeParseException ignored) {
+            // not a strict instant; try other formats
+        }
+
+        for (DateTimeFormatter formatter : DATE_FORMATTERS) {
             try {
-                SimpleDateFormat sdf = new SimpleDateFormat(format, Locale.ENGLISH);
-                sdf.setLenient(false);
-                return sdf.parse(dateStr);
-            } catch (Exception ignored) {
+                var accessor = formatter.parse(dateStr);
+                try {
+                    return Date.from(Instant.from(accessor));
+                } catch (DateTimeParseException ignored) {
+                    // no timezone info; treat as a local date at UTC midnight
+                }
+                LocalDate localDate = LocalDate.from(accessor);
+                return Date.from(localDate.atStartOfDay(ZoneOffset.UTC).toInstant());
+            } catch (DateTimeParseException ignored) {
                 // try next format
             }
         }
