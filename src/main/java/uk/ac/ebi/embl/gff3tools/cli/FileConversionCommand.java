@@ -33,8 +33,7 @@ import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadata;
 import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadataProvider;
-import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadataSource;
-import uk.ac.ebi.embl.gff3tools.metadata.EmblEntryMetadataSource;
+
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
@@ -152,24 +151,21 @@ public class FileConversionCommand extends AbstractCommand {
     }
 
     /**
-     * Builds an FFToGff3Converter using AnnotationMetadata.
-     * Extracts AnnotationMetadata from the provider (if available) and passes it to the converter.
+     * Builds an FFToGff3Converter using AnnotationMetadata from the already-built provider.
+     * Avoids re-parsing the master file by extracting metadata from the provider chain.
      */
     private Converter buildFFToGff3Converter(ValidationEngine engine, AnnotationMetadataProvider metadataProvider)
             throws CLIException {
-        if (masterFilePath == null) {
+        if (metadataProvider == null) {
             return new FFToGff3Converter(engine);
         }
-        // For EMBL -> GFF3, we need to pass AnnotationMetadata to the converter
-        AnnotationMetadataSource masterSource = parseMasterEntrySource(masterFilePath);
-        if (masterSource instanceof EmblEntryMetadataSource emblSource) {
-            // Backward compat: use the AnnotationMetadata from the EMBL adapter
-            return new FFToGff3Converter(engine, emblSource.getMetadata());
-        } else {
-            // MasterEntry JSON: get metadata and pass it
-            AnnotationMetadata meta = masterSource.getMetadata("__global__").orElse(null);
-            return new FFToGff3Converter(engine, meta);
+        // Extract metadata from the already-built provider using a sentinel key.
+        // The provider returns merged metadata from all registered sources.
+        AnnotationMetadata meta = metadataProvider.getMetadata("__global__").orElse(null);
+        if (meta == null) {
+            return new FFToGff3Converter(engine);
         }
+        return new FFToGff3Converter(engine, meta);
     }
 
     private ConversionFileFormat validateFileType(ConversionFileFormat fileFormat, Path filePath, String cliOption)

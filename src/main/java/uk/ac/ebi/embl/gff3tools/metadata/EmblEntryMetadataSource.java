@@ -94,6 +94,18 @@ public class EmblEntryMetadataSource implements AnnotationMetadataSource {
                     .map(String::valueOf)
                     .ifPresent(meta::setTaxon);
 
+            // Extract lineage from Taxon object (OC line data)
+            organismQualifier
+                    .map(OrganismQualifier::getTaxon)
+                    .map(taxon -> taxon.getLineage())
+                    .ifPresent(meta::setLineage);
+
+            // Extract common name from Taxon object
+            organismQualifier
+                    .map(OrganismQualifier::getTaxon)
+                    .map(taxon -> taxon.getCommonName())
+                    .ifPresent(meta::setCommonName);
+
             // Fallback: extract taxon from db_xref qualifier if not found via OrganismQualifier
             if (meta.getTaxon() == null) {
                 sourceFeature.getQualifiers("db_xref").stream()

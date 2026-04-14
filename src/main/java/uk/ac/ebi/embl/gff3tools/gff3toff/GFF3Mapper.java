@@ -43,6 +43,8 @@ import uk.ac.ebi.embl.gff3tools.metadata.ReferenceData;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
+import uk.ac.ebi.ena.taxonomy.taxon.TaxonFactory;
 
 public class GFF3Mapper {
 
@@ -372,8 +374,10 @@ public class GFF3Mapper {
             }
         }
 
-        // Version: ID line version
-        if (m.getVersion() != null) {
+        // Version: ID line version (only when ##sequence-region didn't already provide one)
+        if (m.getVersion() != null
+                && sequenceRegion != null
+                && sequenceRegion.accessionVersion().isEmpty()) {
             sequence.setVersion(m.getVersion());
         }
 
@@ -404,11 +408,30 @@ public class GFF3Mapper {
             sourceFt.addQualifier("note", "common name: " + m.getCommonName());
         }
 
-        // Lineage: OC line (taxonomy classification)
+        // Lineage: OC line (taxonomy classification).
+        // The EMBL OCWriter reads lineage from sourceFeature.getTaxon().getLineage(),
+        // so we ensure a Taxon object exists on the SourceFeature and populate it.
         if (m.getLineage() != null) {
-            // The OC line is typically set via Entry features; in EMBL writer it's derived
-            // from the source feature's /organism taxonomy. We store it for reference.
-            // The EMBL writer handles OC via taxonomy. We do not set it directly on Entry.
+            Taxon taxon = sourceFt.getTaxon();
+            if (taxon == null) {
+                taxon = new TaxonFactory().createTaxon();
+                sourceFt.setTaxon(taxon);
+            }
+            taxon.setLineage(m.getLineage());
+            // Also populate taxon fields from metadata if they were set above as qualifiers
+            if (m.getScientificName() != null && taxon.getScientificName() == null) {
+                taxon.setScientificName(m.getScientificName());
+            }
+            if (m.getCommonName() != null && taxon.getCommonName() == null) {
+                taxon.setCommonName(m.getCommonName());
+            }
+            if (m.getTaxon() != null && taxon.getTaxId() == null) {
+                try {
+                    taxon.setTaxId(Long.parseLong(m.getTaxon()));
+                } catch (NumberFormatException ignored) {
+                    // taxon field is not numeric; skip
+                }
+            }
         }
 
         // Project: PR line
@@ -451,6 +474,11 @@ public class GFF3Mapper {
 
     /**
      * Maps a ReferenceData to an EMBL Reference and adds it to the entry.
+     *
+     * <p><b>Known limitation:</b> all references are created as {@link Unpublished} publication type.
+     * Published references with journal locations (Article, Book, etc.) will be typed as Unpublished.
+     * Dispatching to the correct publication type based on the reference location format is a future
+     * enhancement.
      */
     private void mapReference(ReferenceData refData, Entry entry) {
         Unpublished publication = referenceFactory.createUnpublished();
@@ -482,6 +510,11 @@ public class GFF3Mapper {
         if (refData.getReferenceComment() != null) {
             reference.setComment(refData.getReferenceComment());
         }
+
+        // Note: referencePosition is deserialized in ReferenceData but not mapped here.
+        // The EMBL Reference API supports setLocations() for RP line data, but the
+        // referencePosition string format would need parsing into LocalRange objects.
+        // This is carried in the model for completeness but not yet mapped.
 
         entry.addReference(reference);
     }
