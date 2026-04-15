@@ -378,11 +378,12 @@ public class GFF3Mapper {
             }
         }
 
-        // Version: ID line version (only when ##sequence-region didn't already provide one)
-        if (m.getVersion() != null
-                && sequenceRegion != null
-                && sequenceRegion.accessionVersion().isEmpty()) {
-            sequence.setVersion(m.getVersion());
+        // Version: ID line version and DT line version
+        if (m.getVersion() != null) {
+            entry.setVersion(m.getVersion());
+            if (sequenceRegion != null && sequenceRegion.accessionVersion().isEmpty()) {
+                sequence.setVersion(m.getVersion());
+            }
         }
 
         // Keywords: KW line
@@ -459,20 +460,24 @@ public class GFF3Mapper {
             }
         }
 
-        // First public: DT line
+        // DT lines: first public and last updated (dates + release numbers)
         if (m.getFirstPublic() != null) {
             Date date = parseDate(m.getFirstPublic());
             if (date != null) {
                 entry.setFirstPublic(date);
             }
         }
-
-        // Last updated: DT line
+        if (m.getFirstPublicRelease() != null) {
+            entry.setFirstPublicRelease(m.getFirstPublicRelease());
+        }
         if (m.getLastUpdated() != null) {
             Date date = parseDate(m.getLastUpdated());
             if (date != null) {
                 entry.setLastUpdated(date);
             }
+        }
+        if (m.getLastUpdatedRelease() != null) {
+            entry.setLastUpdatedRelease(m.getLastUpdatedRelease());
         }
 
         // Sequence length: ID line BP/SQ count

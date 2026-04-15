@@ -20,8 +20,10 @@
   "chromosomeName": "chr1",
   "chromosomeType": "Chromosome",
   "chromosomeLocation": "Nuclear",
-  "firstPublic": "2024-01-15T00:00:00Z",
-  "lastUpdated": "2024-06-01T00:00:00Z",
+  "firstPublic": "15-JAN-2024",
+  "firstPublicRelease": 144,
+  "lastUpdated": "01-JUN-2024",
+  "lastUpdatedRelease": 144,
   "assemblyLevel": "chromosome",
   "assemblyType": "primary metagenome",
   "publications": [

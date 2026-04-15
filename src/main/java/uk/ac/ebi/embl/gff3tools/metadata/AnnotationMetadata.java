@@ -71,7 +71,9 @@ public class AnnotationMetadata {
 
     // ── Dates ──
     private String firstPublic;
+    private Integer firstPublicRelease;
     private String lastUpdated;
+    private Integer lastUpdatedRelease;
 
     // ── Assembly (carried but not mapped to EMBL lines) ──
     private String assemblyLevel;
