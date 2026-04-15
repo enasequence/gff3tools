@@ -480,10 +480,15 @@ public class GFF3Mapper {
             entry.setLastUpdatedRelease(m.getLastUpdatedRelease());
         }
 
-        // Sequence length: ID line BP/SQ count
+        // Sequence length: ID line BP/SQ count.
+        // The IDWriter only uses idLineSequenceLength for SET/master/annotationOnlyCON
+        // entries. For non-SET entries, we set annotationOnlyCON so the IDWriter picks
+        // up the length. SET entries already use idLineSequenceLength natively.
         if (m.getSequenceLength() != null && m.getSequenceLength() > 0) {
-            sequence.setLength(m.getSequenceLength());
             entry.setIdLineSequenceLength(m.getSequenceLength());
+            if (!"SET".equals(entry.getDataClass())) {
+                entry.setAnnotationOnlyCON(true);
+            }
         }
 
         // Sample: DR BioSample line (only for SAMEA-prefixed accessions;
