@@ -486,8 +486,9 @@ public class GFF3Mapper {
             entry.setIdLineSequenceLength(m.getSequenceLength());
         }
 
-        // Sample: DR BioSample line
-        if (m.getSample() != null) {
+        // Sample: DR BioSample line (only for SAMEA-prefixed accessions;
+        // ERS accessions are ENA sample aliases, not BioSample identifiers)
+        if (m.getSample() != null && m.getSample().startsWith("SAMEA")) {
             entry.addXRef(new XRef("BioSample", m.getSample()));
         }
 
