@@ -75,6 +75,10 @@ public class AnnotationMetadata {
     private String lastUpdated;
     private Integer lastUpdatedRelease;
 
+    // ── Cross-references (DR lines) ──
+    private String md5;
+    private List<String> runAccession;
+
     // ── Assembly (carried but not mapped to EMBL lines) ──
     private String assemblyLevel;
     private String assemblyType;

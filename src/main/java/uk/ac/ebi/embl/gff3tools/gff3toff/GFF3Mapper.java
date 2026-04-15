@@ -451,10 +451,19 @@ public class GFF3Mapper {
             }
         }
 
-        // Publications: DR lines (database cross-references, e.g., BioSample, ENA)
+        // DR lines: database cross-references (ordered to match EMBL convention)
+        if (m.getMd5() != null) {
+            entry.addXRef(new XRef("MD5", m.getMd5()));
+        }
+        if (m.getRunAccession() != null) {
+            for (String run : m.getRunAccession()) {
+                entry.addXRef(new XRef("ENA", run));
+            }
+        }
+        // Publications (e.g., BioSample). BioProject is skipped — handled via project → PR line.
         if (m.getPublications() != null) {
             for (CrossReference pub : m.getPublications()) {
-                if (pub.getSource() != null && pub.getId() != null) {
+                if (pub.getSource() != null && pub.getId() != null && !"BioProject".equalsIgnoreCase(pub.getSource())) {
                     entry.addXRef(new XRef(pub.getSource(), pub.getId()));
                 }
             }
@@ -587,6 +596,10 @@ public class GFF3Mapper {
                 continue;
             }
             sourceFt.addQualifier(key, value);
+        }
+        // /environmental_sample is a valueless qualifier implied by metagenome_source
+        if (searchFields.containsKey("metagenome_source")) {
+            sourceFt.addQualifier(qualifierFactory.createQualifier("environmental_sample"));
         }
     }
 
