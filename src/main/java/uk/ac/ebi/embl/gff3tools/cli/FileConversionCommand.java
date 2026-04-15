@@ -33,7 +33,6 @@ import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadata;
 import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadataProvider;
-
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
@@ -94,8 +93,7 @@ public class FileConversionCommand extends AbstractCommand {
                 fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
                 toFileType = validateFileType(toFileType, outputFilePath, "-t");
                 try (ValidationEngine engine = initValidationEngine(ruleOverrides, compositeProvider)) {
-                    Converter converter =
-                            getConverter(engine, fromFileType, toFileType, metadataProvider);
+                    Converter converter = getConverter(engine, fromFileType, toFileType, metadataProvider);
                     converter.convert(inputReader, outputWriter);
                 }
             }

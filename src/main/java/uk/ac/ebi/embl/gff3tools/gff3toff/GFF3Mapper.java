@@ -10,10 +10,12 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3toff;
 
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import org.slf4j.Logger;
@@ -28,9 +30,7 @@ import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
 import uk.ac.ebi.embl.api.entry.location.*;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.qualifier.QualifierFactory;
-import uk.ac.ebi.embl.api.entry.reference.Reference;
-import uk.ac.ebi.embl.api.entry.reference.ReferenceFactory;
-import uk.ac.ebi.embl.api.entry.reference.Unpublished;
+import uk.ac.ebi.embl.api.entry.reference.*;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -450,7 +450,7 @@ public class GFF3Mapper {
             }
         }
 
-        // Publications: DR lines (cross-references)
+        // Publications: DR lines (database cross-references, e.g., BioSample, ENA)
         if (m.getPublications() != null) {
             for (CrossReference pub : m.getPublications()) {
                 if (pub.getSource() != null && pub.getId() != null) {
@@ -474,18 +474,47 @@ public class GFF3Mapper {
                 entry.setLastUpdated(date);
             }
         }
+
+        // Sequence length: ID line BP/SQ count
+        if (m.getSequenceLength() != null && m.getSequenceLength() > 0) {
+            sequence.setLength(m.getSequenceLength());
+            entry.setIdLineSequenceLength(m.getSequenceLength());
+        }
+
+        // Sample: DR BioSample line
+        if (m.getSample() != null) {
+            entry.addXRef(new XRef("BioSample", m.getSample()));
+        }
+
+        // Search fields: source feature qualifiers (geo_loc_name, collection_date, isolate, etc.)
+        if (m.getSearchFields() != null) {
+            mapSearchFields(m.getSearchFields(), sourceFt);
+        }
     }
+
+    private static final java.util.regex.Pattern SUBMISSION_PATTERN = java.util.regex.Pattern.compile(
+            "Submitted \\(([^)]+)\\) to the INSDC\\.\\n?(.*)$", java.util.regex.Pattern.DOTALL);
 
     /**
      * Maps a ReferenceData to an EMBL Reference and adds it to the entry.
-     *
-     * <p><b>Known limitation:</b> all references are created as {@link Unpublished} publication type.
-     * Published references with journal locations (Article, Book, etc.) will be typed as Unpublished.
-     * Dispatching to the correct publication type based on the reference location format is a future
-     * enhancement.
+     * Detects submission-type references from the location field pattern
+     * {@code "Submitted (DD-MMM-YYYY) to the INSDC.\nADDRESS"} and creates a
+     * {@link Submission}; otherwise falls back to {@link Unpublished}.
      */
     private void mapReference(ReferenceData refData, Entry entry) {
-        Unpublished publication = referenceFactory.createUnpublished();
+        Publication publication;
+
+        if (refData.getLocation() != null) {
+            var matcher = SUBMISSION_PATTERN.matcher(refData.getLocation());
+            if (matcher.matches()) {
+                publication =
+                        createSubmission(matcher.group(1), matcher.group(2).trim());
+            } else {
+                publication = referenceFactory.createUnpublished();
+            }
+        } else {
+            publication = referenceFactory.createUnpublished();
+        }
 
         if (refData.getTitle() != null) {
             publication.setTitle(refData.getTitle());
@@ -496,7 +525,6 @@ public class GFF3Mapper {
         }
 
         if (refData.getAuthors() != null) {
-            // Authors is a single string; parse comma-separated names
             String[] authorNames = refData.getAuthors().split(",\\s*");
             for (String authorName : authorNames) {
                 if (!authorName.isBlank()) {
@@ -505,28 +533,59 @@ public class GFF3Mapper {
             }
         }
 
-        if (refData.getLocation() != null) {
-            publication.setJournalBlock(refData.getLocation());
-        }
-
         Reference reference = referenceFactory.createReference(publication, refData.getReferenceNumber());
 
         if (refData.getReferenceComment() != null) {
             reference.setComment(refData.getReferenceComment());
         }
 
-        // Note: referencePosition is deserialized in ReferenceData but not mapped here.
-        // The EMBL Reference API supports setLocations() for RP line data, but the
-        // referencePosition string format would need parsing into LocalRange objects.
-        // This is carried in the model for completeness but not yet mapped.
-
         entry.addReference(reference);
+    }
+
+    /**
+     * Creates a Submission publication from the parsed date string and submitter address.
+     */
+    private Submission createSubmission(String dateStr, String address) {
+        Submission sub = referenceFactory.createSubmission();
+        Date day = parseDate(dateStr);
+        if (day != null) {
+            sub.setDay(day);
+        }
+        if (!address.isBlank()) {
+            sub.setSubmitterAddress(address);
+        }
+        return sub;
+    }
+
+    /**
+     * Keys from searchFields that are already handled by other AnnotationMetadata fields
+     * or are not valid source feature qualifiers.
+     */
+    private static final Set<String> SEARCH_FIELDS_SKIP =
+            Set.of("organism", "topology", "tax_division", "md5_checksum", "country");
+
+    /**
+     * Maps searchFields entries to source feature qualifiers.
+     * Keys that are already handled elsewhere (organism, topology, etc.) are skipped.
+     */
+    private void mapSearchFields(Map<String, String> searchFields, SourceFeature sourceFt) {
+        for (Map.Entry<String, String> field : searchFields.entrySet()) {
+            String key = field.getKey();
+            String value = field.getValue();
+            if (value == null || value.isBlank() || SEARCH_FIELDS_SKIP.contains(key)) {
+                continue;
+            }
+            sourceFt.addQualifier(key, value);
+        }
     }
 
     private static final DateTimeFormatter[] DATE_FORMATTERS = {
         DateTimeFormatter.ISO_DATE_TIME,
         DateTimeFormatter.ISO_DATE,
-        DateTimeFormatter.ofPattern("dd-MMM-yyyy", Locale.ENGLISH),
+        new DateTimeFormatterBuilder()
+                .parseCaseInsensitive()
+                .appendPattern("dd-MMM-yyyy")
+                .toFormatter(Locale.ENGLISH),
     };
 
     /**
@@ -547,7 +606,7 @@ public class GFF3Mapper {
                 var accessor = formatter.parse(dateStr);
                 try {
                     return Date.from(Instant.from(accessor));
-                } catch (DateTimeParseException ignored) {
+                } catch (DateTimeException ignored) {
                     // no timezone info; treat as a local date at UTC midnight
                 }
                 LocalDate localDate = LocalDate.from(accessor);

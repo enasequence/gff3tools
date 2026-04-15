@@ -622,7 +622,8 @@ class GFF3MapperTest {
         assertEquals("From source 1", entry.getDescription().getText());
         // Taxon should NOT be set — source 2 is never consulted
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
-        assertTrue(source.getQualifiers("db_xref").isEmpty(),
+        assertTrue(
+                source.getQualifiers("db_xref").isEmpty(),
                 "Source 2 should not contribute fields when source 1 matched");
     }
 }

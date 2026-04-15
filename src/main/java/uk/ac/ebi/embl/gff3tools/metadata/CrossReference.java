@@ -10,20 +10,23 @@
  */
 package uk.ac.ebi.embl.gff3tools.metadata;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Represents a cross-reference (publication) from MasterEntry JSON.
- * Maps to DR lines in EMBL output.
+ * Represents a database cross-reference from MasterEntry JSON.
+ * Maps to DR lines in EMBL output (e.g., BioSample, ENA).
  */
 @Getter
 @Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CrossReference {
 
+    @JsonAlias("pid")
     private String id;
+
     private String source;
     private String url;
 }

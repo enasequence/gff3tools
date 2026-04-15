@@ -58,18 +58,20 @@ class AnnotationMetadataTest {
             assertEquals("chromosome", meta.getAssemblyLevel());
             assertEquals("primary metagenome", meta.getAssemblyType());
 
-            // Publications
+            // Publications (DR lines)
             assertNotNull(meta.getPublications());
             assertEquals(1, meta.getPublications().size());
-            assertEquals("PMC12345", meta.getPublications().get(0).getId());
-            assertEquals("PUBMED", meta.getPublications().get(0).getSource());
+            assertEquals("SAMEA12345", meta.getPublications().get(0).getId());
+            assertEquals("BioSample", meta.getPublications().get(0).getSource());
 
-            // References
+            // References (RN/RG/RA/RT/RL lines) — uses "number" and "group" aliases
             assertNotNull(meta.getReferences());
             assertEquals(1, meta.getReferences().size());
             assertEquals(1, meta.getReferences().get(0).getReferenceNumber());
+            assertEquals("Human Genome Consortium", meta.getReferences().get(0).getConsortium());
             assertEquals("The human genome", meta.getReferences().get(0).getTitle());
             assertEquals("Smith J., Doe A.", meta.getReferences().get(0).getAuthors());
+            assertTrue(meta.getReferences().get(0).getLocation().startsWith("Submitted"));
         }
     }
 

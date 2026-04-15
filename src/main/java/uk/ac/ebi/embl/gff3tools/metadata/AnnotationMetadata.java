@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.metadata;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
+import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -43,6 +44,7 @@ public class AnnotationMetadata {
     private String topology;
     private String division;
     private String dataClass;
+    private Long sequenceLength;
 
     // ── Project / Sample ──
     private String project;
@@ -74,4 +76,7 @@ public class AnnotationMetadata {
     // ── Assembly (carried but not mapped to EMBL lines) ──
     private String assemblyLevel;
     private String assemblyType;
+
+    // ── Search fields (source feature qualifiers from MasterEntry JSON) ──
+    private Map<String, String> searchFields;
 }

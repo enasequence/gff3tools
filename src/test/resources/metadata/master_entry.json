@@ -26,18 +26,17 @@
   "assemblyType": "primary metagenome",
   "publications": [
     {
-      "id": "PMC12345",
-      "source": "PUBMED",
-      "url": "https://pubmed.ncbi.nlm.nih.gov/12345"
+      "pid": "SAMEA12345",
+      "source": "BioSample"
     }
   ],
   "references": [
     {
-      "referenceNumber": 1,
-      "title": "The human genome",
+      "number": 1,
+      "group": "Human Genome Consortium",
       "authors": "Smith J., Doe A.",
-      "location": "Nature 2024",
-      "consortium": "Human Genome Consortium"
+      "title": "The human genome",
+      "location": "Submitted (15-JAN-2024) to the INSDC.\nEBI, Wellcome Genome Campus, Hinxton CB10 1SA, United Kingdom"
     }
   ]
 }

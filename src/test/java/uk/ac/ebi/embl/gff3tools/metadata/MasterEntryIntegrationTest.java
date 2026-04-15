@@ -104,7 +104,8 @@ class MasterEntryIntegrationTest {
         assertTrue(content.contains("Homo sapiens"), "Should contain scientific name");
         assertTrue(content.contains("PRJEB12345"), "Should contain project accession");
         assertTrue(content.contains("HUM"), "Should contain division");
-        assertTrue(content.contains("PUBMED"), "Should contain publication cross-reference");
+        assertTrue(content.contains("BioSample"), "Should contain publication cross-reference");
+        assertTrue(content.contains("Submitted"), "Should contain submission reference");
     }
 
     @Test
