@@ -89,7 +89,7 @@ class TranslationComparisonValidationTest {
         ValidationException ex =
                 assertThrows(ValidationException.class, () -> validation.validateTranslation(annotation, 1));
         assertTrue(ex.getMessage().contains("TRANSLATION_COMPARISON"));
-        assertTrue(ex.getMessage().contains("CDS_id"));
+        assertTrue(ex.getMessage().contains("1-9"));
         assertTrue(ex.getMessage().contains("seq1"));
     }
 
@@ -124,7 +124,7 @@ class TranslationComparisonValidationTest {
 
         ValidationException ex =
                 assertThrows(ValidationException.class, () -> validation.validateTranslation(annotation, 1));
-        assertTrue(ex.getMessage().contains("cds_b"));
+        assertTrue(ex.getMessage().contains("20-30"));
     }
 
     @Test
@@ -142,8 +142,8 @@ class TranslationComparisonValidationTest {
 
         ValidationException ex =
                 assertThrows(ValidationException.class, () -> validation.validateTranslation(annotation, 1));
-        assertTrue(ex.getMessage().contains("cds_a"), "Should report mismatch for cds_a");
-        assertTrue(ex.getMessage().contains("cds_b"), "Should report mismatch for cds_b");
+        assertTrue(ex.getMessage().contains("1-9"), "Should report mismatch for cds_a");
+        assertTrue(ex.getMessage().contains("20-30"), "Should report mismatch for cds_b");
     }
 
     private GFF3Annotation createAnnotation(GFF3Feature... features) {

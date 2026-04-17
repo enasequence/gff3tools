@@ -85,10 +85,8 @@ public class TranslationComparisonValidation {
             }
             if (translationEntry.newTranslation() == null) {
                 if (context.contains(SequenceLookup.class) && context.get(SequenceLookup.class) != null) {
-                    String featureId = representative.getId().orElse("unknown");
-                    mismatches.add(
-                            ("CDS \"%s\" on %s: existing translation present but no new translation was computed")
-                                    .formatted(featureId, representative.accession()));
+                    mismatches.add(("\nNo new translation for: %s CDS: %d-%d")
+                            .formatted(representative.accession(), representative.getStart(), representative.getEnd()));
                 }
                 continue;
             }
@@ -96,20 +94,20 @@ public class TranslationComparisonValidation {
             if (translationEntry.oldTranslation().equals(translationEntry.newTranslation())) {
                 log.info("Successfully compared translation for: {}", key);
             } else {
-                String featureId = representative.getId().orElse("unknown");
                 mismatches.add(
-                        ("CDS \"%s\" on %s: existing translation length %d differs from computed translation length %d")
+                        ("\nTranslation comparison failed for accession: %s CDS location %d-%d: \nExisting translation: %s \nComputed translation: %s")
                                 .formatted(
-                                        featureId,
                                         representative.accession(),
-                                        translationEntry.oldTranslation().length(),
-                                        translationEntry.newTranslation().length()));
+                                        representative.getStart(),
+                                        representative.getEnd(),
+                                        translationEntry.oldTranslation(),
+                                        translationEntry.newTranslation()));
             }
         }
 
         if (!mismatches.isEmpty()) {
             throw new ValidationException(
-                    "TRANSLATION_COMPARISON", line, "Translation mismatch(es): " + String.join("; ", mismatches));
+                    "TRANSLATION_COMPARISON", line, "Translation mismatch(es): " + String.join("", mismatches));
         }
     }
 }
