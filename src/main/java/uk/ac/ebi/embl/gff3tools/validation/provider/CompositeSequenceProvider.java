@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import lombok.Getter;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
@@ -26,7 +27,9 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
  */
 public class CompositeSequenceProvider implements ContextProvider<SequenceLookup> {
 
+    @Getter
     private final List<SequenceSource> sources = new ArrayList<>();
+
     private SequenceLookup cachedLookup;
 
     /**

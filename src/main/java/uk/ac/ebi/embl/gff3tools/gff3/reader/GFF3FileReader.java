@@ -19,6 +19,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import lombok.Getter;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
@@ -43,7 +44,10 @@ public class GFF3FileReader implements AutoCloseable {
     GFF3Annotation currentAnnotation;
     String currentAccession;
     Map<String, GFF3SequenceRegion> accessionSequenceRegionMap = new TreeMap<>();
+
+    @Getter
     ValidationEngine validationEngine;
+
     public GFF3Species gff3Species;
     private final Set<String> processedAccessions;
 
