@@ -11,8 +11,10 @@
 package uk.ac.ebi.embl.gff3tools.fftogff3;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
@@ -27,13 +29,20 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 public class GFF3FileFactory {
     private static final String HEADER_VERSION = "3.1.26";
-    ValidationEngine engine;
 
-    public GFF3FileFactory(ValidationEngine engine) {
-        this.engine = engine;
-    }
-
-    public GFF3File from(EmblEntryReader entryReader, Entry masterEntry) throws ValidationException, ReadException {
+    /**
+     * Creates a GFF3File from flatfile entries using a reader and validation engine.
+     *
+     * @param entryReader reader used to iterate through EMBL entries (input stream of entries)
+     * @param masterEntry the master entry used for deriving species information
+     * @param engine validation engine used for annotation creation and collecting warnings
+     * @return a fully constructed GFF3File containing header, species, annotations, warnings, and translation state
+     * @throws ValidationException if validation fails during annotation creation
+     * @throws ReadException if an I/O error occurs while reading entries
+     */
+    public static GFF3File fromFlatfileEntriesAndEngine(
+            EmblEntryReader entryReader, Entry masterEntry, ValidationEngine engine)
+            throws ValidationException, ReadException {
         GFF3Header header = new GFF3Header(HEADER_VERSION);
         GFF3Species species = null;
         List<GFF3Annotation> annotations = new ArrayList<>();
@@ -64,9 +73,20 @@ public class GFF3FileFactory {
                 .build();
     }
 
+    /**
+     * Creates a GFF3File from pre-built annotations and an existing GFF3 reader.
+     *
+     * @param annotations list of already constructed GFF3 annotations
+     * @param gff3FileReader reader providing species, validation context, and warnings
+     * @param existingTranslationFilePath optional path to an existing translation FASTA file, which will be defaulted to if the {@link TranslationState} is not available }
+     * @param appendTranslationFasta flag indicating whether to append annotation FASTA output
+     * @return a GFF3File populated with provided annotations, reader context, optional FASTA path, and warnings
+     */
     private static GFF3File fromAnnotationAndReader(
-            List<GFF3Annotation> annotations, GFF3FileReader gff3FileReader, boolean appendTranslationFasta) {
-        GFF3Header header = new GFF3Header(HEADER_VERSION);
+            List<GFF3Annotation> annotations,
+            GFF3FileReader gff3FileReader,
+            Optional<Path> existingTranslationFilePath,
+            boolean appendTranslationFasta) {
 
         TranslationState translationState =
                 gff3FileReader.getValidationEngine().getContext().contains(TranslationState.class)
@@ -77,9 +97,11 @@ public class GFF3FileFactory {
                 .header(new GFF3Header(HEADER_VERSION))
                 .species(gff3FileReader.gff3Species)
                 .annotations(annotations)
-                .writeAnnotationFasta(appendTranslationFasta) // write translation at the end of GFF3 yes/no
-                .translationState(translationState)
+                .gff3Reader(gff3FileReader)
+                .fastaFilePath(existingTranslationFilePath.isPresent() ? existingTranslationFilePath.get() : null)
+                .writeAnnotationFasta(appendTranslationFasta)
                 .parsingWarnings(gff3FileReader.getValidationEngine().getParsingWarnings())
+                .translationState(translationState)
                 .build();
     }
 }
