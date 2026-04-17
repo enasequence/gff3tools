@@ -857,6 +857,55 @@ public class TranslatorTest {
     }
 
     @Test
+    void codonStart2IsReadFromFeatureAttribute() throws TranslationException {
+        GFF3Feature feature = new GFF3Feature(
+                Optional.of("id"), Optional.empty(), "seq", Optional.empty(), "source", "CDS", 1, 100, ".", "+", "0");
+        feature.addAttribute("codon_start", "2");
+
+        Translator translator = new Translator(feature);
+
+        assertEquals(2, translator.getCodonStart());
+    }
+
+    @Test
+    void codonStart3IsReadFromFeatureAttribute() throws TranslationException {
+        GFF3Feature feature = new GFF3Feature(
+                Optional.of("id"), Optional.empty(), "seq", Optional.empty(), "source", "CDS", 1, 100, ".", "+", "0");
+        feature.addAttribute("codon_start", "3");
+
+        Translator translator = new Translator(feature);
+
+        assertEquals(3, translator.getCodonStart());
+    }
+
+    @Test
+    void codonStartDefaultsTo1WhenAttributeAbsent() throws TranslationException {
+        GFF3Feature feature = new GFF3Feature(
+                Optional.of("id"), Optional.empty(), "seq", Optional.empty(), "source", "CDS", 1, 100, ".", "+", "0");
+
+        Translator translator = new Translator(feature);
+
+        assertEquals(1, translator.getCodonStart());
+    }
+
+    @Test
+    void codonStart2ProducesCorrectTranslation() throws Exception {
+        // Sequence: "XATGAAATAA" (10 bases) — first base skipped due to codon_start=2
+        // With codon_start=2: translate from base 2 → "ATGAAATAA" → "MK"
+        GFF3Feature feature = new GFF3Feature(
+                Optional.of("id"), Optional.empty(), "seq", Optional.empty(), "source", "CDS", 1, 10, ".", "+", "0");
+        feature.addAttribute("codon_start", "2");
+        feature.setFivePrimePartial();
+
+        Translator translator = new Translator(feature);
+        translator.enableAllFixes();
+        TranslationResult result = translator.translate("CATGAAATAA".getBytes());
+
+        assertTrue(result.isValid());
+        assertEquals("MK", result.getConceptualTranslation());
+    }
+
+    @Test
     public void testWithFile() throws Exception {
 
         GFF3Feature feature = new GFF3Feature(

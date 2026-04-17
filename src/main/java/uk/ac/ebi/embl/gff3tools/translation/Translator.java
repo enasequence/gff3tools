@@ -102,6 +102,10 @@ public class Translator {
 
         threePrimePartial = feature.isThreePrimePartial();
 
+        codonStart = feature.getAttribute(GFF3Attributes.CODON_START)
+                .map(Integer::parseInt)
+                .orElse(codonStart);
+
         // Parse transl_except attributes and add position exceptions
         handleTranslExceptAttributes(feature);
 

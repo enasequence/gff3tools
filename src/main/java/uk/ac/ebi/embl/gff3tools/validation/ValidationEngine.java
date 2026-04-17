@@ -145,7 +145,6 @@ public class ValidationEngine implements AutoCloseable {
                     throw exception;
                 } else {
                     collectedErrors.add(exception);
-                    LOG.error(exception.getMessage());
                 }
             }
         }
@@ -197,7 +196,6 @@ public class ValidationEngine implements AutoCloseable {
             throw ve;
         } else {
             collectedErrors.add(ve);
-            LOG.error(ve.getMessage());
         }
     }
 
