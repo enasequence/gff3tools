@@ -100,7 +100,7 @@ public class GFF3File implements IGFF3Feature {
         if (translationState != null) {
             writeFastaFromTranslationState(writer);
         } else if (fastaFilePath != null) {
-            writeFastaFromExistingFile(writer); // TODO QUESTION: DOES THIS OVER
+            writeFastaFromExistingFile(writer);
         } else if (gff3Reader != null
                 && gff3Reader.getTranslationOffsetMap() != null
                 && !gff3Reader.getTranslationOffsetMap().isEmpty()) {
