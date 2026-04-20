@@ -24,7 +24,6 @@ import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.gff3tools.fftogff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.validation.*;
-import uk.ac.ebi.embl.gff3tools.validation.builtin.*;
 
 class FFToGFF3ConverterTest {
 
@@ -41,14 +40,15 @@ class FFToGFF3ConverterTest {
                     testFiles.get(filePrefix).toString())) {
 
                 // We need new ValidationEngine each time as we cache data in our tests.
-                GFF3FileFactory rule = new GFF3FileFactory(builder.build());
+                ValidationEngine engine = builder.build();
+                GFF3FileFactory rule = new GFF3FileFactory();
 
                 ReaderOptions readerOptions = new ReaderOptions();
                 readerOptions.setIgnoreSequence(true);
                 EmblEntryReader entryReader =
                         new EmblEntryReader(testFileReader, EmblEntryReader.Format.EMBL_FORMAT, "", readerOptions);
                 Writer gff3Writer = new StringWriter();
-                GFF3File gff3 = rule.from(entryReader, null);
+                GFF3File gff3 = GFF3FileFactory.fromFlatfileEntriesAndEngine(entryReader, null, engine);
                 gff3.writeGFF3String(gff3Writer);
 
                 String expected;

@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.*;
+import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3FileFactory;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
@@ -361,6 +362,31 @@ public class GFF3FileReaderTest {
         assertEquals(input, output);
     }
 
+    @Test
+    void testReadGff3() throws Exception {
+        String input = "##gff-version 3\n"
+                + "##species http://example.org?name=Homo sapiens\n"
+                + "##sequence-region BN000065.1 1 315242\n"
+                + "BN000065.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n"
+                + "BN000065.1\t.\tCDS\t1\t315242\t.\t+\t.\tID=CDS_RHD;gene=RHD;\n"
+                + "##gff-version 3\n"
+                + "##species http://example.org?name=Homo sapiens\n"
+                + "##sequence-region BN000066.1 1 315242\n"
+                + "BN000066.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n"
+                + "BN000066.1\t.\tCDS\t1\t315242\t.\t+\t.\tID=CDS_RHX;gene=RHD;\n";
+
+        String expected = "##gff-version 3.1.26\n" + "##species http://example.org?name=Homo sapiens\n"
+                + "##sequence-region BN000065.1 1 315242\n"
+                + "BN000065.1\t.\tCDS\t1\t315242\t.\t+\t.\tID=CDS_RHD;gene=RHD;\n"
+                + "\n"
+                + "##sequence-region BN000066.1 1 315242\n"
+                + "BN000066.1\t.\tCDS\t1\t315242\t.\t+\t.\tID=CDS_RHX;gene=RHD;\n"
+                + "\n";
+
+        String output = testReadWithGff3FactoryOnce(input);
+        assertEquals(expected, output);
+    }
+
     private String testReadWithHeaderOnce(String input)
             throws IOException, ValidationException, ReadException, WriteException {
         StringWriter writer = new StringWriter();
@@ -391,6 +417,27 @@ public class GFF3FileReaderTest {
                     gff3File.writeGFF3String(writer);
                 }
             });
+            Files.deleteIfExists(Path.of("input.gff3"));
+        }
+        return writer.toString();
+    }
+
+    private String testReadWithGff3FactoryOnce(String input)
+            throws IOException, ValidationException, ReadException, WriteException {
+        StringWriter writer = new StringWriter();
+        Files.writeString(Path.of("input.gff3"), input, Charset.defaultCharset());
+        try (GFF3FileReader reader =
+                new GFF3FileReader(getValidationEngine(), new StringReader(input), Path.of("input.gff3"))) {
+            GFF3Header gff3Header = reader.readHeader();
+
+            List<GFF3Annotation> annotations = new ArrayList<>();
+            reader.read(annotation -> {
+                // first annotation → write header + species only once
+                annotations.add(annotation);
+            });
+
+            GFF3File gff3File = GFF3FileFactory.fromAnnotationAndReader(annotations, reader, false, Optional.empty());
+            gff3File.writeGFF3String(writer);
             Files.deleteIfExists(Path.of("input.gff3"));
         }
         return writer.toString();

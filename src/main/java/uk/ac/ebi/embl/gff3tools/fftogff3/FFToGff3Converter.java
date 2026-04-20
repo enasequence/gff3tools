@@ -44,8 +44,8 @@ public class FFToGff3Converter implements Converter {
         EmblEntryReader entryReader =
                 new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
-        GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine);
-        GFF3File file = fftogff3.from(entryReader, getMasterEntry(masterFilePath));
+        GFF3File file = GFF3FileFactory.fromFlatfileEntriesAndEngine(
+                entryReader, getMasterEntry(masterFilePath), validationEngine);
         file.writeGFF3String(writer);
 
         // Check for collected errors at end of processing

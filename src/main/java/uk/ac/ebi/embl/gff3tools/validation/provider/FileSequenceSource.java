@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
@@ -39,11 +40,21 @@ import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ParsedHeader;
 @Slf4j
 public class FileSequenceSource implements SequenceSource {
 
+    @Getter
     private final Path path;
+
+    @Getter
     private final SequenceFormat format;
+
+    @Getter
     private final String sequenceKey;
+
+    @Getter
     private SequenceFormatReader formatReader;
+
+    @Getter
     private final Map<String, Long> seqIdToOrdinal = new HashMap<>();
+
     private boolean initialized;
 
     /**
