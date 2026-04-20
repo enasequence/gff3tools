@@ -78,15 +78,15 @@ public class GFF3FileFactory {
      *
      * @param annotations list of already constructed GFF3 annotations
      * @param gff3FileReader reader providing species, validation context, and warnings
-     * @param existingTranslationFilePath optional path to an existing translation FASTA file, which will be defaulted to if the {@link TranslationState} is not available }
      * @param appendTranslationFasta flag indicating whether to append annotation FASTA output
+     * @param existingTranslationFilePathFallback optional path to an existing translation FASTA file, which will be defaulted to if the {@link TranslationState} is not available }
      * @return a GFF3File populated with provided annotations, reader context, optional FASTA path, and warnings
      */
-    private static GFF3File fromAnnotationAndReader(
+    public static GFF3File fromAnnotationAndReader(
             List<GFF3Annotation> annotations,
             GFF3FileReader gff3FileReader,
-            Optional<Path> existingTranslationFilePath,
-            boolean appendTranslationFasta) {
+            boolean appendTranslationFasta,
+            Optional<Path> existingTranslationFilePathFallback) {
 
         TranslationState translationState =
                 gff3FileReader.getValidationEngine().getContext().contains(TranslationState.class)
@@ -98,7 +98,10 @@ public class GFF3FileFactory {
                 .species(gff3FileReader.gff3Species)
                 .annotations(annotations)
                 .gff3Reader(gff3FileReader)
-                .fastaFilePath(existingTranslationFilePath.isPresent() ? existingTranslationFilePath.get() : null)
+                .fastaFilePath(
+                        existingTranslationFilePathFallback.isPresent()
+                                ? existingTranslationFilePathFallback.get()
+                                : null)
                 .writeAnnotationFasta(appendTranslationFasta)
                 .parsingWarnings(gff3FileReader.getValidationEngine().getParsingWarnings())
                 .translationState(translationState)
