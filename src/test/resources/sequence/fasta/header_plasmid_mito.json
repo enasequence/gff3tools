@@ -1,8 +1,0 @@
-{
-  "description": "Mitochondrial plasmid pMT1",
-  "molecule_type": "genomic DNA",
-  "topology": "circular",
-  "chromosome_type": "Plasmid",
-  "chromosome_location": "Mitochondrion",
-  "chromosome_name": "pMT1"
-}

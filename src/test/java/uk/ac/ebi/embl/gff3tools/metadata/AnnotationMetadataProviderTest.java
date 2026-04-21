@@ -13,10 +13,8 @@ package uk.ac.ebi.embl.gff3tools.metadata;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 
 class AnnotationMetadataProviderTest {
 
@@ -97,42 +95,6 @@ class AnnotationMetadataProviderTest {
     }
 
     @Test
-    void embeddedFastaMetadataSource() {
-        FastaHeader h = new FastaHeader();
-        h.setDescription("From FASTA");
-        h.setMoleculeType("genomic DNA");
-        h.setTopology("linear");
-
-        EmbeddedFastaMetadataSource source = new EmbeddedFastaMetadataSource(Map.of("seq1", h));
-
-        Optional<AnnotationMetadata> meta = source.getMetadata("seq1");
-        assertTrue(meta.isPresent());
-        assertEquals("From FASTA", meta.get().getDescription());
-        assertEquals("genomic DNA", meta.get().getMoleculeType());
-        assertEquals("linear", meta.get().getTopology());
-
-        assertTrue(source.getMetadata("seq2").isEmpty());
-    }
-
-    @Test
-    void cliJsonMetadataSource() {
-        FastaHeader h = new FastaHeader();
-        h.setDescription("CLI header");
-        h.setTopology("circular");
-
-        CliJsonMetadataSource source = new CliJsonMetadataSource(h);
-
-        // Returns same metadata for any seqId
-        Optional<AnnotationMetadata> meta1 = source.getMetadata("seq1");
-        Optional<AnnotationMetadata> meta2 = source.getMetadata("seq99");
-
-        assertTrue(meta1.isPresent());
-        assertTrue(meta2.isPresent());
-        assertEquals("CLI header", meta1.get().getDescription());
-        assertEquals("circular", meta2.get().getTopology());
-    }
-
-    @Test
     void masterEntryJsonMetadataSource() {
         AnnotationMetadata metadata = new AnnotationMetadata();
         metadata.setId("GCA_001");
@@ -145,55 +107,5 @@ class AnnotationMetadataProviderTest {
         assertTrue(result.isPresent());
         assertEquals("GCA_001", result.get().getId());
         assertEquals("9606", result.get().getTaxon());
-    }
-
-    @Test
-    void masterEntryTakesPrecedenceOverFastaHeaders() {
-        // MasterEntry JSON metadata (highest priority)
-        AnnotationMetadata masterMeta = new AnnotationMetadata();
-        masterMeta.setDescription("From MasterEntry");
-        masterMeta.setMoleculeType("mRNA");
-        masterMeta.setTaxon("9606");
-        masterMeta.setScientificName("Homo sapiens");
-
-        // FASTA-embedded header for seq1 (lower priority)
-        FastaHeader fastaHeader = new FastaHeader();
-        fastaHeader.setDescription("From FASTA");
-        fastaHeader.setMoleculeType("genomic DNA");
-        fastaHeader.setTopology("circular");
-
-        AnnotationMetadataProvider provider = new AnnotationMetadataProvider();
-        // Master entry registered first = highest priority
-        provider.addSource(new MasterEntryJsonMetadataSource(masterMeta));
-        provider.addSource(new EmbeddedFastaMetadataSource(Map.of("seq1", fastaHeader)));
-
-        // seq1: MasterEntry wins (it is a global source that matches any seqId)
-        AnnotationMetadata result1 = provider.getMetadata("seq1").get();
-        assertEquals("From MasterEntry", result1.getDescription());
-        assertEquals("mRNA", result1.getMoleculeType());
-        assertEquals("9606", result1.getTaxon());
-
-        // seq2: MasterEntry also wins (global fallback)
-        AnnotationMetadata result2 = provider.getMetadata("seq2").get();
-        assertEquals("From MasterEntry", result2.getDescription());
-        assertEquals("mRNA", result2.getMoleculeType());
-    }
-
-    @Test
-    void fastaHeaderUsedWhenNoMasterEntry() {
-        // No master entry — FASTA headers are the only source
-        FastaHeader fastaHeader = new FastaHeader();
-        fastaHeader.setDescription("From FASTA");
-        fastaHeader.setMoleculeType("genomic DNA");
-
-        AnnotationMetadataProvider provider = new AnnotationMetadataProvider();
-        provider.addSource(new EmbeddedFastaMetadataSource(Map.of("seq1", fastaHeader)));
-
-        AnnotationMetadata result = provider.getMetadata("seq1").get();
-        assertEquals("From FASTA", result.getDescription());
-        assertEquals("genomic DNA", result.getMoleculeType());
-
-        // seq2: no source matches
-        assertTrue(provider.getMetadata("seq2").isEmpty());
     }
 }
