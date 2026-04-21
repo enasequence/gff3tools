@@ -230,42 +230,14 @@ public abstract class AbstractCommand implements Runnable {
     }
 
     /**
-     * Builds an {@link AnnotationMetadataProvider} from pre-built sequence sources and optional
-     * {@code --fasta-header} and {@code --master-entry} paths.
-     *
-     * <p>Priority order (highest first):
-     * <ol>
-     *   <li>MasterEntry JSON or EMBL flatfile (--master-entry)</li>
-     *   <li>FASTA-embedded headers (per-seqId)</li>
-     *   <li>CLI --fasta-header JSON (global fallback)</li>
-     * </ol>
-     *
-     * <p>The first source that returns metadata for a given seqId wins entirely;
-     * no field-level merging is performed.
+     * Builds an {@link AnnotationMetadataProvider} from the optional {@code --master-entry} path.
+     * The master entry file (MasterEntry JSON or EMBL flatfile) is the sole metadata source.
      */
-    protected AnnotationMetadataProvider buildMetadataProvider(
-            List<FileSequenceSource> sources, Path fastaHeaderPath, Path masterEntryPath) throws CLIException {
+    protected AnnotationMetadataProvider buildMetadataProvider(Path masterEntryPath) throws CLIException {
         AnnotationMetadataProvider provider = new AnnotationMetadataProvider();
-
-        // Register --master-entry source (highest priority)
         if (masterEntryPath != null) {
             provider.addSource(parseMasterEntrySource(masterEntryPath));
         }
-
-        // Register FASTA-embedded header sources (medium priority)
-        for (FileSequenceSource fss : sources) {
-            Map<String, FastaHeader> headerMap = fss.getSeqIdToHeader();
-            if (!headerMap.isEmpty()) {
-                provider.addSource(new EmbeddedFastaMetadataSource(headerMap));
-            }
-        }
-
-        // Register CLI --fasta-header JSON (lowest priority)
-        if (fastaHeaderPath != null) {
-            FastaHeader cliHeader = parseFastaHeaderJson(fastaHeaderPath);
-            provider.addSource(new CliJsonMetadataSource(cliHeader));
-        }
-
         return provider;
     }
 

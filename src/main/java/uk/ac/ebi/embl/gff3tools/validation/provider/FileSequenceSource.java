@@ -56,6 +56,7 @@ public class FileSequenceSource implements SequenceSource {
 
     @Getter
     private final Map<String, Long> seqIdToOrdinal = new HashMap<>();
+
     private final Map<String, FastaHeader> seqIdToHeader = new HashMap<>();
     private boolean initialized;
 

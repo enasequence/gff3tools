@@ -61,12 +61,6 @@ public class FileConversionCommand extends AbstractCommand {
         Path tempFile = null;
 
         try {
-            // Enforce mutual exclusion: --fasta-header and --master-entry cannot be used together
-            if (sequenceOptions.fastaHeaderPath != null && masterFilePath != null) {
-                throw new CLIException("Options --fasta-header and --master-entry (-m) are mutually exclusive. "
-                        + "Use --fasta-header for legacy FastaHeader JSON or --master-entry for "
-                        + "MasterEntry JSON / EMBL flatfile, but not both.");
-            }
             // Write to a temp file first to ensure atomic output: if conversion fails,
             // no partial/corrupt output file is created. Only on success do we move the
             // temp file to the final destination.
@@ -81,8 +75,7 @@ public class FileConversionCommand extends AbstractCommand {
             List<FileSequenceSource> sources =
                     buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
             CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
-            AnnotationMetadataProvider metadataProvider =
-                    buildMetadataProvider(sources, sequenceOptions.fastaHeaderPath, masterFilePath);
+            AnnotationMetadataProvider metadataProvider = buildMetadataProvider(masterFilePath);
 
             try (BufferedReader inputReader = getPipe(
                             Files::newBufferedReader,

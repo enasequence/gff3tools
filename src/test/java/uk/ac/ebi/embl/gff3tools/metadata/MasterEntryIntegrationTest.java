@@ -45,39 +45,6 @@ class MasterEntryIntegrationTest {
     }
 
     @Test
-    void mutualExclusion_fastaHeaderAndMasterEntry_failsWithError() throws Exception {
-        Path gff3 = tempDir.resolve("test.gff3");
-        Files.writeString(
-                gff3,
-                """
-                ##gff-version 3
-                ##sequence-region seq1 1 1000
-                seq1\t.\tgene\t1\t100\t.\t+\t.\tID=gene1
-                """);
-
-        Path headerJson = tempDir.resolve("header.json");
-        Files.writeString(headerJson, "{\"description\":\"test\",\"molecule_type\":\"dna\",\"topology\":\"linear\"}");
-
-        Path masterJson = tempDir.resolve("master.json");
-        Files.writeString(masterJson, "{\"id\":\"test\"}");
-
-        Path outFile = tempDir.resolve("output.embl");
-
-        // Using both --fasta-header and --master-entry should fail
-        int exitCode = executeCommand(
-                "conversion",
-                "--fasta-header",
-                headerJson.toString(),
-                "--master-entry",
-                masterJson.toString(),
-                gff3.toString(),
-                outFile.toString());
-
-        assertNotEquals(0, exitCode, "Should fail when both --fasta-header and --master-entry are used");
-        assertFalse(Files.exists(outFile), "Output file should not be created");
-    }
-
-    @Test
     void gff3ToEmbl_withMasterEntryJson_succeeds() throws Exception {
         Path gff3 = tempDir.resolve("test.gff3");
         Files.writeString(
@@ -165,24 +132,5 @@ class MasterEntryIntegrationTest {
         String expected = Files.readString(expectedPath).trim();
         String actual = Files.readString(outFile).trim();
         assertEquals(expected, actual, "Output should match expected GFF3 for backward compatibility");
-    }
-
-    @Test
-    void fastaHeaderAlone_backwardCompatible() throws Exception {
-        // Ensure --fasta-header alone still works
-        Path gff3 = getResourcePath("gff3toff_header_tests/fasta_header_basic.gff3");
-        Path headerJson = getResourcePath("sequence/fasta/header_test.json");
-        Path expectedEmbl = getResourcePath("gff3toff_header_tests/fasta_header_basic.embl");
-        Path outFile = tempDir.resolve("output.embl");
-
-        int exitCode = executeCommand(
-                "conversion", "--fasta-header", headerJson.toString(), gff3.toString(), outFile.toString());
-
-        assertEquals(0, exitCode, "--fasta-header alone should succeed");
-        assertTrue(Files.exists(outFile), "Output file should be created");
-
-        String expected = Files.readString(expectedEmbl).trim();
-        String actual = Files.readString(outFile).trim();
-        assertEquals(expected, actual, "EMBL output should match expected for backward compatibility");
     }
 }

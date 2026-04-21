@@ -41,14 +41,14 @@ class FFToGFF3ConverterTest {
 
                 // We need new ValidationEngine each time as we cache data in our tests.
                 ValidationEngine engine = builder.build();
-                GFF3FileFactory rule = new GFF3FileFactory();
+                GFF3FileFactory factory = new GFF3FileFactory(engine);
 
                 ReaderOptions readerOptions = new ReaderOptions();
                 readerOptions.setIgnoreSequence(true);
                 EmblEntryReader entryReader =
                         new EmblEntryReader(testFileReader, EmblEntryReader.Format.EMBL_FORMAT, "", readerOptions);
                 Writer gff3Writer = new StringWriter();
-                GFF3File gff3 = GFF3FileFactory.fromFlatfileEntriesAndEngine(entryReader, null, engine);
+                GFF3File gff3 = factory.from(entryReader, null);
                 gff3.writeGFF3String(gff3Writer);
 
                 String expected;
