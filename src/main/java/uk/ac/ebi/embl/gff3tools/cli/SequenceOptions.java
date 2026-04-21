@@ -38,9 +38,11 @@ public class SequenceOptions {
                     + "Applies to all --sequence entries when set explicitly.")
     public SequenceFormat sequenceFormat;
 
+    @Deprecated
     @CommandLine.Option(
             names = "--fasta-header",
-            description = "Path to a JSON file containing FASTA header metadata. "
+            description = "Deprecated: use --master-entry instead. "
+                    + "Path to a JSON file containing FASTA header metadata. "
                     + "Applied as a global fallback for all seqIds not covered by --sequence FASTA headers.")
     public Path fastaHeaderPath;
 }

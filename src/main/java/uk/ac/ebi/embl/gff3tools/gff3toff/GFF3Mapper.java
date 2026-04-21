@@ -10,18 +10,27 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3toff;
 
+import java.time.DateTimeException;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.EntryFactory;
 import uk.ac.ebi.embl.api.entry.Text;
+import uk.ac.ebi.embl.api.entry.XRef;
 import uk.ac.ebi.embl.api.entry.feature.Feature;
 import uk.ac.ebi.embl.api.entry.feature.FeatureFactory;
 import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
 import uk.ac.ebi.embl.api.entry.location.*;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.qualifier.QualifierFactory;
+import uk.ac.ebi.embl.api.entry.reference.*;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -31,11 +40,15 @@ import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
+import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadata;
+import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadataProvider;
+import uk.ac.ebi.embl.gff3tools.metadata.CrossReference;
+import uk.ac.ebi.embl.gff3tools.metadata.ReferenceData;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
+import uk.ac.ebi.ena.taxonomy.taxon.TaxonFactory;
 
 public class GFF3Mapper {
 
@@ -45,6 +58,7 @@ public class GFF3Mapper {
     private final QualifierFactory qualifierFactory = new QualifierFactory();
     private final LocationFactory locationFactory = new LocationFactory();
     private final SequenceFactory sequenceFactory = new SequenceFactory();
+    private final ReferenceFactory referenceFactory = new ReferenceFactory();
     private static final Logger LOGGER = LoggerFactory.getLogger(GFF3Mapper.class);
 
     Map<String, GFF3Feature> parentFeatures;
@@ -53,18 +67,18 @@ public class GFF3Mapper {
 
     Entry entry;
     GFF3FileReader gff3FileReader;
-    private final FastaHeaderProvider headerProvider;
+    private final AnnotationMetadataProvider metadataProvider;
 
     public GFF3Mapper(GFF3FileReader gff3FileReader) {
-        this(gff3FileReader, null);
+        this(gff3FileReader, (AnnotationMetadataProvider) null);
     }
 
-    public GFF3Mapper(GFF3FileReader gff3FileReader, FastaHeaderProvider headerProvider) {
+    public GFF3Mapper(GFF3FileReader gff3FileReader, AnnotationMetadataProvider metadataProvider) {
         parentFeatures = new HashMap<>();
         joinableFeatureMap = new HashMap<>();
         entry = null;
         this.gff3FileReader = gff3FileReader;
-        this.headerProvider = headerProvider;
+        this.metadataProvider = metadataProvider;
     }
 
     public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) throws ValidationException {
@@ -90,7 +104,7 @@ public class GFF3Mapper {
         entry.addFeature(sourceFeature);
         entry.setSequence(sequence);
 
-        applyFastaHeader(sequenceRegion, entry, sequence, sourceFeature);
+        applyAnnotationMetadata(sequenceRegion, entry, sequence, sourceFeature);
 
         for (GFF3Feature gff3Feature : gff3Annotation.getFeatures()) {
             if (gff3Feature.getId().isPresent()) {
@@ -291,12 +305,12 @@ public class GFF3Mapper {
     }
 
     /**
-     * Applies FASTA header metadata to the EMBL entry, sequence, and source feature.
-     * Gracefully skips if no header provider is available or no header is found for the seqId.
+     * Applies AnnotationMetadata to the EMBL entry, sequence, and source feature.
+     * Gracefully skips if no metadata provider is available or no metadata is found for the seqId.
      */
-    private void applyFastaHeader(
+    private void applyAnnotationMetadata(
             GFF3SequenceRegion sequenceRegion, Entry entry, Sequence sequence, SourceFeature sourceFt) {
-        if (headerProvider == null) {
+        if (metadataProvider == null) {
             return;
         }
         if (sequenceRegion == null) {
@@ -304,42 +318,329 @@ public class GFF3Mapper {
         }
 
         String seqId = sequenceRegion.accessionId();
-        Optional<FastaHeader> opt = headerProvider.getHeader(seqId);
+        Optional<AnnotationMetadata> opt = metadataProvider.getMetadata(seqId);
         if (opt.isEmpty()) {
-            LOGGER.debug("No FASTA header found for seqId '{}'; skipping header mapping", seqId);
+            LOGGER.debug("No annotation metadata found for seqId '{}'; skipping metadata mapping", seqId);
             return;
         }
 
-        FastaHeader h = opt.get();
+        AnnotationMetadata m = opt.get();
 
-        // FR-1: Description mapping (DE line)
-        if (h.getDescription() != null) {
-            entry.setDescription(new Text(h.getDescription()));
+        // DE line: description (title as fallback)
+        if (m.getDescription() != null) {
+            entry.setDescription(new Text(m.getDescription()));
+        } else if (m.getTitle() != null) {
+            entry.setDescription(new Text(m.getTitle()));
         }
 
-        // FR-2: Molecule type mapping (ID line field 4 + source qualifier)
-        if (h.getMoleculeType() != null) {
-            sequence.setMoleculeType(h.getMoleculeType());
-            sourceFt.addQualifier("mol_type", h.getMoleculeType());
+        // Molecule type: ID line field 4 + /mol_type source qualifier
+        if (m.getMoleculeType() != null) {
+            sequence.setMoleculeType(m.getMoleculeType());
+            sourceFt.addQualifier("mol_type", m.getMoleculeType());
         }
 
-        // FR-3: Topology mapping (ID line field 3)
-        if (h.getTopology() != null) {
-            mapTopology(h.getTopology(), sequence);
+        // Topology: ID line field 3 (defaults to LINEAR when absent)
+        if (m.getTopology() != null) {
+            mapTopology(m.getTopology(), sequence);
         }
 
-        // FR-4 + FR-5: Chromosome type and name mapping
-        if (h.getChromosomeType() != null) {
-            mapChromosomeType(h.getChromosomeType(), h.getChromosomeName(), sourceFt);
-        } else if (h.getChromosomeName() != null) {
-            // FR-4: Standalone chromosome name (no type specified)
-            sourceFt.addQualifier("chromosome", h.getChromosomeName());
+        // Chromosome type and name
+        if (m.getChromosomeType() != null) {
+            mapChromosomeType(m.getChromosomeType(), m.getChromosomeName(), sourceFt);
+        } else if (m.getChromosomeName() != null) {
+            sourceFt.addQualifier("chromosome", m.getChromosomeName());
         }
 
-        // FR-5: Chromosome location mapping
-        if (h.getChromosomeLocation() != null) {
-            mapChromosomeLocation(h.getChromosomeLocation(), sourceFt);
+        // Chromosome location -> /organelle qualifier
+        if (m.getChromosomeLocation() != null) {
+            mapChromosomeLocation(m.getChromosomeLocation(), sourceFt);
         }
+
+        // Division: ID line taxonomic division field
+        if (m.getDivision() != null) {
+            entry.setDivision(m.getDivision());
+        }
+
+        // Data class: ID line data class field
+        if (m.getDataClass() != null) {
+            entry.setDataClass(m.getDataClass());
+        }
+
+        // Accession: primary accession (only when GFF3 ##sequence-region provides no accession)
+        if (m.getAccession() != null && entry.getPrimaryAccession() == null) {
+            entry.setPrimaryAccession(m.getAccession());
+        }
+
+        // Secondary accessions: AC line
+        if (m.getSecondaryAccessions() != null) {
+            for (String acc : m.getSecondaryAccessions()) {
+                entry.addSecondaryAccession(new Text(acc));
+            }
+        }
+
+        // Version: ID line version and DT line version
+        if (m.getVersion() != null) {
+            entry.setVersion(m.getVersion());
+            if (sequenceRegion != null && sequenceRegion.accessionVersion().isEmpty()) {
+                sequence.setVersion(m.getVersion());
+            }
+        }
+
+        // Keywords: KW line
+        if (m.getKeywords() != null) {
+            for (String kw : m.getKeywords()) {
+                entry.addKeyword(new Text(kw));
+            }
+        }
+
+        // Comment: CC line
+        if (m.getComment() != null) {
+            entry.setComment(new Text(m.getComment()));
+        }
+
+        // Taxon: source feature /db_xref "taxon:<value>"
+        if (m.getTaxon() != null) {
+            sourceFt.addQualifier("db_xref", "taxon:" + m.getTaxon());
+        }
+
+        // Scientific name: source feature /organism
+        if (m.getScientificName() != null) {
+            sourceFt.addQualifier("organism", m.getScientificName());
+        }
+
+        // Common name: source feature /note with prefix
+        if (m.getCommonName() != null) {
+            sourceFt.addQualifier("note", "common name: " + m.getCommonName());
+        }
+
+        // Lineage: OC line (taxonomy classification).
+        // The EMBL OCWriter reads lineage from sourceFeature.getTaxon().getLineage(),
+        // so we ensure a Taxon object exists on the SourceFeature and populate it.
+        if (m.getLineage() != null) {
+            Taxon taxon = sourceFt.getTaxon();
+            if (taxon == null) {
+                taxon = new TaxonFactory().createTaxon();
+                sourceFt.setTaxon(taxon);
+            }
+            taxon.setLineage(m.getLineage());
+            // Also populate taxon fields from metadata if they were set above as qualifiers
+            if (m.getScientificName() != null && taxon.getScientificName() == null) {
+                taxon.setScientificName(m.getScientificName());
+            }
+            if (m.getCommonName() != null && taxon.getCommonName() == null) {
+                taxon.setCommonName(m.getCommonName());
+            }
+            if (m.getTaxon() != null && taxon.getTaxId() == null) {
+                try {
+                    taxon.setTaxId(Long.parseLong(m.getTaxon()));
+                } catch (NumberFormatException ignored) {
+                    // taxon field is not numeric; skip
+                }
+            }
+        }
+
+        // Project: PR line
+        if (m.getProject() != null) {
+            entry.addProjectAccession(new Text(m.getProject()));
+        }
+
+        // References: RF lines
+        if (m.getReferences() != null) {
+            for (ReferenceData refData : m.getReferences()) {
+                mapReference(refData, entry);
+            }
+        }
+
+        // DR lines: database cross-references (ordered to match EMBL convention)
+        if (m.getMd5() != null) {
+            entry.addXRef(new XRef("MD5", m.getMd5()));
+        }
+        if (m.getRunAccession() != null) {
+            for (String run : m.getRunAccession()) {
+                entry.addXRef(new XRef("ENA", run));
+            }
+        }
+        // Publications (e.g., BioSample). BioProject is skipped — handled via project → PR line.
+        if (m.getPublications() != null) {
+            for (CrossReference pub : m.getPublications()) {
+                if (pub.getSource() != null && pub.getId() != null && !"BioProject".equalsIgnoreCase(pub.getSource())) {
+                    entry.addXRef(new XRef(pub.getSource(), pub.getId()));
+                }
+            }
+        }
+
+        // DT lines: first public and last updated (dates + release numbers)
+        if (m.getFirstPublic() != null) {
+            Date date = parseDate(m.getFirstPublic());
+            if (date != null) {
+                entry.setFirstPublic(date);
+            }
+        }
+        if (m.getFirstPublicRelease() != null) {
+            entry.setFirstPublicRelease(m.getFirstPublicRelease());
+        }
+        if (m.getLastUpdated() != null) {
+            Date date = parseDate(m.getLastUpdated());
+            if (date != null) {
+                entry.setLastUpdated(date);
+            }
+        }
+        if (m.getLastUpdatedRelease() != null) {
+            entry.setLastUpdatedRelease(m.getLastUpdatedRelease());
+        }
+
+        // Sequence length: ID line BP/SQ count.
+        // The IDWriter only uses idLineSequenceLength for SET/master/annotationOnlyCON
+        // entries. For non-SET entries, we set annotationOnlyCON so the IDWriter picks
+        // up the length. SET entries already use idLineSequenceLength natively.
+        if (m.getSequenceLength() != null && m.getSequenceLength() > 0) {
+            entry.setIdLineSequenceLength(m.getSequenceLength());
+            if (!"SET".equals(entry.getDataClass())) {
+                entry.setAnnotationOnlyCON(true);
+            }
+        }
+
+        // Sample: DR BioSample line (only for SAMEA-prefixed accessions;
+        // ERS accessions are ENA sample aliases, not BioSample identifiers)
+        if (m.getSample() != null && m.getSample().startsWith("SAMEA")) {
+            entry.addXRef(new XRef("BioSample", m.getSample()));
+        }
+
+        // Search fields: source feature qualifiers (geo_loc_name, collection_date, isolate, etc.)
+        if (m.getSearchFields() != null) {
+            mapSearchFields(m.getSearchFields(), sourceFt);
+        }
+    }
+
+    private static final java.util.regex.Pattern SUBMISSION_PATTERN = java.util.regex.Pattern.compile(
+            "Submitted \\(([^)]+)\\) to the INSDC\\.\\n?(.*)$", java.util.regex.Pattern.DOTALL);
+
+    /**
+     * Maps a ReferenceData to an EMBL Reference and adds it to the entry.
+     * Detects submission-type references from the location field pattern
+     * {@code "Submitted (DD-MMM-YYYY) to the INSDC.\nADDRESS"} and creates a
+     * {@link Submission}; otherwise falls back to {@link Unpublished}.
+     */
+    private void mapReference(ReferenceData refData, Entry entry) {
+        Publication publication;
+
+        if (refData.getLocation() != null) {
+            var matcher = SUBMISSION_PATTERN.matcher(refData.getLocation());
+            if (matcher.matches()) {
+                publication =
+                        createSubmission(matcher.group(1), matcher.group(2).trim());
+            } else {
+                publication = referenceFactory.createUnpublished();
+            }
+        } else {
+            publication = referenceFactory.createUnpublished();
+        }
+
+        if (refData.getTitle() != null) {
+            publication.setTitle(refData.getTitle());
+        }
+
+        if (refData.getConsortium() != null) {
+            publication.setConsortium(refData.getConsortium());
+        }
+
+        if (refData.getAuthors() != null) {
+            String[] authorNames = refData.getAuthors().split(",\\s*");
+            for (String authorName : authorNames) {
+                if (!authorName.isBlank()) {
+                    publication.addAuthor(referenceFactory.createPerson(authorName.trim()));
+                }
+            }
+        }
+
+        Reference reference = referenceFactory.createReference(publication, refData.getReferenceNumber());
+
+        if (refData.getReferenceComment() != null) {
+            reference.setComment(refData.getReferenceComment());
+        }
+
+        entry.addReference(reference);
+    }
+
+    /**
+     * Creates a Submission publication from the parsed date string and submitter address.
+     */
+    private Submission createSubmission(String dateStr, String address) {
+        Submission sub = referenceFactory.createSubmission();
+        Date day = parseDate(dateStr);
+        if (day != null) {
+            sub.setDay(day);
+        }
+        if (!address.isBlank()) {
+            sub.setSubmitterAddress(address);
+        }
+        return sub;
+    }
+
+    /**
+     * Keys from searchFields that are already handled by other AnnotationMetadata fields
+     * or are not valid source feature qualifiers.
+     */
+    private static final Set<String> SEARCH_FIELDS_SKIP =
+            Set.of("organism", "topology", "tax_division", "md5_checksum", "country");
+
+    /**
+     * Maps searchFields entries to source feature qualifiers.
+     * Keys that are already handled elsewhere (organism, topology, etc.) are skipped.
+     */
+    private void mapSearchFields(Map<String, String> searchFields, SourceFeature sourceFt) {
+        for (Map.Entry<String, String> field : searchFields.entrySet()) {
+            String key = field.getKey();
+            String value = field.getValue();
+            if (value == null || value.isBlank() || SEARCH_FIELDS_SKIP.contains(key)) {
+                continue;
+            }
+            sourceFt.addQualifier(key, value);
+        }
+        // /environmental_sample is a valueless qualifier implied by metagenome_source
+        if (searchFields.containsKey("metagenome_source")) {
+            sourceFt.addQualifier(qualifierFactory.createQualifier("environmental_sample"));
+        }
+    }
+
+    private static final DateTimeFormatter[] DATE_FORMATTERS = {
+        DateTimeFormatter.ISO_DATE_TIME,
+        DateTimeFormatter.ISO_DATE,
+        new DateTimeFormatterBuilder()
+                .parseCaseInsensitive()
+                .appendPattern("dd-MMM-yyyy")
+                .toFormatter(Locale.ENGLISH),
+    };
+
+    /**
+     * Parses a date string into a {@link Date}. Supports ISO-8601 datetime (with timezone)
+     * and simple date formats. Uses {@code java.time} to correctly handle timezone offsets
+     * including the UTC 'Z' suffix.
+     */
+    private Date parseDate(String dateStr) {
+        // Try ISO-8601 instant first (handles "2024-01-15T00:00:00Z" and offset variants)
+        try {
+            return Date.from(Instant.parse(dateStr));
+        } catch (DateTimeParseException ignored) {
+            // not a strict instant; try other formats
+        }
+
+        for (DateTimeFormatter formatter : DATE_FORMATTERS) {
+            try {
+                var accessor = formatter.parse(dateStr);
+                try {
+                    return Date.from(Instant.from(accessor));
+                } catch (DateTimeException ignored) {
+                    // no timezone info; treat as a local date at UTC midnight
+                }
+                LocalDate localDate = LocalDate.from(accessor);
+                return Date.from(localDate.atStartOfDay(ZoneOffset.UTC).toInstant());
+            } catch (DateTimeParseException ignored) {
+                // try next format
+            }
+        }
+        LOGGER.warn("Unable to parse date '{}'; skipping date mapping", dateStr);
+        return null;
     }
 
     /**
@@ -406,7 +707,7 @@ public class GFF3Mapper {
         String normalised = chromosomeLocation.toLowerCase();
 
         if ("nuclear".equals(normalised)) {
-            // Nuclear is the default — no organelle qualifier needed
+            // Nuclear is the default -- no organelle qualifier needed
             return;
         }
 

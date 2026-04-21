@@ -24,24 +24,20 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadata;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 public class GFF3FileFactory {
     private static final String HEADER_VERSION = "3.1.26";
 
-    /**
-     * Creates a GFF3File from flatfile entries using a reader and validation engine.
-     *
-     * @param entryReader reader used to iterate through EMBL entries (input stream of entries)
-     * @param masterEntry the master entry used for deriving species information
-     * @param engine validation engine used for annotation creation and collecting warnings
-     * @return a fully constructed GFF3File containing header, species, annotations, warnings, and translation state
-     * @throws ValidationException if validation fails during annotation creation
-     * @throws ReadException if an I/O error occurs while reading entries
-     */
-    public static GFF3File fromFlatfileEntriesAndEngine(
-            EmblEntryReader entryReader, Entry masterEntry, ValidationEngine engine)
+    private final ValidationEngine engine;
+
+    public GFF3FileFactory(ValidationEngine engine) {
+        this.engine = engine;
+    }
+
+    public GFF3File from(EmblEntryReader entryReader, AnnotationMetadata masterMetadata)
             throws ValidationException, ReadException {
         GFF3Header header = new GFF3Header(HEADER_VERSION);
         GFF3Species species = null;
@@ -52,7 +48,7 @@ public class GFF3FileFactory {
             while (entryReader.read() != null && entryReader.isEntry()) {
                 Entry entry = entryReader.getEntry();
                 if (species == null) {
-                    species = directivesFactory.createSpecies(entry, masterEntry);
+                    species = directivesFactory.createSpecies(entry, masterMetadata);
                 }
                 annotations.add(annotationFactory.from(entry));
             }

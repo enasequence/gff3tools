@@ -18,6 +18,7 @@ import uk.ac.ebi.embl.api.entry.qualifier.OrganismQualifier;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
+import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadata;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 public class GFF3DirectivesFactory {
@@ -37,11 +38,39 @@ public class GFF3DirectivesFactory {
                 .orElseGet(getOrganism);
     }
 
-    public GFF3Species createSpecies(Entry entry, Entry masterEntry) throws NoSourcePresentException {
-        Entry sourceEntry = masterEntry == null ? entry : masterEntry;
+    /**
+     * Builds a taxonomy URL from AnnotationMetadata fields.
+     */
+    private String buildTaxonomyUrlFromMetadata(AnnotationMetadata metadata) {
+        if (metadata.getTaxon() != null) {
+            try {
+                Long taxId = Long.parseLong(metadata.getTaxon());
+                return "%s?id=%d".formatted(BASE_TAXON_URL, taxId);
+            } catch (NumberFormatException ignored) {
+                // taxon field is not numeric; fall through to name-based lookup
+            }
+        }
+        if (metadata.getScientificName() != null) {
+            return "%s?name=%s".formatted(BASE_TAXON_URL, metadata.getScientificName());
+        }
+        return null;
+    }
 
+    /**
+     * Creates a GFF3Species directive using AnnotationMetadata if available,
+     * falling back to the entry's source feature organism qualifier.
+     */
+    public GFF3Species createSpecies(Entry entry, AnnotationMetadata masterMetadata) throws NoSourcePresentException {
+        // If we have AnnotationMetadata with scientificName or taxon, prefer it
+        if (masterMetadata != null
+                && (masterMetadata.getScientificName() != null || masterMetadata.getTaxon() != null)) {
+            String url = buildTaxonomyUrlFromMetadata(masterMetadata);
+            return new GFF3Species(url);
+        }
+
+        // Fall back to reading from the entry's source feature
         Feature feature =
-                Optional.ofNullable(sourceEntry.getPrimarySourceFeature()).orElseThrow(NoSourcePresentException::new);
+                Optional.ofNullable(entry.getPrimarySourceFeature()).orElseThrow(NoSourcePresentException::new);
 
         Optional<OrganismQualifier> qualifier =
                 feature.getQualifiers("organism").stream().findFirst().map(q -> (OrganismQualifier) q);
