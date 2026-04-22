@@ -21,18 +21,33 @@ import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.gff3tools.Converter;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
+import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadata;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 
 public class FFToGff3Converter implements Converter {
-    // MasterFile will be used when converting reduced flatfile tto GFF3
-    Path masterFilePath = null;
-    ValidationEngine validationEngine;
+
+    private final ValidationEngine validationEngine;
+    private AnnotationMetadata masterMetadata;
+
+    /** Legacy field: kept only for backward compat with the Path-based constructor. */
+    private Path masterFilePath = null;
 
     public FFToGff3Converter(ValidationEngine validationEngine) {
         this.validationEngine = validationEngine;
     }
 
-    // Constructor to be used only by the processing pipeline which converts reduced flatfile
+    /**
+     * Constructor accepting pre-built AnnotationMetadata (from --master-entry).
+     */
+    public FFToGff3Converter(ValidationEngine validationEngine, AnnotationMetadata masterMetadata) {
+        this.validationEngine = validationEngine;
+        this.masterMetadata = masterMetadata;
+    }
+
+    /**
+     * Legacy constructor accepting a raw EMBL flatfile path. Kept for backward compatibility.
+     * The EMBL file is parsed into an Entry and then into AnnotationMetadata on convert().
+     */
     public FFToGff3Converter(ValidationEngine validationEngine, Path masterFilePath) {
         this.validationEngine = validationEngine;
         this.masterFilePath = masterFilePath;
@@ -41,11 +56,20 @@ public class FFToGff3Converter implements Converter {
     public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException {
 
+        // If we have a legacy master file path but no metadata yet, parse it
+        if (masterMetadata == null && masterFilePath != null) {
+            Entry masterEntry = getMasterEntry(masterFilePath);
+            if (masterEntry != null) {
+                masterMetadata =
+                        new uk.ac.ebi.embl.gff3tools.metadata.EmblEntryMetadataSource(masterEntry).getMetadata();
+            }
+        }
+
         EmblEntryReader entryReader =
                 new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
-        GFF3File file = GFF3FileFactory.fromFlatfileEntriesAndEngine(
-                entryReader, getMasterEntry(masterFilePath), validationEngine);
+        GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine);
+        GFF3File file = fftogff3.from(entryReader, masterMetadata);
         file.writeGFF3String(writer);
 
         // Check for collected errors at end of processing

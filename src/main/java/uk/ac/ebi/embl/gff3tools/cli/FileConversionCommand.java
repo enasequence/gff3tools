@@ -20,6 +20,7 @@ import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -30,9 +31,12 @@ import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.exception.FormatSupportException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
+import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadata;
+import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 
 // Using pandoc CLI interface conventions
 @CommandLine.Command(name = "conversion", description = "Performs format conversions to or from gff3")
@@ -68,8 +72,10 @@ public class FileConversionCommand extends AbstractCommand {
 
             final Path effectiveOutputPath = writingToFile ? tempFile : null;
 
-            CompositeSequenceProvider compositeProvider =
-                    buildCompositeProvider(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
+            List<FileSequenceSource> sources =
+                    buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
+            CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
+            AnnotationMetadataProvider metadataProvider = buildMetadataProvider(masterFilePath);
 
             try (BufferedReader inputReader = getPipe(
                             Files::newBufferedReader,
@@ -80,7 +86,7 @@ public class FileConversionCommand extends AbstractCommand {
                 fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
                 toFileType = validateFileType(toFileType, outputFilePath, "-t");
                 try (ValidationEngine engine = initValidationEngine(ruleOverrides, compositeProvider)) {
-                    Converter converter = getConverter(engine, fromFileType, toFileType);
+                    Converter converter = getConverter(engine, fromFileType, toFileType, metadataProvider);
                     converter.convert(inputReader, outputWriter);
                 }
             }
@@ -119,17 +125,34 @@ public class FileConversionCommand extends AbstractCommand {
     }
 
     private Converter getConverter(
-            ValidationEngine engine, ConversionFileFormat inputFileType, ConversionFileFormat outputFileType)
-            throws FormatSupportException {
+            ValidationEngine engine,
+            ConversionFileFormat inputFileType,
+            ConversionFileFormat outputFileType,
+            AnnotationMetadataProvider metadataProvider)
+            throws FormatSupportException, CLIException {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
-            return new Gff3ToFFConverter(engine, inputFilePath);
+            return new Gff3ToFFConverter(engine, inputFilePath, metadataProvider);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
-            return masterFilePath == null
-                    ? new FFToGff3Converter(engine)
-                    : new FFToGff3Converter(engine, masterFilePath);
+            return buildFFToGff3Converter(engine, metadataProvider);
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }
+    }
+
+    /**
+     * Builds an FFToGff3Converter using AnnotationMetadata from the already-built provider.
+     * Avoids re-parsing the master file by extracting metadata from the provider chain.
+     */
+    private Converter buildFFToGff3Converter(ValidationEngine engine, AnnotationMetadataProvider metadataProvider)
+            throws CLIException {
+        if (metadataProvider == null) {
+            return new FFToGff3Converter(engine);
+        }
+        AnnotationMetadata meta = metadataProvider.getGlobalMetadata().orElse(null);
+        if (meta == null) {
+            return new FFToGff3Converter(engine);
+        }
+        return new FFToGff3Converter(engine, meta);
     }
 
     private ConversionFileFormat validateFileType(ConversionFileFormat fileFormat, Path filePath, String cliOption)

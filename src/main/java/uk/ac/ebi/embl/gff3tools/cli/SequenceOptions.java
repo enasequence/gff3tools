@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.cli;
 
+import java.nio.file.Path;
 import java.util.List;
 import picocli.CommandLine;
 
@@ -36,4 +37,12 @@ public class SequenceOptions {
             description = "Format of the sequence file: fasta, plain. Inferred from extension if omitted. "
                     + "Applies to all --sequence entries when set explicitly.")
     public SequenceFormat sequenceFormat;
+
+    @CommandLine.Option(
+            names = "--fasta-header",
+            description = "Path to a JSON file containing FASTA header values. "
+                    + "Feeds the FASTA header provider as a global fallback for all seqIds not "
+                    + "covered by --sequence FASTA headers. Not a metadata source — use "
+                    + "--master-entry for metadata.")
+    public Path fastaHeaderPath;
 }

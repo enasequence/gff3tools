@@ -8,21 +8,20 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.exception;
+package uk.ac.ebi.embl.gff3tools.metadata;
 
-import uk.ac.ebi.embl.gff3tools.cli.CLIExitCode;
+import java.util.Optional;
 
-public class CLIException extends ExitException {
-    @Override
-    public CLIExitCode exitCode() {
-        return CLIExitCode.USAGE;
-    }
+/**
+ * A source of {@link AnnotationMetadata} for a given sequence ID.
+ *
+ * <p>Used by {@link AnnotationMetadataProvider} to chain multiple sources
+ * in priority order with field-level merging.
+ */
+public interface AnnotationMetadataSource {
 
-    public CLIException(String message) {
-        super(message);
-    }
-
-    public CLIException(String message, Exception cause) {
-        super(message, cause);
-    }
+    /**
+     * Returns the {@link AnnotationMetadata} for the given seqId, or empty if not available.
+     */
+    Optional<AnnotationMetadata> getMetadata(String seqId);
 }

@@ -14,11 +14,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 
 class FileSequenceSourceTest {
 
@@ -94,6 +96,20 @@ class FileSequenceSourceTest {
         source.hasSequence("x");
         source.close();
         verify(mockReader).close();
+    }
+
+    @Test
+    void getSeqIdToHeaderReturnsPopulatedMapForFasta() {
+        SequenceFormatReader mockReader = mockFastaReader("seq1", "seq2");
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+
+        Map<String, FastaHeader> headerMap = source.getSeqIdToHeader();
+
+        assertEquals(2, headerMap.size());
+        assertTrue(headerMap.containsKey("seq1"));
+        assertTrue(headerMap.containsKey("seq2"));
+        assertEquals("test", headerMap.get("seq1").getDescription());
+        assertEquals("test", headerMap.get("seq2").getDescription());
     }
 
     @Test
