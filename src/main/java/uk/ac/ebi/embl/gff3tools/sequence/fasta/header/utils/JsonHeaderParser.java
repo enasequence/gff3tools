@@ -60,14 +60,20 @@ public class JsonHeaderParser {
                 .mapToObj(cp -> cp <= 0x7F ? String.valueOf((char) cp) : "?")
                 .collect(Collectors.joining()); // replace non-ascii char with one char '?' per unicode mark
 
+        FastaHeader header;
         try {
-            FastaHeader header = MAPPER.readValue(normalised, FastaHeader.class);
-            return header;
-
+            header = MAPPER.readValue(normalised, FastaHeader.class);
         } catch (JsonProcessingException e) {
             throw new FastaHeaderParserException(
                     "Malformed FASTA header JSON: " + normalised + " due to " + e.getMessage(), e);
         }
+
+        // post-processing for neatness
+        if (header.topology != null) {
+            header.topology = header.topology.toLowerCase(Locale.ROOT);
+        }
+
+        return header;
     }
 
     private static String normaliseRawJsonString(String raw) {

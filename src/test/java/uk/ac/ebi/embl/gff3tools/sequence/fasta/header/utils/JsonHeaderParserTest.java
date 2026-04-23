@@ -67,7 +67,7 @@ public class JsonHeaderParserTest {
 
         assertEquals("Pinus", h.getDescription());
         assertEquals("genomic", h.getMoleculeType());
-        assertEquals("CIRCULAR", h.getTopology());
+        assertEquals("circular", h.getTopology());
     }
 
     @Test
