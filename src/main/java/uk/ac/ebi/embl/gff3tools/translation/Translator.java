@@ -76,20 +76,26 @@ public class Translator {
     private static final char START_CODON = 'M';
 
     /**
-     * Creates a new Translator with the specified translation table and GFF3 feature.
-     * If the feature has a "pseudo" or "pseudogene" attribute, the translator is set to non-translating mode.
+     * Creates a translator for one or more CDS sortedFeatures.
      *
-     * @param feature the GFF3 feature associated with this translation
-     * @throws TranslationException if the translation table is invalid
+     * <p>Shared translation metadata is taken from the first segment, while join-level
+     * partiality is derived across all sortedFeatures so compound CDS translation preserves
+     * existing 5'/3' partial boundaries.
      */
-    public Translator(GFF3Feature feature) throws TranslationException {
+    public Translator(List<GFF3Feature> sortedFeatures) throws TranslationException {
+
+        feature = getFirstFeature(sortedFeatures);
+
+        fivePrimePartial = getCompoundFivePrimePartial(sortedFeatures);
+
+        threePrimePartial = getCompoundThreePrimePartial(sortedFeatures);
 
         // TODO: Get translation table from taxon.
         int translationTable =
                 feature.getAttribute("transl_table").map(Integer::parseInt).orElse(DEFAULT_TRANSLATION_TABLE);
 
         this.codonTranslator = new CodonTranslator(translationTable);
-        this.feature = feature;
+
         if (feature.hasAttribute(GFF3Attributes.PSEUDO) || feature.hasAttribute(GFF3Attributes.PSEUDOGENE)) {
             this.nonTranslating = true;
         }
@@ -98,10 +104,6 @@ public class Translator {
             isComplement = true;
         }
 
-        fivePrimePartial = feature.isFivePrimePartial();
-
-        threePrimePartial = feature.isThreePrimePartial();
-
         codonStart = feature.getAttribute(GFF3Attributes.CODON_START)
                 .map(Integer::parseInt)
                 .orElse(codonStart);
@@ -109,10 +111,38 @@ public class Translator {
         // Parse transl_except attributes and add position exceptions
         handleTranslExceptAttributes(feature);
 
-        // Parse codon attributes and add codon exceptions
         handleCodonExceptAttributes(feature);
 
         setPeptideFeature();
+    }
+
+    private boolean getCompoundFivePrimePartial(List<GFF3Feature> features) {
+        if (features.isEmpty()) {
+            return false;
+        }
+        GFF3Feature firstFeature = features.get(0);
+        GFF3Feature lastFeature = features.get(features.size() - 1);
+        // return true if first location or last location is 5'.
+        // Both features are checked for 5' because partiality could be in complement strand.
+        return firstFeature.isFivePrimePartial() || lastFeature.isFivePrimePartial();
+    }
+
+    private boolean getCompoundThreePrimePartial(List<GFF3Feature> features) {
+        if (features.isEmpty()) {
+            return false;
+        }
+        GFF3Feature firstFeature = features.get(0);
+        GFF3Feature lastFeature = features.get(features.size() - 1);
+        // return true if first location or last location is 3'.
+        // Both features are checked for 3' because partiality could be in complement strand.
+        return firstFeature.isThreePrimePartial() || lastFeature.isThreePrimePartial();
+    }
+
+    private static GFF3Feature getFirstFeature(List<GFF3Feature> features) {
+        if (features == null || features.isEmpty()) {
+            throw new IllegalArgumentException("features must not be null or empty");
+        }
+        return features.get(0);
     }
 
     private void setPeptideFeature() {
@@ -263,10 +293,6 @@ public class Translator {
             }
 
             validateTranslation(translationResult);
-
-            if (translationResult.isFixedPseudo()) {
-                feature.addAttribute("pseudo", "true");
-            }
 
         } catch (TranslationException ex) {
             translationResult.addError(ex.getMessage());
