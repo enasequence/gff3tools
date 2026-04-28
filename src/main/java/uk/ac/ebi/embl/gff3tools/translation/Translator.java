@@ -109,6 +109,7 @@ public class Translator {
         // Parse transl_except attributes and add position exceptions
         handleTranslExceptAttributes(feature);
 
+        // Parse codon attributes and add codon exceptions
         handleCodonExceptAttributes(feature);
 
         setPeptideFeature();
@@ -124,11 +125,13 @@ public class Translator {
         GFF3Feature firstFeature = features.get(0);
         GFF3Feature lastFeature = features.get(features.size() - 1);
 
+        // Join-level partiality is determined from the boundary CDS segments.
+        // On complement joins, either boundary can carry the effective 5'/3' partial flag.
         fivePrimePartial = firstFeature.isFivePrimePartial() || lastFeature.isFivePrimePartial();
         threePrimePartial = firstFeature.isThreePrimePartial() || lastFeature.isThreePrimePartial();
     }
 
-    private static GFF3Feature getFirstFeature(List<GFF3Feature> features) {
+    private static GFF3Feature getFirstFeature(List<GFF3Feature> features) throws IllegalArgumentException{
         if (features == null || features.isEmpty()) {
             throw new IllegalArgumentException("features must not be null or empty");
         }
