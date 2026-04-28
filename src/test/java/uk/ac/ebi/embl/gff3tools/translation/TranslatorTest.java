@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.translation;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,11 @@ public class TranslatorTest {
     private Translator createTranslator(int table) throws TranslationException {
         GFF3Feature feature = createDefaultFeature();
         feature.addAttribute("transl_table", String.valueOf(table));
-        return new Translator(feature);
+        return createTranslator(feature);
+    }
+
+    private Translator createTranslator(GFF3Feature feature) throws TranslationException {
+        return new Translator(List.of(feature));
     }
 
     // ========== GFF3Feature Constructor Tests ==========
@@ -42,7 +47,7 @@ public class TranslatorTest {
         feature.addAttribute("pseudo", "true");
         feature.addAttribute("transl_table", "11");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         assertTrue(translator.isNonTranslating());
     }
 
@@ -53,7 +58,7 @@ public class TranslatorTest {
         feature.addAttribute("pseudogene", "processed");
         feature.addAttribute("transl_table", "11");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         assertTrue(translator.isNonTranslating());
     }
 
@@ -64,7 +69,7 @@ public class TranslatorTest {
         feature.addAttribute("product", "some protein");
         feature.addAttribute("transl_table", "11");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         assertFalse(translator.isNonTranslating());
     }
 
@@ -175,7 +180,7 @@ public class TranslatorTest {
         GFF3Feature feature = new GFF3Feature(
                 Optional.of("id1"), Optional.empty(), "seq1", Optional.empty(), "source", "CDS", 1, 100, ".", "+", "0");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         // ATG AAA AGT AAA TAG = M K S K *
         TranslationResult result = translator.translate("ATGAAAAGTAAATAG".getBytes());
         assertTrue(result.isValid());
@@ -183,7 +188,7 @@ public class TranslatorTest {
 
         // TAG is stop codon(*) at position 7-9 is replaced with -> W
         feature.addAttribute("transl_except", "(pos:7..9,aa:Trp)");
-        Translator translatorWithException = new Translator(feature);
+        Translator translatorWithException = createTranslator(feature);
         // ATG AAA AGT AAA TAG = M K W K *
         TranslationResult resultWithExp = translatorWithException.translate("ATGAAAAGTAAATAG".getBytes());
         assertTrue(resultWithExp.isValid());
@@ -198,7 +203,7 @@ public class TranslatorTest {
         // TAG is stop codon(*) at position 4-6 is replaced with -> U
         feature.addAttribute("transl_except", "(pos:4..6,aa:Sec)");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         // ATG TGA AAA TAG = M U K *
         TranslationResult result = translator.translate("ATGTGAAAATAG".getBytes());
         assertTrue(result.isValid());
@@ -213,7 +218,7 @@ public class TranslatorTest {
         feature.addAttribute("transl_except", "(pos:4..6,aa:Sec)");
         feature.addAttribute("transl_except", "(pos:7..9,aa:Trp)");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         // ATG TGA TGA AAA TAG = M U W K *
         TranslationResult result = translator.translate("ATGTGATGAAAATAG".getBytes());
         assertTrue(result.isValid());
@@ -227,7 +232,7 @@ public class TranslatorTest {
         // Make AAA at position 4-6 translate to stop (TERM)
         feature.addAttribute("transl_except", "(pos:4..6,aa:TERM)");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         // ATG AAA = M * (AAA becomes stop)
         TranslationResult result = translator.translate("ATGAAA".getBytes());
         assertTrue(result.isValid());
@@ -241,7 +246,7 @@ public class TranslatorTest {
         // TAG is stop codon at position 4-6, override to Pyrrolysine (O)
         feature.addAttribute("transl_except", "(pos:4..6,aa:Pyl)");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         // ATG TAG AAA TAG = M O K *
         TranslationResult result = translator.translate("ATGTAGAAATAG".getBytes());
         assertTrue(result.isValid());
@@ -265,7 +270,7 @@ public class TranslatorTest {
         // Lowercase amino acid name
         feature.addAttribute("transl_except", "(pos:4..6,aa:trp)");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         // ATG TGA AAA TAG = M W K * (TGA at 4-6 -> W)
         TranslationResult result = translator.translate("ATGTGAAAATAG".getBytes());
         assertTrue(result.isValid());
@@ -279,7 +284,7 @@ public class TranslatorTest {
         // Use TER (alternative to TERM) for stop codon
         feature.addAttribute("transl_except", "(pos:4..6,aa:Ter)");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         // ATG AAA = M * (AAA at 4-6 becomes stop)
         TranslationResult result = translator.translate("ATGAAA".getBytes());
         assertTrue(result.isValid());
@@ -293,7 +298,7 @@ public class TranslatorTest {
         // Flexible whitespace format
         feature.addAttribute("transl_except", "( pos : 4..6 , aa : Sec )");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         // ATG TGA AAA TAG = M U K *
         TranslationResult result = translator.translate("ATGTGAAAATAG".getBytes());
         assertTrue(result.isValid());
@@ -307,7 +312,7 @@ public class TranslatorTest {
         // OTHER amino acid -> X
         feature.addAttribute("transl_except", "(pos:4..6,aa:OTHER)");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         translator.setThreePrimePartial(true);
         // ATG AAA = M X (AAA at 4-6 becomes X)
         TranslationResult result = translator.translate("ATGAAA".getBytes());
@@ -322,7 +327,7 @@ public class TranslatorTest {
         // Unknown amino acid name
         feature.addAttribute("transl_except", "(pos:4..6,aa:Unknown)");
 
-        assertThrows(TranslationException.class, () -> new Translator(feature));
+        assertThrows(TranslationException.class, () -> createTranslator(feature));
     }
 
     @Test
@@ -332,7 +337,7 @@ public class TranslatorTest {
         // Invalid transl_except format
         feature.addAttribute("transl_except", "invalid_format");
 
-        assertThrows(TranslationException.class, () -> new Translator(feature));
+        assertThrows(TranslationException.class, () -> createTranslator(feature));
     }
 
     // ========== handleCodonExceptAttributes Tests ==========
@@ -343,7 +348,7 @@ public class TranslatorTest {
                 Optional.of("id1"), Optional.empty(), "seq1", Optional.empty(), "source", "CDS", 1, 100, ".", "+", "0");
 
         // Test without codon exception
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         TranslationResult result = translator.translate("ATGAAAAAATGA".getBytes());
         assertTrue(result.isValid());
         assertEquals("MKK", result.getConceptualTranslation());
@@ -351,7 +356,7 @@ public class TranslatorTest {
         // Test with codon exception
         // TGA normally is stop, make it tryptophan globally
         feature.addAttribute("codon", "(seq:\"aaa\",aa:Trp)");
-        Translator translatorWithExp = new Translator(feature);
+        Translator translatorWithExp = createTranslator(feature);
         // ATG AAA AAA TGA = M W W (all ATGs become W)
         TranslationResult resultWithExp = translatorWithExp.translate("ATGAAAAAATGA".getBytes());
         assertTrue(resultWithExp.isValid());
@@ -365,7 +370,7 @@ public class TranslatorTest {
         // TGA -> Selenocysteine globally
         feature.addAttribute("codon", "(seq:\"tga\",aa:Sec)");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         translator.setThreePrimePartial(true);
         // ATG TGA AAA = M U K
         TranslationResult result = translator.translate("ATGTGAAAA".getBytes());
@@ -381,7 +386,7 @@ public class TranslatorTest {
         feature.addAttribute("codon", "(seq:\"tga\",aa:Trp)");
         feature.addAttribute("codon", "(seq:\"tag\",aa:Pyl)");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         translator.setThreePrimePartial(true);
         // ATG TGA TAG = M W O (TGA->W, TAG->O)
         TranslationResult result = translator.translate("ATGTGATAG".getBytes());
@@ -396,7 +401,7 @@ public class TranslatorTest {
         // Unquoted codon format
         feature.addAttribute("codon", "(seq:tga,aa:Trp)");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         translator.setThreePrimePartial(true);
         TranslationResult result = translator.translate("ATGTGA".getBytes());
         assertTrue(result.isValid());
@@ -410,7 +415,7 @@ public class TranslatorTest {
         // Lowercase amino acid
         feature.addAttribute("codon", "(seq:\"tga\",aa:trp)");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         translator.setThreePrimePartial(true);
         TranslationResult result = translator.translate("ATGTGA".getBytes());
         assertTrue(result.isValid());
@@ -424,7 +429,7 @@ public class TranslatorTest {
         // Invalid codon format
         feature.addAttribute("codon", "invalid_format");
 
-        assertThrows(TranslationException.class, () -> new Translator(feature));
+        assertThrows(TranslationException.class, () -> createTranslator(feature));
     }
 
     @Test
@@ -434,7 +439,7 @@ public class TranslatorTest {
         // Unknown amino acid
         feature.addAttribute("codon", "(seq:\"tga\",aa:Unknown)");
 
-        assertThrows(TranslationException.class, () -> new Translator(feature));
+        assertThrows(TranslationException.class, () -> createTranslator(feature));
     }
 
     @Test
@@ -862,7 +867,7 @@ public class TranslatorTest {
                 Optional.of("id"), Optional.empty(), "seq", Optional.empty(), "source", "CDS", 1, 100, ".", "+", "0");
         feature.addAttribute("codon_start", "2");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
 
         assertEquals(2, translator.getCodonStart());
     }
@@ -873,7 +878,7 @@ public class TranslatorTest {
                 Optional.of("id"), Optional.empty(), "seq", Optional.empty(), "source", "CDS", 1, 100, ".", "+", "0");
         feature.addAttribute("codon_start", "3");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
 
         assertEquals(3, translator.getCodonStart());
     }
@@ -883,7 +888,7 @@ public class TranslatorTest {
         GFF3Feature feature = new GFF3Feature(
                 Optional.of("id"), Optional.empty(), "seq", Optional.empty(), "source", "CDS", 1, 100, ".", "+", "0");
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
 
         assertEquals(1, translator.getCodonStart());
     }
@@ -897,7 +902,7 @@ public class TranslatorTest {
         feature.addAttribute("codon_start", "2");
         feature.setFivePrimePartial();
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         translator.enableAllFixes();
         TranslationResult result = translator.translate("CATGAAATAA".getBytes());
 
@@ -928,7 +933,7 @@ public class TranslatorTest {
         FastaReader reader = new FastaReader(new File(
                 getClass().getClassLoader().getResource("translation/fasta.txt").getFile()));
 
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         translator.setThreePrimePartial(true);
         String sequence = reader.getSequenceSlice(0L, 4798, 5460).toUpperCase(Locale.ROOT);
 
@@ -964,7 +969,7 @@ public class TranslatorTest {
         // "MAAAVGRRACPAGRRSDAVIRVARSERLEMRHRSSWYASRPRGVCRLRVLLLVCAAVVPIVSSAPLPGYYCYAKNATERRTPNIDRDYWRPGVSVFGCRMPKGVCIEGEWTIEWYIPSLQASVINQVFFKSQTWLGPSMQYIIPSYERGKEVTCRQGFCVDRAEGNLIITDNNTRKEEWARKPTRDVVCKLTACLRATSVSPYSRTTYEECNGTLEDYLSLPDFENIYDISKVVPYVPPPKAPAVPPKVPGKAEDAPPDESCIGCDNPGLNAAAIAVPVVTVIVLVSGIGYLCRSTESRQRTLELYRDLWSSLRRRLHRGDYARDG";
         String expectedTranslation =
                 "MKRIGLERCFLSTSYRSTRFPSTALPRLTAERRSTFFTPDPKPRGGGCPANTPRVLYPPPHPGVRRAVKRLLPRNIRRRSRNARFTALRAGRRSSRKLHTLAGRLTPPSRGRGARPGG";
-        Translator translator = new Translator(feature);
+        Translator translator = createTranslator(feature);
         translator.setThreePrimePartial(true);
         // String sequence = reader.getSequenceSliceString(0L,999,1979).toUpperCase(Locale.ROOT);
         String sequence = reader.getSequenceSlice(0L, 480, 836).toUpperCase(Locale.ROOT);

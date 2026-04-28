@@ -99,23 +99,23 @@ public class TranslationFix {
         }
     }
 
-    private void translateCdsGroup(List<GFF3Feature> segments, SequenceLookup sequenceLookup, int line)
+    private void translateCdsGroup(List<GFF3Feature> features, SequenceLookup sequenceLookup, int line)
             throws ValidationException {
 
-        boolean isTransSpliced = segments.stream().anyMatch(s -> s.hasAttribute(GFF3Attributes.TRANS_SPLICING));
+        boolean isTransSpliced = features.stream().anyMatch(s -> s.hasAttribute(GFF3Attributes.TRANS_SPLICING));
 
-        List<GFF3Feature> sorted = new ArrayList<>(segments);
+        List<GFF3Feature> sortedFeatures = new ArrayList<>(features);
         if (!isTransSpliced) {
-            // Sort segments by genomic start position when they are not trans-spliced.
-            sorted.sort(Comparator.comparingLong(GFF3Feature::getStart));
+            // Sort features by genomic start position when they are not trans-spliced.
+            sortedFeatures.sort(Comparator.comparingLong(GFF3Feature::getStart));
         }
 
-        GFF3Feature representative = sorted.get(0);
+        GFF3Feature representative = sortedFeatures.get(0);
         String oldTranslation = lookupOldTranslation(representative);
 
         // Skip CDS features with exception attribute (e.g. ribosomal slippage).
-        // Check ALL segments — any segment carrying the exception applies to the whole join.
-        boolean hasException = sorted.stream()
+        // Check ALL sortedFeatures — any segment carrying the exception applies to the whole join.
+        boolean hasException = sortedFeatures.stream()
                 .anyMatch(s -> s.getAttribute(GFF3Attributes.EXCEPTION).isPresent());
         if (hasException) {
             // record the old translation as new translation in case of exception
@@ -124,15 +124,15 @@ public class TranslationFix {
         }
 
         try {
-            // Concatenate sequence slices from all segments in genomic order
+            // Concatenate sequence slices from all features in genomic order
             StringBuilder concatenated = new StringBuilder();
-            for (GFF3Feature segment : sorted) {
+            for (GFF3Feature segment : sortedFeatures) {
                 String slice =
                         sequenceLookup.getSequenceSlice(segment.accession(), segment.getStart(), segment.getEnd());
                 concatenated.append(slice);
             }
 
-            Translator translator = new Translator(representative);
+            Translator translator = new Translator(sortedFeatures);
             translator.enableAllFixes();
             TranslationResult result =
                     translator.translate(concatenated.toString().getBytes());
@@ -148,7 +148,7 @@ public class TranslationFix {
                 recordTranslationState(representative, line, oldTranslation, translation);
             }
 
-            propagateJoinAttributes(sorted, result);
+            propagateJoinAttributes(sortedFeatures, result);
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
@@ -188,13 +188,15 @@ public class TranslationFix {
             }
         }
 
-        // Propagate pseudo from the first CDS segment to all subsequent join segments.
-        first.getAttribute(GFF3Attributes.PSEUDO).ifPresent(pseudoValue -> {
-            for (int i = 1; i < segments.size(); i++) {
-                segments.get(i).removeAttributeList(GFF3Attributes.PSEUDO);
-                segments.get(i).addAttribute(GFF3Attributes.PSEUDO, pseudoValue);
+        // Only propagate pseudo when translation newly determines the CDS is pseudo.
+        // We intentionally do not copy an existing pseudo from the first segment to
+        // the rest of the group, because such segments should not be treated as one join.
+        if (result.isFixedPseudo()) {
+            for (GFF3Feature segment : segments) {
+                segment.removeAttributeList(GFF3Attributes.PSEUDO);
+                segment.addAttribute(GFF3Attributes.PSEUDO, "true");
             }
-        });
+        }
     }
 
     private String lookupOldTranslation(GFF3Feature feature) {

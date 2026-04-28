@@ -146,6 +146,36 @@ class TranslationFixTest {
     }
 
     @Test
+    void preservesThreePrimePartialAcrossJoinDuringTranslation() throws Exception {
+        long seg1Start = 62703507L;
+        long seg1End = 62703686L;
+        long seg2Start = 62710877L;
+        long seg2End = 62710985L;
+
+        String seg1Sequence =
+                "TTGAAATGCTTGTGGGCTGGGCCAGTCTCACAGCAAGATTACAGAGTCATCTCTCTGCCATCTGATGAGAAGATACCTCAGGCACTGGAAAAAAACCCAGACTGTATGGTTCTTTTGGGATCCACTGCAGAGAATACTCCCAAGACAGAGAAGCATTCCGACCCTCCCAGTCCATCAGGA";
+        String seg2Sequence =
+                "CCTGAGGATAGCACAAGGCACTGCAGGAAGCAGGAGCACTTCACGGTACAGGGCCCTGCTCTTGGTGCTGCTGGGCCTCTTTGCAGGGAAGGGATAAAAATCCAGGGAC";
+
+        when(mockLookup.getSequenceSlice("seq1", seg1Start, seg1End)).thenReturn(seg1Sequence);
+        when(mockLookup.getSequenceSlice("seq1", seg2Start, seg2End)).thenReturn(seg2Sequence);
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", seg1Start, seg1End, "+");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", seg2Start, seg2End, "+");
+        seg2.setThreePrimePartial();
+
+        GFF3Annotation annotation = createAnnotation(seg1, seg2);
+        fix.fixAnnotation(annotation, 1);
+
+        String key = TranslationState.buildKey(seg1.accession(), "cds1");
+        assertEquals(
+                "MKCLWAGPVSQQDYRVISLPSDEKIPQALEKNPDCMVLLGSTAENTPKTEKHSDPPSPSGPEDSTRHCRKQEHFTVQGPALGAAGPLCREGIKIQG",
+                translationState.get(key).newTranslation());
+        assertFalse(seg1.isFivePrimePartial(), "5' partial should not be introduced for an already 3'-partial join");
+        assertTrue(seg2.isThreePrimePartial(), "Existing 3' partial should be preserved on the last segment");
+    }
+
+    @Test
     void translatesMultiSegmentCdsComplementJoin() throws Exception {
         // seg1="TTATTT" (1-6), seg2="CAT" (10-12) → concat "TTATTTCAT" (9 bases)
         // Rev comp = "ATGAAATAA" → ATG=M, AAA=K, TAA=* → "MK"
@@ -186,20 +216,6 @@ class TranslationFixTest {
         assertFalse(seg1.hasAttribute("translation"));
         assertFalse(seg2.hasAttribute("translation"));
         verifyNoInteractions(mockLookup);
-    }
-
-    @Test
-    void propagatesPseudoToAllJoinSegments() throws Exception {
-        when(mockLookup.getSequenceSlice(any(), anyLong(), anyLong())).thenReturn("ATGAAATAA");
-
-        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 9, "+");
-        seg1.addAttribute("pseudo", "true");
-        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 20, 28, "+");
-        GFF3Annotation annotation = createAnnotation(seg1, seg2);
-        fix.fixAnnotation(annotation, 1);
-
-        assertTrue(seg1.hasAttribute("pseudo"));
-        assertTrue(seg2.hasAttribute("pseudo"));
     }
 
     @Test
