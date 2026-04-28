@@ -395,7 +395,11 @@ public class GFF3Mapper {
 
         // Comment: CC line
         if (m.getComment() != null) {
-            entry.setComment(new Text(m.getComment()));
+            // Pre-wrap to EMBL's ~75-col content width. CCWriter preserves
+            // submitter-provided line breaks but only force-breaks at 200 cols,
+            // so an unwrapped master.json comment would emit as one or two
+            // very long CC lines.
+            entry.setComment(new Text(wrapCommentText(m.getComment(), CC_LINE_WIDTH)));
         }
 
         // Taxon: source feature /db_xref "taxon:<value>"
@@ -455,8 +459,8 @@ public class GFF3Mapper {
         if (m.getMd5() != null) {
             entry.addXRef(new XRef("MD5", m.getMd5()));
         }
-        if (m.getRunAccession() != null) {
-            for (String run : m.getRunAccession()) {
+        if (m.getRunAccessions() != null) {
+            for (String run : m.getRunAccessions()) {
                 entry.addXRef(new XRef("ENA", run));
             }
         }
@@ -547,8 +551,13 @@ public class GFF3Mapper {
         if (refData.getAuthors() != null) {
             String[] authorNames = refData.getAuthors().split(",\\s*");
             for (String authorName : authorNames) {
-                if (!authorName.isBlank()) {
-                    publication.addAuthor(referenceFactory.createPerson(authorName.trim()));
+                // Collapse runs of whitespace inside each name — master.json
+                // sometimes carries doubled spaces between surname and initials
+                // (e.g. "Goudenege  D."), which would otherwise propagate verbatim
+                // into the EMBL `RA` line.
+                String normalized = authorName.trim().replaceAll("\\s+", " ");
+                if (!normalized.isEmpty()) {
+                    publication.addAuthor(referenceFactory.createPerson(normalized));
                 }
             }
         }
@@ -577,12 +586,65 @@ public class GFF3Mapper {
         return sub;
     }
 
+    /** Target content width for `CC` lines (EMBL convention is 80 total = 5-col prefix + 75). */
+    private static final int CC_LINE_WIDTH = 75;
+
+    /**
+     * Word-wrap a comment string to {@code maxWidth}-column lines, preserving any
+     * existing line breaks. Words longer than {@code maxWidth} are kept on their own
+     * line and not broken (CCWriter will force-break them if needed).
+     */
+    static String wrapCommentText(String text, int maxWidth) {
+        StringBuilder out = new StringBuilder();
+        boolean firstParagraph = true;
+        for (String paragraph : text.split("\n", -1)) {
+            if (!firstParagraph) {
+                out.append('\n');
+            }
+            firstParagraph = false;
+            if (paragraph.isEmpty()) {
+                continue;
+            }
+            StringBuilder line = new StringBuilder();
+            for (String word : paragraph.split(" +")) {
+                if (word.isEmpty()) {
+                    continue;
+                }
+                if (line.length() == 0) {
+                    line.append(word);
+                } else if (line.length() + 1 + word.length() <= maxWidth) {
+                    line.append(' ').append(word);
+                } else {
+                    out.append(line).append('\n');
+                    line.setLength(0);
+                    line.append(word);
+                }
+            }
+            if (line.length() > 0) {
+                out.append(line);
+            }
+        }
+        return out.toString();
+    }
+
     /**
      * Keys from searchFields that are already handled by other AnnotationMetadata fields
-     * or are not valid source feature qualifiers.
+     * or are not valid source feature qualifiers. Skipping `chromosome`/`plasmid`/`segment`/
+     * `linkage_group`/`organelle` avoids emitting these qualifiers twice when the same value
+     * is present both at the top level (chromosomeName / chromosomeLocation) and inside
+     * searchFields.
      */
-    private static final Set<String> SEARCH_FIELDS_SKIP =
-            Set.of("organism", "topology", "tax_division", "md5_checksum", "country");
+    private static final Set<String> SEARCH_FIELDS_SKIP = Set.of(
+            "organism",
+            "topology",
+            "tax_division",
+            "md5_checksum",
+            "country",
+            "chromosome",
+            "plasmid",
+            "segment",
+            "linkage_group",
+            "organelle");
 
     /**
      * Maps searchFields entries to source feature qualifiers.
