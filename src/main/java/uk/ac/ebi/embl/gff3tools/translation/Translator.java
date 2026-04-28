@@ -131,7 +131,7 @@ public class Translator {
         threePrimePartial = firstFeature.isThreePrimePartial() || lastFeature.isThreePrimePartial();
     }
 
-    private static GFF3Feature getFirstFeature(List<GFF3Feature> features) throws IllegalArgumentException{
+    private static GFF3Feature getFirstFeature(List<GFF3Feature> features) {
         if (features == null || features.isEmpty()) {
             throw new IllegalArgumentException("features must not be null or empty");
         }
