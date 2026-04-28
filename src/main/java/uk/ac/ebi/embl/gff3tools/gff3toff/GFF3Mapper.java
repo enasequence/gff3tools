@@ -634,10 +634,12 @@ public class GFF3Mapper {
      * or are not valid source feature qualifiers. Skipping `chromosome`/`plasmid`/`segment`/
      * `linkage_group`/`organelle` avoids emitting these qualifiers twice when the same value
      * is present both at the top level (chromosomeName / chromosomeLocation) and inside
-     * searchFields.
+     * searchFields. `mol_type` and `organism` are likewise emitted from the dedicated
+     * moleculeType/scientificName paths.
      */
     private static final Set<String> SEARCH_FIELDS_SKIP = Set.of(
             "organism",
+            "mol_type",
             "topology",
             "tax_division",
             "md5_checksum",
@@ -657,6 +659,11 @@ public class GFF3Mapper {
             String key = field.getKey();
             String value = field.getValue();
             if (value == null || value.isBlank() || SEARCH_FIELDS_SKIP.contains(key)) {
+                continue;
+            }
+            // Taxon db_xref is emitted from the dedicated taxon path; skip duplicates here
+            // while preserving legitimate non-taxon db_xref values.
+            if ("db_xref".equals(key) && value.startsWith("taxon:")) {
                 continue;
             }
             sourceFt.addQualifier(key, value);

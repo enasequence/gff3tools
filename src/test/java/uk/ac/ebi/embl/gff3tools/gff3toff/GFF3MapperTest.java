@@ -704,6 +704,67 @@ class GFF3MapperTest {
     }
 
     /**
+     * Regression: when both `moleculeType` (top level) and `searchFields.mol_type`
+     * carry a value, only the dedicated path should emit `/mol_type` so the
+     * source feature contains the qualifier exactly once.
+     */
+    @Test
+    void molTypeQualifierEmittedOnceWhenSetInBothFields() throws Exception {
+        MasterMetadata meta = new MasterMetadata();
+        meta.setMoleculeType("genomic DNA");
+        meta.setSearchFields(Map.of("mol_type", "genomic DNA"));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
+
+        SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
+        List<Qualifier> molTypeQuals = source.getQualifiers("mol_type");
+        assertEquals(1, molTypeQuals.size(), "mol_type qualifier should appear exactly once");
+        assertEquals("genomic DNA", molTypeQuals.get(0).getValue());
+    }
+
+    /**
+     * Regression: when `taxon` (top level) emits a `db_xref="taxon:N"` qualifier and
+     * `searchFields.db_xref` carries the same value, the source feature must emit it once.
+     * Non-taxon db_xref values in searchFields should still pass through.
+     */
+    @Test
+    void taxonDbXrefQualifierEmittedOnceWhenSetInBothFields() throws Exception {
+        MasterMetadata meta = new MasterMetadata();
+        meta.setTaxon("9606");
+        meta.setSearchFields(Map.of("db_xref", "taxon:9606"));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
+
+        SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
+        List<Qualifier> dbXrefQuals = source.getQualifiers("db_xref");
+        assertEquals(1, dbXrefQuals.size(), "taxon db_xref qualifier should appear exactly once");
+        assertEquals("taxon:9606", dbXrefQuals.get(0).getValue());
+    }
+
+    @Test
+    void nonTaxonDbXrefInSearchFieldsIsPreserved() throws Exception {
+        MasterMetadata meta = new MasterMetadata();
+        meta.setTaxon("9606");
+        meta.setSearchFields(Map.of("db_xref", "FLYBASE:FBgn0000001"));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
+
+        SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
+        List<String> values = source.getQualifiers("db_xref").stream()
+                .map(Qualifier::getValue)
+                .toList();
+        assertEquals(2, values.size());
+        assertTrue(values.contains("taxon:9606"));
+        assertTrue(values.contains("FLYBASE:FBgn0000001"));
+    }
+
+    /**
      * Regression: master.json sometimes carries doubled whitespace inside the
      * `references[].authors` string (e.g. `"Goudenege  D., Le Roux  F."`). The
      * converter must collapse runs of whitespace so `RA` lines render with single
