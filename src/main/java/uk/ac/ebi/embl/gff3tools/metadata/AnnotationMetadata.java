@@ -77,7 +77,7 @@ public class AnnotationMetadata {
 
     // ── Cross-references (DR lines) ──
     private String md5;
-    private List<String> runAccession;
+    private List<String> runAccessions;
 
     // ── Assembly (carried but not mapped to EMBL lines) ──
     private String assemblyLevel;
