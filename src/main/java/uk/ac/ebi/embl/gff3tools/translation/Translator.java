@@ -86,9 +86,7 @@ public class Translator {
 
         feature = getFirstFeature(sortedFeatures);
 
-        fivePrimePartial = getCompoundFivePrimePartial(sortedFeatures);
-
-        threePrimePartial = getCompoundThreePrimePartial(sortedFeatures);
+        setCompoundPartiality(sortedFeatures);
 
         // TODO: Get translation table from taxon.
         int translationTable =
@@ -116,26 +114,18 @@ public class Translator {
         setPeptideFeature();
     }
 
-    private boolean getCompoundFivePrimePartial(List<GFF3Feature> features) {
+    private void setCompoundPartiality(List<GFF3Feature> features) {
         if (features.isEmpty()) {
-            return false;
+            fivePrimePartial = false;
+            threePrimePartial = false;
+            return;
         }
-        GFF3Feature firstFeature = features.get(0);
-        GFF3Feature lastFeature = features.get(features.size() - 1);
-        // return true if first location or last location is 5'.
-        // Both features are checked for 5' because partiality could be in complement strand.
-        return firstFeature.isFivePrimePartial() || lastFeature.isFivePrimePartial();
-    }
 
-    private boolean getCompoundThreePrimePartial(List<GFF3Feature> features) {
-        if (features.isEmpty()) {
-            return false;
-        }
         GFF3Feature firstFeature = features.get(0);
         GFF3Feature lastFeature = features.get(features.size() - 1);
-        // return true if first location or last location is 3'.
-        // Both features are checked for 3' because partiality could be in complement strand.
-        return firstFeature.isThreePrimePartial() || lastFeature.isThreePrimePartial();
+
+        fivePrimePartial = firstFeature.isFivePrimePartial() || lastFeature.isFivePrimePartial();
+        threePrimePartial = firstFeature.isThreePrimePartial() || lastFeature.isThreePrimePartial();
     }
 
     private static GFF3Feature getFirstFeature(List<GFF3Feature> features) {
