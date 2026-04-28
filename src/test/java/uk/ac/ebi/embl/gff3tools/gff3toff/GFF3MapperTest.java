@@ -27,9 +27,10 @@ import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadata;
-import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadataProvider;
+import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
+import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.metadata.ReferenceData;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 class GFF3MapperTest {
 
@@ -46,16 +47,16 @@ class GFF3MapperTest {
         return annotation;
     }
 
-    private AnnotationMetadata createFullMetadata() {
-        AnnotationMetadata m = new AnnotationMetadata();
+    private MasterMetadata createFullMetadata() {
+        MasterMetadata m = new MasterMetadata();
         m.setDescription("Homo sapiens genome assembly");
         m.setMoleculeType("genomic DNA");
         m.setTopology("linear");
         return m;
     }
 
-    private AnnotationMetadata createMetadataWithChromosome(String type, String location, String name) {
-        AnnotationMetadata m = createFullMetadata();
+    private MasterMetadata createMetadataWithChromosome(String type, String location, String name) {
+        MasterMetadata m = createFullMetadata();
         m.setChromosomeType(type);
         m.setChromosomeLocation(location);
         m.setChromosomeName(name);
@@ -63,19 +64,28 @@ class GFF3MapperTest {
     }
 
     /**
-     * Helper to create an AnnotationMetadataProvider from a per-seqId metadata map.
+     * Helper to create an MasterMetadataProvider from a per-seqId metadata map.
      */
-    private AnnotationMetadataProvider providerFromMetadata(Map<String, AnnotationMetadata> metadataMap) {
-        AnnotationMetadataProvider provider = new AnnotationMetadataProvider();
+    private MasterMetadataProvider providerFromMetadata(Map<String, MasterMetadata> metadataMap) {
+        MasterMetadataProvider provider = new MasterMetadataProvider();
         provider.addSource(seqId -> Optional.ofNullable(metadataMap.get(seqId)));
         return provider;
     }
 
+    /**
+     * Wraps a MasterMetadataProvider in a ValidationContext for the GFF3Mapper constructor.
+     */
+    private ValidationContext contextWith(MasterMetadataProvider provider) {
+        ValidationContext ctx = new ValidationContext();
+        ctx.register(MasterMetadataProvider.class, provider);
+        return ctx;
+    }
+
     @Test
     void appliesDescriptionFromHeader() throws Exception {
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", createFullMetadata()));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", createFullMetadata()));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         assertNotNull(entry.getDescription());
@@ -84,9 +94,9 @@ class GFF3MapperTest {
 
     @Test
     void appliesMoleculeTypeToSequenceAndQualifier() throws Exception {
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", createFullMetadata()));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", createFullMetadata()));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         assertEquals("genomic DNA", entry.getSequence().getMoleculeType());
@@ -99,11 +109,11 @@ class GFF3MapperTest {
 
     @Test
     void appliesLinearTopology() throws Exception {
-        AnnotationMetadata h = createFullMetadata();
+        MasterMetadata h = createFullMetadata();
         h.setTopology("linear");
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         assertEquals(Sequence.Topology.LINEAR, entry.getSequence().getTopology());
@@ -111,11 +121,11 @@ class GFF3MapperTest {
 
     @Test
     void appliesCircularTopology() throws Exception {
-        AnnotationMetadata h = createFullMetadata();
+        MasterMetadata h = createFullMetadata();
         h.setTopology("CIRCULAR");
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         assertEquals(Sequence.Topology.CIRCULAR, entry.getSequence().getTopology());
@@ -123,11 +133,11 @@ class GFF3MapperTest {
 
     @Test
     void unrecognisedTopologyIsSkipped() throws Exception {
-        AnnotationMetadata h = createFullMetadata();
+        MasterMetadata h = createFullMetadata();
         h.setTopology("tangled");
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         // Should not throw
         Entry entry = assertDoesNotThrow(() -> mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000)));
         // Topology should remain at its default (null)
@@ -136,7 +146,7 @@ class GFF3MapperTest {
 
     @Test
     void nullHeaderProviderSkipsGracefully() throws Exception {
-        GFF3Mapper mapper = new GFF3Mapper(mockReader());
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), new ValidationContext());
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         // Should produce default entry with no description set
@@ -145,9 +155,9 @@ class GFF3MapperTest {
 
     @Test
     void noHeaderForSeqIdSkipsGracefully() throws Exception {
-        AnnotationMetadataProvider provider = new AnnotationMetadataProvider();
+        MasterMetadataProvider provider = new MasterMetadataProvider();
         // Empty provider - no sources
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         assertNotNull(entry);
@@ -155,11 +165,11 @@ class GFF3MapperTest {
 
     @Test
     void nullSequenceRegionSkipsHeaderApplication() throws Exception {
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", createFullMetadata()));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", createFullMetadata()));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
 
-        // GFF3Annotation with a null sequenceRegion -- applyAnnotationMetadata() must return early
+        // GFF3Annotation with a null sequenceRegion -- applyMasterMetadata() must return early
         GFF3Annotation annotation = new GFF3Annotation();
         assertNull(annotation.getSequenceRegion());
 
@@ -174,14 +184,14 @@ class GFF3MapperTest {
 
     @Test
     void nullFieldsInHeaderAreSkippedIndividually() throws Exception {
-        AnnotationMetadata h = new AnnotationMetadata();
+        MasterMetadata h = new MasterMetadata();
         h.setDescription(null);
         h.setMoleculeType("genomic DNA");
         h.setTopology(null);
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         // molecule_type should still be applied
@@ -190,17 +200,17 @@ class GFF3MapperTest {
 
     @Test
     void perSeqIdSourceTakesPrecedenceOverGlobal() throws Exception {
-        AnnotationMetadata perSeq = createFullMetadata();
+        MasterMetadata perSeq = createFullMetadata();
         perSeq.setDescription("From per-seqId source");
-        AnnotationMetadata global = createFullMetadata();
+        MasterMetadata global = createFullMetadata();
         global.setDescription("From global source");
 
-        AnnotationMetadataProvider provider = new AnnotationMetadataProvider();
-        Map<String, AnnotationMetadata> perSeqMap = Map.of("seq1", perSeq);
+        MasterMetadataProvider provider = new MasterMetadataProvider();
+        Map<String, MasterMetadata> perSeqMap = Map.of("seq1", perSeq);
         provider.addSource(seqId -> Optional.ofNullable(perSeqMap.get(seqId)));
         provider.addSource(seqId -> Optional.of(global));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
 
         // seq1 matches per-seqId source first
         Entry entry1 = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
@@ -215,11 +225,11 @@ class GFF3MapperTest {
 
     @Test
     void appliesChromosomeNameAsStandaloneQualifier() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome(null, null, "chr1");
+        MasterMetadata h = createMetadataWithChromosome(null, null, "chr1");
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -230,11 +240,11 @@ class GFF3MapperTest {
 
     @Test
     void nullChromosomeFieldsAreSkipped() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome(null, null, null);
+        MasterMetadata h = createMetadataWithChromosome(null, null, null);
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -249,11 +259,11 @@ class GFF3MapperTest {
 
     @Test
     void chromosomeTypeChromosomeAddsChromosomeQualifier() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome("Chromosome", null, "chr1");
+        MasterMetadata h = createMetadataWithChromosome("Chromosome", null, "chr1");
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -264,11 +274,11 @@ class GFF3MapperTest {
 
     @Test
     void chromosomeTypePlasmidAddsPlasmidQualifier() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome("Plasmid", null, "pBR322");
+        MasterMetadata h = createMetadataWithChromosome("Plasmid", null, "pBR322");
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -279,11 +289,11 @@ class GFF3MapperTest {
 
     @Test
     void chromosomeTypeSegmentAddsSegmentQualifier() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome("Segment", null, "L");
+        MasterMetadata h = createMetadataWithChromosome("Segment", null, "L");
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -294,11 +304,11 @@ class GFF3MapperTest {
 
     @Test
     void chromosomeTypeLinkageGroupAddsLinkageGroupQualifier() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome("Linkage Group", null, "LG1");
+        MasterMetadata h = createMetadataWithChromosome("Linkage Group", null, "LG1");
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -309,11 +319,11 @@ class GFF3MapperTest {
 
     @Test
     void chromosomeTypeMonopartiteAddsNoQualifier() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome("Monopartite", null, "seg1");
+        MasterMetadata h = createMetadataWithChromosome("Monopartite", null, "seg1");
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -326,11 +336,11 @@ class GFF3MapperTest {
 
     @Test
     void unrecognisedChromosomeTypeIsSkipped() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome("Unknown", null, "x");
+        MasterMetadata h = createMetadataWithChromosome("Unknown", null, "x");
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = assertDoesNotThrow(() -> mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000)));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -342,11 +352,11 @@ class GFF3MapperTest {
 
     @Test
     void chromosomeTypeCaseInsensitive() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome("PLASMID", null, "pX");
+        MasterMetadata h = createMetadataWithChromosome("PLASMID", null, "pX");
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -357,11 +367,11 @@ class GFF3MapperTest {
 
     @Test
     void chromosomeTypeWithoutNameAddsQualifierWithoutValue() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome("Plasmid", null, null);
+        MasterMetadata h = createMetadataWithChromosome("Plasmid", null, null);
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -373,11 +383,11 @@ class GFF3MapperTest {
     @Test
     void chromosomeTypeOverridesStandaloneChromosomeName() throws Exception {
         // When type is Plasmid and name is pX, should add /plasmid="pX" NOT /chromosome="pX"
-        AnnotationMetadata h = createMetadataWithChromosome("Plasmid", null, "pX");
+        MasterMetadata h = createMetadataWithChromosome("Plasmid", null, "pX");
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -390,11 +400,11 @@ class GFF3MapperTest {
 
     @Test
     void chromosomeLocationMitochondrionAddsOrganelleQualifier() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome(null, "Mitochondrion", null);
+        MasterMetadata h = createMetadataWithChromosome(null, "Mitochondrion", null);
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -405,11 +415,11 @@ class GFF3MapperTest {
 
     @Test
     void chromosomeLocationChloroplastAddsOrganelleQualifier() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome(null, "Chloroplast", null);
+        MasterMetadata h = createMetadataWithChromosome(null, "Chloroplast", null);
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -420,11 +430,11 @@ class GFF3MapperTest {
 
     @Test
     void chromosomeLocationPlastidAddsOrganelleQualifier() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome(null, "Plastid", null);
+        MasterMetadata h = createMetadataWithChromosome(null, "Plastid", null);
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -435,11 +445,11 @@ class GFF3MapperTest {
 
     @Test
     void chromosomeLocationKinetoplastAddsOrganelleQualifier() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome(null, "Kinetoplast", null);
+        MasterMetadata h = createMetadataWithChromosome(null, "Kinetoplast", null);
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -450,11 +460,11 @@ class GFF3MapperTest {
 
     @Test
     void chromosomeLocationNuclearAddsNoQualifier() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome(null, "Nuclear", null);
+        MasterMetadata h = createMetadataWithChromosome(null, "Nuclear", null);
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -463,11 +473,11 @@ class GFF3MapperTest {
 
     @Test
     void unrecognisedChromosomeLocationIsPassedThrough() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome(null, "Unknown", null);
+        MasterMetadata h = createMetadataWithChromosome(null, "Unknown", null);
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -478,11 +488,11 @@ class GFF3MapperTest {
 
     @Test
     void chromosomeLocationCaseInsensitive() throws Exception {
-        AnnotationMetadata h = createMetadataWithChromosome(null, "MITOCHONDRION", null);
+        MasterMetadata h = createMetadataWithChromosome(null, "MITOCHONDRION", null);
 
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -491,17 +501,17 @@ class GFF3MapperTest {
         assertEquals("mitochondrion", quals.get(0).getValue());
     }
 
-    // -- New AnnotationMetadata field mapping tests --
+    // -- New MasterMetadata field mapping tests --
 
     @Test
     void appliesTitleAsDescriptionFallback() throws Exception {
-        AnnotationMetadata meta = new AnnotationMetadata();
+        MasterMetadata meta = new MasterMetadata();
         meta.setTitle("Title as fallback");
 
-        AnnotationMetadataProvider provider = new AnnotationMetadataProvider();
+        MasterMetadataProvider provider = new MasterMetadataProvider();
         provider.addSource(seqId -> Optional.of(meta));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         assertEquals("Title as fallback", entry.getDescription().getText());
@@ -509,14 +519,14 @@ class GFF3MapperTest {
 
     @Test
     void descriptionTakesPriorityOverTitle() throws Exception {
-        AnnotationMetadata meta = new AnnotationMetadata();
+        MasterMetadata meta = new MasterMetadata();
         meta.setDescription("The description");
         meta.setTitle("The title");
 
-        AnnotationMetadataProvider provider = new AnnotationMetadataProvider();
+        MasterMetadataProvider provider = new MasterMetadataProvider();
         provider.addSource(seqId -> Optional.of(meta));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         assertEquals("The description", entry.getDescription().getText());
@@ -524,14 +534,14 @@ class GFF3MapperTest {
 
     @Test
     void appliesDivisionAndDataClass() throws Exception {
-        AnnotationMetadata meta = new AnnotationMetadata();
+        MasterMetadata meta = new MasterMetadata();
         meta.setDivision("VRT");
         meta.setDataClass("STD");
 
-        AnnotationMetadataProvider provider = new AnnotationMetadataProvider();
+        MasterMetadataProvider provider = new MasterMetadataProvider();
         provider.addSource(seqId -> Optional.of(meta));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         assertEquals("VRT", entry.getDivision());
@@ -540,15 +550,15 @@ class GFF3MapperTest {
 
     @Test
     void appliesTaxonAndScientificName() throws Exception {
-        AnnotationMetadata meta = new AnnotationMetadata();
+        MasterMetadata meta = new MasterMetadata();
         meta.setTaxon("9606");
         meta.setScientificName("Homo sapiens");
         meta.setCommonName("human");
 
-        AnnotationMetadataProvider provider = new AnnotationMetadataProvider();
+        MasterMetadataProvider provider = new MasterMetadataProvider();
         provider.addSource(seqId -> Optional.of(meta));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -562,14 +572,14 @@ class GFF3MapperTest {
 
     @Test
     void appliesKeywordsAndComment() throws Exception {
-        AnnotationMetadata meta = new AnnotationMetadata();
+        MasterMetadata meta = new MasterMetadata();
         meta.setKeywords(List.of("WGS", "genome"));
         meta.setComment("This is a test comment");
 
-        AnnotationMetadataProvider provider = new AnnotationMetadataProvider();
+        MasterMetadataProvider provider = new MasterMetadataProvider();
         provider.addSource(seqId -> Optional.of(meta));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         assertEquals(2, entry.getKeywords().size());
@@ -581,13 +591,13 @@ class GFF3MapperTest {
 
     @Test
     void appliesProjectAccession() throws Exception {
-        AnnotationMetadata meta = new AnnotationMetadata();
+        MasterMetadata meta = new MasterMetadata();
         meta.setProject("PRJEB12345");
 
-        AnnotationMetadataProvider provider = new AnnotationMetadataProvider();
+        MasterMetadataProvider provider = new MasterMetadataProvider();
         provider.addSource(seqId -> Optional.of(meta));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         assertEquals(1, entry.getProjectAccessions().size());
@@ -597,19 +607,19 @@ class GFF3MapperTest {
     @Test
     void firstMatchingSourceWinsEntirely() throws Exception {
         // Source 1: has description but no taxon
-        AnnotationMetadata source1 = new AnnotationMetadata();
+        MasterMetadata source1 = new MasterMetadata();
         source1.setDescription("From source 1");
 
         // Source 2: has description AND taxon — should not be reached
-        AnnotationMetadata source2 = new AnnotationMetadata();
+        MasterMetadata source2 = new MasterMetadata();
         source2.setDescription("From source 2");
         source2.setTaxon("9606");
 
-        AnnotationMetadataProvider provider = new AnnotationMetadataProvider();
+        MasterMetadataProvider provider = new MasterMetadataProvider();
         provider.addSource(seqId -> Optional.of(source1));
         provider.addSource(seqId -> Optional.of(source2));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         // Description should come from source 1 (first match wins)
@@ -631,11 +641,11 @@ class GFF3MapperTest {
      */
     @Test
     void runAccessionsAreEmittedAsDrEnaXrefs() throws Exception {
-        AnnotationMetadata meta = new AnnotationMetadata();
+        MasterMetadata meta = new MasterMetadata();
         meta.setRunAccessions(List.of("ERR10879942", "ERR10890754"));
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         List<XRef> enaRuns = entry.getXRefs().stream()
@@ -657,11 +667,11 @@ class GFF3MapperTest {
                 + "data generated by the Darwin Tree of Life Project. The assembly process included "
                 + "initial PacBio assembly generation with Hifiasm, retained haplotig separation with "
                 + "purge_dups, and Hi-C based scaffolding with YaHS.";
-        AnnotationMetadata meta = new AnnotationMetadata();
+        MasterMetadata meta = new MasterMetadata();
         meta.setComment(longComment);
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         String wrapped = entry.getComment().getText();
@@ -678,13 +688,13 @@ class GFF3MapperTest {
      */
     @Test
     void chromosomeQualifierEmittedOnceWhenSetInBothFields() throws Exception {
-        AnnotationMetadata meta = new AnnotationMetadata();
+        MasterMetadata meta = new MasterMetadata();
         meta.setChromosomeType("chromosome");
         meta.setChromosomeName("4");
         meta.setSearchFields(Map.of("chromosome", "4"));
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
@@ -705,11 +715,11 @@ class GFF3MapperTest {
         ref.setReferenceNumber(1);
         ref.setAuthors("Goudenege  D., Le Roux  F.");
 
-        AnnotationMetadata meta = new AnnotationMetadata();
+        MasterMetadata meta = new MasterMetadata();
         meta.setReferences(List.of(ref));
-        AnnotationMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
 
-        GFF3Mapper mapper = new GFF3Mapper(mockReader(), provider);
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         assertEquals(1, entry.getReferences().size());

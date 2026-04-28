@@ -13,15 +13,15 @@ package uk.ac.ebi.embl.gff3tools.metadata;
 import java.util.Optional;
 
 /**
- * A source of {@link AnnotationMetadata} for a given sequence ID.
+ * A source of {@link MasterMetadata} for a given sequence ID.
  *
- * <p>Used by {@link AnnotationMetadataProvider} to chain multiple sources
+ * <p>Used by {@link MasterMetadataProvider} to chain multiple sources
  * in priority order with field-level merging.
  */
-public interface AnnotationMetadataSource {
+public interface MasterMetadataSource {
 
     /**
-     * Returns the {@link AnnotationMetadata} for the given seqId, or empty if not available.
+     * Returns the {@link MasterMetadata} for the given seqId, or empty if not available.
      */
-    Optional<AnnotationMetadata> getMetadata(String seqId);
+    Optional<MasterMetadata> getMetadata(String seqId);
 }

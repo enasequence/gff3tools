@@ -13,20 +13,20 @@ package uk.ac.ebi.embl.gff3tools.metadata;
 import java.util.Optional;
 
 /**
- * An {@link AnnotationMetadataSource} backed by a MasterEntry JSON document deserialized
- * directly into {@link AnnotationMetadata}. Acts as a global fallback (returns the same
+ * An {@link MasterMetadataSource} backed by a MasterEntry JSON document deserialized
+ * directly into {@link MasterMetadata}. Acts as a global fallback (returns the same
  * metadata for any seqId query).
  */
-public class MasterEntryJsonMetadataSource implements AnnotationMetadataSource {
+public class MasterEntryJsonMetadataSource implements MasterMetadataSource {
 
-    private final AnnotationMetadata metadata;
+    private final MasterMetadata metadata;
 
-    public MasterEntryJsonMetadataSource(AnnotationMetadata metadata) {
+    public MasterEntryJsonMetadataSource(MasterMetadata metadata) {
         this.metadata = metadata;
     }
 
     @Override
-    public Optional<AnnotationMetadata> getMetadata(String seqId) {
+    public Optional<MasterMetadata> getMetadata(String seqId) {
         return Optional.of(metadata);
     }
 }

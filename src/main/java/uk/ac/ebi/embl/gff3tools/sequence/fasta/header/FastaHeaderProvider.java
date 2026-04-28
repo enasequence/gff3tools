@@ -14,19 +14,35 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
+import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 /**
  * Composite that chains multiple {@link FastaHeaderSource} instances in priority order
  * and returns the first non-empty {@link FastaHeader} for a given seqId.
  *
  * <p>Sources are queried in registration order (highest priority first).
+ *
+ * <p>Registered on the validation engine context as a {@link ContextProvider} so consumers
+ * can resolve it via {@code context.get(FastaHeaderProvider.class)}. Currently exposed for
+ * downstream use; not consumed during conversion.
  */
-public class FastaHeaderProvider {
+public class FastaHeaderProvider implements ContextProvider<FastaHeaderProvider> {
 
     private final List<FastaHeaderSource> sources;
 
     public FastaHeaderProvider() {
         this.sources = new ArrayList<>();
+    }
+
+    @Override
+    public FastaHeaderProvider get(ValidationContext context) {
+        return this;
+    }
+
+    @Override
+    public Class<FastaHeaderProvider> type() {
+        return FastaHeaderProvider.class;
     }
 
     /**

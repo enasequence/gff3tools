@@ -18,7 +18,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import java.io.InputStream;
 import org.junit.jupiter.api.Test;
 
-class AnnotationMetadataTest {
+class MasterMetadataTest {
 
     private static final ObjectMapper MAPPER = JsonMapper.builder()
             .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
@@ -28,7 +28,7 @@ class AnnotationMetadataTest {
     void deserializesFromMasterEntryJson() throws Exception {
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("metadata/master_entry.json")) {
             assertNotNull(is, "Test resource metadata/master_entry.json not found");
-            AnnotationMetadata meta = MAPPER.readValue(is, AnnotationMetadata.class);
+            MasterMetadata meta = MAPPER.readValue(is, MasterMetadata.class);
 
             assertEquals("GCA_000001405.29", meta.getId());
             assertEquals("CAXMMS010000001", meta.getAccession());
@@ -78,7 +78,7 @@ class AnnotationMetadataTest {
     @Test
     void ignoresUnknownProperties() throws Exception {
         String json = "{\"id\":\"test\",\"unknownField\":\"value\",\"platform\":\"Illumina\"}";
-        AnnotationMetadata meta = MAPPER.readValue(json, AnnotationMetadata.class);
+        MasterMetadata meta = MAPPER.readValue(json, MasterMetadata.class);
         assertEquals("test", meta.getId());
         // Should not throw
     }
@@ -86,7 +86,7 @@ class AnnotationMetadataTest {
     @Test
     void caseInsensitivePropertyMatching() throws Exception {
         String json = "{\"ID\":\"test\",\"DESCRIPTION\":\"desc\",\"MoleculeType\":\"DNA\"}";
-        AnnotationMetadata meta = MAPPER.readValue(json, AnnotationMetadata.class);
+        MasterMetadata meta = MAPPER.readValue(json, MasterMetadata.class);
         assertEquals("test", meta.getId());
         assertEquals("desc", meta.getDescription());
         assertEquals("DNA", meta.getMoleculeType());
@@ -95,7 +95,7 @@ class AnnotationMetadataTest {
     @Test
     void nullFieldsRemainNull() throws Exception {
         String json = "{\"id\":\"minimal\"}";
-        AnnotationMetadata meta = MAPPER.readValue(json, AnnotationMetadata.class);
+        MasterMetadata meta = MAPPER.readValue(json, MasterMetadata.class);
         assertEquals("minimal", meta.getId());
         assertNull(meta.getDescription());
         assertNull(meta.getMoleculeType());

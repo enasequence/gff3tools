@@ -19,7 +19,6 @@ import uk.ac.ebi.embl.gff3tools.*;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 
 @Slf4j
@@ -27,7 +26,6 @@ public class Gff3ToFFConverter implements Converter {
 
     ValidationEngine validationEngine;
     Path gff3Path;
-    AnnotationMetadataProvider metadataProvider;
     int warningCount = 0;
 
     private void addToWarningCount(int c) {
@@ -35,13 +33,8 @@ public class Gff3ToFFConverter implements Converter {
     }
 
     public Gff3ToFFConverter(ValidationEngine validationEngine, Path gff3Path) {
-        this(validationEngine, gff3Path, (AnnotationMetadataProvider) null);
-    }
-
-    public Gff3ToFFConverter(ValidationEngine validationEngine, Path gff3Path, AnnotationMetadataProvider provider) {
         this.validationEngine = validationEngine;
         this.gff3Path = gff3Path;
-        this.metadataProvider = provider;
     }
 
     public void convert(BufferedReader reader, BufferedWriter writer)
@@ -50,7 +43,7 @@ public class Gff3ToFFConverter implements Converter {
         try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader, gff3Path)) {
             gff3Reader.readHeader();
             gff3Reader.read(annotation -> {
-                writeEntry(new GFF3Mapper(gff3Reader, metadataProvider), annotation, writer);
+                writeEntry(new GFF3Mapper(gff3Reader, validationEngine.getContext()), annotation, writer);
                 List<ValidationException> warnings = validationEngine.getParsingWarnings();
                 for (ValidationException e : warnings) {
                     log.warn("WARNING: %s".formatted(e.getMessage()));

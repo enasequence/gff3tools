@@ -40,13 +40,14 @@ import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
-import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadata;
-import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.metadata.CrossReference;
+import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
+import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.metadata.ReferenceData;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 import uk.ac.ebi.ena.taxonomy.taxon.TaxonFactory;
 
@@ -67,18 +68,15 @@ public class GFF3Mapper {
 
     Entry entry;
     GFF3FileReader gff3FileReader;
-    private final AnnotationMetadataProvider metadataProvider;
+    private final MasterMetadataProvider metadataProvider;
 
-    public GFF3Mapper(GFF3FileReader gff3FileReader) {
-        this(gff3FileReader, (AnnotationMetadataProvider) null);
-    }
-
-    public GFF3Mapper(GFF3FileReader gff3FileReader, AnnotationMetadataProvider metadataProvider) {
+    public GFF3Mapper(GFF3FileReader gff3FileReader, ValidationContext context) {
         parentFeatures = new HashMap<>();
         joinableFeatureMap = new HashMap<>();
         entry = null;
         this.gff3FileReader = gff3FileReader;
-        this.metadataProvider = metadataProvider;
+        this.metadataProvider =
+                context.contains(MasterMetadataProvider.class) ? context.get(MasterMetadataProvider.class) : null;
     }
 
     public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) throws ValidationException {
@@ -104,7 +102,7 @@ public class GFF3Mapper {
         entry.addFeature(sourceFeature);
         entry.setSequence(sequence);
 
-        applyAnnotationMetadata(sequenceRegion, entry, sequence, sourceFeature);
+        applyMasterMetadata(sequenceRegion, entry, sequence, sourceFeature);
 
         for (GFF3Feature gff3Feature : gff3Annotation.getFeatures()) {
             if (gff3Feature.getId().isPresent()) {
@@ -305,10 +303,10 @@ public class GFF3Mapper {
     }
 
     /**
-     * Applies AnnotationMetadata to the EMBL entry, sequence, and source feature.
+     * Applies MasterMetadata to the EMBL entry, sequence, and source feature.
      * Gracefully skips if no metadata provider is available or no metadata is found for the seqId.
      */
-    private void applyAnnotationMetadata(
+    private void applyMasterMetadata(
             GFF3SequenceRegion sequenceRegion, Entry entry, Sequence sequence, SourceFeature sourceFt) {
         if (metadataProvider == null) {
             return;
@@ -318,13 +316,13 @@ public class GFF3Mapper {
         }
 
         String seqId = sequenceRegion.accessionId();
-        Optional<AnnotationMetadata> opt = metadataProvider.getMetadata(seqId);
+        Optional<MasterMetadata> opt = metadataProvider.getMetadata(seqId);
         if (opt.isEmpty()) {
-            LOGGER.debug("No annotation metadata found for seqId '{}'; skipping metadata mapping", seqId);
+            LOGGER.debug("No master metadata found for seqId '{}'; skipping metadata mapping", seqId);
             return;
         }
 
-        AnnotationMetadata m = opt.get();
+        MasterMetadata m = opt.get();
 
         // DE line: description (title as fallback)
         if (m.getDescription() != null) {
@@ -628,7 +626,7 @@ public class GFF3Mapper {
     }
 
     /**
-     * Keys from searchFields that are already handled by other AnnotationMetadata fields
+     * Keys from searchFields that are already handled by other MasterMetadata fields
      * or are not valid source feature qualifiers. Skipping `chromosome`/`plasmid`/`segment`/
      * `linkage_group`/`organelle` avoids emitting these qualifiers twice when the same value
      * is present both at the top level (chromosomeName / chromosomeLocation) and inside

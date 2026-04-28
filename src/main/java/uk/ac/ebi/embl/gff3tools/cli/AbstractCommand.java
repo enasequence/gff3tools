@@ -230,11 +230,11 @@ public abstract class AbstractCommand implements Runnable {
     }
 
     /**
-     * Builds an {@link AnnotationMetadataProvider} from the optional {@code --master-entry} path.
+     * Builds an {@link MasterMetadataProvider} from the optional {@code --master-entry} path.
      * The master entry file (MasterEntry JSON or EMBL flatfile) is the sole metadata source.
      */
-    protected AnnotationMetadataProvider buildMetadataProvider(Path masterEntryPath) throws CLIException {
-        AnnotationMetadataProvider provider = new AnnotationMetadataProvider();
+    protected MasterMetadataProvider buildMetadataProvider(Path masterEntryPath) throws CLIException {
+        MasterMetadataProvider provider = new MasterMetadataProvider();
         if (masterEntryPath != null) {
             provider.addSource(parseMasterEntrySource(masterEntryPath));
         }
@@ -243,10 +243,10 @@ public abstract class AbstractCommand implements Runnable {
 
     /**
      * Parses a master entry file based on its extension.
-     * .json -> MasterEntry JSON deserialized into AnnotationMetadata
-     * .embl/.ff -> EMBL flatfile parsed into Entry and adapted to AnnotationMetadata
+     * .json -> MasterEntry JSON deserialized into MasterMetadata
+     * .embl/.ff -> EMBL flatfile parsed into Entry and adapted to MasterMetadata
      */
-    protected AnnotationMetadataSource parseMasterEntrySource(Path path) throws CLIException {
+    protected MasterMetadataSource parseMasterEntrySource(Path path) throws CLIException {
         String ext = getFileExtension(path).orElse("").toLowerCase();
         return switch (ext) {
             case "json" -> parseMasterEntryJson(path);
@@ -258,14 +258,14 @@ public abstract class AbstractCommand implements Runnable {
     }
 
     /**
-     * Parses a MasterEntry JSON file into an AnnotationMetadata.
+     * Parses a MasterEntry JSON file into an MasterMetadata.
      */
     private MasterEntryJsonMetadataSource parseMasterEntryJson(Path path) throws CLIException {
         try {
             ObjectMapper mapper = JsonMapper.builder()
                     .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
                     .build();
-            AnnotationMetadata meta = mapper.readValue(path.toFile(), AnnotationMetadata.class);
+            MasterMetadata meta = mapper.readValue(path.toFile(), MasterMetadata.class);
             return new MasterEntryJsonMetadataSource(meta);
         } catch (Exception e) {
             throw new CLIException(

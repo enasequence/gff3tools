@@ -31,8 +31,8 @@ import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.exception.FormatSupportException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
-import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadata;
-import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadataProvider;
+import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
@@ -75,7 +75,8 @@ public class FileConversionCommand extends AbstractCommand {
             List<FileSequenceSource> sources =
                     buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
             CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
-            AnnotationMetadataProvider metadataProvider = buildMetadataProvider(masterFilePath);
+            MasterMetadataProvider metadataProvider = buildMetadataProvider(masterFilePath);
+            FastaHeaderProvider headerProvider = buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
 
             try (BufferedReader inputReader = getPipe(
                             Files::newBufferedReader,
@@ -85,8 +86,9 @@ public class FileConversionCommand extends AbstractCommand {
                             writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
                 fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
                 toFileType = validateFileType(toFileType, outputFilePath, "-t");
-                try (ValidationEngine engine = initValidationEngine(ruleOverrides, compositeProvider)) {
-                    Converter converter = getConverter(engine, fromFileType, toFileType, metadataProvider);
+                try (ValidationEngine engine =
+                        initValidationEngine(ruleOverrides, compositeProvider, metadataProvider, headerProvider)) {
+                    Converter converter = getConverter(engine, fromFileType, toFileType);
                     converter.convert(inputReader, outputWriter);
                 }
             }
@@ -125,34 +127,15 @@ public class FileConversionCommand extends AbstractCommand {
     }
 
     private Converter getConverter(
-            ValidationEngine engine,
-            ConversionFileFormat inputFileType,
-            ConversionFileFormat outputFileType,
-            AnnotationMetadataProvider metadataProvider)
+            ValidationEngine engine, ConversionFileFormat inputFileType, ConversionFileFormat outputFileType)
             throws FormatSupportException, CLIException {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
-            return new Gff3ToFFConverter(engine, inputFilePath, metadataProvider);
+            return new Gff3ToFFConverter(engine, inputFilePath);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
-            return buildFFToGff3Converter(engine, metadataProvider);
+            return new FFToGff3Converter(engine);
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }
-    }
-
-    /**
-     * Builds an FFToGff3Converter using AnnotationMetadata from the already-built provider.
-     * Avoids re-parsing the master file by extracting metadata from the provider chain.
-     */
-    private Converter buildFFToGff3Converter(ValidationEngine engine, AnnotationMetadataProvider metadataProvider)
-            throws CLIException {
-        if (metadataProvider == null) {
-            return new FFToGff3Converter(engine);
-        }
-        AnnotationMetadata meta = metadataProvider.getGlobalMetadata().orElse(null);
-        if (meta == null) {
-            return new FFToGff3Converter(engine);
-        }
-        return new FFToGff3Converter(engine, meta);
     }
 
     private ConversionFileFormat validateFileType(ConversionFileFormat fileFormat, Path filePath, String cliOption)

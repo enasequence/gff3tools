@@ -12,40 +12,40 @@ package uk.ac.ebi.embl.gff3tools.metadata;
 
 import java.util.Optional;
 import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.api.entry.feature.Feature;
-import uk.ac.ebi.embl.api.entry.qualifier.OrganismQualifier;
+import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
+import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 /**
- * An {@link AnnotationMetadataSource} that adapts a parsed EMBL flatfile {@link Entry}
- * (master entry) into {@link AnnotationMetadata}. Maps all available Entry fields to the
+ * An {@link MasterMetadataSource} that adapts a parsed EMBL flatfile {@link Entry}
+ * (master entry) into {@link MasterMetadata}. Maps all available Entry fields to the
  * metadata model for backward compatibility.
  *
  * <p>Acts as a global fallback: returns the same metadata for any seqId query.
  */
-public class EmblEntryMetadataSource implements AnnotationMetadataSource {
+public class EmblEntryMetadataSource implements MasterMetadataSource {
 
-    private final AnnotationMetadata metadata;
+    private final MasterMetadata metadata;
 
     public EmblEntryMetadataSource(Entry entry) {
         this.metadata = fromEntry(entry);
     }
 
     @Override
-    public Optional<AnnotationMetadata> getMetadata(String seqId) {
+    public Optional<MasterMetadata> getMetadata(String seqId) {
         return Optional.of(metadata);
     }
 
     /**
-     * Returns the pre-built AnnotationMetadata for use outside the provider chain
+     * Returns the pre-built MasterMetadata for use outside the provider chain
      * (e.g. in FFToGff3Converter direction).
      */
-    public AnnotationMetadata getMetadata() {
+    public MasterMetadata getMetadata() {
         return metadata;
     }
 
-    private static AnnotationMetadata fromEntry(Entry entry) {
-        AnnotationMetadata meta = new AnnotationMetadata();
+    private static MasterMetadata fromEntry(Entry entry) {
+        MasterMetadata meta = new MasterMetadata();
 
         if (entry.getPrimaryAccession() != null) {
             meta.setAccession(entry.getPrimaryAccession());
@@ -76,37 +76,30 @@ public class EmblEntryMetadataSource implements AnnotationMetadataSource {
             }
         }
 
-        // Source feature fields
-        Feature sourceFeature = entry.getPrimarySourceFeature();
+        // Source feature fields. SourceFeature.getTaxon() returns the Taxon populated
+        // by the EMBL reader (from OS/OC/organism lines) regardless of whether the
+        // underlying organism qualifier is the OrganismQualifier subclass or a plain Qualifier,
+        // so we read all taxon-shaped fields from there.
+        SourceFeature sourceFeature = entry.getPrimarySourceFeature();
         if (sourceFeature != null) {
-            // Extract organism (scientific name) and taxon ID from OrganismQualifier
-            Optional<OrganismQualifier> organismQualifier = sourceFeature.getQualifiers("organism").stream()
-                    .filter(q -> q instanceof OrganismQualifier)
-                    .map(q -> (OrganismQualifier) q)
-                    .findFirst();
+            Taxon taxon = sourceFeature.getTaxon();
+            if (taxon != null) {
+                if (taxon.getScientificName() != null) {
+                    meta.setScientificName(taxon.getScientificName());
+                }
+                if (taxon.getCommonName() != null) {
+                    meta.setCommonName(taxon.getCommonName());
+                }
+                if (taxon.getLineage() != null) {
+                    meta.setLineage(taxon.getLineage());
+                }
+                if (taxon.getTaxId() != null) {
+                    meta.setTaxon(String.valueOf(taxon.getTaxId()));
+                }
+            }
 
-            organismQualifier.map(OrganismQualifier::getValue).ifPresent(meta::setScientificName);
-
-            // Prefer taxon ID from OrganismQualifier's Taxon object (parsed by EMBL reader)
-            organismQualifier
-                    .map(OrganismQualifier::getTaxon)
-                    .map(taxon -> taxon.getTaxId())
-                    .map(String::valueOf)
-                    .ifPresent(meta::setTaxon);
-
-            // Extract lineage from Taxon object (OC line data)
-            organismQualifier
-                    .map(OrganismQualifier::getTaxon)
-                    .map(taxon -> taxon.getLineage())
-                    .ifPresent(meta::setLineage);
-
-            // Extract common name from Taxon object
-            organismQualifier
-                    .map(OrganismQualifier::getTaxon)
-                    .map(taxon -> taxon.getCommonName())
-                    .ifPresent(meta::setCommonName);
-
-            // Fallback: extract taxon from db_xref qualifier if not found via OrganismQualifier
+            // Fallback: recover taxon ID from db_xref="taxon:N" when the Taxon path
+            // didn't supply one. db_xref carries no lineage/commonName, so those stay unset.
             if (meta.getTaxon() == null) {
                 sourceFeature.getQualifiers("db_xref").stream()
                         .map(Qualifier::getValue)
@@ -116,7 +109,8 @@ public class EmblEntryMetadataSource implements AnnotationMetadataSource {
                         .ifPresent(meta::setTaxon);
             }
 
-            // If no OrganismQualifier found, try regular organism qualifier for name
+            // Fallback: recover scientific name from a plain /organism qualifier value
+            // when the Taxon path didn't supply one.
             if (meta.getScientificName() == null) {
                 sourceFeature.getQualifiers("organism").stream()
                         .findFirst()

@@ -18,7 +18,7 @@ import uk.ac.ebi.embl.api.entry.qualifier.OrganismQualifier;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
-import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadata;
+import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 public class GFF3DirectivesFactory {
@@ -39,9 +39,9 @@ public class GFF3DirectivesFactory {
     }
 
     /**
-     * Builds a taxonomy URL from AnnotationMetadata fields.
+     * Builds a taxonomy URL from MasterMetadata fields.
      */
-    private String buildTaxonomyUrlFromMetadata(AnnotationMetadata metadata) {
+    private String buildTaxonomyUrlFromMetadata(MasterMetadata metadata) {
         if (metadata.getTaxon() != null) {
             try {
                 Long taxId = Long.parseLong(metadata.getTaxon());
@@ -57,11 +57,11 @@ public class GFF3DirectivesFactory {
     }
 
     /**
-     * Creates a GFF3Species directive using AnnotationMetadata if available,
+     * Creates a GFF3Species directive using MasterMetadata if available,
      * falling back to the entry's source feature organism qualifier.
      */
-    public GFF3Species createSpecies(Entry entry, AnnotationMetadata masterMetadata) throws NoSourcePresentException {
-        // If we have AnnotationMetadata with scientificName or taxon, prefer it
+    public GFF3Species createSpecies(Entry entry, MasterMetadata masterMetadata) throws NoSourcePresentException {
+        // If we have MasterMetadata with scientificName or taxon, prefer it
         if (masterMetadata != null
                 && (masterMetadata.getScientificName() != null || masterMetadata.getTaxon() != null)) {
             String url = buildTaxonomyUrlFromMetadata(masterMetadata);

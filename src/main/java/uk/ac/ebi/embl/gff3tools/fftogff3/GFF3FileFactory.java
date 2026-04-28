@@ -24,7 +24,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.gff3tools.metadata.AnnotationMetadata;
+import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
@@ -37,7 +37,7 @@ public class GFF3FileFactory {
         this.engine = engine;
     }
 
-    public GFF3File from(EmblEntryReader entryReader, AnnotationMetadata masterMetadata)
+    public GFF3File from(EmblEntryReader entryReader, MasterMetadata masterMetadata)
             throws ValidationException, ReadException {
         GFF3Header header = new GFF3Header(HEADER_VERSION);
         GFF3Species species = null;

@@ -13,26 +13,41 @@ package uk.ac.ebi.embl.gff3tools.metadata;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 /**
- * Chain-of-responsibility provider that returns {@link AnnotationMetadata} from the first
- * {@link AnnotationMetadataSource} that has data for a given seqId. Sources are queried in
+ * Chain-of-responsibility provider that returns {@link MasterMetadata} from the first
+ * {@link MasterMetadataSource} that has data for a given seqId. Sources are queried in
  * registration order (first registered = highest priority). No field-level merging is performed;
  * the first source that returns a non-empty result wins entirely.
+ *
+ * <p>Registered on the validation engine context as a {@link ContextProvider} so converters
+ * and mappers can resolve it via {@code context.get(MasterMetadataProvider.class)}.
  */
-public class AnnotationMetadataProvider {
+public class MasterMetadataProvider implements ContextProvider<MasterMetadataProvider> {
 
-    private final List<AnnotationMetadataSource> sources;
+    private final List<MasterMetadataSource> sources;
 
-    public AnnotationMetadataProvider() {
+    public MasterMetadataProvider() {
         this.sources = new ArrayList<>();
+    }
+
+    @Override
+    public MasterMetadataProvider get(ValidationContext context) {
+        return this;
+    }
+
+    @Override
+    public Class<MasterMetadataProvider> type() {
+        return MasterMetadataProvider.class;
     }
 
     /**
      * Registers a metadata source. Sources are queried in registration order
      * (first registered = highest priority).
      */
-    public void addSource(AnnotationMetadataSource source) {
+    public void addSource(MasterMetadataSource source) {
         this.sources.add(source);
     }
 
@@ -42,17 +57,17 @@ public class AnnotationMetadataProvider {
      * empty seqId; global sources (MasterEntry, CLI JSON) will respond, per-seqId sources
      * (FASTA-embedded) will not.
      */
-    public Optional<AnnotationMetadata> getGlobalMetadata() {
+    public Optional<MasterMetadata> getGlobalMetadata() {
         return getMetadata("");
     }
 
     /**
-     * Returns the {@link AnnotationMetadata} from the first source that has data for the
+     * Returns the {@link MasterMetadata} from the first source that has data for the
      * given seqId. Sources are queried in registration order; the first non-empty result wins.
      */
-    public Optional<AnnotationMetadata> getMetadata(String seqId) {
-        for (AnnotationMetadataSource source : sources) {
-            Optional<AnnotationMetadata> opt = source.getMetadata(seqId);
+    public Optional<MasterMetadata> getMetadata(String seqId) {
+        for (MasterMetadataSource source : sources) {
+            Optional<MasterMetadata> opt = source.getMetadata(seqId);
             if (opt.isPresent()) {
                 return opt;
             }

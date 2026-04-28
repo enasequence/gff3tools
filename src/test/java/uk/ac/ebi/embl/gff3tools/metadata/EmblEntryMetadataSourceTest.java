@@ -82,7 +82,7 @@ class EmblEntryMetadataSourceTest {
         Entry entry = createPopulatedEntry();
         EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry);
 
-        AnnotationMetadata meta = source.getMetadata();
+        MasterMetadata meta = source.getMetadata();
         assertNotNull(meta);
 
         assertEquals("AB123456", meta.getAccession());
@@ -123,8 +123,8 @@ class EmblEntryMetadataSourceTest {
         Entry entry = createPopulatedEntry();
         EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry);
 
-        Optional<AnnotationMetadata> meta1 = source.getMetadata("seq1");
-        Optional<AnnotationMetadata> meta2 = source.getMetadata("anything_else");
+        Optional<MasterMetadata> meta1 = source.getMetadata("seq1");
+        Optional<MasterMetadata> meta2 = source.getMetadata("anything_else");
 
         assertTrue(meta1.isPresent());
         assertTrue(meta2.isPresent());
@@ -136,7 +136,7 @@ class EmblEntryMetadataSourceTest {
         Entry entry = entryFactory.createEntry();
         EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry);
 
-        AnnotationMetadata meta = source.getMetadata();
+        MasterMetadata meta = source.getMetadata();
         assertNotNull(meta);
         assertNull(meta.getAccession());
         assertNull(meta.getDescription());
@@ -155,7 +155,7 @@ class EmblEntryMetadataSourceTest {
         entry.addFeature(source);
 
         EmblEntryMetadataSource metaSource = new EmblEntryMetadataSource(entry);
-        AnnotationMetadata meta = metaSource.getMetadata();
+        MasterMetadata meta = metaSource.getMetadata();
 
         assertEquals("12345", meta.getTaxon());
     }
@@ -168,7 +168,7 @@ class EmblEntryMetadataSourceTest {
         entry.setSequence(seq);
 
         EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry);
-        AnnotationMetadata meta = source.getMetadata();
+        MasterMetadata meta = source.getMetadata();
 
         assertEquals("circular", meta.getTopology());
     }
