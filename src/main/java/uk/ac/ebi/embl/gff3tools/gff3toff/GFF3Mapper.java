@@ -502,9 +502,13 @@ public class GFF3Mapper {
             }
         }
 
-        // Sample: DR BioSample line (only for SAMEA-prefixed accessions;
-        // ERS accessions are ENA sample aliases, not BioSample identifiers)
-        if (m.getSample() != null && m.getSample().startsWith("SAMEA")) {
+        // Sample: DR BioSample line. BioSample is a tripartite EBI/NCBI/DDBJ
+        // collaboration, so SAMEA, SAMN, and SAMD are all valid BioSample accessions.
+        // ERS accessions are ENA sample aliases, not BioSample identifiers, and are skipped.
+        if (m.getSample() != null
+                && (m.getSample().startsWith("SAMEA")
+                        || m.getSample().startsWith("SAMN")
+                        || m.getSample().startsWith("SAMD"))) {
             entry.addXRef(new XRef("BioSample", m.getSample()));
         }
 
