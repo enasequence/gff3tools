@@ -10,31 +10,24 @@
  */
 package uk.ac.ebi.embl.gff3tools.metadata;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Represents a literature reference from MasterEntry JSON.
- * Maps to RN/RG/RA/RT/RL lines in EMBL output.
+ * One element of a {@link ReferenceData#getAuthors()} list. Master.json carries
+ * the author's surname, first-name component and (optionally) a middle-name
+ * component as separate strings; each name component may be a full name
+ * ("Eleanor"), a single initial with or without a period ("E." / "E") or
+ * multiple initials ("E. P." / "E P"). The converter normalises these to the
+ * EMBL `RA` "Surname Initials." form when emitting the flat file.
  */
 @Getter
 @Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ReferenceData {
+public class AuthorData {
 
-    @JsonAlias("number")
-    private Integer referenceNumber;
-
-    private String referencePosition;
-    private String referenceComment;
-    private String title;
-
-    @JsonAlias("group")
-    private String consortium;
-
-    private List<AuthorData> authors;
-    private String location;
+    private String firstName;
+    private String middleName;
+    private String surname;
 }

@@ -22,11 +22,11 @@ import uk.ac.ebi.embl.api.entry.XRef;
 import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.reference.Person;
-import uk.ac.ebi.embl.api.entry.reference.Reference;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.gff3tools.metadata.AuthorData;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.metadata.ReferenceData;
@@ -765,16 +765,28 @@ class GFF3MapperTest {
     }
 
     /**
-     * Regression: master.json sometimes carries doubled whitespace inside the
-     * `references[].authors` string (e.g. `"Goudenege  D., Le Roux  F."`). The
-     * converter must collapse runs of whitespace so `RA` lines render with single
-     * spaces between surname and initials.
+     * master.json now ships authors as a list of {firstName, middleName, surname}
+     * objects. The converter must build a {@link Person} per entry, with the
+     * combined firstName + middleName components reduced to compact EMBL initials
+     * (e.g. firstName "Eleanor" + middleName "P." → "E.P."). The downstream
+     * {@code RAWriter} renders `Person` as `surname + " " + firstName`, so the
+     * EMBL `RA` line ends up as `Surname E.P.`.
      */
     @Test
-    void authorWhitespaceIsCollapsedBeforeBuildingPerson() throws Exception {
+    void structuredAuthorsAreEmittedWithCompactInitials() throws Exception {
         ReferenceData ref = new ReferenceData();
         ref.setReferenceNumber(1);
-        ref.setAuthors("Goudenege  D., Le Roux  F.");
+        AuthorData a1 = new AuthorData();
+        a1.setSurname("Ferreira");
+        a1.setFirstName("B.");
+        AuthorData a2 = new AuthorData();
+        a2.setSurname("Salcher");
+        a2.setFirstName("Eleanor");
+        a2.setMiddleName("P.");
+        AuthorData a3 = new AuthorData();
+        a3.setSurname("Doe");
+        a3.setFirstName("E P");
+        ref.setAuthors(List.of(a1, a2, a3));
 
         MasterMetadata meta = new MasterMetadata();
         meta.setReferences(List.of(ref));
@@ -784,15 +796,38 @@ class GFF3MapperTest {
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         assertEquals(1, entry.getReferences().size());
-        Reference reference = entry.getReferences().get(0);
-        List<Person> authors = reference.getPublication().getAuthors();
-        assertEquals(2, authors.size());
-        assertEquals("Goudenege D.", authors.get(0).getSurname());
-        assertEquals("Le Roux F.", authors.get(1).getSurname());
-        for (Person p : authors) {
-            assertFalse(
-                    p.getSurname().contains("  "),
-                    "Person surname must not contain doubled whitespace: '" + p.getSurname() + "'");
-        }
+        List<Person> authors = entry.getReferences().get(0).getPublication().getAuthors();
+        assertEquals(3, authors.size());
+        assertEquals("Ferreira", authors.get(0).getSurname());
+        assertEquals("B.", authors.get(0).getFirstName());
+        assertEquals("Salcher", authors.get(1).getSurname());
+        assertEquals("E.P.", authors.get(1).getFirstName());
+        assertEquals("Doe", authors.get(2).getSurname());
+        assertEquals("E.P.", authors.get(2).getFirstName());
+    }
+
+    /**
+     * {@code toInitials} must accept every name-component shape master.json may
+     * emit and reduce it to compact "X.Y." initials with no internal separators.
+     */
+    @Test
+    void toInitialsHandlesAllNameComponentShapes() {
+        // null / blank
+        assertEquals("", GFF3Mapper.toInitials(null));
+        assertEquals("", GFF3Mapper.toInitials(""));
+        assertEquals("", GFF3Mapper.toInitials("   "));
+        // full name
+        assertEquals("E.", GFF3Mapper.toInitials("Eleanor"));
+        // single initial, with and without period
+        assertEquals("E.", GFF3Mapper.toInitials("E."));
+        assertEquals("E.", GFF3Mapper.toInitials("E"));
+        // multiple initials, periods + spaces
+        assertEquals("E.P.", GFF3Mapper.toInitials("E. P."));
+        assertEquals("E.P.", GFF3Mapper.toInitials("E P"));
+        assertEquals("E.P.", GFF3Mapper.toInitials("E.P."));
+        // doubled whitespace and lowercase
+        assertEquals("E.P.", GFF3Mapper.toInitials("  e.   p.  "));
+        // compound first name "Mary Anne"
+        assertEquals("M.A.", GFF3Mapper.toInitials("Mary Anne"));
     }
 }

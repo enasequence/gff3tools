@@ -40,6 +40,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
+import uk.ac.ebi.embl.gff3tools.metadata.AuthorData;
 import uk.ac.ebi.embl.gff3tools.metadata.CrossReference;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
@@ -551,16 +552,15 @@ public class GFF3Mapper {
         }
 
         if (refData.getAuthors() != null) {
-            String[] authorNames = refData.getAuthors().split(",\\s*");
-            for (String authorName : authorNames) {
-                // Collapse runs of whitespace inside each name — master.json
-                // sometimes carries doubled spaces between surname and initials
-                // (e.g. "Goudenege  D."), which would otherwise propagate verbatim
-                // into the EMBL `RA` line.
-                String normalized = authorName.trim().replaceAll("\\s+", " ");
-                if (!normalized.isEmpty()) {
-                    publication.addAuthor(referenceFactory.createPerson(normalized));
-                }
+            for (AuthorData author : refData.getAuthors()) {
+                if (author == null) continue;
+                String surname = author.getSurname() == null
+                        ? ""
+                        : author.getSurname().trim().replaceAll("\\s+", " ");
+                String initials = toInitials(author.getFirstName()) + toInitials(author.getMiddleName());
+                if (surname.isEmpty() && initials.isEmpty()) continue;
+                publication.addAuthor(referenceFactory.createPerson(
+                        surname.isEmpty() ? null : surname, initials.isEmpty() ? null : initials));
             }
         }
 
@@ -586,6 +586,25 @@ public class GFF3Mapper {
             sub.setSubmitterAddress(address);
         }
         return sub;
+    }
+
+    /**
+     * Reduce a name component (firstName or middleName) to compact EMBL initials,
+     * each letter followed by a period, no separators between letters. Accepts:
+     * full name ("Eleanor" → "E."), single initial with or without period
+     * ("E." / "E" → "E."), and multiple initials separated by spaces and/or
+     * periods ("E. P." / "E P" / "E.P." → "E.P."). Returns "" for null/blank.
+     */
+    static String toInitials(String component) {
+        if (component == null) return "";
+        StringBuilder sb = new StringBuilder();
+        for (String token : component.trim().split("\\s+")) {
+            for (String sub : token.split("\\.")) {
+                if (sub.isEmpty()) continue;
+                sb.append(Character.toUpperCase(sub.charAt(0))).append('.');
+            }
+        }
+        return sb.toString();
     }
 
     /** Target content width for `CC` lines (EMBL convention is 80 total = 5-col prefix + 75). */

@@ -36,7 +36,10 @@
     {
       "number": 1,
       "group": "Human Genome Consortium",
-      "authors": "Smith J., Doe A.",
+      "authors": [
+        { "firstName": "J.", "surname": "Smith" },
+        { "firstName": "A.", "surname": "Doe" }
+      ],
       "title": "The human genome",
       "location": "Submitted (15-JAN-2024) to the INSDC.\nEBI, Wellcome Genome Campus, Hinxton CB10 1SA, United Kingdom"
     }

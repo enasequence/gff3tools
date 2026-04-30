@@ -70,7 +70,13 @@ class MasterMetadataTest {
             assertEquals(1, meta.getReferences().get(0).getReferenceNumber());
             assertEquals("Human Genome Consortium", meta.getReferences().get(0).getConsortium());
             assertEquals("The human genome", meta.getReferences().get(0).getTitle());
-            assertEquals("Smith J., Doe A.", meta.getReferences().get(0).getAuthors());
+            var refAuthors = meta.getReferences().get(0).getAuthors();
+            assertNotNull(refAuthors);
+            assertEquals(2, refAuthors.size());
+            assertEquals("Smith", refAuthors.get(0).getSurname());
+            assertEquals("J.", refAuthors.get(0).getFirstName());
+            assertEquals("Doe", refAuthors.get(1).getSurname());
+            assertEquals("A.", refAuthors.get(1).getFirstName());
             assertTrue(meta.getReferences().get(0).getLocation().startsWith("Submitted"));
         }
     }
