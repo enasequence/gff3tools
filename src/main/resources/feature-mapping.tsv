@@ -104,6 +104,7 @@ SO:0000386 	RNase_P_RNA	The RNA component of Ribonuclease P (RNase P), a ubiquit
 SO:0000385 	RNase_MRP_RNA	The RNA molecule essential for the catalytic activity of RNase MRP, an enzymatically active ribonucleoprotein with two distinct roles in eukaryotes. In mitochondria it plays a direct role in the initiation of mitochondrial DNA replication. In the nucleus it is involved in precursor rRNA processing, where it cleaves the internal transcribed spacer 1 between 18S and 5.8S rRNAs.	ncRNA	/ncRNA_class="RNase_MRP_RNA"
 SO:0000390 	telomerase_RNA	The RNA component of telomerase, a reverse transcriptase that synthesizes telomeric DNA.	ncRNA	/ncRNA_class="telomerase_RNA"
 SO:0000602 	guide_RNA	A small RNA oligo, typically about 20 bases, that guides the cas nuclease to a target DNA sequence in the CRISPR/cas mutagenesis method.	ncRNA	/ncRNA_class="guideRNA"
+SO:0000602 	guide_RNA	A small RNA oligo, typically about 20 bases, that guides the cas nuclease to a target DNA sequence in the CRISPR/cas mutagenesis method.	ncRNA	/ncRNA_class="guide_RNA"
 SO:0001998	sgRNA	Asmall RNA oligo, typically about 20 bases, that guides the cas nuclease to a target DNA sequence in the CRISPR/cas mutagenesis method.	ncRNA	/ncRNA_class="sgRNA"
 SO:0000454 	rasiRNA	A 17-28-nt, small interfering RNA derived from transcripts of repetitive elements.	ncRNA	/ncRNA_class="rasiRNA"
 SO:0000013 	scRNA	A small non coding RNA sequence, present in the cytoplasm.	ncRNA	/ncRNA_class="scRNA"
