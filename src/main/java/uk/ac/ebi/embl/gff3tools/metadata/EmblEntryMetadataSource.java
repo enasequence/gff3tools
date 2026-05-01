@@ -14,7 +14,6 @@ import java.util.Optional;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
-import uk.ac.ebi.ena.taxonomy.client.TaxonomyClient;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 /**
@@ -29,11 +28,11 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
     private final MasterMetadata metadata;
 
     public EmblEntryMetadataSource(Entry entry) {
-        this(entry, taxId -> Optional.ofNullable(new TaxonomyClient().getTaxonByTaxid(taxId)));
+        this(entry, new TaxonProvider());
     }
 
-    EmblEntryMetadataSource(Entry entry, TaxonResolver taxonResolver) {
-        this.metadata = fromEntry(entry, taxonResolver);
+    public EmblEntryMetadataSource(Entry entry, TaxonProvider taxonProvider) {
+        this.metadata = fromEntry(entry, taxonProvider);
     }
 
     @Override
@@ -49,12 +48,7 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
         return metadata;
     }
 
-    @FunctionalInterface
-    interface TaxonResolver {
-        Optional<Taxon> resolve(Long taxId) throws Exception;
-    }
-
-    private static MasterMetadata fromEntry(Entry entry, TaxonResolver taxonResolver) {
+    private static MasterMetadata fromEntry(Entry entry, TaxonProvider taxonProvider) {
         MasterMetadata meta = new MasterMetadata();
 
         if (entry.getPrimaryAccession() != null) {
@@ -117,7 +111,7 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
                         .filter(v -> v != null && v.startsWith("taxon:"))
                         .findFirst()
                         .map(v -> v.substring("taxon:".length()))
-                        .ifPresent(taxId -> applyTaxonFromDbXref(meta, taxId, taxonResolver));
+                        .ifPresent(taxId -> applyTaxonFromDbXref(meta, taxId, taxonProvider));
             }
 
             // Fallback: recover scientific name from a plain /organism qualifier value
@@ -158,14 +152,13 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
         return meta;
     }
 
-    private static void applyTaxonFromDbXref(MasterMetadata meta, String taxId, TaxonResolver taxonResolver) {
+    private static void applyTaxonFromDbXref(MasterMetadata meta, String taxId, TaxonProvider taxonProvider) {
         meta.setTaxon(taxId);
         try {
             Long numericTaxId = Long.parseLong(taxId);
-            taxonResolver.resolve(numericTaxId).ifPresent(taxon -> applyTaxonFields(meta, taxon));
-        } catch (Exception ignored) {
-            // Keep the taxon ID recovered from db_xref even if the ID is non-numeric
-            // or taxonomy lookup is unavailable.
+            taxonProvider.getTaxonByTaxId(numericTaxId).ifPresent(taxon -> applyTaxonFields(meta, taxon));
+        } catch (NumberFormatException ignored) {
+            // Keep the taxon ID recovered from db_xref even if it is non-numeric.
         }
     }
 
