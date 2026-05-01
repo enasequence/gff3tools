@@ -35,7 +35,14 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Run Spotless check
-        run: ./gradlew spotlessCheck -Pgitlab_private_token=$GITLAB_TOKEN
+        run: |
+          if [ -z "$GITLAB_TOKEN" ]; then
+            echo "GITLAB_TOKEN is missing"
+            exit 1
+          else
+            echo "GITLAB_TOKEN is present"
+          fi
+          ./gradlew spotlessCheck "-Pgitlab_private_token=$GITLAB_TOKEN"
 
       - name: Run all tests
-        run: ./gradlew test --info -Pgitlab_private_token=$GITLAB_TOKEN
+        run: ./gradlew test --info "-Pgitlab_private_token=$GITLAB_TOKEN"
