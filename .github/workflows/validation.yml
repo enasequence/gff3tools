@@ -9,6 +9,8 @@ jobs:
   validate:
     name: Run Spotless + Tests
     runs-on: ubuntu-latest
+    env:
+      GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -33,7 +35,21 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Run Spotless check
-        run: ./gradlew spotlessCheck -Pgitlab_private_token=dummy-token
+        run: |
+          if [ -z "$GITLAB_TOKEN" ]; then
+            echo "GITLAB_TOKEN is missing"
+            exit 1
+          else
+            echo "GITLAB_TOKEN is present"
+          fi
+          ./gradlew spotlessCheck "-Pgitlab_private_token=$GITLAB_TOKEN"
 
       - name: Run all tests
-        run: ./gradlew test --info -Pgitlab_private_token=dummy-token
+        run: |
+          if [ -z "$GITLAB_TOKEN" ]; then
+            echo "GITLAB_TOKEN is missing"
+            exit 1
+          else
+            echo "GITLAB_TOKEN is present"
+          fi
+          ./gradlew test --info "-Pgitlab_private_token=$GITLAB_TOKEN"
