@@ -8,21 +8,18 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.exception;
+package uk.ac.ebi.embl.gff3tools.metadata;
 
-import uk.ac.ebi.embl.gff3tools.cli.CLIExitCode;
+import java.util.Optional;
+import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
-public class CLIException extends ExitException {
-    @Override
-    public CLIExitCode exitCode() {
-        return CLIExitCode.USAGE;
-    }
+/**
+ * A source of taxonomy data for a given NCBI taxon ID.
+ */
+public interface TaxonSource {
 
-    public CLIException(String message) {
-        super(message);
-    }
-
-    public CLIException(String message, Exception cause) {
-        super(message, cause);
-    }
+    /**
+     * Returns the {@link Taxon} for the given taxon ID, or empty if not available.
+     */
+    Optional<Taxon> getTaxonByTaxId(Long taxId);
 }

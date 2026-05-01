@@ -8,21 +8,25 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.exception;
+package uk.ac.ebi.embl.gff3tools.metadata;
 
-import uk.ac.ebi.embl.gff3tools.cli.CLIExitCode;
+import java.util.Optional;
 
-public class CLIException extends ExitException {
+/**
+ * An {@link MasterMetadataSource} backed by a MasterEntry JSON document deserialized
+ * directly into {@link MasterMetadata}. Acts as a global fallback (returns the same
+ * metadata for any seqId query).
+ */
+public class MasterEntryJsonMetadataSource implements MasterMetadataSource {
+
+    private final MasterMetadata metadata;
+
+    public MasterEntryJsonMetadataSource(MasterMetadata metadata) {
+        this.metadata = metadata;
+    }
+
     @Override
-    public CLIExitCode exitCode() {
-        return CLIExitCode.USAGE;
-    }
-
-    public CLIException(String message) {
-        super(message);
-    }
-
-    public CLIException(String message, Exception cause) {
-        super(message, cause);
+    public Optional<MasterMetadata> getMetadata(String seqId) {
+        return Optional.of(metadata);
     }
 }

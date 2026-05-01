@@ -1,0 +1,47 @@
+{
+  "id": "GCA_000001405.29",
+  "accession": "CAXMMS010000001",
+  "secondaryAccessions": ["CAXMMS000000000"],
+  "description": "Homo sapiens genome assembly",
+  "title": "Human Genome Assembly",
+  "version": 1,
+  "moleculeType": "genomic DNA",
+  "topology": "linear",
+  "division": "HUM",
+  "dataClass": "STD",
+  "project": "PRJEB12345",
+  "sample": "SAMEA12345",
+  "taxon": "9606",
+  "scientificName": "Homo sapiens",
+  "commonName": "human",
+  "lineage": "Eukaryota; Metazoa; Chordata; Mammalia; Primates; Hominidae; Homo.",
+  "keywords": ["WGS", "genome"],
+  "comment": "This is a test assembly",
+  "chromosomeName": "chr1",
+  "chromosomeType": "Chromosome",
+  "chromosomeLocation": "Nuclear",
+  "firstPublic": "15-JAN-2024",
+  "firstPublicRelease": 144,
+  "lastUpdated": "01-JUN-2024",
+  "lastUpdatedRelease": 144,
+  "assemblyLevel": "chromosome",
+  "assemblyType": "primary metagenome",
+  "publications": [
+    {
+      "pid": "SAMEA12345",
+      "source": "BioSample"
+    }
+  ],
+  "references": [
+    {
+      "number": 1,
+      "group": "Human Genome Consortium",
+      "authors": [
+        { "firstName": "J.", "surname": "Smith" },
+        { "firstName": "A.", "surname": "Doe" }
+      ],
+      "title": "The human genome",
+      "location": "Submitted (15-JAN-2024) to the INSDC.\nEBI, Wellcome Genome Campus, Hinxton CB10 1SA, United Kingdom"
+    }
+  ]
+}

@@ -30,6 +30,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 @CommandLine.Command(
@@ -61,8 +62,9 @@ public class TranslationCommand extends AbstractCommand {
         }
 
         try {
-            CompositeSequenceProvider compositeProvider =
-                    buildCompositeProvider(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
+            List<FileSequenceSource> sources =
+                    buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
+            CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
             if (!compositeProvider.hasSources()) {
                 throw new RuntimeException(
                         "A sequence source is required. Provide --sequence or ensure a plugin supplies sequences.");
