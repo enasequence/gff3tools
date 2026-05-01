@@ -154,10 +154,20 @@ class EmblEntryMetadataSourceTest {
         source.addQualifier(qualifierFactory.createQualifier("db_xref", "taxon:12345"));
         entry.addFeature(source);
 
-        EmblEntryMetadataSource metaSource = new EmblEntryMetadataSource(entry);
+        Taxon resolvedTaxon = taxonFactory.createTaxon();
+        resolvedTaxon.setTaxId(12345L);
+        resolvedTaxon.setScientificName("Resolved species");
+        resolvedTaxon.setCommonName("resolved common name");
+        resolvedTaxon.setLineage("Eukaryota; Test lineage;");
+
+        EmblEntryMetadataSource metaSource = new EmblEntryMetadataSource(
+                entry, taxId -> taxId.equals(12345L) ? Optional.of(resolvedTaxon) : Optional.empty());
         MasterMetadata meta = metaSource.getMetadata();
 
         assertEquals("12345", meta.getTaxon());
+        assertEquals("Resolved species", meta.getScientificName());
+        assertEquals("resolved common name", meta.getCommonName());
+        assertEquals("Eukaryota; Test lineage;", meta.getLineage());
     }
 
     @Test

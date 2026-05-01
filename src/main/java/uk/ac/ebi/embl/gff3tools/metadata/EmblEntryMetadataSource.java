@@ -14,6 +14,7 @@ import java.util.Optional;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
+import uk.ac.ebi.ena.taxonomy.client.TaxonomyClient;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 /**
@@ -28,7 +29,11 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
     private final MasterMetadata metadata;
 
     public EmblEntryMetadataSource(Entry entry) {
-        this.metadata = fromEntry(entry);
+        this(entry, taxId -> Optional.ofNullable(new TaxonomyClient().getTaxonByTaxid(taxId)));
+    }
+
+    EmblEntryMetadataSource(Entry entry, TaxonResolver taxonResolver) {
+        this.metadata = fromEntry(entry, taxonResolver);
     }
 
     @Override
@@ -44,7 +49,12 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
         return metadata;
     }
 
-    private static MasterMetadata fromEntry(Entry entry) {
+    @FunctionalInterface
+    interface TaxonResolver {
+        Optional<Taxon> resolve(Long taxId) throws Exception;
+    }
+
+    private static MasterMetadata fromEntry(Entry entry, TaxonResolver taxonResolver) {
         MasterMetadata meta = new MasterMetadata();
 
         if (entry.getPrimaryAccession() != null) {
@@ -98,15 +108,16 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
                 }
             }
 
-            // Fallback: recover taxon ID from db_xref="taxon:N" when the Taxon path
-            // didn't supply one. db_xref carries no lineage/commonName, so those stay unset.
+            // Fallback: recover taxon metadata from db_xref="taxon:N" when the Taxon path
+            // didn't supply a taxon ID. The db_xref itself only stores the ID, so resolve it
+            // via taxonomy to fill lineage/commonName/scientificName where possible.
             if (meta.getTaxon() == null) {
                 sourceFeature.getQualifiers("db_xref").stream()
                         .map(Qualifier::getValue)
                         .filter(v -> v != null && v.startsWith("taxon:"))
                         .findFirst()
                         .map(v -> v.substring("taxon:".length()))
-                        .ifPresent(meta::setTaxon);
+                        .ifPresent(taxId -> applyTaxonFromDbXref(meta, taxId, taxonResolver));
             }
 
             // Fallback: recover scientific name from a plain /organism qualifier value
@@ -145,5 +156,31 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
         }
 
         return meta;
+    }
+
+    private static void applyTaxonFromDbXref(MasterMetadata meta, String taxId, TaxonResolver taxonResolver) {
+        meta.setTaxon(taxId);
+        try {
+            Long numericTaxId = Long.parseLong(taxId);
+            taxonResolver.resolve(numericTaxId).ifPresent(taxon -> applyTaxonFields(meta, taxon));
+        } catch (Exception ignored) {
+            // Keep the taxon ID recovered from db_xref even if the ID is non-numeric
+            // or taxonomy lookup is unavailable.
+        }
+    }
+
+    private static void applyTaxonFields(MasterMetadata meta, Taxon taxon) {
+        if (taxon.getScientificName() != null) {
+            meta.setScientificName(taxon.getScientificName());
+        }
+        if (taxon.getCommonName() != null) {
+            meta.setCommonName(taxon.getCommonName());
+        }
+        if (taxon.getLineage() != null) {
+            meta.setLineage(taxon.getLineage());
+        }
+        if (taxon.getTaxId() != null) {
+            meta.setTaxon(String.valueOf(taxon.getTaxId()));
+        }
     }
 }

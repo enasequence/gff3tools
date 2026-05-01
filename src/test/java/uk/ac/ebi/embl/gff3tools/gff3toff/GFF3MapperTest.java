@@ -93,6 +93,34 @@ class GFF3MapperTest {
     }
 
     @Test
+    void appliesSequenceLengthForNonSetEntries() throws Exception {
+        MasterMetadata meta = createFullMetadata();
+        meta.setDataClass("STD");
+        meta.setSequenceLength(1234L);
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
+
+        assertEquals(1234L, entry.getIdLineSequenceLength());
+        assertTrue(entry.isAnnotationOnlyCON());
+    }
+
+    @Test
+    void appliesSequenceLengthForSetEntriesWithoutForcingAnnotationOnlyCon() throws Exception {
+        MasterMetadata meta = createFullMetadata();
+        meta.setDataClass("SET");
+        meta.setSequenceLength(1234L);
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
+
+        assertEquals(1234L, entry.getIdLineSequenceLength());
+        assertFalse(entry.isAnnotationOnlyCON());
+    }
+
+    @Test
     void appliesMoleculeTypeToSequenceAndQualifier() throws Exception {
         MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", createFullMetadata()));
 
