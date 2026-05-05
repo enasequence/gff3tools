@@ -208,7 +208,7 @@ public abstract class AbstractCommand implements Runnable {
      * {@link #buildCompositeProvider(List)} so each FASTA file is opened only once.
      */
     protected FastaHeaderProvider buildHeaderProvider(List<FileSequenceSource> sources, Path fastaHeaderPath)
-            throws CLIException {
+            throws ExitException {
         FastaHeaderProvider headerProvider = new FastaHeaderProvider();
 
         // Register FASTA-embedded header sources (highest priority).
@@ -233,7 +233,7 @@ public abstract class AbstractCommand implements Runnable {
      * Builds an {@link MasterMetadataProvider} from the optional {@code --master-entry} path.
      * The master entry file (MasterEntry JSON or EMBL flatfile) is the sole metadata source.
      */
-    protected MasterMetadataProvider buildMetadataProvider(Path masterEntryPath) throws CLIException {
+    protected MasterMetadataProvider buildMetadataProvider(Path masterEntryPath) throws ExitException {
         MasterMetadataProvider provider = new MasterMetadataProvider();
         if (masterEntryPath != null) {
             provider.addSource(parseMasterEntrySource(masterEntryPath));
@@ -246,7 +246,7 @@ public abstract class AbstractCommand implements Runnable {
      * .json -> MasterEntry JSON deserialized into MasterMetadata
      * .embl/.ff -> EMBL flatfile parsed into Entry and adapted to MasterMetadata
      */
-    protected MasterMetadataSource parseMasterEntrySource(Path path) throws CLIException {
+    protected MasterMetadataSource parseMasterEntrySource(Path path) throws ExitException {
         String ext = getFileExtension(path).orElse("").toLowerCase();
         return switch (ext) {
             case "json" -> parseMasterEntryJson(path);
@@ -260,23 +260,31 @@ public abstract class AbstractCommand implements Runnable {
     /**
      * Parses a MasterEntry JSON file into an MasterMetadata.
      */
-    private MasterEntryJsonMetadataSource parseMasterEntryJson(Path path) throws CLIException {
+    private MasterEntryJsonMetadataSource parseMasterEntryJson(Path path) throws ExitException {
+        if (!Files.exists(path)) {
+            throw new NonExistingFile("The --master-entry file does not exist: " + path, null);
+        }
         try {
             ObjectMapper mapper = JsonMapper.builder()
                     .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
                     .build();
             MasterMetadata meta = mapper.readValue(path.toFile(), MasterMetadata.class);
             return new MasterEntryJsonMetadataSource(meta);
-        } catch (Exception e) {
-            throw new CLIException(
-                    "Failed to parse --master-entry JSON file '%s': %s".formatted(path, e.getMessage()), e);
+        } catch (NoSuchFileException e) {
+            throw new NonExistingFile("The --master-entry file does not exist: " + path, e);
+        } catch (IOException e) {
+            throw new ReadException(
+                    "Failed to read --master-entry JSON file '%s': %s".formatted(path, e.getMessage()), e);
         }
     }
 
     /**
      * Parses an EMBL flatfile master entry into an EmblEntryMetadataSource adapter.
      */
-    private EmblEntryMetadataSource parseMasterEntryEmbl(Path path) throws CLIException {
+    private EmblEntryMetadataSource parseMasterEntryEmbl(Path path) throws ExitException {
+        if (!Files.exists(path)) {
+            throw new NonExistingFile("The --master-entry file does not exist: " + path, null);
+        }
         try (BufferedReader reader = Files.newBufferedReader(path)) {
             ReaderOptions readerOptions = new ReaderOptions();
             readerOptions.setIgnoreSequence(true);
@@ -290,11 +298,9 @@ public abstract class AbstractCommand implements Runnable {
                 throw new CLIException("No entry found in --master-entry EMBL file: " + path);
             }
             return new EmblEntryMetadataSource(masterEntry);
-        } catch (CLIException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new CLIException(
-                    "Failed to parse --master-entry EMBL file '%s': %s".formatted(path, e.getMessage()), e);
+        } catch (IOException e) {
+            throw new ReadException(
+                    "Failed to read --master-entry EMBL file '%s': %s".formatted(path, e.getMessage()), e);
         }
     }
 
@@ -302,15 +308,20 @@ public abstract class AbstractCommand implements Runnable {
      * Parses a JSON file at the given path into a {@link FastaHeader}.
      * Fails fast with a descriptive error if the file is missing or malformed.
      */
-    private FastaHeader parseFastaHeaderJson(Path path) throws CLIException {
+    private FastaHeader parseFastaHeaderJson(Path path) throws ExitException {
+        if (!Files.exists(path)) {
+            throw new NonExistingFile("The --fasta-header file does not exist: " + path, null);
+        }
         try {
             ObjectMapper mapper = JsonMapper.builder()
                     .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
                     .build();
             return mapper.readValue(path.toFile(), FastaHeader.class);
-        } catch (Exception e) {
-            throw new CLIException(
-                    "Failed to parse --fasta-header JSON file '%s': %s".formatted(path, e.getMessage()), e);
+        } catch (NoSuchFileException e) {
+            throw new NonExistingFile("The --fasta-header file does not exist: " + path, e);
+        } catch (IOException e) {
+            throw new ReadException(
+                    "Failed to read --fasta-header JSON file '%s': %s".formatted(path, e.getMessage()), e);
         }
     }
 }

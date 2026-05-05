@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.metadata;
 
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -22,7 +23,7 @@ public class MasterEntryJsonMetadataSource implements MasterMetadataSource {
     private final MasterMetadata metadata;
 
     public MasterEntryJsonMetadataSource(MasterMetadata metadata) {
-        this.metadata = metadata;
+        this.metadata = Objects.requireNonNull(metadata, "metadata");
     }
 
     @Override

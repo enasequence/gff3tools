@@ -15,8 +15,10 @@ import java.util.Optional;
 /**
  * A source of {@link MasterMetadata} for a given sequence ID.
  *
- * <p>Used by {@link MasterMetadataProvider} to chain multiple sources
- * in priority order with field-level merging.
+ * <p>{@link MasterMetadataProvider} queries registered sources in registration
+ * order and returns the first non-empty result; there is no field-level merging.
+ * Sources that always return metadata (e.g. a single global master entry) will
+ * shadow any sources registered after them, so order accordingly.
  */
 public interface MasterMetadataSource {
 

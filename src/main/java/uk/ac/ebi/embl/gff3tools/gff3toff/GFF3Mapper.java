@@ -10,15 +10,13 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3toff;
 
-import java.time.DateTimeException;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
-import java.time.temporal.TemporalAccessor;
 import java.util.*;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -385,7 +383,7 @@ public class GFF3Mapper {
         // Version: ID line version and DT line version
         if (m.getVersion() != null) {
             entry.setVersion(m.getVersion());
-            if (sequenceRegion != null && sequenceRegion.accessionVersion().isEmpty()) {
+            if (sequenceRegion.accessionVersion().isEmpty()) {
                 sequence.setVersion(m.getVersion());
             }
         }
@@ -421,17 +419,22 @@ public class GFF3Mapper {
             sourceFt.addQualifier("note", "common name: " + m.getCommonName());
         }
 
-        // Lineage: OC line (taxonomy classification).
-        // The EMBL OCWriter reads lineage from sourceFeature.getTaxon().getLineage(),
-        // so we ensure a Taxon object exists on the SourceFeature and populate it.
-        if (m.getLineage() != null) {
+        // Populate the SourceFeature Taxon whenever any taxon-shaped field is set.
+        // The EMBL OS/OC writers read scientificName/lineage from sourceFeature.getTaxon();
+        // building the Taxon only when lineage is set would silently drop OS for entries
+        // that carry only scientificName or taxId.
+        if (m.getLineage() != null
+                || m.getScientificName() != null
+                || m.getCommonName() != null
+                || m.getTaxon() != null) {
             Taxon taxon = sourceFt.getTaxon();
             if (taxon == null) {
                 taxon = new TaxonFactory().createTaxon();
                 sourceFt.setTaxon(taxon);
             }
-            taxon.setLineage(m.getLineage());
-            // Also populate taxon fields from metadata if they were set above as qualifiers
+            if (m.getLineage() != null) {
+                taxon.setLineage(m.getLineage());
+            }
             if (m.getScientificName() != null && taxon.getScientificName() == null) {
                 taxon.setScientificName(m.getScientificName());
             }
@@ -718,7 +721,8 @@ public class GFF3Mapper {
             sourceFt.addQualifier(key, value);
         }
         // /environmental_sample is a valueless qualifier implied by metagenome_source
-        if (searchFields.containsKey("metagenome_source")) {
+        String metagenomeSource = searchFields.get("metagenome_source");
+        if (metagenomeSource != null && !metagenomeSource.isBlank()) {
             sourceFt.addQualifier(qualifierFactory.createQualifier("environmental_sample"));
         }
     }
@@ -728,53 +732,55 @@ public class GFF3Mapper {
             .appendPattern("dd-MMM-yyyy")
             .toFormatter(Locale.ENGLISH);
 
-    private static final DateTimeFormatter[] DATE_FORMATTERS = {
-        DateTimeFormatter.ISO_DATE_TIME, DateTimeFormatter.ISO_DATE, EMBL_DATE_FORMATTER,
-    };
-
-    private static String formatEmblDate(TemporalAccessor date) {
-        return EMBL_DATE_FORMATTER.format(date).toUpperCase(Locale.ENGLISH);
-    }
-
     /**
-     * Parses a date string into a {@link Date}. Supports ISO-8601 datetime (with timezone)
-     * and simple date formats. Uses {@code java.time} to correctly handle timezone offsets
-     * including the UTC 'Z' suffix.
+     * Parses a date string into a {@link Date} whose calendar day (in the JVM
+     * default zone) matches the UTC calendar day of the input. The downstream
+     * EMBL writer reformats the {@link Date} back through {@link ZoneId#systemDefault()},
+     * so anchoring start-of-day in the same zone keeps the rendered DT/Submitted
+     * line stable across runners.
+     *
+     * <p>Supports: ISO-8601 offset/zoned datetimes, ISO-8601 instants ("...Z"),
+     * ISO-8601 local datetimes / dates (assumed UTC), and EMBL "dd-MMM-yyyy".
      */
     private Date parseDate(String dateStr) {
-        TemporalAccessor parsedDate = parseTemporalAccessor(dateStr);
-        if (parsedDate == null) {
+        LocalDate utcDate = parseToUtcLocalDate(dateStr);
+        if (utcDate == null) {
             LOGGER.warn("Unable to parse date '{}'; skipping date mapping", dateStr);
             return null;
         }
-        try {
-            return Date.from(Instant.from(parsedDate));
-        } catch (DateTimeException ignored) {
-            LocalDate localDate = LocalDate.from(parsedDate);
-            return Date.from(localDate.atStartOfDay(ZoneOffset.UTC).toInstant());
-        }
+        return Date.from(utcDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
-    private TemporalAccessor parseTemporalAccessor(String dateStr) {
-        // Try ISO-8601 instant first (handles "2024-01-15T00:00:00Z" and offset variants)
+    private LocalDate parseToUtcLocalDate(String dateStr) {
+        // ISO-8601 with offset (e.g. "2025-04-03T01:00:00+12:00", "...Z")
         try {
-            return OffsetDateTime.parse(dateStr);
+            return OffsetDateTime.parse(dateStr)
+                    .toInstant()
+                    .atZone(ZoneOffset.UTC)
+                    .toLocalDate();
         } catch (DateTimeParseException ignored) {
             // not an offset datetime; try other formats
         }
 
+        // ISO-8601 local datetime (no offset) — interpret as UTC
         try {
-            return Instant.parse(dateStr).atOffset(ZoneOffset.UTC);
+            return DateTimeFormatter.ISO_LOCAL_DATE_TIME.parse(dateStr, LocalDate::from);
         } catch (DateTimeParseException ignored) {
-            // not a strict instant; try other formats
+            // not a local datetime; try other formats
         }
 
-        for (DateTimeFormatter formatter : DATE_FORMATTERS) {
-            try {
-                return formatter.parse(dateStr);
-            } catch (DateTimeParseException ignored) {
-                // try next format
-            }
+        // ISO-8601 local date
+        try {
+            return LocalDate.parse(dateStr);
+        } catch (DateTimeParseException ignored) {
+            // not an ISO local date
+        }
+
+        // EMBL "dd-MMM-yyyy"
+        try {
+            return LocalDate.parse(dateStr, EMBL_DATE_FORMATTER);
+        } catch (DateTimeParseException ignored) {
+            // not EMBL date format
         }
         return null;
     }
