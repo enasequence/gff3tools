@@ -70,14 +70,17 @@ class MasterMetadataTest {
             assertEquals(1, meta.getReferences().get(0).getReferenceNumber());
             assertEquals("Human Genome Consortium", meta.getReferences().get(0).getConsortium());
             assertEquals("The human genome", meta.getReferences().get(0).getTitle());
-            var refAuthors = meta.getReferences().get(0).getAuthors();
+            var submitterDetails = meta.getReferences().get(0).getSubmitterDetails();
+            assertNotNull(submitterDetails);
+            assertEquals("2024-01-15T00:00:00Z", submitterDetails.getSubmittedDate());
+            assertEquals("EBI", submitterDetails.getSubmissionAccount().getCenterName());
+            var refAuthors = submitterDetails.getAuthors();
             assertNotNull(refAuthors);
             assertEquals(2, refAuthors.size());
             assertEquals("Smith", refAuthors.get(0).getSurname());
-            assertEquals("J.", refAuthors.get(0).getFirstName());
+            assertEquals("John", refAuthors.get(0).getFirstName());
             assertEquals("Doe", refAuthors.get(1).getSurname());
-            assertEquals("A.", refAuthors.get(1).getFirstName());
-            assertTrue(meta.getReferences().get(0).getLocation().startsWith("Submitted"));
+            assertEquals("Alice", refAuthors.get(1).getFirstName());
         }
     }
 
@@ -96,6 +99,48 @@ class MasterMetadataTest {
         assertEquals("test", meta.getId());
         assertEquals("desc", meta.getDescription());
         assertEquals("DNA", meta.getMoleculeType());
+    }
+
+    @Test
+    void deserializesNestedSubmitterDetailsReferenceSchema() throws Exception {
+        String json =
+                """
+                {
+                  "id": "test",
+                  "references": [
+                    {
+                      "referenceNumber": 1,
+                      "submitterDetails": {
+                        "submittedDate": "2025-04-03T13:30:22.000+00:00",
+                        "submissionAccount": {
+                          "centerName": "BIOLOGY CENTRE CAS, INSTITUTE OF HYDROBIOLOGY",
+                          "laboratoryName": "Laboratory of Microbial Ecology and Evolution & Laboratory of Microbial Cultivation and Ecogenomics",
+                          "address": "Na Sadkach 7, Ceske Budejovice",
+                          "country": "Czech Republic"
+                        },
+                        "authors": [
+                          {"firstName": "Clafy", "surname": "Fernandes"},
+                          {"firstName": "Michaela", "middleName": "M.", "surname": "Salcher"}
+                        ]
+                      }
+                    }
+                  ]
+                }
+                """;
+        MasterMetadata meta = MAPPER.readValue(json, MasterMetadata.class);
+        assertNotNull(meta.getReferences());
+        assertEquals(1, meta.getReferences().size());
+        var reference = meta.getReferences().get(0);
+        assertNotNull(reference.getSubmitterDetails());
+        assertEquals(
+                "2025-04-03T13:30:22.000+00:00", reference.getSubmitterDetails().getSubmittedDate());
+        assertEquals(
+                "BIOLOGY CENTRE CAS, INSTITUTE OF HYDROBIOLOGY",
+                reference.getSubmitterDetails().getSubmissionAccount().getCenterName());
+        assertEquals(2, reference.getSubmitterDetails().getAuthors().size());
+        assertEquals(
+                "Fernandes", reference.getSubmitterDetails().getAuthors().get(0).getSurname());
+        assertEquals("M.", reference.getSubmitterDetails().getAuthors().get(1).getMiddleName());
     }
 
     @Test

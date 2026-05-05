@@ -36,12 +36,20 @@
     {
       "number": 1,
       "group": "Human Genome Consortium",
-      "authors": [
-        { "firstName": "J.", "surname": "Smith" },
-        { "firstName": "A.", "surname": "Doe" }
-      ],
       "title": "The human genome",
-      "location": "Submitted (15-JAN-2024) to the INSDC.\nEBI, Wellcome Genome Campus, Hinxton CB10 1SA, United Kingdom"
+      "submitterDetails": {
+        "submittedDate": "2024-01-15T00:00:00Z",
+        "submissionAccount": {
+          "centerName": "EBI",
+          "laboratoryName": "Wellcome Genome Campus",
+          "address": "Hinxton CB10 1SA",
+          "country": "United Kingdom"
+        },
+        "authors": [
+          { "firstName": "John", "surname": "Smith" },
+          { "firstName": "Alice", "surname": "Doe" }
+        ]
+      }
     }
   ]
 }

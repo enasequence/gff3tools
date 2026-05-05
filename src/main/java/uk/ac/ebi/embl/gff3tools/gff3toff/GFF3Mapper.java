@@ -13,11 +13,14 @@ package uk.ac.ebi.embl.gff3tools.gff3toff;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.TemporalAccessor;
 import java.util.*;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -45,6 +48,8 @@ import uk.ac.ebi.embl.gff3tools.metadata.CrossReference;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.metadata.ReferenceData;
+import uk.ac.ebi.embl.gff3tools.metadata.SubmissionAccount;
+import uk.ac.ebi.embl.gff3tools.metadata.SubmitterDetails;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -519,27 +524,14 @@ public class GFF3Mapper {
         }
     }
 
-    private static final java.util.regex.Pattern SUBMISSION_PATTERN = java.util.regex.Pattern.compile(
-            "Submitted \\(([^)]+)\\) to the INSDC\\.\\n?(.*)$", java.util.regex.Pattern.DOTALL);
-
     /**
      * Maps a ReferenceData to an EMBL Reference and adds it to the entry.
-     * Detects submission-type references from the location field pattern
-     * {@code "Submitted (DD-MMM-YYYY) to the INSDC.\nADDRESS"} and creates a
-     * {@link Submission}; otherwise falls back to {@link Unpublished}.
+     * Creates a {@link Submission} when nested submitter details contain a valid
+     * submitted date; otherwise falls back to {@link Unpublished}.
      */
     private void mapReference(ReferenceData refData, Entry entry) {
-        Publication publication;
-
-        if (refData.getLocation() != null) {
-            var matcher = SUBMISSION_PATTERN.matcher(refData.getLocation());
-            if (matcher.matches()) {
-                publication =
-                        createSubmission(matcher.group(1), matcher.group(2).trim());
-            } else {
-                publication = referenceFactory.createUnpublished();
-            }
-        } else {
+        Publication publication = createSubmissionPublication(refData);
+        if (publication == null) {
             publication = referenceFactory.createUnpublished();
         }
 
@@ -551,8 +543,10 @@ public class GFF3Mapper {
             publication.setConsortium(refData.getConsortium());
         }
 
-        if (refData.getAuthors() != null) {
-            for (AuthorData author : refData.getAuthors()) {
+        SubmitterDetails submitterDetails = refData.getSubmitterDetails();
+        List<AuthorData> authors = submitterDetails == null ? null : submitterDetails.getAuthors();
+        if (authors != null) {
+            for (AuthorData author : authors) {
                 if (author == null) continue;
                 String surname = author.getSurname() == null
                         ? ""
@@ -573,19 +567,55 @@ public class GFF3Mapper {
         entry.addReference(reference);
     }
 
-    /**
-     * Creates a Submission publication from the parsed date string and submitter address.
-     */
-    private Submission createSubmission(String dateStr, String address) {
-        Submission sub = referenceFactory.createSubmission();
-        Date day = parseDate(dateStr);
-        if (day != null) {
-            sub.setDay(day);
+    private Submission createSubmissionPublication(ReferenceData refData) {
+        SubmitterDetails submitterDetails = refData.getSubmitterDetails();
+        // Submission RL lines require a valid submitted date. When submitter details are
+        // absent or the date is missing/unparseable, fall back to an unpublished reference
+        // instead of emitting a malformed EMBL submission location.
+        if (submitterDetails == null || submitterDetails.getSubmittedDate() == null) {
+            return null;
         }
-        if (!address.isBlank()) {
-            sub.setSubmitterAddress(address);
+        Date parsedDate = parseDate(submitterDetails.getSubmittedDate());
+        if (parsedDate == null) {
+            LOGGER.warn(
+                    "Unable to map submission reference location due to invalid submittedDate '{}'",
+                    submitterDetails.getSubmittedDate());
+            return null;
         }
-        return sub;
+        Submission submission = referenceFactory.createSubmission();
+        submission.setDay(parsedDate);
+        String address = buildSubmitterAddress(submitterDetails.getSubmissionAccount());
+        if (address != null && !address.isBlank()) {
+            submission.setSubmitterAddress(address);
+        }
+        return submission;
+    }
+
+    private static String buildSubmitterAddress(SubmissionAccount account) {
+        if (account == null) {
+            return null;
+        }
+        String institutionLine = Stream.of(account.getCenterName(), account.getLaboratoryName())
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(part -> !part.isEmpty())
+                .reduce((left, right) -> left + ", " + right)
+                .orElse(null);
+
+        String addressLine = Stream.of(account.getAddress(), account.getCountry())
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(part -> !part.isEmpty())
+                .reduce((left, right) -> left + ", " + right)
+                .orElse(null);
+
+        if (institutionLine == null) {
+            return addressLine;
+        }
+        if (addressLine == null) {
+            return institutionLine;
+        }
+        return institutionLine + "\n" + addressLine;
     }
 
     /**
@@ -693,14 +723,18 @@ public class GFF3Mapper {
         }
     }
 
+    private static final DateTimeFormatter EMBL_DATE_FORMATTER = new DateTimeFormatterBuilder()
+            .parseCaseInsensitive()
+            .appendPattern("dd-MMM-yyyy")
+            .toFormatter(Locale.ENGLISH);
+
     private static final DateTimeFormatter[] DATE_FORMATTERS = {
-        DateTimeFormatter.ISO_DATE_TIME,
-        DateTimeFormatter.ISO_DATE,
-        new DateTimeFormatterBuilder()
-                .parseCaseInsensitive()
-                .appendPattern("dd-MMM-yyyy")
-                .toFormatter(Locale.ENGLISH),
+        DateTimeFormatter.ISO_DATE_TIME, DateTimeFormatter.ISO_DATE, EMBL_DATE_FORMATTER,
     };
+
+    private static String formatEmblDate(TemporalAccessor date) {
+        return EMBL_DATE_FORMATTER.format(date).toUpperCase(Locale.ENGLISH);
+    }
 
     /**
      * Parses a date string into a {@link Date}. Supports ISO-8601 datetime (with timezone)
@@ -708,28 +742,40 @@ public class GFF3Mapper {
      * including the UTC 'Z' suffix.
      */
     private Date parseDate(String dateStr) {
+        TemporalAccessor parsedDate = parseTemporalAccessor(dateStr);
+        if (parsedDate == null) {
+            LOGGER.warn("Unable to parse date '{}'; skipping date mapping", dateStr);
+            return null;
+        }
+        try {
+            return Date.from(Instant.from(parsedDate));
+        } catch (DateTimeException ignored) {
+            LocalDate localDate = LocalDate.from(parsedDate);
+            return Date.from(localDate.atStartOfDay(ZoneOffset.UTC).toInstant());
+        }
+    }
+
+    private TemporalAccessor parseTemporalAccessor(String dateStr) {
         // Try ISO-8601 instant first (handles "2024-01-15T00:00:00Z" and offset variants)
         try {
-            return Date.from(Instant.parse(dateStr));
+            return OffsetDateTime.parse(dateStr);
+        } catch (DateTimeParseException ignored) {
+            // not an offset datetime; try other formats
+        }
+
+        try {
+            return Instant.parse(dateStr).atOffset(ZoneOffset.UTC);
         } catch (DateTimeParseException ignored) {
             // not a strict instant; try other formats
         }
 
         for (DateTimeFormatter formatter : DATE_FORMATTERS) {
             try {
-                var accessor = formatter.parse(dateStr);
-                try {
-                    return Date.from(Instant.from(accessor));
-                } catch (DateTimeException ignored) {
-                    // no timezone info; treat as a local date at UTC midnight
-                }
-                LocalDate localDate = LocalDate.from(accessor);
-                return Date.from(localDate.atStartOfDay(ZoneOffset.UTC).toInstant());
+                return formatter.parse(dateStr);
             } catch (DateTimeParseException ignored) {
                 // try next format
             }
         }
-        LOGGER.warn("Unable to parse date '{}'; skipping date mapping", dateStr);
         return null;
     }
 

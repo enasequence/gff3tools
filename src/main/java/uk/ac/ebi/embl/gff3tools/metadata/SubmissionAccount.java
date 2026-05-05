@@ -10,29 +10,18 @@
  */
 package uk.ac.ebi.embl.gff3tools.metadata;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * Represents a literature reference from MasterEntry JSON.
- * Maps to RN/RG/RA/RT/RL lines in EMBL output.
- */
 @Getter
 @Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ReferenceData {
+public class SubmissionAccount {
 
-    @JsonAlias("number")
-    private Integer referenceNumber;
-
-    private String referencePosition;
-    private String referenceComment;
-    private String title;
-
-    @JsonAlias("group")
-    private String consortium;
-
-    private SubmitterDetails submitterDetails;
+    private String brokerName;
+    private String centerName;
+    private String laboratoryName;
+    private String address;
+    private String country;
 }

@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.gff3toff;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,6 +24,7 @@ import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.reference.Person;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
+import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
@@ -30,6 +32,8 @@ import uk.ac.ebi.embl.gff3tools.metadata.AuthorData;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.metadata.ReferenceData;
+import uk.ac.ebi.embl.gff3tools.metadata.SubmissionAccount;
+import uk.ac.ebi.embl.gff3tools.metadata.SubmitterDetails;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 class GFF3MapperTest {
@@ -802,8 +806,6 @@ class GFF3MapperTest {
      */
     @Test
     void structuredAuthorsAreEmittedWithCompactInitials() throws Exception {
-        ReferenceData ref = new ReferenceData();
-        ref.setReferenceNumber(1);
         AuthorData a1 = new AuthorData();
         a1.setSurname("Ferreira");
         a1.setFirstName("B.");
@@ -814,7 +816,11 @@ class GFF3MapperTest {
         AuthorData a3 = new AuthorData();
         a3.setSurname("Doe");
         a3.setFirstName("E P");
-        ref.setAuthors(List.of(a1, a2, a3));
+        SubmitterDetails submitterDetails = new SubmitterDetails();
+        submitterDetails.setAuthors(List.of(a1, a2, a3));
+        ReferenceData ref = new ReferenceData();
+        ref.setReferenceNumber(1);
+        ref.setSubmitterDetails(submitterDetails);
 
         MasterMetadata meta = new MasterMetadata();
         meta.setReferences(List.of(ref));
@@ -838,6 +844,135 @@ class GFF3MapperTest {
      * {@code toInitials} must accept every name-component shape master.json may
      * emit and reduce it to compact "X.Y." initials with no internal separators.
      */
+    @Test
+    void nestedSubmitterDetailsAreMappedToSubmissionReference() throws Exception {
+        AuthorData a1 = new AuthorData();
+        a1.setSurname("Fernandes");
+        a1.setFirstName("Clafy");
+        AuthorData a2 = new AuthorData();
+        a2.setSurname("Salcher");
+        a2.setFirstName("Michaela");
+        a2.setMiddleName("M.");
+
+        SubmissionAccount submissionAccount = new SubmissionAccount();
+        submissionAccount.setCenterName("BIOLOGY CENTRE CAS, INSTITUTE OF HYDROBIOLOGY");
+        submissionAccount.setLaboratoryName(
+                "Laboratory of Microbial Ecology and Evolution & Laboratory of Microbial Cultivation and Ecogenomics");
+        submissionAccount.setAddress("Na Sadkach 7, Ceske Budejovice");
+        submissionAccount.setCountry("Czech Republic");
+
+        SubmitterDetails submitterDetails = new SubmitterDetails();
+        submitterDetails.setSubmittedDate("2025-04-03T13:30:22.000+00:00");
+        submitterDetails.setSubmissionAccount(submissionAccount);
+        submitterDetails.setAuthors(List.of(a1, a2));
+
+        ReferenceData ref = new ReferenceData();
+        ref.setReferenceNumber(1);
+        ref.setSubmitterDetails(submitterDetails);
+
+        MasterMetadata meta = new MasterMetadata();
+        meta.setReferences(List.of(ref));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
+
+        assertEquals(1, entry.getReferences().size());
+        assertEquals(
+                2, entry.getReferences().get(0).getPublication().getAuthors().size());
+        List<Person> authors = entry.getReferences().get(0).getPublication().getAuthors();
+        assertEquals("Fernandes", authors.get(0).getSurname());
+        assertEquals("C.", authors.get(0).getFirstName());
+        assertEquals("Salcher", authors.get(1).getSurname());
+        assertEquals("M.M.", authors.get(1).getFirstName());
+
+        StringWriter writer = new StringWriter();
+        EmblEntryWriter entryWriter = new EmblEntryWriter(entry);
+        entryWriter.setShowAcStartLine(false);
+        entryWriter.write(writer);
+        String embl = writer.toString();
+        assertTrue(embl.contains("RL   Submitted (03-APR-2025) to the INSDC."));
+        assertTrue(embl.contains("BIOLOGY CENTRE CAS, INSTITUTE OF HYDROBIOLOGY"));
+        assertTrue(embl.contains("RL   Na Sadkach 7, Ceske Budejovice, Czech Republic"));
+    }
+
+    @Test
+    void submittedDateIsNormalisedToUtc() throws Exception {
+        // 2025-04-03T01:00:00+12:00 == 2025-04-02T13:00:00Z, so the EMBL date must be 02-APR-2025
+        SubmitterDetails submitterDetails = new SubmitterDetails();
+        submitterDetails.setSubmittedDate("2025-04-03T01:00:00+12:00");
+
+        ReferenceData ref = new ReferenceData();
+        ref.setReferenceNumber(1);
+        ref.setSubmitterDetails(submitterDetails);
+
+        MasterMetadata meta = new MasterMetadata();
+        meta.setReferences(List.of(ref));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
+
+        StringWriter writer = new StringWriter();
+        EmblEntryWriter entryWriter = new EmblEntryWriter(entry);
+        entryWriter.setShowAcStartLine(false);
+        entryWriter.write(writer);
+        String embl = writer.toString();
+
+        assertTrue(embl.contains("RL   Submitted (02-APR-2025) to the INSDC."));
+    }
+
+    @Test
+    void invalidSubmittedDateFallsBackToUnpublishedReference() throws Exception {
+        SubmitterDetails submitterDetails = new SubmitterDetails();
+        submitterDetails.setSubmittedDate("2025-04");
+
+        ReferenceData ref = new ReferenceData();
+        ref.setReferenceNumber(1);
+        ref.setSubmitterDetails(submitterDetails);
+
+        MasterMetadata meta = new MasterMetadata();
+        meta.setReferences(List.of(ref));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
+
+        StringWriter writer = new StringWriter();
+        EmblEntryWriter entryWriter = new EmblEntryWriter(entry);
+        entryWriter.setShowAcStartLine(false);
+        entryWriter.write(writer);
+        String embl = writer.toString();
+
+        assertFalse(embl.contains("RL   Submitted (2025-04) to the INSDC."));
+    }
+
+    @Test
+    void nullSubmittedDateFallsBackToUnpublishedReference() throws Exception {
+        SubmitterDetails submitterDetails = new SubmitterDetails();
+        // submittedDate left null intentionally
+
+        ReferenceData ref = new ReferenceData();
+        ref.setReferenceNumber(1);
+        ref.setSubmitterDetails(submitterDetails);
+
+        MasterMetadata meta = new MasterMetadata();
+        meta.setReferences(List.of(ref));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
+
+        StringWriter writer = new StringWriter();
+        EmblEntryWriter entryWriter = new EmblEntryWriter(entry);
+        entryWriter.setShowAcStartLine(false);
+        entryWriter.write(writer);
+        String embl = writer.toString();
+
+        assertFalse(embl.contains("RL   Submitted"));
+        assertTrue(embl.contains("RL   Unpublished."));
+    }
+
     @Test
     void toInitialsHandlesAllNameComponentShapes() {
         // null / blank
