@@ -328,6 +328,12 @@ public class GFF3Mapper {
 
         MasterMetadata m = opt.get();
 
+        // WGS set master entries describe a SET that contains many per-contig entries.
+        // When converting one of those per-contig entries we must materialise contig-
+        // level fields (dataClass=WGS, per-contig length, RP, SET cross-references)
+        // instead of inheriting the SET-level master fields verbatim.
+        boolean isWgsContig = m.getContigDataclass() != null;
+
         // DE line: description (title as fallback)
         if (m.getDescription() != null) {
             entry.setDescription(new Text(m.getDescription()));
@@ -363,9 +369,12 @@ public class GFF3Mapper {
             entry.setDivision(m.getDivision());
         }
 
-        // Data class: ID line data class field
-        if (m.getDataClass() != null) {
-            entry.setDataClass(m.getDataClass());
+        // Data class: ID line data class field. For WGS contig entries the master's
+        // dataClass is "SET" (it describes the containing set), so prefer the contig
+        // dataClass when present.
+        String effectiveDataClass = isWgsContig ? m.getContigDataclass() : m.getDataClass();
+        if (effectiveDataClass != null) {
+            entry.setDataClass(effectiveDataClass);
         }
 
         // Accession: primary accession (only when GFF3 ##sequence-region provides no accession)
@@ -394,6 +403,18 @@ public class GFF3Mapper {
                 entry.addKeyword(new Text(kw));
             }
         }
+        // For WGS contigs the reference flatfile carries `KW   WGS.`. master.json doesn't
+        // ship that keyword on the SET master entry, so add it ourselves when the contig
+        // dataclass identifies the entry as WGS and the keyword isn't already present.
+        if (isWgsContig && "WGS".equalsIgnoreCase(m.getContigDataclass())) {
+            boolean hasWgsKeyword = entry.getKeywords().stream()
+                    .map(Text::getText)
+                    .filter(Objects::nonNull)
+                    .anyMatch("WGS"::equalsIgnoreCase);
+            if (!hasWgsKeyword) {
+                entry.addKeyword(new Text("WGS"));
+            }
+        }
 
         // Comment: CC line
         if (m.getComment() != null) {
@@ -414,8 +435,10 @@ public class GFF3Mapper {
             sourceFt.addQualifier("organism", m.getScientificName());
         }
 
-        // Common name: source feature /note with prefix
-        if (m.getCommonName() != null) {
+        // Common name: source feature /note with prefix.
+        // WGS contig source features omit the common-name note in the reference output
+        // (the common name is implied by /organism + /db_xref). Suppress it to match.
+        if (m.getCommonName() != null && !isWgsContig) {
             sourceFt.addQualifier("note", "common name: " + m.getCommonName());
         }
 
@@ -455,16 +478,37 @@ public class GFF3Mapper {
             entry.addProjectAccession(new Text(m.getProject()));
         }
 
-        // References: RF lines
+        // References: RF lines. For WGS contigs the EMBL flatfile carries a per-contig
+        // RP line (`RP   1-<length>`) on each submission reference; pass the contig
+        // length through so mapReference can attach it.
+        Long contigRpLength = null;
+        if (isWgsContig) {
+            long len = sequenceRegion.end() - sequenceRegion.start() + 1;
+            if (len > 0) {
+                contigRpLength = len;
+            }
+        }
         if (m.getReferences() != null) {
             for (ReferenceData refData : m.getReferences()) {
-                mapReference(refData, entry);
+                mapReference(refData, entry, contigRpLength);
             }
         }
 
         // DR lines: database cross-references (ordered to match EMBL convention)
         if (m.getMd5() != null) {
             entry.addXRef(new XRef("MD5", m.getMd5()));
+        }
+        // For WGS contigs the reference flatfile points back to two SET accessions
+        // before the run accession: the master entry (m.accession) and the WGS root
+        // set (6-char letter prefix from m.wgsSet + 9 zeros, e.g. "CAXMYH01" → "CAXMYH000000000").
+        if (isWgsContig) {
+            if (m.getAccession() != null) {
+                entry.addXRef(new XRef("ENA", m.getAccession(), "SET"));
+            }
+            String rootSet = wgsRootSetAccession(m.getWgsSet());
+            if (rootSet != null) {
+                entry.addXRef(new XRef("ENA", rootSet, "SET"));
+            }
         }
         if (m.getRunAccessions() != null) {
             for (String run : m.getRunAccessions()) {
@@ -501,10 +545,23 @@ public class GFF3Mapper {
         }
 
         // Sequence length: ID line BP/SQ count.
-        // The IDWriter only uses idLineSequenceLength for SET/master/annotationOnlyCON
-        // entries. For non-SET entries, we set annotationOnlyCON so the IDWriter picks
-        // up the length. SET entries already use idLineSequenceLength natively.
-        if (m.getSequenceLength() != null && m.getSequenceLength() > 0) {
+        // For WGS contigs the master.json sequenceLength is the SET-level contig count
+        // (e.g. 11435), not the per-contig length. The actual per-contig length comes
+        // from the GFF3 ##sequence-region directive. The EMBL Sequence model only
+        // surfaces a non-zero length when a byte buffer / contigs / AGP rows are
+        // populated, none of which apply to a GFF3-only entry, so we route the per-
+        // contig length through idLineSequenceLength + annotationOnlyCON the same way
+        // we already do for non-SET non-WGS entries.
+        // For non-WGS entries, the IDWriter only uses idLineSequenceLength for
+        // SET/master/annotationOnlyCON entries, so for non-SET entries we set
+        // annotationOnlyCON so the IDWriter picks up the length.
+        if (isWgsContig) {
+            long contigLength = sequenceRegion.end() - sequenceRegion.start() + 1;
+            if (contigLength > 0) {
+                entry.setIdLineSequenceLength(contigLength);
+                entry.setAnnotationOnlyCON(true);
+            }
+        } else if (m.getSequenceLength() != null && m.getSequenceLength() > 0) {
             entry.setIdLineSequenceLength(m.getSequenceLength());
             if (!"SET".equals(entry.getDataClass())) {
                 entry.setAnnotationOnlyCON(true);
@@ -523,16 +580,18 @@ public class GFF3Mapper {
 
         // Search fields: source feature qualifiers (geo_loc_name, collection_date, isolate, etc.)
         if (m.getSearchFields() != null) {
-            mapSearchFields(m.getSearchFields(), sourceFt);
+            mapSearchFields(m.getSearchFields(), sourceFt, isWgsContig);
         }
     }
 
     /**
      * Maps a ReferenceData to an EMBL Reference and adds it to the entry.
      * Creates a {@link Submission} when nested submitter details contain a valid
-     * submitted date; otherwise falls back to {@link Unpublished}.
+     * submitted date; otherwise falls back to {@link Unpublished}. When
+     * {@code contigRpLength} is non-null the resulting Reference is given an RP
+     * range of 1..contigRpLength.
      */
-    private void mapReference(ReferenceData refData, Entry entry) {
+    private void mapReference(ReferenceData refData, Entry entry, Long contigRpLength) {
         Publication publication = createSubmissionPublication(refData);
         if (publication == null) {
             publication = referenceFactory.createUnpublished();
@@ -565,6 +624,12 @@ public class GFF3Mapper {
 
         if (refData.getReferenceComment() != null) {
             reference.setComment(refData.getReferenceComment());
+        }
+
+        if (contigRpLength != null && contigRpLength > 0) {
+            Order<LocalRange> rpLocations = new Order<>();
+            rpLocations.addLocation(locationFactory.createLocalRange(1L, contigRpLength));
+            reference.setLocations(rpLocations);
         }
 
         entry.addReference(reference);
@@ -618,7 +683,42 @@ public class GFF3Mapper {
         if (addressLine == null) {
             return institutionLine;
         }
-        return institutionLine + "\n" + addressLine;
+        // Join with a comma so the EMBL RL writer wraps on commas across the
+        // whole address (rather than treating institution and address as two
+        // separate blocks). The writer collapses any embedded newline to a
+        // single space anyway, so a `\n` separator would yield the institution
+        // and address running together with no separator.
+        return institutionLine + ", " + addressLine;
+    }
+
+    /**
+     * Derives the WGS "root set" accession (the SET-level accession that contains every
+     * version of the WGS project) from the master entry's `wgsSet` field. The wgsSet is
+     * typically an 8-char letter+digit prefix such as "CAXMYH01"; the root set accession
+     * is the 6-char letter prefix followed by nine zeros (e.g. "CAXMYH000000000").
+     * Returns null when the input is null or doesn't have at least 6 characters of letters.
+     */
+    static String wgsRootSetAccession(String wgsSet) {
+        if (wgsSet == null) {
+            return null;
+        }
+        StringBuilder prefix = new StringBuilder();
+        for (int i = 0; i < wgsSet.length() && prefix.length() < 6; i++) {
+            char c = wgsSet.charAt(i);
+            if (Character.isLetter(c)) {
+                prefix.append(Character.toUpperCase(c));
+            } else {
+                break;
+            }
+        }
+        if (prefix.length() < 4) {
+            return null;
+        }
+        // WGS accessions are 15 chars: <letter prefix><digits>. Pad with zeros.
+        while (prefix.length() < 15) {
+            prefix.append('0');
+        }
+        return prefix.toString();
     }
 
     /**
@@ -703,14 +803,26 @@ public class GFF3Mapper {
             "organelle");
 
     /**
+     * SearchFields keys that are SET-level metadata: they describe the assembly project
+     * but not the individual WGS contig. Reference WGS flatfiles omit these from the
+     * per-contig source feature, so we suppress them when emitting a WGS contig entry.
+     */
+    private static final Set<String> WGS_CONTIG_SEARCH_FIELDS_SKIP = Set.of("geo_loc_name", "collection_date");
+
+    /**
      * Maps searchFields entries to source feature qualifiers.
      * Keys that are already handled elsewhere (organism, topology, etc.) are skipped.
+     * For WGS contig entries, additional SET-level keys are suppressed so the source
+     * feature matches the reference WGS contig flatfile.
      */
-    private void mapSearchFields(Map<String, String> searchFields, SourceFeature sourceFt) {
+    private void mapSearchFields(Map<String, String> searchFields, SourceFeature sourceFt, boolean isWgsContig) {
         for (Map.Entry<String, String> field : searchFields.entrySet()) {
             String key = field.getKey();
             String value = field.getValue();
             if (value == null || value.isBlank() || SEARCH_FIELDS_SKIP.contains(key)) {
+                continue;
+            }
+            if (isWgsContig && WGS_CONTIG_SEARCH_FIELDS_SKIP.contains(key)) {
                 continue;
             }
             // Taxon db_xref is emitted from the dedicated taxon path; skip duplicates here

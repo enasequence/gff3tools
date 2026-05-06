@@ -892,8 +892,10 @@ class GFF3MapperTest {
         entryWriter.write(writer);
         String embl = writer.toString();
         assertTrue(embl.contains("RL   Submitted (03-APR-2025) to the INSDC."));
-        assertTrue(embl.contains("BIOLOGY CENTRE CAS, INSTITUTE OF HYDROBIOLOGY"));
-        assertTrue(embl.contains("RL   Na Sadkach 7, Ceske Budejovice, Czech Republic"));
+        // Institution and address are joined into one block and wrapped on commas, so
+        // the institution starts the first RL block-line and the country tails the last.
+        assertTrue(embl.contains("RL   BIOLOGY CENTRE CAS, INSTITUTE OF HYDROBIOLOGY,"));
+        assertTrue(embl.contains("Ceske Budejovice, Czech Republic"));
     }
 
     @Test
@@ -992,5 +994,182 @@ class GFF3MapperTest {
         assertEquals("E.P.", GFF3Mapper.toInitials("  e.   p.  "));
         // compound first name "Mary Anne"
         assertEquals("M.A.", GFF3Mapper.toInitials("Mary Anne"));
+    }
+
+    // ── WGS contig regression tests ──
+
+    /**
+     * Builds a master.json-shaped MasterMetadata for a WGS set master entry. Mirrors the
+     * shape of fields the prod /webin/gff3/dev/master/{acc} endpoint returns for
+     * `dataClass=SET, contigDataclass=WGS` masters.
+     */
+    private MasterMetadata createWgsSetMasterMetadata() {
+        MasterMetadata m = new MasterMetadata();
+        m.setAccession("CAXMYH010000000");
+        m.setDataClass("SET");
+        m.setContigDataclass("WGS");
+        m.setWgsSet("CAXMYH01");
+        m.setDivision("INV");
+        m.setMoleculeType("genomic DNA");
+        m.setTopology("linear");
+        m.setSequenceLength(11435L); // SET-level contig count, NOT a per-contig length
+        m.setRunAccessions(List.of("ERR12930749"));
+        m.setSample("SAMEA115421145");
+        return m;
+    }
+
+    @Test
+    void wgsContigUsesContigDataclassNotSet() throws Exception {
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("CAXMYH010000001", createWgsSetMasterMetadata()));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("CAXMYH010000001", 1, 3118321));
+
+        assertEquals("WGS", entry.getDataClass());
+    }
+
+    @Test
+    void wgsContigUsesPerContigSequenceLengthFromSequenceRegion() throws Exception {
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("CAXMYH010000001", createWgsSetMasterMetadata()));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("CAXMYH010000001", 1, 3118321));
+
+        // WGS contigs route the per-contig length through idLineSequenceLength + annotationOnlyCON
+        // (the only path the IDWriter honours for non-SET, non-master entries with no byte buffer).
+        // Crucially, the SET-level master.sequenceLength (11435) must NOT be used.
+        assertEquals(3118321L, entry.getIdLineSequenceLength());
+        assertTrue(entry.isAnnotationOnlyCON());
+    }
+
+    @Test
+    void wgsContigEmitsPerContigLengthOnIdLine() throws Exception {
+        // End-to-end: render the EMBL flat file and assert the ID line carries the per-contig
+        // length (3118321 BP), not the SET master's contig count (11435 BP).
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("CAXMYH010000001", createWgsSetMasterMetadata()));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("CAXMYH010000001", 1, 3118321));
+
+        StringWriter writer = new StringWriter();
+        EmblEntryWriter entryWriter = new EmblEntryWriter(entry);
+        entryWriter.setShowAcStartLine(false);
+        entryWriter.write(writer);
+        String embl = writer.toString();
+        assertTrue(
+                embl.contains("ID   CAXMYH010000001; SV 1; linear; genomic DNA; WGS; INV; 3118321 BP."),
+                "Expected per-contig WGS ID line, got first line: " + embl.split("\n")[0]);
+    }
+
+    @Test
+    void wgsContigEmitsWgsKeyword() throws Exception {
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("CAXMYH010000001", createWgsSetMasterMetadata()));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("CAXMYH010000001", 1, 3118321));
+
+        List<String> keywords =
+                entry.getKeywords().stream().map(text -> text.getText()).toList();
+        assertTrue(keywords.contains("WGS"), "Expected WGS keyword for WGS contig entries");
+    }
+
+    @Test
+    void wgsContigEmitsSetCrossReferences() throws Exception {
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("CAXMYH010000001", createWgsSetMasterMetadata()));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("CAXMYH010000001", 1, 3118321));
+
+        List<XRef> setXRefs = entry.getXRefs().stream()
+                .filter(x -> "ENA".equals(x.getDatabase()) && "SET".equals(x.getSecondaryAccession()))
+                .toList();
+        assertEquals(2, setXRefs.size(), "WGS contigs should emit two ENA SET cross-references");
+        assertEquals("CAXMYH010000000", setXRefs.get(0).getPrimaryAccession());
+        assertEquals("CAXMYH000000000", setXRefs.get(1).getPrimaryAccession());
+    }
+
+    @Test
+    void wgsContigSubmissionReferenceIncludesRpLine() throws Exception {
+        MasterMetadata meta = createWgsSetMasterMetadata();
+        SubmitterDetails sd = new SubmitterDetails();
+        sd.setSubmittedDate("2024-07-09T06:52:04.000+00:00");
+        ReferenceData ref = new ReferenceData();
+        ref.setReferenceNumber(1);
+        ref.setSubmitterDetails(sd);
+        meta.setReferences(List.of(ref));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("CAXMYH010000001", meta));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("CAXMYH010000001", 1, 3118321));
+
+        StringWriter writer = new StringWriter();
+        EmblEntryWriter entryWriter = new EmblEntryWriter(entry);
+        entryWriter.setShowAcStartLine(false);
+        entryWriter.write(writer);
+        String embl = writer.toString();
+
+        assertTrue(embl.contains("RP   1-3118321"), "Expected RP line covering full contig length");
+    }
+
+    @Test
+    void wgsContigSuppressesCommonNameNote() throws Exception {
+        MasterMetadata meta = createWgsSetMasterMetadata();
+        meta.setCommonName("castor bean tick");
+        meta.setScientificName("Ixodes ricinus");
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("CAXMYH010000001", meta));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("CAXMYH010000001", 1, 3118321));
+
+        SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
+        boolean hasCommonNameNote = source.getQualifiers("note").stream()
+                .map(Qualifier::getValue)
+                .anyMatch(v -> v != null && v.startsWith("common name:"));
+        assertFalse(hasCommonNameNote, "WGS contig source feature should not carry a common-name /note");
+    }
+
+    @Test
+    void wgsContigSuppressesGeoLocAndCollectionDateSearchFields() throws Exception {
+        MasterMetadata meta = createWgsSetMasterMetadata();
+        meta.setSearchFields(Map.of(
+                "geo_loc_name", "Tunisia",
+                "collection_date", "2023-03-01",
+                "isolation_source", "forest of Jouza"));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("CAXMYH010000001", meta));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("CAXMYH010000001", 1, 3118321));
+
+        SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
+        assertTrue(source.getQualifiers("geo_loc_name").isEmpty(), "/geo_loc_name suppressed for WGS contig");
+        assertTrue(source.getQualifiers("collection_date").isEmpty(), "/collection_date suppressed for WGS contig");
+        // isolation_source must still pass through
+        assertFalse(source.getQualifiers("isolation_source").isEmpty(), "/isolation_source preserved for WGS contig");
+    }
+
+    @Test
+    void nonWgsContigPreservesGeoLocAndCollectionDateSearchFields() throws Exception {
+        // No contigDataclass means this is NOT a WGS contig; the SET-level qualifiers must pass through.
+        MasterMetadata meta = new MasterMetadata();
+        meta.setSearchFields(Map.of("geo_loc_name", "Tunisia", "collection_date", "2023-03-01"));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
+
+        SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
+        assertFalse(source.getQualifiers("geo_loc_name").isEmpty());
+        assertFalse(source.getQualifiers("collection_date").isEmpty());
+    }
+
+    @Test
+    void wgsRootSetAccessionDerivesFromWgsSetField() {
+        // 8-char wgsSet "CAXMYH01" → 6-char letter prefix "CAXMYH" + nine zeros
+        assertEquals("CAXMYH000000000", GFF3Mapper.wgsRootSetAccession("CAXMYH01"));
+        // Lowercase letters are normalised
+        assertEquals("CAXMYH000000000", GFF3Mapper.wgsRootSetAccession("caxmyh01"));
+        // null and too-short prefixes return null
+        assertNull(GFF3Mapper.wgsRootSetAccession(null));
+        assertNull(GFF3Mapper.wgsRootSetAccession("ABC"));
     }
 }
