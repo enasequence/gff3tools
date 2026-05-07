@@ -123,16 +123,35 @@ public class TranslationFix {
             return;
         }
 
+        // Detect mixed-strand segments (trans-spliced feature not flagged with trans_splicing attr).
+        long distinctStrands = sortedFeatures.stream()
+                .map(GFF3Feature::isComplement)
+                .distinct()
+                .count();
+        boolean hasMixedStrands = distinctStrands > 1;
+
         try {
-            // Concatenate sequence slices from all features in genomic order
+            // For mixed-strand (trans-spliced) joins [example: OZ261802
+            // join(complement(73411..73524),153918..154146,154688..154713)]
+            // Reverse complement each minus-strand segment individually
+            // before concatenating — matching sequencetools SegmentFactory per-segment strand logic.
+            // For uniform-strand joins, concatenate raw and let the Translator apply overall RC.
             StringBuilder concatenated = new StringBuilder();
             for (GFF3Feature segment : sortedFeatures) {
                 String slice =
                         sequenceLookup.getSequenceSlice(segment.accession(), segment.getStart(), segment.getEnd());
+                if (hasMixedStrands && segment.isComplement()) {
+                    slice = new String(Translator.reverseComplement(slice.getBytes()));
+                }
                 concatenated.append(slice);
             }
 
             Translator translator = new Translator(sortedFeatures);
+            if (hasMixedStrands) {
+                // Sequence is already strand-corrected per segment; prevent the Translator
+                // from applying an additional full-sequence RC.
+                translator.setIsComplement(false);
+            }
             translator.enableAllFixes();
             TranslationResult result =
                     translator.translate(concatenated.toString().getBytes());

@@ -194,6 +194,48 @@ class TranslationFixTest {
     }
 
     @Test
+    void translatesMixedStrandJoinWithPerSegmentReverseComplement() throws Exception {
+        // join(complement(1..6), 10..15)
+        // seg1 minus: raw "TTCATT" → RC "AATGAA"
+        // seg2 plus:  raw "CCCTAA" (unchanged)
+        // concat → "AATGAACCCTAA" → forward translate: AAT=N, GAA=E, CCC=P, TAA=stop → "NEP"
+        //
+        // Without per-segment reverse complement (RC) the whole concat "TTCATTCCCTAA" would be RC'd by Translator
+        // (driven by seg1 being complement), producing a garbled sequence with internal stops.
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("TTCATT");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("CCCTAA");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "-");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
+        fix.fixAnnotation(createAnnotation(seg1, seg2), 1);
+
+        String key = TranslationState.buildKey("seq1", "cds1");
+        assertEquals("NEP", translationState.get(key).newTranslation());
+    }
+
+    @Test
+    void translatesMixedStrandThreeSegmentJoin() throws Exception {
+        // Mirrors the rps12 trans-spliced join pattern:
+        //   join(complement(1..3), 10..12, 20..22)
+        // seg1 minus: raw "CAT" → RC "ATG"
+        // seg2 plus:  raw "AAA"
+        // seg3 plus:  raw "TAA"
+        // concat (sorted by start) → "ATG" + "AAA" + "TAA" = "ATGAAATAA"
+        // forward translate: ATG=M, AAA=K, TAA=stop → "MK"
+        when(mockLookup.getSequenceSlice("seq1", 1L, 3L)).thenReturn("CAT");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 12L)).thenReturn("AAA");
+        when(mockLookup.getSequenceSlice("seq1", 20L, 22L)).thenReturn("TAA");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 3, "-");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 12, "+");
+        GFF3Feature seg3 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 20, 22, "+");
+        fix.fixAnnotation(createAnnotation(seg1, seg2, seg3), 1);
+
+        String key = TranslationState.buildKey("seq1", "cds1");
+        assertEquals("MK", translationState.get(key).newTranslation());
+    }
+
+    @Test
     void skipsExceptionFeatures() throws Exception {
         GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
         feature.addAttribute("exception", "ribosomal slippage");

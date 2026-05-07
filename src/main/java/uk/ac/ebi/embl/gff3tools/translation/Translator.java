@@ -186,6 +186,15 @@ public class Translator {
     /**
      * Enables all auto-fix options.
      */
+    /**
+     * Overrides the complement flag set from the first feature's strand.
+     * Use when the sequence has already been strand-corrected per segment
+     * (e.g. trans-spliced joins with mixed strands).
+     */
+    public void setIsComplement(boolean isComplement) {
+        this.isComplement = isComplement;
+    }
+
     public void enableAllFixes() {
         fixNoStartCodonMake5Partial = true;
         fixCodonStartNotOneMake5Partial = true;
