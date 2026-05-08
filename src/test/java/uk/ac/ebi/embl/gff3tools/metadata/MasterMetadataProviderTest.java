@@ -19,6 +19,8 @@ import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.EntryFactory;
 import uk.ac.ebi.embl.api.entry.Text;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
+import uk.ac.ebi.ena.taxonomy.taxon.TaxonFactory;
 
 class MasterMetadataProviderTest {
 
@@ -121,6 +123,32 @@ class MasterMetadataProviderTest {
         assertTrue(meta.isPresent());
         assertEquals("AB123456", meta.get().getAccession());
         assertEquals("Lazy materialization", meta.get().getDescription());
+    }
+
+    @Test
+    void taxonIdMaterializedLazilyOnContextGet() {
+        TaxonFactory taxonFactory = new TaxonFactory();
+        Taxon resolved = taxonFactory.createTaxon();
+        resolved.setTaxId(9606L);
+        resolved.setScientificName("Homo sapiens");
+
+        TaxonProvider taxonProvider = new TaxonProvider();
+        taxonProvider.addSource(taxId -> taxId.equals(9606L) ? Optional.of(resolved) : Optional.empty());
+
+        MasterMetadataProvider provider = new MasterMetadataProvider();
+        provider.setTaxonId(9606L);
+
+        // Before context resolution, no source has been materialized.
+        assertTrue(provider.getMetadata("any").isEmpty());
+
+        ValidationContext ctx = new ValidationContext();
+        ctx.register(TaxonProvider.class, taxonProvider);
+        ctx.register(MasterMetadataProvider.class, provider);
+        provider.get(ctx);
+
+        MasterMetadata meta = provider.getMetadata("any").orElseThrow();
+        assertEquals("9606", meta.getTaxon());
+        assertEquals("Homo sapiens", meta.getScientificName());
     }
 
     @Test

@@ -30,6 +30,7 @@ public class MasterMetadataProvider implements ContextProvider<MasterMetadataPro
 
     private final List<MasterMetadataSource> sources;
     private Entry pendingEmblMasterEntry;
+    private Long pendingTaxonId;
 
     public MasterMetadataProvider() {
         this.sources = new ArrayList<>();
@@ -44,6 +45,11 @@ public class MasterMetadataProvider implements ContextProvider<MasterMetadataPro
             sources.add(new EmblEntryMetadataSource(pendingEmblMasterEntry, taxonProvider));
             pendingEmblMasterEntry = null;
         }
+        if (pendingTaxonId != null) {
+            TaxonProvider taxonProvider = context.get(TaxonProvider.class);
+            sources.add(new TaxonIdMetadataSource(pendingTaxonId, taxonProvider));
+            pendingTaxonId = null;
+        }
         return this;
     }
 
@@ -57,6 +63,16 @@ public class MasterMetadataProvider implements ContextProvider<MasterMetadataPro
      */
     public void setEmblMasterEntry(Entry entry) {
         this.pendingEmblMasterEntry = entry;
+    }
+
+    /**
+     * Defers building a {@link TaxonIdMetadataSource} until the validation context exists,
+     * so the source can resolve scientific name / lineage from the registered
+     * {@link TaxonProvider}. The source is added on the first call to
+     * {@link #get(ValidationContext)}.
+     */
+    public void setTaxonId(Long taxonId) {
+        this.pendingTaxonId = taxonId;
     }
 
     @Override
