@@ -219,11 +219,22 @@ public abstract class AbstractCommand implements Runnable {
     }
 
     /**
-     * Builds an {@link MasterMetadataProvider} from the optional {@code --master-entry} path.
-     * The master entry file (MasterEntry JSON or EMBL flatfile) is the sole metadata source.
+     * Builds an {@link MasterMetadataProvider} from the optional {@code --master-entry} path
+     * or {@code --taxon-id}. The two options are mutually exclusive.
+     *
+     * <p>JSON and EMBL master-entry sources are added eagerly. Taxon-ID sources are deferred
+     * to the validation context setup so they can resolve a
+     * {@link uk.ac.ebi.embl.gff3tools.metadata.TaxonProvider}.
      */
-    protected MasterMetadataProvider buildMetadataProvider(Path masterEntryPath) throws ExitException {
+    protected MasterMetadataProvider buildMetadataProvider(Path masterEntryPath, Long taxonId) throws ExitException {
+        if (masterEntryPath != null && taxonId != null) {
+            throw new CLIException("--master-entry and --taxon-id are mutually exclusive.");
+        }
         MasterMetadataProvider provider = new MasterMetadataProvider();
+        if (taxonId != null) {
+            provider.setTaxonId(taxonId);
+            return provider;
+        }
         if (masterEntryPath != null) {
             provider.addSource(parseMasterEntrySource(masterEntryPath));
         }

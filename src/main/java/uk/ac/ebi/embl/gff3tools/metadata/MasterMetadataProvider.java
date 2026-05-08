@@ -28,6 +28,7 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 public class MasterMetadataProvider implements ContextProvider<MasterMetadataProvider> {
 
     private final List<MasterMetadataSource> sources;
+    private Long pendingTaxonId;
 
     public MasterMetadataProvider() {
         this.sources = new ArrayList<>();
@@ -35,8 +36,24 @@ public class MasterMetadataProvider implements ContextProvider<MasterMetadataPro
 
     @Override
     public MasterMetadataProvider get(ValidationContext context) {
+        if (pendingTaxonId != null) {
+            TaxonProvider taxonProvider = context.get(TaxonProvider.class);
+            sources.add(new TaxonIdMetadataSource(pendingTaxonId, taxonProvider));
+            pendingTaxonId = null;
+        }
         return this;
     }
+
+    /**
+     * Defers building a {@link TaxonIdMetadataSource} until the validation context exists,
+     * so the source can resolve scientific name / lineage from the registered
+     * {@link TaxonProvider}. The source is added on the first call to
+     * {@link #get(ValidationContext)}.
+     */
+    public void setTaxonId(Long taxonId) {
+        this.pendingTaxonId = taxonId;
+    }
+
 
     @Override
     public Class<MasterMetadataProvider> type() {

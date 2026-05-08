@@ -144,7 +144,7 @@ public class FileConversionCommand extends AbstractCommand {
             }
 
             CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
-            MasterMetadataProvider metadataProvider = buildMetadataProvider(masterFilePath);
+            MasterMetadataProvider metadataProvider = buildMetadataProvider(masterFilePath, taxonId);
             FastaHeaderProvider headerProvider = buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
 
             final FileSequenceSource inputFastaSourceFinal = inputFastaSource;

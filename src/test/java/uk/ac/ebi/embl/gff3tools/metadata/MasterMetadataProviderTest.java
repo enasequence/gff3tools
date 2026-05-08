@@ -15,6 +15,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
+import uk.ac.ebi.ena.taxonomy.taxon.TaxonFactory;
 
 class MasterMetadataProviderTest {
 
@@ -92,6 +95,41 @@ class MasterMetadataProviderTest {
         assertEquals("desc", result.getDescription());
         assertEquals("genomic DNA", result.getMoleculeType());
         assertNull(result.getTaxon(), "Fields from source2 should not be present");
+    }
+
+    @Test
+    void taxonIdMaterializedLazilyOnContextGet() {
+        TaxonFactory taxonFactory = new TaxonFactory();
+        Taxon resolved = taxonFactory.createTaxon();
+        resolved.setTaxId(9606L);
+        resolved.setScientificName("Homo sapiens");
+
+        TaxonProvider taxonProvider = new TaxonProvider() {
+            @Override
+            public Optional<Taxon> resolve(long taxId) {
+                return taxId == 9606L ? Optional.of(resolved) : Optional.empty();
+            }
+
+            @Override
+            public TaxonProvider get(ValidationContext context) {
+                return this;
+            }
+        };
+
+        MasterMetadataProvider provider = new MasterMetadataProvider();
+        provider.setTaxonId(9606L);
+
+        // Before context resolution, no source has been materialized.
+        assertTrue(provider.getMetadata("any").isEmpty());
+
+        ValidationContext ctx = new ValidationContext();
+        ctx.register(TaxonProvider.class, taxonProvider);
+        ctx.register(MasterMetadataProvider.class, provider);
+        provider.get(ctx);
+
+        MasterMetadata meta = provider.getMetadata("any").orElseThrow();
+        assertEquals("9606", meta.getTaxon());
+        assertEquals("Homo sapiens", meta.getScientificName());
     }
 
     @Test
