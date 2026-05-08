@@ -221,29 +221,24 @@ public abstract class AbstractCommand implements Runnable {
     /**
      * Builds an {@link MasterMetadataProvider} from the optional {@code --master-entry} path.
      * The master entry file (MasterEntry JSON or EMBL flatfile) is the sole metadata source.
+     *
+     * <p>JSON sources are added eagerly. EMBL sources are deferred to the validation context
+     * setup so they can resolve a {@link uk.ac.ebi.embl.gff3tools.metadata.TaxonProvider}.
      */
     protected MasterMetadataProvider buildMetadataProvider(Path masterEntryPath) throws ExitException {
         MasterMetadataProvider provider = new MasterMetadataProvider();
-        if (masterEntryPath != null) {
-            provider.addSource(parseMasterEntrySource(masterEntryPath));
+        if (masterEntryPath == null) {
+            return provider;
         }
-        return provider;
-    }
-
-    /**
-     * Parses a master entry file based on its extension.
-     * .json -> MasterEntry JSON deserialized into MasterMetadata
-     * .embl/.ff -> EMBL flatfile parsed into Entry and adapted to MasterMetadata
-     */
-    protected MasterMetadataSource parseMasterEntrySource(Path path) throws ExitException {
-        String ext = getFileExtension(path).orElse("").toLowerCase();
-        return switch (ext) {
-            case "json" -> parseMasterEntryJson(path);
-            case "embl", "ff" -> parseMasterEntryEmbl(path);
+        String ext = getFileExtension(masterEntryPath).orElse("").toLowerCase();
+        switch (ext) {
+            case "json" -> provider.addSource(parseMasterEntryJson(masterEntryPath));
+            case "embl", "ff" -> provider.setEmblMasterEntry(parseMasterEntryEmbl(masterEntryPath));
             default ->
                 throw new CLIException("Unrecognized --master-entry file extension '." + ext
                         + "'. Supported: .json (MasterEntry JSON), .embl/.ff (EMBL flatfile).");
-        };
+        }
+        return provider;
     }
 
     /**
@@ -268,9 +263,11 @@ public abstract class AbstractCommand implements Runnable {
     }
 
     /**
-     * Parses an EMBL flatfile master entry into an EmblEntryMetadataSource adapter.
+     * Parses an EMBL flatfile master entry into a raw {@link Entry}. The entry is wired into
+     * the {@link MasterMetadataProvider} for deferred materialization, so the resulting
+     * {@link EmblEntryMetadataSource} can use the {@code TaxonProvider} from the validation context.
      */
-    private EmblEntryMetadataSource parseMasterEntryEmbl(Path path) throws ExitException {
+    private Entry parseMasterEntryEmbl(Path path) throws ExitException {
         if (!Files.exists(path)) {
             throw new NonExistingFile("The --master-entry file does not exist: " + path, null);
         }
@@ -286,7 +283,7 @@ public abstract class AbstractCommand implements Runnable {
             if (masterEntry == null) {
                 throw new CLIException("No entry found in --master-entry EMBL file: " + path);
             }
-            return new EmblEntryMetadataSource(masterEntry);
+            return masterEntry;
         } catch (IOException e) {
             throw new ReadException(
                     "Failed to read --master-entry EMBL file '%s': %s".formatted(path, e.getMessage()), e);

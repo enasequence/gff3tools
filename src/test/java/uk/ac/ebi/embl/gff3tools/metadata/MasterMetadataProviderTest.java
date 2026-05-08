@@ -15,6 +15,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.api.entry.Entry;
+import uk.ac.ebi.embl.api.entry.EntryFactory;
+import uk.ac.ebi.embl.api.entry.Text;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 class MasterMetadataProviderTest {
 
@@ -92,6 +96,31 @@ class MasterMetadataProviderTest {
         assertEquals("desc", result.getDescription());
         assertEquals("genomic DNA", result.getMoleculeType());
         assertNull(result.getTaxon(), "Fields from source2 should not be present");
+    }
+
+    @Test
+    void emblMasterEntryMaterializedLazilyOnContextGet() {
+        EntryFactory entryFactory = new EntryFactory();
+        Entry entry = entryFactory.createEntry();
+        entry.setPrimaryAccession("AB123456");
+        entry.setDescription(new Text("Lazy materialization"));
+
+        MasterMetadataProvider provider = new MasterMetadataProvider();
+        provider.setEmblMasterEntry(entry);
+
+        // Before context resolution, no source has been materialized.
+        assertTrue(provider.getMetadata("any").isEmpty());
+
+        // Resolving via the context registers the EmblEntryMetadataSource.
+        ValidationContext ctx = new ValidationContext();
+        ctx.register(TaxonProvider.class, new TaxonProvider());
+        ctx.register(MasterMetadataProvider.class, provider);
+        provider.get(ctx);
+
+        Optional<MasterMetadata> meta = provider.getMetadata("any");
+        assertTrue(meta.isPresent());
+        assertEquals("AB123456", meta.get().getAccession());
+        assertEquals("Lazy materialization", meta.get().getDescription());
     }
 
     @Test

@@ -27,10 +27,6 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
 
     private final MasterMetadata metadata;
 
-    public EmblEntryMetadataSource(Entry entry) {
-        this(entry, new TaxonProvider());
-    }
-
     public EmblEntryMetadataSource(Entry entry, TaxonProvider taxonProvider) {
         this.metadata = fromEntry(entry, taxonProvider);
     }

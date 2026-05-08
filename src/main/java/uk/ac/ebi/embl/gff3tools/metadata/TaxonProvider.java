@@ -13,6 +13,8 @@ package uk.ac.ebi.embl.gff3tools.metadata;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 /**
@@ -21,10 +23,24 @@ import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
  *
  * <p>The default provider has no sources and is offline-only. Network-backed sources
  * should be provided by environment-specific extensions and registered explicitly.
+ *
+ * <p>Registered on the validation engine context as a {@link ContextProvider} so other
+ * providers (e.g. {@link MasterMetadataProvider}) can resolve it lazily during context
+ * setup via {@code context.get(TaxonProvider.class)}.
  */
-public class TaxonProvider {
+public class TaxonProvider implements ContextProvider<TaxonProvider> {
 
     private final List<TaxonSource> sources = new ArrayList<>();
+
+    @Override
+    public TaxonProvider get(ValidationContext context) {
+        return this;
+    }
+
+    @Override
+    public Class<TaxonProvider> type() {
+        return TaxonProvider.class;
+    }
 
     /**
      * Registers a taxon source. Sources are queried in registration order.

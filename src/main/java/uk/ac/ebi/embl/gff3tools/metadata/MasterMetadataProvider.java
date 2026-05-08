@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.metadata;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
@@ -28,6 +29,7 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 public class MasterMetadataProvider implements ContextProvider<MasterMetadataProvider> {
 
     private final List<MasterMetadataSource> sources;
+    private Entry pendingEmblMasterEntry;
 
     public MasterMetadataProvider() {
         this.sources = new ArrayList<>();
@@ -35,7 +37,26 @@ public class MasterMetadataProvider implements ContextProvider<MasterMetadataPro
 
     @Override
     public MasterMetadataProvider get(ValidationContext context) {
+        if (pendingEmblMasterEntry != null) {
+            // Materialize the EMBL master entry source now that the context exists, so we
+            // can resolve a TaxonProvider from it instead of constructing one inline.
+            TaxonProvider taxonProvider = context.get(TaxonProvider.class);
+            sources.add(new EmblEntryMetadataSource(pendingEmblMasterEntry, taxonProvider));
+            pendingEmblMasterEntry = null;
+        }
         return this;
+    }
+
+    /**
+     * Defers building an {@link EmblEntryMetadataSource} until the validation context exists,
+     * so the source can use the registered {@link TaxonProvider}. The source is added on
+     * the first call to {@link #get(ValidationContext)}.
+     *
+     * <p>Use this for the EMBL flatfile master entry path. For pre-built sources (e.g. JSON),
+     * use {@link #addSource(MasterMetadataSource)} directly.
+     */
+    public void setEmblMasterEntry(Entry entry) {
+        this.pendingEmblMasterEntry = entry;
     }
 
     @Override

@@ -80,7 +80,7 @@ class EmblEntryMetadataSourceTest {
     @Test
     void mapsAllFieldsFromPopulatedEntry() {
         Entry entry = createPopulatedEntry();
-        EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry);
+        EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry, new TaxonProvider());
 
         MasterMetadata meta = source.getMetadata();
         assertNotNull(meta);
@@ -121,7 +121,7 @@ class EmblEntryMetadataSourceTest {
     @Test
     void returnsSameMetadataForAnySeqId() {
         Entry entry = createPopulatedEntry();
-        EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry);
+        EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry, new TaxonProvider());
 
         Optional<MasterMetadata> meta1 = source.getMetadata("seq1");
         Optional<MasterMetadata> meta2 = source.getMetadata("anything_else");
@@ -134,7 +134,7 @@ class EmblEntryMetadataSourceTest {
     @Test
     void handlesMinimalEntry() {
         Entry entry = entryFactory.createEntry();
-        EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry);
+        EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry, new TaxonProvider());
 
         MasterMetadata meta = source.getMetadata();
         assertNotNull(meta);
@@ -173,13 +173,13 @@ class EmblEntryMetadataSourceTest {
     }
 
     @Test
-    void defaultConstructorDoesNotResolveTaxonFromDbXref() {
+    void emptyTaxonProviderDoesNotResolveTaxonFromDbXref() {
         Entry entry = entryFactory.createEntry();
         SourceFeature source = featureFactory.createSourceFeature();
         source.addQualifier(qualifierFactory.createQualifier("db_xref", "taxon:12345"));
         entry.addFeature(source);
 
-        EmblEntryMetadataSource metaSource = new EmblEntryMetadataSource(entry);
+        EmblEntryMetadataSource metaSource = new EmblEntryMetadataSource(entry, new TaxonProvider());
         MasterMetadata meta = metaSource.getMetadata();
 
         assertEquals("12345", meta.getTaxon());
@@ -195,7 +195,7 @@ class EmblEntryMetadataSourceTest {
         seq.setTopology(Sequence.Topology.CIRCULAR);
         entry.setSequence(seq);
 
-        EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry);
+        EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry, new TaxonProvider());
         MasterMetadata meta = source.getMetadata();
 
         assertEquals("circular", meta.getTopology());
