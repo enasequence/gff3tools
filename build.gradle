@@ -38,7 +38,7 @@ spotless {
 '''
         importOrder 'java', 'javax', 'org', 'com', '', 'uk'
         removeUnusedImports()
-        palantirJavaFormat()
+        palantirJavaFormat('2.57.0')
     }
 }
 

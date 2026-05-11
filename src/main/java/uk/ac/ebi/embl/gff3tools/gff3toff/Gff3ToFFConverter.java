@@ -43,7 +43,7 @@ public class Gff3ToFFConverter implements Converter {
         try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader, gff3Path)) {
             gff3Reader.readHeader();
             gff3Reader.read(annotation -> {
-                writeEntry(new GFF3Mapper(gff3Reader), annotation, writer);
+                writeEntry(new GFF3Mapper(gff3Reader, validationEngine.getContext()), annotation, writer);
                 List<ValidationException> warnings = validationEngine.getParsingWarnings();
                 for (ValidationException e : warnings) {
                     log.warn("WARNING: %s".formatted(e.getMessage()));

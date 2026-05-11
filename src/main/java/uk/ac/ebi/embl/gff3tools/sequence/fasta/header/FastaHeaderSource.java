@@ -8,21 +8,21 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.exception;
+package uk.ac.ebi.embl.gff3tools.sequence.fasta.header;
 
-import uk.ac.ebi.embl.gff3tools.cli.CLIExitCode;
+import java.util.Optional;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 
-public class CLIException extends ExitException {
-    @Override
-    public CLIExitCode exitCode() {
-        return CLIExitCode.USAGE;
-    }
+/**
+ * A source of {@link FastaHeader} metadata for a given sequence ID.
+ *
+ * <p>Used by {@link FastaHeaderProvider} to chain multiple sources
+ * in priority order (chain-of-responsibility pattern).
+ */
+public interface FastaHeaderSource {
 
-    public CLIException(String message) {
-        super(message);
-    }
-
-    public CLIException(String message, Exception cause) {
-        super(message, cause);
-    }
+    /**
+     * Returns the {@link FastaHeader} for the given seqId, or empty if not available.
+     */
+    Optional<FastaHeader> getHeader(String seqId);
 }

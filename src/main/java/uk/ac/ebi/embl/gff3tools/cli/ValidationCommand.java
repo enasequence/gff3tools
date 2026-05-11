@@ -22,6 +22,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 
 // Using pandoc CLI interface conventions
 @CommandLine.Command(name = "validation", description = "Performs validations on gff3 files")
@@ -42,8 +43,9 @@ public class ValidationCommand extends AbstractCommand {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
 
         try {
-            CompositeSequenceProvider compositeProvider =
-                    buildCompositeProvider(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
+            List<FileSequenceSource> sources =
+                    buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
+            CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
 
             try (ValidationEngine validationEngine = initValidationEngine(ruleOverrides, compositeProvider)) {
 

@@ -8,21 +8,19 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.exception;
+package uk.ac.ebi.embl.gff3tools.metadata;
 
-import uk.ac.ebi.embl.gff3tools.cli.CLIExitCode;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
-public class CLIException extends ExitException {
-    @Override
-    public CLIExitCode exitCode() {
-        return CLIExitCode.USAGE;
-    }
+@Getter
+@Setter
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class SubmitterDetails {
 
-    public CLIException(String message) {
-        super(message);
-    }
-
-    public CLIException(String message, Exception cause) {
-        super(message, cause);
-    }
+    private String submittedDate;
+    private SubmissionAccount submissionAccount;
+    private List<AuthorData> authors;
 }

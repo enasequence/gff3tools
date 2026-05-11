@@ -19,10 +19,13 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.gff3tools.fftogff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
+import uk.ac.ebi.embl.gff3tools.metadata.EmblEntryMetadataSource;
+import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 
 class FFToGFF3ConverterTest {
@@ -41,14 +44,14 @@ class FFToGFF3ConverterTest {
 
                 // We need new ValidationEngine each time as we cache data in our tests.
                 ValidationEngine engine = builder.build();
-                GFF3FileFactory rule = new GFF3FileFactory();
+                GFF3FileFactory factory = new GFF3FileFactory(engine);
 
                 ReaderOptions readerOptions = new ReaderOptions();
                 readerOptions.setIgnoreSequence(true);
                 EmblEntryReader entryReader =
                         new EmblEntryReader(testFileReader, EmblEntryReader.Format.EMBL_FORMAT, "", readerOptions);
                 Writer gff3Writer = new StringWriter();
-                GFF3File gff3 = GFF3FileFactory.fromFlatfileEntriesAndEngine(entryReader, null, engine);
+                GFF3File gff3 = factory.from(entryReader, null);
                 gff3.writeGFF3String(gff3Writer);
 
                 String expected;
@@ -86,8 +89,12 @@ class FFToGFF3ConverterTest {
 
     private void testConvert(Path inputFile, Path expectedFile, Path masterFile) {
         ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
+        MasterMetadataProvider metadataProvider = buildMetadataProvider(masterFile);
+        if (metadataProvider != null) {
+            engineBuilder.withProvider(metadataProvider);
+        }
         ValidationEngine engine = engineBuilder.build();
-        FFToGff3Converter converter = new FFToGff3Converter(engine, masterFile);
+        FFToGff3Converter converter = new FFToGff3Converter(engine);
         try (BufferedReader testFileReader = Files.newBufferedReader(inputFile);
                 BufferedReader expectedFileReader = Files.newBufferedReader(expectedFile);
                 StringWriter stringWriter = new StringWriter();
@@ -101,6 +108,26 @@ class FFToGFF3ConverterTest {
 
         } catch (Exception e) {
             fail("Error on test case: " + inputFile + " - " + e.getMessage());
+        }
+    }
+
+    private static MasterMetadataProvider buildMetadataProvider(Path masterFile) {
+        if (masterFile == null) return null;
+        ReaderOptions readerOptions = new ReaderOptions();
+        readerOptions.setIgnoreSequence(true);
+        try (BufferedReader reader = Files.newBufferedReader(masterFile)) {
+            EmblEntryReader entryReader =
+                    new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "master_reader", readerOptions);
+            Entry masterEntry = null;
+            while (entryReader.read() != null && entryReader.isEntry()) {
+                masterEntry = entryReader.getEntry();
+            }
+            if (masterEntry == null) return null;
+            MasterMetadataProvider provider = new MasterMetadataProvider();
+            provider.addSource(new EmblEntryMetadataSource(masterEntry));
+            return provider;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }

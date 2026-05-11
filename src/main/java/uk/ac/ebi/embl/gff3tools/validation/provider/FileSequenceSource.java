@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.Getter;
@@ -19,6 +20,7 @@ import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReaderFactory;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.JsonHeaderParser;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ParsedHeader;
 
@@ -55,6 +57,7 @@ public class FileSequenceSource implements SequenceSource {
     @Getter
     private final Map<String, Long> seqIdToOrdinal = new HashMap<>();
 
+    private final Map<String, FastaHeader> seqIdToHeader = new HashMap<>();
     private boolean initialized;
 
     /**
@@ -108,6 +111,15 @@ public class FileSequenceSource implements SequenceSource {
         }
     }
 
+    /**
+     * Returns an unmodifiable view of the parsed FASTA headers keyed by submission ID.
+     * Only populated for FASTA-format sources after initialization.
+     */
+    public Map<String, FastaHeader> getSeqIdToHeader() {
+        ensureInitialized();
+        return Collections.unmodifiableMap(seqIdToHeader);
+    }
+
     private synchronized void ensureInitialized() {
         if (initialized) {
             return;
@@ -146,6 +158,7 @@ public class FileSequenceSource implements SequenceSource {
                         throw new RuntimeException("Duplicate submission ID in FASTA: " + submissionId);
                     }
                     seqIdToOrdinal.put(submissionId, ordinal);
+                    seqIdToHeader.put(submissionId, parsed.getHeader());
                 } catch (Exception e) {
                     throw new RuntimeException(
                             ("Failed to parse FASTA header at ordinal %d: %s. "
