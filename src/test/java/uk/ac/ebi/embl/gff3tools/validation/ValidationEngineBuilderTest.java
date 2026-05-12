@@ -254,7 +254,7 @@ class ValidationEngineBuilderTest {
         IntegerProvider integerProvider = new IntegerProvider(42);
 
         ValidationEngine engine = new ValidationEngineBuilder()
-                .disableAutoDetectContextProviders()
+                .disableAutodetectContextProviders()
                 .withProvider(stringProvider)
                 .withProvider(integerProvider)
                 .build();

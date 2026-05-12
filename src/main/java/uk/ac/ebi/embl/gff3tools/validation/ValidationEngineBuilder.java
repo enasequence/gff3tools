@@ -64,7 +64,7 @@ public class ValidationEngineBuilder {
      *
      * @return this builder for chaining
      */
-    public ValidationEngineBuilder disableAutoDetectContextProviders() {
+    public ValidationEngineBuilder disableAutodetectContextProviders() {
         this.providerClasspathScanningEnabled = false;
         return this;
     }
