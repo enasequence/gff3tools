@@ -22,7 +22,8 @@ public class ValidationEngineBuilder {
     private final ValidationConfig validationConfig;
     private boolean failFast = false;
     private final List<ContextProvider<?>> providerOverrides = new ArrayList<>();
-    private boolean classpathScanningEnabled = true;
+    private boolean providerClasspathScanningEnabled = true;
+    private boolean validationClassPathScanningEnabled = true;
     private final List<Fix> fixOverrides = new ArrayList<>();
     private final List<Validation> validatorOverrides = new ArrayList<>();
 
@@ -36,7 +37,8 @@ public class ValidationEngineBuilder {
         ValidationRegistry registry = ValidationRegistry.builder()
                 .config(validationConfig)
                 .providers(providerOverrides)
-                .classpathScanningEnabled(classpathScanningEnabled)
+                .contextProviderClassPathScanningEnabled(providerClasspathScanningEnabled)
+                .validationClassPathScanningEnabled(validationClassPathScanningEnabled)
                 .fixes(fixOverrides)
                 .validators(validatorOverrides)
                 .build();
@@ -58,12 +60,23 @@ public class ValidationEngineBuilder {
 
     /**
      * Disable classpath scanning. When disabled, only explicitly registered
-     * fixes, validators, and providers participate in the engine.
+     * context providers participate in the engine.
      *
      * @return this builder for chaining
      */
-    public ValidationEngineBuilder disableClasspathScanning() {
-        this.classpathScanningEnabled = false;
+    public ValidationEngineBuilder disableAutoDetectContextProviders() {
+        this.providerClasspathScanningEnabled = false;
+        return this;
+    }
+
+    /**
+     * Disable classpath scanning. When disabled, only explicitly registered
+     * fixes and validators (classes annotated with Gff3Validation/Gff3Fix) participate in the engine.
+     *
+     * @return this builder for chaining
+     */
+    public ValidationEngineBuilder disableAutodetectValidationsAndFixes() {
+        this.validationClassPathScanningEnabled = false;
         return this;
     }
 
