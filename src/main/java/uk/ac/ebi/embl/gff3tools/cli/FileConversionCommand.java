@@ -153,23 +153,24 @@ public class FileConversionCommand extends AbstractCommand {
             return new BufferedReader(new InputStreamReader(System.in));
         }
 
-        try {
-            BufferedInputStream bis = new BufferedInputStream(Files.newInputStream(inputFilePath));
-
-            // Check for gzip magic bytes
-            bis.mark(2);
-            int byte1 = bis.read();
-            int byte2 = bis.read();
-            bis.reset();
-
-            if (byte1 == GZIP_MAGIC_BYTE1 && byte2 == GZIP_MAGIC_BYTE2) {
-                log.debug("Detected gzip-compressed input file");
-                return new BufferedReader(new InputStreamReader(new GZIPInputStream(bis)));
-            }
-
-            return new BufferedReader(new InputStreamReader(bis));
+        boolean gzipped;
+        try (InputStream peekStream = Files.newInputStream(inputFilePath)) {
+            int byte1 = peekStream.read();
+            int byte2 = peekStream.read();
+            gzipped = (byte1 == GZIP_MAGIC_BYTE1 && byte2 == GZIP_MAGIC_BYTE2);
         } catch (NoSuchFileException e) {
             throw new NonExistingFile("The file does not exist: " + inputFilePath, e);
+        } catch (IOException e) {
+            throw new ReadException("Error opening file: " + inputFilePath, e);
+        }
+
+        try {
+            if (gzipped) {
+                log.debug("Detected gzip-compressed input file");
+                return new BufferedReader(
+                        new InputStreamReader(new GZIPInputStream(Files.newInputStream(inputFilePath))));
+            }
+            return new BufferedReader(new InputStreamReader(Files.newInputStream(inputFilePath)));
         } catch (IOException e) {
             throw new ReadException("Error opening file: " + inputFilePath, e);
         }

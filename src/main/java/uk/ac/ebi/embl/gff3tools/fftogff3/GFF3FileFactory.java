@@ -29,6 +29,8 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 public class GFF3FileFactory {
+    private static final String HEADER_VERSION = "3.1.26";
+
     private final ValidationEngine engine;
 
     public GFF3FileFactory(ValidationEngine engine) {
@@ -37,7 +39,7 @@ public class GFF3FileFactory {
 
     public GFF3File from(EmblEntryReader entryReader, MasterMetadata masterMetadata)
             throws ValidationException, ReadException {
-        GFF3Header header = new GFF3Header(GFF3Header.DEFAULT_VERSION);
+        GFF3Header header = new GFF3Header(HEADER_VERSION);
         GFF3Species species = null;
         List<GFF3Annotation> annotations = new ArrayList<>();
         GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
@@ -88,7 +90,7 @@ public class GFF3FileFactory {
                         : null;
 
         return GFF3File.builder()
-                .header(new GFF3Header(GFF3Header.DEFAULT_VERSION))
+                .header(new GFF3Header(HEADER_VERSION))
                 .species(gff3FileReader.gff3Species)
                 .annotations(annotations)
                 .gff3Reader(gff3FileReader)
