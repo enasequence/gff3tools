@@ -41,18 +41,18 @@ public class GFF3FileFactory {
         this.fastaFilePath = fastaFilePath;
     }
 
-    public GFF3File from(EmblEntryReader entryReader, Entry masterEntry) throws ValidationException, ReadException {
+    public GFF3File from(EmblEntryReader entryReader, MasterMetadata masterMetadata)
+            throws ValidationException, ReadException {
         GFF3Header header = new GFF3Header(GFF3Header.DEFAULT_VERSION);
         GFF3Species species = null;
         List<GFF3Annotation> annotations = new ArrayList<>();
         GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
-        GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(engine, directivesFactory, fastaFilePath);
+        GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(engine, directivesFactory);
         try {
             while (entryReader.read() != null && entryReader.isEntry()) {
                 Entry entry = entryReader.getEntry();
                 if (species == null) {
-                    Entry sourceEntry = masterEntry != null ? masterEntry : entry;
-                    species = directivesFactory.createSpecies(sourceEntry, (MasterMetadata) null);
+                    species = directivesFactory.createSpecies(entry, masterMetadata);
                 }
                 annotations.add(annotationFactory.from(entry));
             }
@@ -70,30 +70,6 @@ public class GFF3FileFactory {
                 .annotations(annotations)
                 .fastaFilePath(fastaFilePath)
                 .translationState(translationState)
-                .parsingWarnings(engine.getParsingWarnings())
-                .build();
-    }
-
-    public GFF3File from(List<Entry> entries, Entry masterEntry) throws ValidationException {
-        GFF3Header header = new GFF3Header(GFF3Header.DEFAULT_VERSION);
-        GFF3Species species = null;
-        List<GFF3Annotation> annotations = new ArrayList<>();
-        GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
-        GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(engine, directivesFactory, fastaFilePath);
-
-        for (Entry entry : entries) {
-            if (species == null) {
-                Entry sourceEntry = masterEntry != null ? masterEntry : entry;
-                species = directivesFactory.createSpecies(sourceEntry, (MasterMetadata) null);
-            }
-            annotations.add(annotationFactory.from(entry));
-        }
-
-        return GFF3File.builder()
-                .header(header)
-                .species(species)
-                .annotations(annotations)
-                .fastaFilePath(fastaFilePath)
                 .parsingWarnings(engine.getParsingWarnings())
                 .build();
     }

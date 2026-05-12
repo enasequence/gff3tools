@@ -79,8 +79,7 @@ public class TSVToGFF3Converter implements Converter {
             List<GFF3Annotation> annotations = new ArrayList<>();
 
             GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
-            GFF3AnnotationFactory annotationFactory =
-                    new GFF3AnnotationFactory(validationEngine, directivesFactory, translationFastaPath);
+            GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(validationEngine, directivesFactory);
 
             TSVEntryReader entryReader = new TSVEntryReader(reader);
             try (BufferedWriter nucleotideFastaWriter = createNucleotideFastaWriter()) {

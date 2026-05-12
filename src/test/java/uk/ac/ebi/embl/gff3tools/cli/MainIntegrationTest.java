@@ -888,47 +888,4 @@ public class MainIntegrationTest {
             Files.deleteIfExists(outputGff3);
         }
     }
-
-    @Test
-    void testEmblToGff3_withoutSequenceInInput_fastaOutputEmpty() throws IOException {
-        // Use a test file without sequence data
-        Path inputFile = Path.of("src/test/resources/fftogff3_rules/partial_location_end.embl");
-        Path outputGff3 = Files.createTempFile("output", ".gff3");
-        Path outputFasta = Files.createTempFile("output", ".fasta");
-
-        String[] args = new String[] {
-            "conversion",
-            "-f",
-            "embl",
-            "-t",
-            "gff3",
-            "--output-sequence",
-            outputFasta.toString(),
-            inputFile.toString(),
-            outputGff3.toString()
-        };
-
-        PrintStream originalErr = System.err;
-        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
-        System.setErr(new PrintStream(errContent));
-
-        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
-            mock.when(() -> Main.main(any())).thenCallRealMethod();
-            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
-            Main.main(args);
-
-            // Verify GFF3 output was created
-            assertTrue(Files.exists(outputGff3), "GFF3 output file should exist");
-
-            // Verify FASTA output is empty (no sequences in input file)
-            assertTrue(Files.exists(outputFasta), "FASTA output file should exist");
-            String fastaContent = Files.readString(outputFasta);
-            assertTrue(
-                    fastaContent.isEmpty(), "FASTA output should be empty when input file has no nucleotide sequences");
-        } finally {
-            Files.deleteIfExists(outputGff3);
-            Files.deleteIfExists(outputFasta);
-            System.setErr(originalErr);
-        }
-    }
 }

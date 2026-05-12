@@ -12,30 +12,23 @@ package uk.ac.ebi.embl.gff3tools.fftogff3;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.gff3tools.Converter;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
+import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
+import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 
 public class FFToGff3Converter implements Converter {
-    // MasterFile will be used when converting reduced flatfile tto GFF3
-    Path masterFilePath = null;
-    ValidationEngine validationEngine;
+
+    private final ValidationEngine validationEngine;
 
     public FFToGff3Converter(ValidationEngine validationEngine) {
         this.validationEngine = validationEngine;
-    }
-
-    // Constructor to be used only by the processing pipeline which converts reduced flatfile
-    public FFToGff3Converter(ValidationEngine validationEngine, Path masterFilePath) {
-        this.validationEngine = validationEngine;
-        this.masterFilePath = masterFilePath;
     }
 
     public void convert(BufferedReader reader, BufferedWriter writer)
@@ -47,7 +40,7 @@ public class FFToGff3Converter implements Converter {
                     new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
 
             GFF3FileFactory fftogff3 = new GFF3FileFactory(validationEngine, fastaPath);
-            GFF3File file = fftogff3.from(entryReader, getMasterEntry(masterFilePath));
+            GFF3File file = fftogff3.from(entryReader, resolveMasterMetadata());
             file.writeGFF3String(writer);
 
             // Check for collected errors at end of processing
@@ -57,32 +50,20 @@ public class FFToGff3Converter implements Converter {
         }
     }
 
+    private MasterMetadata resolveMasterMetadata() {
+        ValidationContext context = validationEngine.getContext();
+        if (!context.contains(MasterMetadataProvider.class)) {
+            return null;
+        }
+        return context.get(MasterMetadataProvider.class).getGlobalMetadata().orElse(null);
+    }
+
     private ReaderOptions getReaderOptions() {
         ReaderOptions readerOptions = new ReaderOptions();
         readerOptions.setIgnoreSequence(true);
         return readerOptions;
     }
 
-    private Entry getMasterEntry(Path masterFilePath) throws ReadException {
-        if (masterFilePath == null) {
-            return null;
-        }
-        try (BufferedReader inputReader = Files.newBufferedReader(masterFilePath)) {
-            Entry masterEntry = null;
-            EmblEntryReader entryReader = new EmblEntryReader(
-                    inputReader, EmblEntryReader.Format.EMBL_FORMAT, "embl_reader", getReaderOptions());
-            while (entryReader.read() != null && entryReader.isEntry()) {
-                masterEntry = entryReader.getEntry();
-            }
-            return masterEntry;
-        } catch (IOException e) {
-            throw new ReadException("Error opening master file: " + masterFilePath, e);
-        }
-    }
-
-    /**
-     * Create  FASTA in the  system temp directory.
-     */
     private Path getFastaPath() {
         try {
             return Files.createTempFile("gff3-translation", ".fasta");
@@ -91,14 +72,11 @@ public class FFToGff3Converter implements Converter {
         }
     }
 
-    /**
-     * Delete FASTA file in the  system temp directory.
-     */
     private void deleteFastaFile(Path fastaPath) {
         try {
             Files.deleteIfExists(fastaPath);
         } catch (Exception e) {
-            throw new RuntimeException("Unable to create temp fasta file.", e);
+            throw new RuntimeException("Unable to delete temp fasta file.", e);
         }
     }
 }

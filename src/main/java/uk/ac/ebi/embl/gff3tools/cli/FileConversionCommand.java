@@ -34,7 +34,6 @@ import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
-import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToFFConverter;
 import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToGFF3Converter;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
@@ -56,8 +55,8 @@ public class FileConversionCommand extends AbstractCommand {
     public ConversionFileFormat toFileType;
 
     @CommandLine.Option(
-            names = "-m",
-            description = "Optional master file for reduced flatfile conversion (EMBL to GFF3 only)")
+            names = {"--master-entry", "-m"},
+            description = "Optional master entry file. Accepts MasterEntry JSON (.json) or EMBL flatfile (.embl/.ff).")
     public Path masterFilePath;
 
     @CommandLine.Option(
@@ -182,10 +181,8 @@ public class FileConversionCommand extends AbstractCommand {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
             return new Gff3ToFFConverter(engine, inputFilePath);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
-            // Optional master file for reduced flatfile conversion
-            return masterFilePath == null
-                    ? new FFToGff3Converter(engine)
-                    : new FFToGff3Converter(engine, masterFilePath);
+            // Master metadata (from -m) is registered on the engine via buildMetadataProvider
+            return new FFToGff3Converter(engine);
         } else if (inputFileType == ConversionFileFormat.tsv && outputFileType == ConversionFileFormat.gff3) {
             // TSV to GFF3 conversion using sequencetools template processing
             return new TSVToGFF3Converter(engine, fastaOutputPath);

@@ -26,7 +26,7 @@ public class TSVParseException extends ReadException {
     }
 
     public TSVParseException(String message, int lineNumber) {
-        super("Line " + lineNumber + ": " + message, new IOException(message));
+        super("Line " + lineNumber + ": " + message, new IOException("Line " + lineNumber + ": " + message));
         this.lineNumber = lineNumber;
     }
 
