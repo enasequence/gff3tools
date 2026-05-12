@@ -88,7 +88,8 @@ public class ValidationRegistry {
     private ValidationRegistry(
             ValidationConfig config,
             @Singular List<ContextProvider<?>> providers,
-            boolean classpathScanningEnabled,
+            boolean contextProviderClassPathScanningEnabled,
+            boolean validationClassPathScanningEnabled,
             @Singular("fix") List<Fix> fixes,
             @Singular("validator") List<Validation> validators) {
         this.validationConfig = config;
@@ -96,7 +97,7 @@ public class ValidationRegistry {
         ValidationContext ctx = new ValidationContext();
 
         List<ContextProvider<?>> allProviders;
-        if (classpathScanningEnabled) {
+        if (contextProviderClassPathScanningEnabled) {
             allProviders = new ArrayList<>(instantiateProviders());
             for (ContextProvider<?> provider : allProviders) {
                 ctx.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
@@ -128,7 +129,7 @@ public class ValidationRegistry {
 
         // Build scanned descriptors
         List<ValidatorDescriptor> scannedDescriptors;
-        if (classpathScanningEnabled) {
+        if (validationClassPathScanningEnabled) {
             scannedDescriptors = buildDescriptors(ScanHolder.validationList, ctx, config);
         } else {
             scannedDescriptors = new ArrayList<>();
@@ -168,7 +169,9 @@ public class ValidationRegistry {
      * Returns a builder with classpath scanning enabled by default.
      */
     public static ValidationRegistryBuilder builder() {
-        return new ValidationRegistryBuilder().classpathScanningEnabled(true);
+        return new ValidationRegistryBuilder()
+                .contextProviderClassPathScanningEnabled(true)
+                .validationClassPathScanningEnabled(true);
     }
 
     public ValidationContext getContext() {

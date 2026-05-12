@@ -18,9 +18,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.exception.DuplicateValidationRuleException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
+import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
 
 class ValidationEngineBuilderTest {
 
@@ -119,8 +121,9 @@ class ValidationEngineBuilderTest {
     @Test
     @DisplayName("build() with classpath scanning disabled produces empty registry")
     void build_withClasspathScanningDisabled_producesEmptyRegistry() {
-        ValidationEngine engine =
-                new ValidationEngineBuilder().disableClasspathScanning().build();
+        ValidationEngine engine = new ValidationEngineBuilder()
+                .disableAutodetectValidationsAndFixes()
+                .build();
 
         assertNotNull(engine);
         assertNotNull(engine.getContext());
@@ -138,7 +141,7 @@ class ValidationEngineBuilderTest {
         TestFixA fixInstance = new TestFixA();
 
         ValidationEngine engine = new ValidationEngineBuilder()
-                .disableClasspathScanning()
+                .disableAutodetectValidationsAndFixes()
                 .withFix(fixInstance)
                 .build();
 
@@ -153,7 +156,7 @@ class ValidationEngineBuilderTest {
         TestValidationA validationInstance = new TestValidationA();
 
         ValidationEngine engine = new ValidationEngineBuilder()
-                .disableClasspathScanning()
+                .disableAutodetectValidationsAndFixes()
                 .withValidator(validationInstance)
                 .build();
 
@@ -205,7 +208,7 @@ class ValidationEngineBuilderTest {
 
         assertThrows(DuplicateValidationRuleException.class, () -> {
             new ValidationEngineBuilder()
-                    .disableClasspathScanning()
+                    .disableAutodetectValidationsAndFixes()
                     .withFix(fixA)
                     .withFix(fixDupA)
                     .build();
@@ -218,7 +221,7 @@ class ValidationEngineBuilderTest {
         TestFixA fixInstance = new TestFixA();
 
         ValidationEngine engine = new ValidationEngineBuilder()
-                .disableClasspathScanning()
+                .disableAutodetectValidationsAndFixes()
                 .withFix(fixInstance)
                 .build();
 
@@ -233,7 +236,7 @@ class ValidationEngineBuilderTest {
         IntegerProvider integerProvider = new IntegerProvider(42);
 
         ValidationEngine engine = new ValidationEngineBuilder()
-                .disableClasspathScanning()
+                .disableAutodetectValidationsAndFixes()
                 .withProvider(stringProvider)
                 .withProvider(integerProvider)
                 .build();
@@ -244,13 +247,40 @@ class ValidationEngineBuilderTest {
     }
 
     @Test
+    @DisplayName(
+            "build() with turned off classpath detection for ContextProviders should have only explicitly registered context providers in the ValidationContext")
+    void build_withMultipleProviders_withAutoregistrationTurnedOff() {
+        StringProvider stringProvider = new StringProvider("hello");
+        IntegerProvider integerProvider = new IntegerProvider(42);
+
+        ValidationEngine engine = new ValidationEngineBuilder()
+                .disableAutodetectContextProviders()
+                .withProvider(stringProvider)
+                .withProvider(integerProvider)
+                .build();
+
+        ValidationContext ctx = engine.getContext();
+        assertEquals(2, ctx.getNumberOfProviders(), "There should be exactly 2 providers");
+        assertEquals("hello", ctx.get(String.class), "String provider should be resolvable");
+        assertEquals(42, ctx.get(Integer.class), "Integer provider should be resolvable");
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> ctx.get(CompositeSequenceProvider.class),
+                "CompositeSequence provider should NOT be resolvable");
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> ctx.get(FastaHeaderProvider.class),
+                "FastaHeader provider should NOT be resolvable");
+    }
+
+    @Test
     @DisplayName("build() with explicit fixes groups by priority correctly")
     void build_withExplicitFixes_groupsByPriorityCorrectly() {
         CriticalPriorityFix criticalFix = new CriticalPriorityFix();
         LowPriorityFix lowFix = new LowPriorityFix();
 
         ValidationEngine engine = new ValidationEngineBuilder()
-                .disableClasspathScanning()
+                .disableAutodetectValidationsAndFixes()
                 .withFix(criticalFix)
                 .withFix(lowFix)
                 .build();
@@ -275,7 +305,7 @@ class ValidationEngineBuilderTest {
 
         assertThrows(IllegalArgumentException.class, () -> {
             new ValidationEngineBuilder()
-                    .disableClasspathScanning()
+                    .disableAutodetectValidationsAndFixes()
                     .withFix(unannotated)
                     .build();
         });
