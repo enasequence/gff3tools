@@ -28,6 +28,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 /**
  * Converts TSV files to GFF3 format.
@@ -70,62 +71,59 @@ public class TSVToGFF3Converter implements Converter {
     public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException {
 
-        // Translation sequences go to a temp file (used internally for GFF3 output)
-        Path translationFastaPath = createTempFastaPath();
+        GFF3Header header = new GFF3Header(GFF3Header.DEFAULT_VERSION);
+        GFF3Species species = null;
+        List<GFF3Annotation> annotations = new ArrayList<>();
 
-        try {
-            GFF3Header header = new GFF3Header(GFF3Header.DEFAULT_VERSION);
-            GFF3Species species = null;
-            List<GFF3Annotation> annotations = new ArrayList<>();
+        GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
+        GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(validationEngine, directivesFactory);
 
-            GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
-            GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(validationEngine, directivesFactory);
+        TSVEntryReader entryReader = new TSVEntryReader(reader);
+        try (BufferedWriter nucleotideFastaWriter = createNucleotideFastaWriter()) {
+            LOG.info(
+                    "Converting TSV file using template: {}",
+                    entryReader.getTemplateInfo().getName());
 
-            TSVEntryReader entryReader = new TSVEntryReader(reader);
-            try (BufferedWriter nucleotideFastaWriter = createNucleotideFastaWriter()) {
-                LOG.info(
-                        "Converting TSV file using template: {}",
-                        entryReader.getTemplateInfo().getName());
+            Entry entry;
+            int entryCount = 0;
+            while ((entry = entryReader.read()) != null) {
+                entryCount++;
 
-                Entry entry;
-                int entryCount = 0;
-                while ((entry = entryReader.read()) != null) {
-                    entryCount++;
-
-                    // Write nucleotide sequence to FASTA if writer is provided (streaming)
-                    if (nucleotideFastaWriter != null) {
-                        ConversionUtils.writeNucleotideSequence(entry, nucleotideFastaWriter);
-                    }
-
-                    if (species == null) {
-                        species = directivesFactory.createSpecies(entry, null);
-                    }
-
-                    annotations.add(annotationFactory.from(entry));
-                }
-
-                LOG.info("Converted {} entries from TSV", entryCount);
+                // Write nucleotide sequence to FASTA if writer is provided (streaming)
                 if (nucleotideFastaWriter != null) {
-                    LOG.info("Wrote nucleotide sequences to FASTA file: {}", fastaOutputPath);
+                    ConversionUtils.writeNucleotideSequence(entry, nucleotideFastaWriter);
                 }
-            } catch (IOException e) {
-                throw new ReadException("Error reading TSV file", e);
+
+                if (species == null) {
+                    species = directivesFactory.createSpecies(entry, null);
+                }
+
+                annotations.add(annotationFactory.from(entry));
             }
 
-            GFF3File file = GFF3File.builder()
-                    .header(header)
-                    .species(species)
-                    .annotations(annotations)
-                    .fastaFilePath(translationFastaPath)
-                    .parsingWarnings(validationEngine.getParsingWarnings())
-                    .build();
-
-            file.writeGFF3String(writer);
-
-            validationEngine.throwIfErrorsCollected();
-        } finally {
-            deleteTempFile(translationFastaPath);
+            LOG.info("Converted {} entries from TSV", entryCount);
+            if (nucleotideFastaWriter != null) {
+                LOG.info("Wrote nucleotide sequences to FASTA file: {}", fastaOutputPath);
+            }
+        } catch (IOException e) {
+            throw new ReadException("Error reading TSV file", e);
         }
+
+        TranslationState translationState = validationEngine.getContext().contains(TranslationState.class)
+                ? validationEngine.getContext().get(TranslationState.class)
+                : null;
+
+        GFF3File file = GFF3File.builder()
+                .header(header)
+                .species(species)
+                .annotations(annotations)
+                .translationState(translationState)
+                .parsingWarnings(validationEngine.getParsingWarnings())
+                .build();
+
+        file.writeGFF3String(writer);
+
+        validationEngine.throwIfErrorsCollected();
     }
 
     /**
@@ -141,30 +139,6 @@ public class TSVToGFF3Converter implements Converter {
             return Files.newBufferedWriter(fastaOutputPath);
         } catch (IOException e) {
             throw new WriteException("Error creating FASTA output file: " + fastaOutputPath, e);
-        }
-    }
-
-    /**
-     * Creates a temporary FASTA file for storing translation sequences.
-     *
-     * @throws WriteException if the temp file cannot be created
-     */
-    private Path createTempFastaPath() throws WriteException {
-        try {
-            return Files.createTempFile("gff3-translation-tsv", ".fasta");
-        } catch (IOException e) {
-            throw new WriteException("Unable to create temp fasta file", e);
-        }
-    }
-
-    /**
-     * Deletes the temporary FASTA file.
-     */
-    private void deleteTempFile(Path path) {
-        try {
-            Files.deleteIfExists(path);
-        } catch (Exception e) {
-            LOG.warn("Unable to delete temp file: {}", path, e);
         }
     }
 }
