@@ -705,7 +705,7 @@ public class MainIntegrationTest {
         }
     }
 
-    // ── TSV to GFF3 conversion integration tests ──
+    // TSV to GFF3 conversion integration tests
 
     @Test
     void testTsvToGff3_successfulConversion() throws IOException {
@@ -841,6 +841,34 @@ public class MainIntegrationTest {
         } finally {
             Files.deleteIfExists(outputGff3);
             System.setErr(originalErr);
+        }
+    }
+
+    @Test
+    void testTsvToGff3_cdsTemplate_translationsInOutput() throws IOException {
+        Path inputFile = Path.of("src/test/resources/tsvtogff3/cds-single-entry.tsv");
+        Path outputGff3 = Files.createTempFile("output", ".gff3");
+
+        String[] args =
+                new String[] {"conversion", "-f", "tsv", "-t", "gff3", inputFile.toString(), outputGff3.toString()};
+
+        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
+            mock.when(() -> Main.main(any())).thenCallRealMethod();
+            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
+            Main.main(args);
+
+            mock.verify(() -> Main.exit(0));
+
+            assertTrue(Files.exists(outputGff3), "GFF3 output file should exist");
+            String gff3Content = Files.readString(outputGff3);
+            assertTrue(gff3Content.contains("##gff-version"), "GFF3 should have version header");
+            assertTrue(gff3Content.contains("##FASTA"), "GFF3 should contain ##FASTA section for translations");
+            // ATGGCT...GCT(×32)...TGA translates to Met + Ala×32 (stop excluded)
+            assertTrue(
+                    gff3Content.contains("MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"),
+                    "GFF3 should contain translated amino acid sequence");
+        } finally {
+            Files.deleteIfExists(outputGff3);
         }
     }
 
