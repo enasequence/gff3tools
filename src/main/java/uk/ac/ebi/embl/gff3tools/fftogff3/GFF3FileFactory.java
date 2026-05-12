@@ -29,16 +29,10 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 public class GFF3FileFactory {
-    ValidationEngine engine;
-    Path fastaFilePath = null;
+    private final ValidationEngine engine;
 
     public GFF3FileFactory(ValidationEngine engine) {
         this.engine = engine;
-    }
-
-    public GFF3FileFactory(ValidationEngine engine, Path fastaFilePath) {
-        this.engine = engine;
-        this.fastaFilePath = fastaFilePath;
     }
 
     public GFF3File from(EmblEntryReader entryReader, MasterMetadata masterMetadata)
@@ -68,7 +62,6 @@ public class GFF3FileFactory {
                 .header(header)
                 .species(species)
                 .annotations(annotations)
-                .fastaFilePath(fastaFilePath)
                 .translationState(translationState)
                 .parsingWarnings(engine.getParsingWarnings())
                 .build();
