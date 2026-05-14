@@ -249,16 +249,15 @@ public enum ConversionUtils {
      * @return the effective accession, or null if neither is available
      */
     public static String getEffectiveAccession(Entry entry) {
-        if (entry == null || entry.getSequence() == null) {
-            return entry != null ? entry.getSubmitterAccession() : null;
+        if (entry == null) {
+            return null;
         }
-
-        String accession = entry.getSequence().getAccession();
-        if (accession != null && !accession.isEmpty()) {
-            return accession;
+        if (entry.getSequence() != null) {
+            String accession = entry.getSequence().getAccession();
+            if (accession != null && !accession.isEmpty()) {
+                return accession;
+            }
         }
-
-        // Fall back to submitter accession (e.g., ENTRYNUMBER from TSV files)
         return entry.getSubmitterAccession();
     }
 

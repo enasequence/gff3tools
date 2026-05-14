@@ -78,8 +78,8 @@ public class TSVToGFF3Converter implements Converter {
         GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
         GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(validationEngine, directivesFactory);
 
-        TSVEntryReader entryReader = new TSVEntryReader(reader);
-        try (BufferedWriter nucleotideFastaWriter = createNucleotideFastaWriter()) {
+        try (TSVEntryReader entryReader = new TSVEntryReader(reader);
+                BufferedWriter nucleotideFastaWriter = createNucleotideFastaWriter()) {
             LOG.info(
                     "Converting TSV file using template: {}",
                     entryReader.getTemplateInfo().getName());
