@@ -14,7 +14,6 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import io.vavr.Function0;
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -24,14 +23,9 @@ import java.nio.file.Path;
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
-import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
-import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
-import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
-import uk.ac.ebi.embl.gff3tools.metadata.*;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.CliFastaHeaderSource;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FileFastaHeaderSource;
@@ -216,92 +210,6 @@ public abstract class AbstractCommand implements Runnable {
         }
 
         return headerProvider;
-    }
-
-    /**
-     * Builds an {@link MasterMetadataProvider} from the optional {@code --master-entry} path
-     * or {@code --taxon-id}. The two options are mutually exclusive.
-     *
-     * <p>JSON and EMBL master-entry sources are added eagerly. Taxon-ID sources are deferred
-     * to the validation context setup so they can resolve a
-     * {@link uk.ac.ebi.embl.gff3tools.metadata.TaxonProvider}.
-     */
-    protected MasterMetadataProvider buildMetadataProvider(Path masterEntryPath, Long taxonId) throws ExitException {
-        if (masterEntryPath != null && taxonId != null) {
-            throw new CLIException("--master-entry and --taxon-id are mutually exclusive.");
-        }
-        MasterMetadataProvider provider = new MasterMetadataProvider();
-        if (taxonId != null) {
-            provider.setTaxonId(taxonId);
-            return provider;
-        }
-        if (masterEntryPath != null) {
-            provider.addSource(parseMasterEntrySource(masterEntryPath));
-        }
-        return provider;
-    }
-
-    /**
-     * Parses a master entry file based on its extension.
-     * .json -> MasterEntry JSON deserialized into MasterMetadata
-     * .embl/.ff -> EMBL flatfile parsed into Entry and adapted to MasterMetadata
-     */
-    protected MasterMetadataSource parseMasterEntrySource(Path path) throws ExitException {
-        String ext = getFileExtension(path).orElse("").toLowerCase();
-        return switch (ext) {
-            case "json" -> parseMasterEntryJson(path);
-            case "embl", "ff" -> parseMasterEntryEmbl(path);
-            default ->
-                throw new CLIException("Unrecognized --master-entry file extension '." + ext
-                        + "'. Supported: .json (MasterEntry JSON), .embl/.ff (EMBL flatfile).");
-        };
-    }
-
-    /**
-     * Parses a MasterEntry JSON file into an MasterMetadata.
-     */
-    private MasterEntryJsonMetadataSource parseMasterEntryJson(Path path) throws ExitException {
-        if (!Files.exists(path)) {
-            throw new NonExistingFile("The --master-entry file does not exist: " + path, null);
-        }
-        try {
-            ObjectMapper mapper = JsonMapper.builder()
-                    .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
-                    .build();
-            MasterMetadata meta = mapper.readValue(path.toFile(), MasterMetadata.class);
-            return new MasterEntryJsonMetadataSource(meta);
-        } catch (NoSuchFileException e) {
-            throw new NonExistingFile("The --master-entry file does not exist: " + path, e);
-        } catch (IOException e) {
-            throw new ReadException(
-                    "Failed to read --master-entry JSON file '%s': %s".formatted(path, e.getMessage()), e);
-        }
-    }
-
-    /**
-     * Parses an EMBL flatfile master entry into an EmblEntryMetadataSource adapter.
-     */
-    private EmblEntryMetadataSource parseMasterEntryEmbl(Path path) throws ExitException {
-        if (!Files.exists(path)) {
-            throw new NonExistingFile("The --master-entry file does not exist: " + path, null);
-        }
-        try (BufferedReader reader = Files.newBufferedReader(path)) {
-            ReaderOptions readerOptions = new ReaderOptions();
-            readerOptions.setIgnoreSequence(true);
-            EmblEntryReader entryReader =
-                    new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "master_reader", readerOptions);
-            Entry masterEntry = null;
-            while (entryReader.read() != null && entryReader.isEntry()) {
-                masterEntry = entryReader.getEntry();
-            }
-            if (masterEntry == null) {
-                throw new CLIException("No entry found in --master-entry EMBL file: " + path);
-            }
-            return new EmblEntryMetadataSource(masterEntry);
-        } catch (IOException e) {
-            throw new ReadException(
-                    "Failed to read --master-entry EMBL file '%s': %s".formatted(path, e.getMessage()), e);
-        }
     }
 
     /**
