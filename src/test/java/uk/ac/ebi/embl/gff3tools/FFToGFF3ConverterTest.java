@@ -23,6 +23,7 @@ import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.gff3tools.fftogff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
+import uk.ac.ebi.embl.gff3tools.metadata.EmblEntryMetadataSource;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 
@@ -122,7 +123,7 @@ class FFToGFF3ConverterTest {
             }
             if (masterEntry == null) return null;
             MasterMetadataProvider provider = new MasterMetadataProvider();
-            provider.setEmblMasterEntry(masterEntry);
+            provider.addSource(new EmblEntryMetadataSource(masterEntry));
             return provider;
         } catch (IOException e) {
             throw new RuntimeException(e);

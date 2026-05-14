@@ -80,7 +80,7 @@ class EmblEntryMetadataSourceTest {
     @Test
     void mapsAllFieldsFromPopulatedEntry() {
         Entry entry = createPopulatedEntry();
-        EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry, new TaxonProvider());
+        EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry);
 
         MasterMetadata meta = source.getMetadata();
         assertNotNull(meta);
@@ -121,7 +121,7 @@ class EmblEntryMetadataSourceTest {
     @Test
     void returnsSameMetadataForAnySeqId() {
         Entry entry = createPopulatedEntry();
-        EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry, new TaxonProvider());
+        EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry);
 
         Optional<MasterMetadata> meta1 = source.getMetadata("seq1");
         Optional<MasterMetadata> meta2 = source.getMetadata("anything_else");
@@ -134,7 +134,7 @@ class EmblEntryMetadataSourceTest {
     @Test
     void handlesMinimalEntry() {
         Entry entry = entryFactory.createEntry();
-        EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry, new TaxonProvider());
+        EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry);
 
         MasterMetadata meta = source.getMetadata();
         assertNotNull(meta);
@@ -146,44 +146,18 @@ class EmblEntryMetadataSourceTest {
     }
 
     @Test
-    void fallsBackToDbXrefForTaxon() {
-        // Entry with a plain organism qualifier (not OrganismQualifier) and a db_xref
+    void recoversTaxonIdFromDbXref() {
         Entry entry = entryFactory.createEntry();
         SourceFeature source = featureFactory.createSourceFeature();
         source.addQualifier(qualifierFactory.createQualifier("organism", "Unknown species"));
         source.addQualifier(qualifierFactory.createQualifier("db_xref", "taxon:12345"));
         entry.addFeature(source);
 
-        Taxon resolvedTaxon = taxonFactory.createTaxon();
-        resolvedTaxon.setTaxId(12345L);
-        resolvedTaxon.setScientificName("Resolved species");
-        resolvedTaxon.setCommonName("resolved common name");
-        resolvedTaxon.setLineage("Eukaryota; Test lineage;");
-
-        TaxonProvider taxonProvider = new TaxonProvider();
-        taxonProvider.addSource(taxId -> taxId.equals(12345L) ? Optional.of(resolvedTaxon) : Optional.empty());
-
-        EmblEntryMetadataSource metaSource = new EmblEntryMetadataSource(entry, taxonProvider);
+        EmblEntryMetadataSource metaSource = new EmblEntryMetadataSource(entry);
         MasterMetadata meta = metaSource.getMetadata();
 
         assertEquals("12345", meta.getTaxon());
-        assertEquals("Resolved species", meta.getScientificName());
-        assertEquals("resolved common name", meta.getCommonName());
-        assertEquals("Eukaryota; Test lineage;", meta.getLineage());
-    }
-
-    @Test
-    void emptyTaxonProviderDoesNotResolveTaxonFromDbXref() {
-        Entry entry = entryFactory.createEntry();
-        SourceFeature source = featureFactory.createSourceFeature();
-        source.addQualifier(qualifierFactory.createQualifier("db_xref", "taxon:12345"));
-        entry.addFeature(source);
-
-        EmblEntryMetadataSource metaSource = new EmblEntryMetadataSource(entry, new TaxonProvider());
-        MasterMetadata meta = metaSource.getMetadata();
-
-        assertEquals("12345", meta.getTaxon());
-        assertNull(meta.getScientificName());
+        assertEquals("Unknown species", meta.getScientificName());
         assertNull(meta.getCommonName());
         assertNull(meta.getLineage());
     }
@@ -195,7 +169,7 @@ class EmblEntryMetadataSourceTest {
         seq.setTopology(Sequence.Topology.CIRCULAR);
         entry.setSequence(seq);
 
-        EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry, new TaxonProvider());
+        EmblEntryMetadataSource source = new EmblEntryMetadataSource(entry);
         MasterMetadata meta = source.getMetadata();
 
         assertEquals("circular", meta.getTopology());

@@ -15,12 +15,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.api.entry.EntryFactory;
-import uk.ac.ebi.embl.api.entry.Text;
-import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
-import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
-import uk.ac.ebi.ena.taxonomy.taxon.TaxonFactory;
 
 class MasterMetadataProviderTest {
 
@@ -47,7 +41,6 @@ class MasterMetadataProviderTest {
     void firstSourceWinsEntirely() {
         MasterMetadata source1 = new MasterMetadata();
         source1.setDescription("From source 1");
-        // taxon is null — but source 1 still wins entirely
 
         MasterMetadata source2 = new MasterMetadata();
         source2.setDescription("From source 2");
@@ -69,7 +62,7 @@ class MasterMetadataProviderTest {
         meta.setDescription("From second source");
 
         MasterMetadataProvider provider = new MasterMetadataProvider();
-        provider.addSource(seqId -> Optional.empty()); // this source has nothing
+        provider.addSource(seqId -> Optional.empty());
         provider.addSource(seqId -> Optional.of(meta));
 
         Optional<MasterMetadata> result = provider.getMetadata("seq1");
@@ -94,61 +87,10 @@ class MasterMetadataProviderTest {
         provider.addSource(seqId -> Optional.of(source2));
 
         MasterMetadata result = provider.getMetadata("seq1").get();
-        assertSame(source1, result, "Should return the exact object from the first matching source");
+        assertSame(source1, result);
         assertEquals("desc", result.getDescription());
         assertEquals("genomic DNA", result.getMoleculeType());
-        assertNull(result.getTaxon(), "Fields from source2 should not be present");
-    }
-
-    @Test
-    void emblMasterEntryMaterializedLazilyOnContextGet() {
-        EntryFactory entryFactory = new EntryFactory();
-        Entry entry = entryFactory.createEntry();
-        entry.setPrimaryAccession("AB123456");
-        entry.setDescription(new Text("Lazy materialization"));
-
-        MasterMetadataProvider provider = new MasterMetadataProvider();
-        provider.setEmblMasterEntry(entry);
-
-        // Before context resolution, no source has been materialized.
-        assertTrue(provider.getMetadata("any").isEmpty());
-
-        // Resolving via the context registers the EmblEntryMetadataSource.
-        ValidationContext ctx = new ValidationContext();
-        ctx.register(TaxonProvider.class, new TaxonProvider());
-        ctx.register(MasterMetadataProvider.class, provider);
-        provider.get(ctx);
-
-        Optional<MasterMetadata> meta = provider.getMetadata("any");
-        assertTrue(meta.isPresent());
-        assertEquals("AB123456", meta.get().getAccession());
-        assertEquals("Lazy materialization", meta.get().getDescription());
-    }
-
-    @Test
-    void taxonIdMaterializedLazilyOnContextGet() {
-        TaxonFactory taxonFactory = new TaxonFactory();
-        Taxon resolved = taxonFactory.createTaxon();
-        resolved.setTaxId(9606L);
-        resolved.setScientificName("Homo sapiens");
-
-        TaxonProvider taxonProvider = new TaxonProvider();
-        taxonProvider.addSource(taxId -> taxId.equals(9606L) ? Optional.of(resolved) : Optional.empty());
-
-        MasterMetadataProvider provider = new MasterMetadataProvider();
-        provider.setTaxonId(9606L);
-
-        // Before context resolution, no source has been materialized.
-        assertTrue(provider.getMetadata("any").isEmpty());
-
-        ValidationContext ctx = new ValidationContext();
-        ctx.register(TaxonProvider.class, taxonProvider);
-        ctx.register(MasterMetadataProvider.class, provider);
-        provider.get(ctx);
-
-        MasterMetadata meta = provider.getMetadata("any").orElseThrow();
-        assertEquals("9606", meta.getTaxon());
-        assertEquals("Homo sapiens", meta.getScientificName());
+        assertNull(result.getTaxon());
     }
 
     @Test
@@ -159,7 +101,6 @@ class MasterMetadataProviderTest {
 
         MasterEntryJsonMetadataSource source = new MasterEntryJsonMetadataSource(metadata);
 
-        // Returns same metadata for any seqId
         Optional<MasterMetadata> result = source.getMetadata("any_seq_id");
         assertTrue(result.isPresent());
         assertEquals("GCA_001", result.get().getId());
