@@ -19,6 +19,8 @@ import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.gff3tools.metadata.TaxonIdProvider;
+import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
@@ -52,7 +54,11 @@ public class ValidationCommand extends AbstractCommand {
                     buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
             CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
 
-            try (ValidationEngine validationEngine = initValidationEngine(ruleOverrides, compositeProvider)) {
+            ContextProvider<?>[] providers = taxonId != null
+                    ? new ContextProvider<?>[] {compositeProvider, new TaxonIdProvider(taxonId)}
+                    : new ContextProvider<?>[] {compositeProvider};
+
+            try (ValidationEngine validationEngine = initValidationEngine(ruleOverrides, providers)) {
 
                 try (BufferedReader inputReader = getPipe(
                                 Files::newBufferedReader,

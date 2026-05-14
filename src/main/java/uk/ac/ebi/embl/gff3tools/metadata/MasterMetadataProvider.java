@@ -49,9 +49,8 @@ public class MasterMetadataProvider implements ContextProvider<MasterMetadataPro
 
     /**
      * Returns metadata without a specific seqId context. Useful for the EMBL-to-GFF3 direction
-     * where metadata is needed before any per-sequence processing. Queries sources with an
-     * empty seqId; global sources (MasterEntry, CLI JSON) will respond, per-seqId sources
-     * (FASTA-embedded) will not.
+     * where metadata is needed before any per-sequence processing. Sources that key off seqId
+     * will return empty; global sources (MasterEntry JSON, EMBL master entry) will respond.
      */
     public Optional<MasterMetadata> getGlobalMetadata() {
         return getMetadata("");
