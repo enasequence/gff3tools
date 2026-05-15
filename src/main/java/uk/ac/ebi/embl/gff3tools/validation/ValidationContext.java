@@ -76,4 +76,9 @@ public class ValidationContext {
             }
         }
     }
+
+    /** For testing, checks the number of available providers **/
+    protected int getNumberOfProviders() {
+        return providers.size();
+    }
 }
