@@ -19,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.gff3tools.metadata.TaxonIdProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
@@ -30,11 +29,6 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 @CommandLine.Command(name = "validation", description = "Performs validations on gff3 files")
 @Slf4j
 public class ValidationCommand extends AbstractCommand {
-
-    @CommandLine.Option(
-            names = "--taxon-id",
-            description = "Optional NCBI taxon ID used by taxonomy-aware validation rules.")
-    public Long taxonId;
 
     @CommandLine.Mixin
     public SequenceOptions sequenceOptions;
@@ -54,9 +48,7 @@ public class ValidationCommand extends AbstractCommand {
                     buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
             CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
 
-            ContextProvider<?>[] providers = taxonId != null
-                    ? new ContextProvider<?>[] {compositeProvider, new TaxonIdProvider(taxonId)}
-                    : new ContextProvider<?>[] {compositeProvider};
+            ContextProvider<?>[] providers = new ContextProvider<?>[] {compositeProvider};
 
             try (ValidationEngine validationEngine = initValidationEngine(ruleOverrides, providers)) {
 
