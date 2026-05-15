@@ -12,16 +12,15 @@ package uk.ac.ebi.embl.gff3tools.cli;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,10 +28,13 @@ import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.Converter;
 import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.exception.FormatSupportException;
+import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
+import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToGFF3Converter;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
@@ -42,6 +44,25 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 @CommandLine.Command(name = "conversion", description = "Performs format conversions to or from gff3")
 @Slf4j
 public class FileConversionCommand extends AbstractCommand {
+
+    private static final int GZIP_MAGIC_BYTE1 = 0x1f;
+    private static final int GZIP_MAGIC_BYTE2 = 0x8b;
+
+    @CommandLine.Option(names = "-f", description = "The type of the input file to be converted")
+    public ConversionFileFormat fromFileType;
+
+    @CommandLine.Option(names = "-t", description = "The type of the file to convert to")
+    public ConversionFileFormat toFileType;
+
+    @CommandLine.Option(
+            names = {"--master-entry", "-m"},
+            description = "Optional master entry file. Accepts MasterEntry JSON (.json) or EMBL flatfile (.embl/.ff).")
+    public Path masterFilePath;
+
+    @CommandLine.Option(
+            names = {"--output-sequence", "-os"},
+            description = "Output path for nucleotide sequences in FASTA format (TSV to GFF3 conversion only)")
+    public Path fastaOutputPath;
 
     @CommandLine.Parameters(
             paramLabel = "[output-file]",
@@ -78,10 +99,7 @@ public class FileConversionCommand extends AbstractCommand {
             MasterMetadataProvider metadataProvider = buildMetadataProvider(masterFilePath);
             FastaHeaderProvider headerProvider = buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
 
-            try (BufferedReader inputReader = getPipe(
-                            Files::newBufferedReader,
-                            () -> new BufferedReader(new InputStreamReader(System.in)),
-                            inputFilePath);
+            try (BufferedReader inputReader = createInputReader();
                     BufferedWriter outputWriter =
                             writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
                 fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
@@ -126,13 +144,49 @@ public class FileConversionCommand extends AbstractCommand {
         return new BufferedWriter(new OutputStreamWriter(System.out));
     }
 
+    /**
+     * Creates a BufferedReader for the input file.
+     * Automatically detects and handles gzip-compressed files.
+     */
+    private BufferedReader createInputReader() throws NonExistingFile, ReadException {
+        if (inputFilePath == null || inputFilePath.toString().isEmpty()) {
+            return new BufferedReader(new InputStreamReader(System.in));
+        }
+
+        boolean gzipped;
+        try (InputStream peekStream = Files.newInputStream(inputFilePath)) {
+            int byte1 = peekStream.read();
+            int byte2 = peekStream.read();
+            gzipped = (byte1 == GZIP_MAGIC_BYTE1 && byte2 == GZIP_MAGIC_BYTE2);
+        } catch (NoSuchFileException e) {
+            throw new NonExistingFile("The file does not exist: " + inputFilePath, e);
+        } catch (IOException e) {
+            throw new ReadException("Error opening file: " + inputFilePath, e);
+        }
+
+        try {
+            if (gzipped) {
+                log.debug("Detected gzip-compressed input file");
+                return new BufferedReader(
+                        new InputStreamReader(new GZIPInputStream(Files.newInputStream(inputFilePath))));
+            }
+            return new BufferedReader(new InputStreamReader(Files.newInputStream(inputFilePath)));
+        } catch (IOException e) {
+            throw new ReadException("Error opening file: " + inputFilePath, e);
+        }
+    }
+
     private Converter getConverter(
             ValidationEngine engine, ConversionFileFormat inputFileType, ConversionFileFormat outputFileType)
             throws FormatSupportException, CLIException {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
             return new Gff3ToFFConverter(engine, inputFilePath);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
+            // Master metadata (from -m) is registered on the engine via buildMetadataProvider
             return new FFToGff3Converter(engine);
+        } else if (inputFileType == ConversionFileFormat.tsv && outputFileType == ConversionFileFormat.gff3) {
+            // TSV to GFF3 conversion using sequencetools template processing
+            return new TSVToGFF3Converter(engine, fastaOutputPath);
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }
