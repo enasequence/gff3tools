@@ -75,14 +75,13 @@ public class TSVToGFF3Converter implements Converter {
      *
      * @param validationEngine the validation engine to use
      * @param fastaOutputPath optional output path for FASTA sequences; if null, sequences are discarded
-*
+     *
      */
     public TSVToGFF3Converter(ValidationEngine validationEngine, Path fastaOutputPath, Path sourceOutputPath) {
         this.validationEngine = validationEngine;
         this.fastaOutputPath = fastaOutputPath;
         this.sourceOutputPath = sourceOutputPath;
     }
-
 
     @Override
     public void convert(BufferedReader reader, BufferedWriter writer)
