@@ -103,10 +103,9 @@ public class TSVToGFF3Converter implements Converter {
             Entry entry;
             List<SourceFeature> sourceFeatures = new ArrayList<>();
             int entryCount = 0;
+            boolean wroteSource = false;
             while ((entry = entryReader.read()) != null) {
                 entryCount++;
-
-                SourceFeature sourceFeature = entry.getPrimarySourceFeature();
 
                 // Write nucleotide sequence to FASTA if writer is provided (streaming)
                 if (nucleotideFastaWriter != null) {

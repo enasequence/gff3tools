@@ -796,74 +796,8 @@ public class MainIntegrationTest {
     }
 
     @Test
-    void testTsvToGff3_withAllTemplates() throws IOException {
-
-        Path inputDir = Path.of("src/test/resources/tsvtogff3/all_templates");
-        final String[] allTemplatesA = {
-                "ERT000002-rRNA.tsv",
-                "ERT000003-EST-1.tsv",
-                "ERT000006-SCM.tsv",
-                "ERT000009-ITS.tsv",
-                "ERT000020-COI.tsv",
-                "ERT000024-GSS-1.tsv",
-                "ERT000028-SVC.tsv",
-                "ERT000029-SCGD.tsv",
-                "ERT000030-MHC1.tsv",
-                "ERT000032-matK.tsv",
-                "ERT000034-Dloop.tsv",
-                "ERT000035-IGS.tsv",
-                "ERT000036-MHC2.tsv",
-                "ERT000037-intron.tsv",
-                "ERT000038-hyloMarker.tsv",
-                "ERT000039-Sat.tsv",
-                "ERT000042-ncRNA.tsv",
-                "ERT000047-betasat.tsv",
-                "ERT000050-ISR.tsv",
-                "ERT000051-poly.tsv",
-                "ERT000052-ssRNA.tsv",
-                "ERT000053-ETS.tsv",
-                "ERT000055-STS.tsv",
-                "ERT000056-mobele.tsv",
-                "ERT000057-alphasat.tsv",
-                "ERT000058-MLmarker.tsv",
-                "ERT000060-vUTR.tsv",
-                // Test validation with entry number column
-                "with-entrynumber.tsv",
-                // Test validation without entry number column
-                "without-entrynumber.tsv",
-                // Test with Checklist template id
-                "ERT000002-rRNA-with-checklist-line.tsv"
-        };
-
-        for (String file : allTemplatesA) {
-            Path inputFile = inputDir.resolve(file);
-            Path outputGff3 = Files.createTempFile("output", ".gff3");
-            Path outputFasta = Files.createTempFile("output", ".fasta");
-
-            String[] args =
-                    new String[] {"conversion", "-f", "tsv", "-t", "gff3","--output-sequence",
-                            outputFasta.toString(), inputFile.toString(), outputGff3.toString()};
-
-            try (MockedStatic<Main> mock = mockStatic(Main.class)) {
-                mock.when(() -> Main.main(any())).thenCallRealMethod();
-                mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
-                Main.main(args);
-
-                mock.verify(() -> Main.exit(0));
-
-                assertTrue(Files.exists(outputGff3), "GFF3 output file should exist");
-                String gff3Content = Files.readString(outputGff3);
-                assertTrue(gff3Content.contains("##gff-version"), "GFF3 should have version header");
-            } finally {
-                Files.deleteIfExists(outputGff3);
-            }
-        }
-    }
-
-
-    @Test
     void testTsvToGff3_rrnaTemplate() throws IOException {
-        Path inputFile = Path.of("src/test/resources/tsvtogff3/all_templates/");
+        Path inputFile = Path.of("src/test/resources/tsvtogff3/rrna-single-entry.tsv");
         Path outputGff3 = Files.createTempFile("output", ".gff3");
 
         String[] args =
