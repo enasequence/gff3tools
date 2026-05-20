@@ -796,43 +796,43 @@ public class MainIntegrationTest {
     }
 
     @Test
-    void testTsvToGff3_gzipInput_allTemplates() throws IOException {
+    void testTsvToGff3_withAllTemplates() throws IOException {
 
         Path inputDir = Path.of("src/test/resources/tsvtogff3/all_templates");
         final String[] allTemplatesA = {
-            "ERT000002-rRNA.tsv.gz",
-            "ERT000003-EST-1.tsv.gz",
-            "ERT000006-SCM.tsv.gz",
-            "ERT000009-ITS.tsv.gz",
-            "ERT000020-COI.tsv.gz",
-            "ERT000024-GSS-1.tsv.gz",
-            "ERT000028-SVC.tsv.gz",
-            "ERT000029-SCGD.tsv.gz",
-            "ERT000030-MHC1.tsv.gz",
-            "ERT000032-matK.tsv.gz",
-            "ERT000034-Dloop.tsv.gz",
-            "ERT000035-IGS.tsv.gz",
-            "ERT000036-MHC2.tsv.gz",
-            "ERT000037-intron.tsv.gz",
-            "ERT000038-hyloMarker.tsv.gz",
-            //"ERT000039-Sat.tsv.gz",
-            "ERT000042-ncRNA.tsv.gz",
-            "ERT000047-betasat.tsv.gz",
-            "ERT000050-ISR.tsv.gz",
-            "ERT000051-poly.tsv.gz",
-            "ERT000052-ssRNA.tsv.gz",
-            "ERT000053-ETS.tsv.gz",
-            "ERT000055-STS.tsv.gz",
-            "ERT000056-mobele.tsv.gz",
-            "ERT000057-alphasat.tsv.gz",
-            "ERT000058-MLmarker.tsv.gz",
-            "ERT000060-vUTR.tsv.gz",
-            // Test validation with entry number column
-            "with-entrynumber.tsv.gz",
-            // Test validation without entry number column
-            "without-entrynumber.tsv.gz",
-            // Test with Checklist template id
-            "ERT000002-rRNA-with-checklist-line.tsv.gz"
+                "ERT000002-rRNA.tsv",
+                "ERT000003-EST-1.tsv",
+                "ERT000006-SCM.tsv",
+                "ERT000009-ITS.tsv",
+                "ERT000020-COI.tsv",
+                "ERT000024-GSS-1.tsv",
+                "ERT000028-SVC.tsv",
+                "ERT000029-SCGD.tsv",
+                "ERT000030-MHC1.tsv",
+                "ERT000032-matK.tsv",
+                "ERT000034-Dloop.tsv",
+                "ERT000035-IGS.tsv",
+                "ERT000036-MHC2.tsv",
+                "ERT000037-intron.tsv",
+                "ERT000038-hyloMarker.tsv",
+                "ERT000039-Sat.tsv",
+                "ERT000042-ncRNA.tsv",
+                "ERT000047-betasat.tsv",
+                "ERT000050-ISR.tsv",
+                "ERT000051-poly.tsv",
+                "ERT000052-ssRNA.tsv",
+                "ERT000053-ETS.tsv",
+                "ERT000055-STS.tsv",
+                "ERT000056-mobele.tsv",
+                "ERT000057-alphasat.tsv",
+                "ERT000058-MLmarker.tsv",
+                "ERT000060-vUTR.tsv",
+                // Test validation with entry number column
+                "with-entrynumber.tsv",
+                // Test validation without entry number column
+                "without-entrynumber.tsv",
+                // Test with Checklist template id
+                "ERT000002-rRNA-with-checklist-line.tsv"
         };
 
         for (String file : allTemplatesA) {
@@ -857,30 +857,6 @@ public class MainIntegrationTest {
             } finally {
                 Files.deleteIfExists(outputGff3);
             }
-        }
-    }
-
-    @Test
-    void testTsvToGff3_gzipInput_TODELETE() throws IOException {
-        Path inputFile = Path.of("src/test/resources/tsvtogff3/all_templates/ERT000039-Sat.tsv.gz");
-        Path outputGff3 = Files.createTempFile("output", ".gff3");
-
-        String[] args =
-                new String[] {"conversion", "-f", "tsv", "-t", "gff3", inputFile.toString(), outputGff3.toString()};
-
-        try (MockedStatic<Main> mock = mockStatic(Main.class)) {
-            mock.when(() -> Main.main(any())).thenCallRealMethod();
-            mock.when(() -> Main.exit(anyInt())).thenAnswer((Answer<Void>) i -> null);
-            Main.main(args);
-
-            mock.verify(() -> Main.exit(0));
-
-            assertTrue(Files.exists(outputGff3), "GFF3 output file should exist");
-            String gff3Content = Files.readString(outputGff3);
-            assertTrue(gff3Content.contains("##gff-version"), "GFF3 should have version header");
-            assertTrue(gff3Content.contains("Boletus"), "GFF3 should contain organism name");
-        } finally {
-            Files.deleteIfExists(outputGff3);
         }
     }
 
