@@ -18,6 +18,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
+import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
 import uk.ac.ebi.embl.gff3tools.Converter;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3AnnotationFactory;
@@ -46,6 +47,7 @@ public class TSVToGFF3Converter implements Converter {
     private final ValidationEngine validationEngine;
     // Optional output path for FASTA sequences; if null, sequences are discarded
     private final Path fastaOutputPath;
+    private final Path sourceOutputPath;
 
     /**
      * Creates a new TSV to GFF3 converter.
@@ -65,7 +67,22 @@ public class TSVToGFF3Converter implements Converter {
     public TSVToGFF3Converter(ValidationEngine validationEngine, Path fastaOutputPath) {
         this.validationEngine = validationEngine;
         this.fastaOutputPath = fastaOutputPath;
+        this.sourceOutputPath = null;
     }
+
+    /**
+     * Creates a new TSV to GFF3 converter.
+     *
+     * @param validationEngine the validation engine to use
+     * @param fastaOutputPath optional output path for FASTA sequences; if null, sequences are discarded
+*
+     */
+    public TSVToGFF3Converter(ValidationEngine validationEngine, Path fastaOutputPath, Path sourceOutputPath) {
+        this.validationEngine = validationEngine;
+        this.fastaOutputPath = fastaOutputPath;
+        this.sourceOutputPath = sourceOutputPath;
+    }
+
 
     @Override
     public void convert(BufferedReader reader, BufferedWriter writer)
@@ -85,9 +102,12 @@ public class TSVToGFF3Converter implements Converter {
                     entryReader.getTemplateInfo().getName());
 
             Entry entry;
+            List<SourceFeature> sourceFeatures = new ArrayList<>();
             int entryCount = 0;
             while ((entry = entryReader.read()) != null) {
                 entryCount++;
+
+                SourceFeature sourceFeature = entry.getPrimarySourceFeature();
 
                 // Write nucleotide sequence to FASTA if writer is provided (streaming)
                 if (nucleotideFastaWriter != null) {
