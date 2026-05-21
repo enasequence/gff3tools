@@ -245,20 +245,14 @@ public enum ConversionUtils {
      * <p>This is useful for TSV-based entries where the sequence accession is not set
      * (assigned after submission), but the submitter accession (ENTRYNUMBER) is available.
      *
+     * Falls back to method from the {@link FastaFileWriter} to avoid code duplication accross accession generators
+     * that should wprk the same.
+     *
      * @param entry the Entry to get the accession from
      * @return the effective accession, or null if neither is available
      */
     public static String getEffectiveAccession(Entry entry) {
-        if (entry == null) {
-            return null;
-        }
-        if (entry.getSequence() != null) {
-            String accession = entry.getSequence().getAccession();
-            if (accession != null && !accession.isEmpty()) {
-                return accession;
-            }
-        }
-        return entry.getSubmitterAccession();
+        return FastaFileWriter.getEffectiveAccession(entry);
     }
 
     /**
@@ -268,22 +262,17 @@ public enum ConversionUtils {
      *
      * @param entry the Entry containing the sequence to write (may be null)
      * @param fastaWriter the writer to write the FASTA output to
+     * @param headerFormat the headerFormat which the {@link FastaFileWriter will use}
      * @throws WriteException if an I/O error occurs while writing
      */
     public static void writeNucleotideSequence(
-            Entry entry, BufferedWriter fastaWriter /*, TSVToGFF3Converter.FastaHeaderType fastaHeaderType*/)
+            Entry entry, BufferedWriter fastaWriter, FastaFileWriter.FastaHeaderFormat headerFormat)
             throws WriteException {
         if (entry == null || entry.getSequence() == null || entry.getSequence().getLength() == 0) {
             return;
         }
         try {
-            new FastaFileWriter(entry, fastaWriter).write();
-            /*
-            switch (fastaHeaderType) {
-                case DEFAULT ->
-                case ENA -> new  FastaFileWriter(entry, fastaWriter, FastaFileWriter.FastaHeaderFormat.ENA_HEADER_FORMAT).write(); //TODO fix
-                default -> throw new IllegalStateException("Unrecognized fasta header type: " + fastaHeaderType);
-            }*/
+            new FastaFileWriter(entry, fastaWriter, headerFormat).write();
         } catch (IOException e) {
             throw new WriteException("Error writing nucleotide sequence to FASTA", e);
         }

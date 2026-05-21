@@ -18,6 +18,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
+import uk.ac.ebi.embl.fasta.writer.FastaFileWriter;
 import uk.ac.ebi.embl.gff3tools.Converter;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3AnnotationFactory;
@@ -112,6 +113,8 @@ public class TSVToGFF3Converter implements Converter {
             boolean wroteSource = false;
             while ((entry = entryReader.read()) != null) {
                 entryCount++;
+                String accession = entry.getPrimaryAccession();
+                String seqAcc = entry.getSequence().getAccessionwithVersion();
 
                 if (sourceOutputPath != null) {
                     SourceFeatureDTO sourceFeature = new SourceFeatureDTO(entry.getPrimarySourceFeature());
@@ -120,7 +123,16 @@ public class TSVToGFF3Converter implements Converter {
 
                 // Write nucleotide sequence to FASTA if writer is provided (streaming)
                 if (nucleotideFastaWriter != null) {
-                    ConversionUtils.writeNucleotideSequence(entry, nucleotideFastaWriter);
+                    switch (fastaHeaderType) {
+                        case DEFAULT ->
+                            ConversionUtils.writeNucleotideSequence(
+                                    entry,
+                                    nucleotideFastaWriter,
+                                    FastaFileWriter.FastaHeaderFormat.DEFAULT_HEADER_FORMAT);
+                        case JSON_HEADER ->
+                            ConversionUtils.writeNucleotideSequence(
+                                    entry, nucleotideFastaWriter, FastaFileWriter.FastaHeaderFormat.JSON_FASTA_HEADER);
+                    }
                 }
 
                 if (species == null) {
@@ -177,6 +189,6 @@ public class TSVToGFF3Converter implements Converter {
 
     public enum FastaHeaderType {
         DEFAULT,
-        ENA
+        JSON_HEADER
     }
 }

@@ -60,13 +60,20 @@ repositories {
     mavenCentral()
     maven {
         url "https://gitlab.ebi.ac.uk/api/v4/groups/enasequence/-/packages/maven"
+        credentials(HttpHeaderCredentials) {
+            name = "Private-Token"
+            value = gitlab_private_token
+        }
+        authentication {
+            header(HttpHeaderAuthentication)
+        }
     }
 }
 
 dependencies {
     implementation("org.projectlombok:lombok:1.18.30")
     annotationProcessor("org.projectlombok:lombok:1.18.30")
-    implementation('uk.ac.ebi.ena.sequence:sequencetools:2.+')
+    implementation('uk.ac.ebi.ena.sequence:sequencetools:2.34.1')
     implementation("uk.ac.ebi.ena:fastareader:1.1.0")
     implementation "io.vavr:vavr:0.10.5"
     implementation "org.jgrapht:jgrapht-core:1.5.2"
