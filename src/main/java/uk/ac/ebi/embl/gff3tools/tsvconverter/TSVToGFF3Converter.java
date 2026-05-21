@@ -18,7 +18,6 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
 import uk.ac.ebi.embl.gff3tools.Converter;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3AnnotationFactory;
@@ -28,6 +27,8 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
+import uk.ac.ebi.embl.gff3tools.utils.SourceFeatureDTO;
+import uk.ac.ebi.embl.gff3tools.utils.SourceFeatureUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
@@ -101,11 +102,16 @@ public class TSVToGFF3Converter implements Converter {
                     entryReader.getTemplateInfo().getName());
 
             Entry entry;
-            List<SourceFeature> sourceFeatures = new ArrayList<>();
+            List<SourceFeatureDTO> sourceFeatures = new ArrayList<>();
             int entryCount = 0;
             boolean wroteSource = false;
             while ((entry = entryReader.read()) != null) {
                 entryCount++;
+
+                if (sourceOutputPath != null) {
+                    SourceFeatureDTO sourceFeature = new SourceFeatureDTO(entry.getPrimarySourceFeature());
+                    sourceFeatures.add(sourceFeature);
+                }
 
                 // Write nucleotide sequence to FASTA if writer is provided (streaming)
                 if (nucleotideFastaWriter != null) {
@@ -121,6 +127,10 @@ public class TSVToGFF3Converter implements Converter {
 
             LOG.info("Converted {} entries from TSV", entryCount);
             if (nucleotideFastaWriter != null) {
+                LOG.info("Wrote nucleotide sequences to FASTA file: {}", fastaOutputPath);
+            }
+            if (sourceOutputPath != null) {
+                SourceFeatureUtils.dumpSourceFeatureDto(sourceFeatures, sourceOutputPath);
                 LOG.info("Wrote nucleotide sequences to FASTA file: {}", fastaOutputPath);
             }
         } catch (IOException e) {
