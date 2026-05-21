@@ -26,11 +26,13 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.SourceFeatureDTO;
 import uk.ac.ebi.embl.gff3tools.utils.SourceFeatureUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
+import uk.ac.manchester.cs.owl.explanation.ordering.EntailedAxiomTree;
 
 /**
  * Converts TSV files to GFF3 format.
@@ -48,6 +50,7 @@ public class TSVToGFF3Converter implements Converter {
     private final ValidationEngine validationEngine;
     // Optional output path for FASTA sequences; if null, sequences are discarded
     private final Path fastaOutputPath;
+    private final FastaHeaderType fastaHeaderType;
     private final Path sourceOutputPath;
 
     /**
@@ -66,9 +69,7 @@ public class TSVToGFF3Converter implements Converter {
      * @param fastaOutputPath optional output path for FASTA sequences; if null, sequences are discarded
      */
     public TSVToGFF3Converter(ValidationEngine validationEngine, Path fastaOutputPath) {
-        this.validationEngine = validationEngine;
-        this.fastaOutputPath = fastaOutputPath;
-        this.sourceOutputPath = null;
+        this(validationEngine, fastaOutputPath, FastaHeaderType.DEFAULT, null);
     }
 
     /**
@@ -76,11 +77,13 @@ public class TSVToGFF3Converter implements Converter {
      *
      * @param validationEngine the validation engine to use
      * @param fastaOutputPath optional output path for FASTA sequences; if null, sequences are discarded
+     * @param fastaHeaderType optional output path for FASTA sequences
      * @param sourceOutputPath optional output path for a serialised list of {@link SourceFeatureDTO}s
      */
-    public TSVToGFF3Converter(ValidationEngine validationEngine, Path fastaOutputPath, Path sourceOutputPath) {
+    public TSVToGFF3Converter(ValidationEngine validationEngine, Path fastaOutputPath, FastaHeaderType fastaHeaderType, Path sourceOutputPath) {
         this.validationEngine = validationEngine;
         this.fastaOutputPath = fastaOutputPath;
+        this.fastaHeaderType = fastaHeaderType;
         this.sourceOutputPath = sourceOutputPath;
     }
 
@@ -168,5 +171,10 @@ public class TSVToGFF3Converter implements Converter {
         } catch (IOException e) {
             throw new WriteException("Error creating FASTA output file: " + fastaOutputPath, e);
         }
+    }
+
+    public enum FastaHeaderType{
+        DEFAULT,
+        ENA
     }
 }

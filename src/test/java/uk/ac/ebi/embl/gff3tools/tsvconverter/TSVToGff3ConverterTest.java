@@ -187,7 +187,7 @@ public class TSVToGff3ConverterTest {
                 BufferedReader reader = Files.newBufferedReader(inputTsv);
                 BufferedWriter writer = Files.newBufferedWriter(outputGff3)) {
 
-            TSVToGFF3Converter converter = new TSVToGFF3Converter(engine, fastaOutputPath, sourceOutputPath);
+            TSVToGFF3Converter converter = new TSVToGFF3Converter(engine, fastaOutputPath, TSVToGFF3Converter.FastaHeaderType.DEFAULT, sourceOutputPath);
             converter.convert(reader, writer);
         }
     }
