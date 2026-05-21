@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.fasta.writer.FastaFileWriter;
 import uk.ac.ebi.embl.gff3tools.exception.WriteException;
-import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToGFF3Converter;
 
 public enum ConversionUtils {
     INSTANCE;
@@ -271,7 +270,9 @@ public enum ConversionUtils {
      * @param fastaWriter the writer to write the FASTA output to
      * @throws WriteException if an I/O error occurs while writing
      */
-    public static void writeNucleotideSequence(Entry entry, BufferedWriter fastaWriter/*, TSVToGFF3Converter.FastaHeaderType fastaHeaderType*/) throws WriteException {
+    public static void writeNucleotideSequence(
+            Entry entry, BufferedWriter fastaWriter /*, TSVToGFF3Converter.FastaHeaderType fastaHeaderType*/)
+            throws WriteException {
         if (entry == null || entry.getSequence() == null || entry.getSequence().getLength() == 0) {
             return;
         }
