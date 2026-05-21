@@ -76,7 +76,7 @@ public class TSVToGFF3Converter implements Converter {
      *
      * @param validationEngine the validation engine to use
      * @param fastaOutputPath optional output path for FASTA sequences; if null, sequences are discarded
-     *
+     * @param sourceOutputPath optional output path for a serialised list of {@link SourceFeatureDTO}s
      */
     public TSVToGFF3Converter(ValidationEngine validationEngine, Path fastaOutputPath, Path sourceOutputPath) {
         this.validationEngine = validationEngine;
