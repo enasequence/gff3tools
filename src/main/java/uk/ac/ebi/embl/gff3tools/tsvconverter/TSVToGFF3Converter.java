@@ -114,7 +114,6 @@ public class TSVToGFF3Converter implements Converter {
             while ((entry = entryReader.read()) != null) {
                 entryCount++;
                 String accession = entry.getPrimaryAccession();
-                String seqAcc = entry.getSequence().getAccessionwithVersion();
 
                 if (sourceOutputPath != null) {
                     SourceFeatureDTO sourceFeature = new SourceFeatureDTO(entry.getPrimarySourceFeature());
