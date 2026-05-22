@@ -32,7 +32,7 @@ public class SourceFeatureUtils {
                 in.toFile(), mapper.getTypeFactory().constructCollectionType(List.class, SourceFeatureDTO.class));
     }
 
-    public static abstract class TaxonMixIn {
+    public abstract static class TaxonMixIn {
 
         @JsonAlias("formal")
         abstract void setFormalName(Boolean formalName);

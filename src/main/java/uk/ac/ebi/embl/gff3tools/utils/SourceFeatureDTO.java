@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.utils;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import uk.ac.ebi.embl.api.entry.feature.FeatureFactory;
 import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
@@ -31,6 +32,10 @@ public class SourceFeatureDTO {
     public SourceFeatureDTO() {}
 
     public SourceFeatureDTO(SourceFeature original) {
+        if (original == null) {
+            return;
+        }
+
         this.scientificName = original.getScientificName();
         this.commonName = original.getCommonName();
         this.taxId = original.getTaxId();
@@ -39,28 +44,35 @@ public class SourceFeatureDTO {
         this.transgenic = original.isTransgenic();
 
         this.qualifiers = new HashMap<>();
+        if (original.getQualifiers() != null) {
+            for (Qualifier qualifier : original.getQualifiers()) {
+                if (qualifier == null) continue;
 
-        for (Qualifier qualifier : original.getQualifiers()) {
-            this.qualifiers.put(qualifier.getName(), qualifier.getValue());
+                if (qualifier.getName() != null) {
+                    this.qualifiers.put(qualifier.getName(), qualifier.getValue());
+                }
+            }
         }
     }
 
     public SourceFeature toSourceFeature() {
+
         SourceFeature copy = new FeatureFactory().createSourceFeature();
 
-        copy.setScientificName(scientificName);
-        copy.setCommonName(commonName);
-        copy.setTaxId(taxId);
-        copy.setTaxon(taxon);
+        Optional.ofNullable(scientificName).ifPresent(copy::setScientificName);
+        Optional.ofNullable(commonName).ifPresent(copy::setCommonName);
+        Optional.ofNullable(taxId).ifPresent(copy::setTaxId);
+        Optional.ofNullable(taxon).ifPresent(copy::setTaxon);
+
         copy.setFocus(focus);
         copy.setTransgenic(transgenic);
 
         if (qualifiers != null) {
             QualifierFactory qf = new QualifierFactory();
 
-            for (Map.Entry<String, String> entry : qualifiers.entrySet()) {
-                copy.addQualifier(qf.createQualifier(entry.getKey(), entry.getValue()));
-            }
+            qualifiers.entrySet().stream()
+                    .filter(entry -> entry.getKey() != null)
+                    .forEach(entry -> copy.addQualifier(qf.createQualifier(entry.getKey(), entry.getValue())));
         }
 
         return copy;
