@@ -13,29 +13,40 @@ package uk.ac.ebi.embl.gff3tools.utils;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import uk.ac.ebi.embl.api.entry.feature.FeatureFactory;
 import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
 import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.qualifier.QualifierFactory;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
+@Getter
+@Setter
+@NoArgsConstructor
 public class SourceFeatureDTO {
 
-    public String scientificName;
-    public String commonName;
-    public Long taxId;
-    public Taxon taxon;
-    public boolean focus;
-    public boolean transgenic;
-    public Map<String, String> qualifiers;
+    private String id;
 
-    public SourceFeatureDTO() {}
+    // extracted data from getters/setters
+    private String scientificName;
+    private String commonName;
+    private Long taxId;
+    private Taxon taxon;
+    private boolean focus;
+    private boolean transgenic;
+    private Map<String, String> qualifiers;
 
-    public SourceFeatureDTO(SourceFeature original) {
+    public SourceFeatureDTO(String id, SourceFeature original) {
         if (original == null) {
-            return;
+            throw new NullPointerException("Original feature is null");
+        }
+        if (id == null || id.isEmpty()) {
+            throw new NullPointerException("Associated id is null or empty");
         }
 
+        this.id = id;
         this.scientificName = original.getScientificName();
         this.commonName = original.getCommonName();
         this.taxId = original.getTaxId();
