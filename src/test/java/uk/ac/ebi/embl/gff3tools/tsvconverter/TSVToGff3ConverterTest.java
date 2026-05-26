@@ -20,7 +20,10 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.api.entry.feature.SourceFeature;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReaderFactory;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
@@ -181,7 +184,10 @@ public class TSVToGff3ConverterTest {
                         () -> assertTrue(Files.exists(outputSource), "Source feature file should exist"),
                         () -> assertTrue(Files.size(outputSource) > 0, "Source feature file should not be empty"));
 
-                List<SourceFeatureDTO> sourceFeatures = SourceFeatureUtils.loadSourceFeatureDto(outputSource);
+                List<SourceFeatureDTO> sourceFeatureDTOs = SourceFeatureUtils.loadSourceFeatureDto(outputSource);
+                List<SourceFeature> sourceFeatures = sourceFeatureDTOs.stream()
+                        .map(SourceFeatureDTO::toSourceFeature)
+                        .collect(Collectors.toList());
                 assertFalse(sourceFeatures.isEmpty(), "Source feature file should contain at least one entry");
 
             } finally {
