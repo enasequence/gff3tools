@@ -225,7 +225,7 @@ class ConversionUtilsTest {
         try (BufferedWriter writer = new BufferedWriter(stringWriter)) {
             // Should not throw, just no-op
             ConversionUtils.writeNucleotideSequence(
-                    null, writer, FastaFileWriter.FastaHeaderFormat.DEFAULT_HEADER_FORMAT);
+                    null, writer, FastaFileWriter.FastaHeaderFormat.DEFAULT_HEADER_FORMAT, null);
         }
         assertEquals("", stringWriter.toString(), "Null entry should produce no output");
     }
@@ -239,7 +239,7 @@ class ConversionUtilsTest {
         StringWriter stringWriter = new StringWriter();
         try (BufferedWriter writer = new BufferedWriter(stringWriter)) {
             ConversionUtils.writeNucleotideSequence(
-                    entry, writer, FastaFileWriter.FastaHeaderFormat.DEFAULT_HEADER_FORMAT);
+                    entry, writer, FastaFileWriter.FastaHeaderFormat.DEFAULT_HEADER_FORMAT, null);
         }
         assertEquals("", stringWriter.toString(), "Entry with null sequence should produce no output");
     }
@@ -257,7 +257,7 @@ class ConversionUtilsTest {
         StringWriter stringWriter = new StringWriter();
         try (BufferedWriter writer = new BufferedWriter(stringWriter)) {
             ConversionUtils.writeNucleotideSequence(
-                    entry, writer, FastaFileWriter.FastaHeaderFormat.DEFAULT_HEADER_FORMAT);
+                    entry, writer, FastaFileWriter.FastaHeaderFormat.DEFAULT_HEADER_FORMAT, null);
         }
         assertEquals("", stringWriter.toString(), "Entry with empty sequence should produce no output");
     }
@@ -276,7 +276,7 @@ class ConversionUtilsTest {
         StringWriter stringWriter = new StringWriter();
         try (BufferedWriter writer = new BufferedWriter(stringWriter)) {
             ConversionUtils.writeNucleotideSequence(
-                    entry, writer, FastaFileWriter.FastaHeaderFormat.DEFAULT_HEADER_FORMAT);
+                    entry, writer, FastaFileWriter.FastaHeaderFormat.DEFAULT_HEADER_FORMAT, null);
         }
 
         String output = stringWriter.toString();

@@ -113,9 +113,18 @@ public class TSVToGFF3Converter implements Converter {
             while ((entry = entryReader.read()) != null) {
                 entryCount++;
 
+                if (species == null) {
+                    species = directivesFactory.createSpecies(entry, null);
+                }
+
+                GFF3Annotation newAnnotation = annotationFactory.from(entry);
+                annotations.add(newAnnotation);
+                String submissionId = newAnnotation.getAccession();
+
+                // write source
                 if (sourceOutputPath != null) {
-                    String id = ConversionUtils.getEffectiveAccession(entry);
-                    SourceFeatureDTO sourceFeature = new SourceFeatureDTO(id, entry.getPrimarySourceFeature());
+                    SourceFeatureDTO sourceFeature =
+                            new SourceFeatureDTO(submissionId, entry.getPrimarySourceFeature());
                     sourceFeatures.add(sourceFeature);
                 }
 
@@ -126,18 +135,16 @@ public class TSVToGFF3Converter implements Converter {
                             ConversionUtils.writeNucleotideSequence(
                                     entry,
                                     nucleotideFastaWriter,
-                                    FastaFileWriter.FastaHeaderFormat.DEFAULT_HEADER_FORMAT);
+                                    FastaFileWriter.FastaHeaderFormat.DEFAULT_HEADER_FORMAT,
+                                    null);
                         case JSON_HEADER ->
                             ConversionUtils.writeNucleotideSequence(
-                                    entry, nucleotideFastaWriter, FastaFileWriter.FastaHeaderFormat.JSON_FASTA_HEADER);
+                                    entry,
+                                    nucleotideFastaWriter,
+                                    FastaFileWriter.FastaHeaderFormat.JSON_FASTA_HEADER,
+                                    submissionId);
                     }
                 }
-
-                if (species == null) {
-                    species = directivesFactory.createSpecies(entry, null);
-                }
-
-                annotations.add(annotationFactory.from(entry));
             }
 
             LOG.info("Converted {} entries from TSV", entryCount);
