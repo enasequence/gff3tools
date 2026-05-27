@@ -10,9 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.utils;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -36,7 +34,7 @@ public class SourceFeatureDTO {
     private Taxon taxon;
     private boolean focus;
     private boolean transgenic;
-    private Map<String, String> qualifiers;
+    private Map<String, List<String>> qualifiers;
 
     public SourceFeatureDTO(String id, SourceFeature original) {
         if (original == null) {
@@ -57,11 +55,13 @@ public class SourceFeatureDTO {
         this.qualifiers = new HashMap<>();
         if (original.getQualifiers() != null) {
             for (Qualifier qualifier : original.getQualifiers()) {
-                if (qualifier == null) continue;
-
-                if (qualifier.getName() != null) {
-                    this.qualifiers.put(qualifier.getName(), qualifier.getValue());
+                if (qualifier == null || qualifier.getName() == null) {
+                    continue;
                 }
+
+                this.qualifiers
+                        .computeIfAbsent(qualifier.getName(), k -> new ArrayList<>())
+                        .add(qualifier.getValue());
             }
         }
     }
@@ -83,7 +83,15 @@ public class SourceFeatureDTO {
 
             qualifiers.entrySet().stream()
                     .filter(entry -> entry.getKey() != null)
-                    .forEach(entry -> copy.addQualifier(qf.createQualifier(entry.getKey(), entry.getValue())));
+                    .forEach(entry -> {
+                        List<String> values = entry.getValue();
+
+                        if (values != null) {
+                            values.stream()
+                                    .filter(Objects::nonNull)
+                                    .forEach(value -> copy.addQualifier(qf.createQualifier(entry.getKey(), value)));
+                        }
+                    });
         }
 
         return copy;

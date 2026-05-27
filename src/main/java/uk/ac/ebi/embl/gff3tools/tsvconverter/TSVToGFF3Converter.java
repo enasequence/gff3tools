@@ -153,7 +153,7 @@ public class TSVToGFF3Converter implements Converter {
             }
             if (sourceOutputPath != null) {
                 SourceFeatureUtils.dumpSourceFeatureDto(sourceFeatures, sourceOutputPath);
-                LOG.info("Wrote nucleotide sequences to FASTA file: {}", fastaOutputPath);
+                LOG.info("Wrote source features to sequence source file: {}", sourceOutputPath);
             }
         } catch (IOException e) {
             throw new ReadException("Error reading TSV file", e);
