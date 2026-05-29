@@ -1,0 +1,3 @@
+#template_accession ERT000030
+ENTRYNUMBER	ORGANISM_NAME	GENE	ALLELE	PSEUDO	PRODUCT	5'_CDS	3'_CDS	5'_PARTIAL	3'_PARTIAL	EXON_NUMBER_A	5'_EXON_A	3'_EXON_A	HAPLOTYPE	BREED	SEQUENCE	
+1	Equus caballus	EQA-DRB	05	no	MHC class II antigen	1	9	yes	no	3	1	67	EQ23	Farmyard	atggactgacgacgacagcagcagaatggactgacgacgacagcagcagaatggactgacgacgacagcagcagaatggactgacgacgacagcagcagaatggactgacgacgacagcagcagaatggactgacgacgacagcagcagaatggactgacgacgacagcagcagaatggactgacgacgacagcagcagaatggactgacgacgacagcagcagaatggactgacgacgacagcagcagaatggactgacgacgacagcagcagaatggactgacgacgacagcagcaga	

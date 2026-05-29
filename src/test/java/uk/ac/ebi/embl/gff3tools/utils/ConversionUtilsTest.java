@@ -19,6 +19,7 @@ import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.api.entry.EntryFactory;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
+import uk.ac.ebi.embl.fasta.writer.FastaFileWriter;
 
 class ConversionUtilsTest {
 
@@ -223,7 +224,8 @@ class ConversionUtilsTest {
         StringWriter stringWriter = new StringWriter();
         try (BufferedWriter writer = new BufferedWriter(stringWriter)) {
             // Should not throw, just no-op
-            ConversionUtils.writeNucleotideSequence(null, writer);
+            ConversionUtils.writeNucleotideSequence(
+                    null, writer, FastaFileWriter.FastaHeaderFormat.DEFAULT_HEADER_FORMAT, null);
         }
         assertEquals("", stringWriter.toString(), "Null entry should produce no output");
     }
@@ -236,7 +238,8 @@ class ConversionUtilsTest {
 
         StringWriter stringWriter = new StringWriter();
         try (BufferedWriter writer = new BufferedWriter(stringWriter)) {
-            ConversionUtils.writeNucleotideSequence(entry, writer);
+            ConversionUtils.writeNucleotideSequence(
+                    entry, writer, FastaFileWriter.FastaHeaderFormat.DEFAULT_HEADER_FORMAT, null);
         }
         assertEquals("", stringWriter.toString(), "Entry with null sequence should produce no output");
     }
@@ -253,7 +256,8 @@ class ConversionUtilsTest {
 
         StringWriter stringWriter = new StringWriter();
         try (BufferedWriter writer = new BufferedWriter(stringWriter)) {
-            ConversionUtils.writeNucleotideSequence(entry, writer);
+            ConversionUtils.writeNucleotideSequence(
+                    entry, writer, FastaFileWriter.FastaHeaderFormat.DEFAULT_HEADER_FORMAT, null);
         }
         assertEquals("", stringWriter.toString(), "Entry with empty sequence should produce no output");
     }
@@ -271,7 +275,8 @@ class ConversionUtilsTest {
 
         StringWriter stringWriter = new StringWriter();
         try (BufferedWriter writer = new BufferedWriter(stringWriter)) {
-            ConversionUtils.writeNucleotideSequence(entry, writer);
+            ConversionUtils.writeNucleotideSequence(
+                    entry, writer, FastaFileWriter.FastaHeaderFormat.DEFAULT_HEADER_FORMAT, null);
         }
 
         String output = stringWriter.toString();

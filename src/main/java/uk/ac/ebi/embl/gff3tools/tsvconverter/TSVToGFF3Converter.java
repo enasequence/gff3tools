@@ -18,6 +18,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
+import uk.ac.ebi.embl.fasta.writer.FastaFileWriter;
 import uk.ac.ebi.embl.gff3tools.Converter;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3AnnotationFactory;
@@ -27,6 +28,8 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
+import uk.ac.ebi.embl.gff3tools.utils.SourceFeatureDTO;
+import uk.ac.ebi.embl.gff3tools.utils.SourceFeatureUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
@@ -46,6 +49,8 @@ public class TSVToGFF3Converter implements Converter {
     private final ValidationEngine validationEngine;
     // Optional output path for FASTA sequences; if null, sequences are discarded
     private final Path fastaOutputPath;
+    private final FastaHeaderType fastaHeaderType;
+    private final Path sourceOutputPath;
 
     /**
      * Creates a new TSV to GFF3 converter.
@@ -63,8 +68,26 @@ public class TSVToGFF3Converter implements Converter {
      * @param fastaOutputPath optional output path for FASTA sequences; if null, sequences are discarded
      */
     public TSVToGFF3Converter(ValidationEngine validationEngine, Path fastaOutputPath) {
+        this(validationEngine, fastaOutputPath, FastaHeaderType.DEFAULT, null);
+    }
+
+    /**
+     * Creates a new TSV to GFF3 converter.
+     *
+     * @param validationEngine the validation engine to use
+     * @param fastaOutputPath optional output path for FASTA sequences; if null, sequences are discarded
+     * @param fastaHeaderType optional output path for FASTA sequences
+     * @param sourceOutputPath optional output path for a serialised list of {@link SourceFeatureDTO}s
+     */
+    public TSVToGFF3Converter(
+            ValidationEngine validationEngine,
+            Path fastaOutputPath,
+            FastaHeaderType fastaHeaderType,
+            Path sourceOutputPath) {
         this.validationEngine = validationEngine;
         this.fastaOutputPath = fastaOutputPath;
+        this.fastaHeaderType = fastaHeaderType;
+        this.sourceOutputPath = sourceOutputPath;
     }
 
     @Override
@@ -85,25 +108,52 @@ public class TSVToGFF3Converter implements Converter {
                     entryReader.getTemplateInfo().getName());
 
             Entry entry;
+            List<SourceFeatureDTO> sourceFeatures = new ArrayList<>();
             int entryCount = 0;
             while ((entry = entryReader.read()) != null) {
                 entryCount++;
-
-                // Write nucleotide sequence to FASTA if writer is provided (streaming)
-                if (nucleotideFastaWriter != null) {
-                    ConversionUtils.writeNucleotideSequence(entry, nucleotideFastaWriter);
-                }
 
                 if (species == null) {
                     species = directivesFactory.createSpecies(entry, null);
                 }
 
-                annotations.add(annotationFactory.from(entry));
+                GFF3Annotation newAnnotation = annotationFactory.from(entry);
+                annotations.add(newAnnotation);
+                String submissionId = newAnnotation.getAccession();
+
+                // write source
+                if (sourceOutputPath != null) {
+                    SourceFeatureDTO sourceFeature =
+                            new SourceFeatureDTO(submissionId, entry.getPrimarySourceFeature());
+                    sourceFeatures.add(sourceFeature);
+                }
+
+                // Write nucleotide sequence to FASTA if writer is provided (streaming)
+                if (nucleotideFastaWriter != null) {
+                    switch (fastaHeaderType) {
+                        case DEFAULT ->
+                            ConversionUtils.writeNucleotideSequence(
+                                    entry,
+                                    nucleotideFastaWriter,
+                                    FastaFileWriter.FastaHeaderFormat.DEFAULT_HEADER_FORMAT,
+                                    null);
+                        case JSON_HEADER ->
+                            ConversionUtils.writeNucleotideSequence(
+                                    entry,
+                                    nucleotideFastaWriter,
+                                    FastaFileWriter.FastaHeaderFormat.JSON_FASTA_HEADER,
+                                    submissionId);
+                    }
+                }
             }
 
             LOG.info("Converted {} entries from TSV", entryCount);
             if (nucleotideFastaWriter != null) {
                 LOG.info("Wrote nucleotide sequences to FASTA file: {}", fastaOutputPath);
+            }
+            if (sourceOutputPath != null) {
+                SourceFeatureUtils.dumpSourceFeatureDto(sourceFeatures, sourceOutputPath);
+                LOG.info("Wrote source features to sequence source file: {}", sourceOutputPath);
             }
         } catch (IOException e) {
             throw new ReadException("Error reading TSV file", e);
@@ -140,5 +190,10 @@ public class TSVToGFF3Converter implements Converter {
         } catch (IOException e) {
             throw new WriteException("Error creating FASTA output file: " + fastaOutputPath, e);
         }
+    }
+
+    public enum FastaHeaderType {
+        DEFAULT,
+        JSON_HEADER
     }
 }
