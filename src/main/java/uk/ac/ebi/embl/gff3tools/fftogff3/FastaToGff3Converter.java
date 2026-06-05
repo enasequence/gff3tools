@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.fftogff3;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -80,6 +81,13 @@ public class FastaToGff3Converter implements Converter {
         // Blank values are treated as "not supplied" so we emit a plain gap.
         this.gapType = isBlank(gapType) ? null : gapType.trim();
         this.linkageEvidence = isBlank(linkageEvidence) ? null : linkageEvidence.trim();
+        // Defensive: linkage_evidence is only meaningful alongside a gap_type (INSDC allows it
+        // only for gap_type "within scaffold", "repeat within scaffold" or "contamination").
+        // Reject the inconsistent combination here so we never emit a plain gap carrying a
+        // linkage_evidence attribute; full value validity is still enforced by AssemblyGapValidation.
+        if (this.linkageEvidence != null && this.gapType == null) {
+            throw new IllegalArgumentException("linkageEvidence requires a gapType to be supplied");
+        }
     }
 
     private static boolean isBlank(String value) {
@@ -99,8 +107,15 @@ public class FastaToGff3Converter implements Converter {
         GFF3Header header = new GFF3Header(GFF3Header.DEFAULT_VERSION);
         List<GFF3Annotation> annotations = new ArrayList<>();
 
+        // Build the ordinal -> seqId lookup once (O(n)) instead of scanning the map per ordinal.
+        Map<Long, String> ordinalToSeqId = buildOrdinalToSeqId();
+
+        // Gap IDs are unique across the whole document (GFF3 requires unique IDs within a file),
+        // so the counter spans all sequences rather than resetting per sequence.
+        int gapCounter = 0;
+
         for (long ordinal : formatReader.getOrderedIds()) {
-            String seqId = findSeqIdForOrdinal(ordinal);
+            String seqId = ordinalToSeqId.getOrDefault(ordinal, source.getSequenceKey());
             if (seqId == null) {
                 log.warn("No sequence ID found for ordinal {}", ordinal);
                 continue;
@@ -120,14 +135,13 @@ public class FastaToGff3Converter implements Converter {
             GFF3Annotation annotation = new GFF3Annotation();
             annotation.setSequenceRegion(new GFF3SequenceRegion(seqId, Optional.empty(), 1, length));
 
-            int gapIndex = 0;
             for (GapRegion gap : gaps) {
                 // Rule: only runs of N at least minGapLength long are reported as gaps,
                 // matching the INSDC assembly behaviour in sequencetools.
                 if (gap.lengthBases() < minGapLength) {
                     continue;
                 }
-                String id = gapIndex == 0 ? "gap" : "gap_" + gapIndex;
+                String id = gapCounter == 0 ? "gap" : "gap_" + gapCounter;
                 GFF3Feature feature = new GFF3Feature(
                         Optional.of(id),
                         Optional.empty(),
@@ -154,7 +168,7 @@ public class FastaToGff3Converter implements Converter {
                 // generated gap, mirroring the FF->GFF3 path. Generated content has no line number.
                 validationEngine.validate(feature, -1);
                 annotation.addFeature(feature);
-                gapIndex++;
+                gapCounter++;
             }
 
             // Run annotation-level fixes/validations over the generated annotation.
@@ -171,13 +185,13 @@ public class FastaToGff3Converter implements Converter {
         validationEngine.throwIfErrorsCollected();
     }
 
-    private String findSeqIdForOrdinal(long ordinal) {
+    private Map<Long, String> buildOrdinalToSeqId() {
+        Map<Long, String> ordinalToSeqId = new HashMap<>();
         for (Map.Entry<String, Long> entry : source.getSeqIdToOrdinal().entrySet()) {
-            if (entry.getValue() == ordinal) {
-                return entry.getKey();
-            }
+            // Plain sequences have no header-derived IDs; the loop body adds nothing and callers
+            // fall back to source.getSequenceKey().
+            ordinalToSeqId.put(entry.getValue(), entry.getKey());
         }
-        // Plain sequences have no header-derived IDs; fall back to the source key when present.
-        return source.getSequenceKey();
+        return ordinalToSeqId;
     }
 }

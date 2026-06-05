@@ -21,6 +21,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.GZIPInputStream;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -49,6 +50,11 @@ public class FileConversionCommand extends AbstractCommand {
 
     private static final int GZIP_MAGIC_BYTE1 = 0x1f;
     private static final int GZIP_MAGIC_BYTE2 = 0x8b;
+
+    // INSDC gap types for which linkage_evidence is both required and allowed. Mirrors
+    // AssemblyGapValidation; kept here only to fail fast with a clear usage message.
+    private static final Set<String> GAP_TYPES_REQUIRING_LINKAGE =
+            Set.of("within scaffold", "repeat within scaffold", "contamination");
 
     @CommandLine.Option(names = "-f", description = "The type of the input file to be converted")
     public ConversionFileFormat fromFileType;
@@ -128,6 +134,7 @@ public class FileConversionCommand extends AbstractCommand {
             // validations run as in the FASTA+GFF3 case.
             FileSequenceSource inputFastaSource = null;
             if (fromFileType == ConversionFileFormat.fasta && toFileType == ConversionFileFormat.gff3) {
+                validateGapOptions();
                 SequenceFormat fmt = resolveSequenceFormat(inputFilePath, sequenceOptions.sequenceFormat);
                 // fastareader cannot read gzip directly; decompress once to a temp file if needed.
                 Path sourcePath = decompressIfGzipped(inputFilePath);
@@ -143,7 +150,11 @@ public class FileConversionCommand extends AbstractCommand {
             FastaHeaderProvider headerProvider = buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
 
             final FileSequenceSource inputFastaSourceFinal = inputFastaSource;
-            try (BufferedReader inputReader = createInputReader();
+            // FASTA -> GFF3 reads the sequence exclusively through the shared FileSequenceSource,
+            // so we avoid opening (and, for gzip, decompressing) the input a second time here.
+            try (BufferedReader inputReader = inputFastaSourceFinal != null
+                            ? new BufferedReader(new StringReader(""))
+                            : createInputReader();
                     BufferedWriter outputWriter =
                             writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
                 try (ValidationEngine engine =
@@ -185,6 +196,30 @@ public class FileConversionCommand extends AbstractCommand {
                 } catch (Exception deleteEx) {
                     log.warn("Failed to delete temporary decompressed input: {}", decompressedInput);
                 }
+            }
+        }
+    }
+
+    /**
+     * Fails fast with a clear usage message for inconsistent gap options, instead of deferring to
+     * the validation engine (which would report a less obvious VALIDATION_ERROR). Value validity is
+     * still enforced downstream by {@code AssemblyGapValidation}.
+     */
+    private void validateGapOptions() throws CLIException {
+        boolean hasGapType = gapType != null && !gapType.isBlank();
+        boolean hasLinkageEvidence = linkageEvidence != null && !linkageEvidence.isBlank();
+        if (hasLinkageEvidence && !hasGapType) {
+            throw new CLIException("--linkage-evidence requires --gap-type to be set");
+        }
+        if (hasGapType) {
+            String normalizedGapType = gapType.trim().toLowerCase();
+            boolean requiresLinkage = GAP_TYPES_REQUIRING_LINKAGE.contains(normalizedGapType);
+            if (requiresLinkage && !hasLinkageEvidence) {
+                throw new CLIException("--gap-type \"" + gapType.trim() + "\" requires --linkage-evidence to be set");
+            }
+            if (!requiresLinkage && hasLinkageEvidence) {
+                throw new CLIException("--linkage-evidence is only valid with --gap-type "
+                        + "\"within scaffold\", \"repeat within scaffold\" or \"contamination\"");
             }
         }
     }

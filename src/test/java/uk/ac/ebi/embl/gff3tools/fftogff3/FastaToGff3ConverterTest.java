@@ -133,6 +133,42 @@ class FastaToGff3ConverterTest {
     }
 
     @Test
+    void rejectsLinkageEvidenceWithoutGapType() {
+        // linkage_evidence is meaningless without a gap_type; reject the inconsistent combination.
+        ValidationEngine engine = new ValidationEngineBuilder().build();
+        FileSequenceSource source = new FileSequenceSource(SINGLE_SEQUENCE, SequenceFormat.fasta, null);
+        assertThrows(
+                IllegalArgumentException.class, () -> new FastaToGff3Converter(engine, source, 1, null, "unspecified"));
+    }
+
+    @Test
+    void assignsUniqueGapIdsAcrossMultipleSequences() throws Exception {
+        // Two sequences, each with a single 10bp gap at the same coordinates. The gap IDs must be
+        // unique across the whole document, not reset per sequence.
+        Path fasta = Files.createTempFile("multi", ".fasta");
+        Files.writeString(
+                fasta,
+                ">SEQ1.1 | {\"description\":\"first\"}\nATGCNNNNNNNNNNATGC\n"
+                        + ">SEQ2.1 | {\"description\":\"second\"}\nGGGGNNNNNNNNNNGGGG\n");
+
+        ValidationEngine engine = new ValidationEngineBuilder().build();
+        FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 1);
+
+        String actual = runConversion(converter);
+        source.close();
+
+        // Both gaps span bases 5..14 within their own sequence.
+        assertTrue(actual.contains("SEQ1.1\t.\tgap\t5\t14\t"));
+        assertTrue(actual.contains("SEQ2.1\t.\tgap\t5\t14\t"));
+        // IDs are unique across the document: "gap" and "gap_1".
+        assertTrue(actual.contains("ID=gap;"));
+        assertTrue(actual.contains("ID=gap_1;"));
+
+        Files.deleteIfExists(fasta);
+    }
+
+    @Test
     void feedsSequenceLookupAndFastaHeaderContextFromInputFasta() throws Exception {
         // Wire the input FASTA into the engine providers exactly as the conversion command does,
         // then verify the engine context exposes the submission IDs, sequence and FASTA header.
