@@ -65,6 +65,12 @@ public class FileConversionCommand extends AbstractCommand {
             description = "Output path for nucleotide sequences in FASTA format (TSV to GFF3 conversion only)")
     public Path fastaOutputPath;
 
+    @CommandLine.Option(
+            names = {"--min-gap-length", "-mgl"},
+            description = "Minimum run of N bases reported as a gap feature (FASTA to GFF3 conversion only). "
+                    + "Default: ${DEFAULT-VALUE}.")
+    public int minGapLength = FastaToGff3Converter.DEFAULT_MIN_GAP_LENGTH;
+
     @CommandLine.Parameters(
             paramLabel = "[output-file]",
             defaultValue = "",
@@ -190,7 +196,7 @@ public class FileConversionCommand extends AbstractCommand {
             return new TSVToGFF3Converter(engine, fastaOutputPath);
         } else if (inputFileType == ConversionFileFormat.fasta && outputFileType == ConversionFileFormat.gff3) {
             SequenceFormat format = resolveSequenceFormat(inputFilePath, null);
-            return new FastaToGff3Converter(engine, inputFilePath, format);
+            return new FastaToGff3Converter(engine, inputFilePath, format, minGapLength);
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }

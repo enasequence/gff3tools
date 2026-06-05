@@ -17,12 +17,12 @@ import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 import lombok.extern.slf4j.Slf4j;
+import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.Converter;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.exception.WriteException;
-import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
@@ -33,8 +33,10 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
  * Converts a FASTA (or plain) sequence file to a GFF3 file containing only gap features.
  *
  * <p>Each sequence entry is scanned for contiguous runs of {@code N}/{@code n} bases.
- * Every run becomes a {@code gap} feature with {@code estimated_length}, {@code gap_type},
- * and {@code linkage_evidence} attributes.
+ * Every run whose length is at least {@code minGapLength} becomes a {@code gap} feature with
+ * {@code estimated_length}, {@code gap_type}, and {@code linkage_evidence} attributes. Runs
+ * shorter than {@code minGapLength} are ignored, mirroring the INSDC assembly behaviour
+ * implemented in sequencetools ({@code SequenceToGapFeatureBasesFix}).
  */
 @Slf4j
 public class FastaToGff3Converter implements Converter {
@@ -44,14 +46,21 @@ public class FastaToGff3Converter implements Converter {
     private static final String GAP_TYPE_DEFAULT = "within scaffold";
     private static final String LINKAGE_EVIDENCE_DEFAULT = "unspecified";
 
+    /** Default minimum gap length, matching sequencetools {@code Entry.DEFAULT_MIN_GAP_LENGTH}. */
+    public static final int DEFAULT_MIN_GAP_LENGTH = 10;
+
     private final ValidationEngine validationEngine;
     private final Path inputFilePath;
     private final SequenceFormat sequenceFormat;
+    private final int minGapLength;
 
-    public FastaToGff3Converter(ValidationEngine validationEngine, Path inputFilePath, SequenceFormat sequenceFormat) {
+    public FastaToGff3Converter(
+            ValidationEngine validationEngine, Path inputFilePath, SequenceFormat sequenceFormat, int minGapLength) {
         this.validationEngine = validationEngine;
         this.inputFilePath = inputFilePath;
         this.sequenceFormat = sequenceFormat;
+        // Defensive: a run of N is only ever a gap if it has at least one base.
+        this.minGapLength = Math.max(1, minGapLength);
     }
 
     @Override
@@ -92,6 +101,11 @@ public class FastaToGff3Converter implements Converter {
 
             int gapIndex = 0;
             for (GapRegion gap : gaps) {
+                // Rule: only runs of N at least minGapLength long are reported as gaps,
+                // matching the INSDC assembly behaviour in sequencetools.
+                if (gap.lengthBases() < minGapLength) {
+                    continue;
+                }
                 String id = gapIndex == 0 ? "gap" : "gap_" + gapIndex;
                 GFF3Feature feature = new GFF3Feature(
                         Optional.of(id),

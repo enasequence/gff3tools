@@ -29,7 +29,8 @@ class FastaToGff3ConverterTest {
         Path expected = Path.of("src/test/resources/fasta_to_gff3/single_sequence_expected.gff3");
 
         ValidationEngine engine = new ValidationEngineBuilder().build();
-        FastaToGff3Converter converter = new FastaToGff3Converter(engine, fasta, SequenceFormat.fasta);
+        // minGapLength=1 reports every run of N, so both gaps in the fixture are emitted.
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, fasta, SequenceFormat.fasta, 1);
 
         StringWriter output = new StringWriter();
         try (BufferedReader reader = new BufferedReader(new StringReader(""));
@@ -43,12 +44,35 @@ class FastaToGff3ConverterTest {
     }
 
     @Test
+    void minGapLengthFiltersShortGaps() throws Exception {
+        // Fixture has a 10bp gap (45..54) and a 4bp gap (99..102).
+        Path fasta = Path.of("src/test/resources/fasta_to_gff3/single_sequence.fasta");
+
+        ValidationEngine engine = new ValidationEngineBuilder().build();
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, fasta, SequenceFormat.fasta, 10);
+
+        StringWriter output = new StringWriter();
+        try (BufferedReader reader = new BufferedReader(new StringReader(""));
+                BufferedWriter writer = new BufferedWriter(output)) {
+            converter.convert(reader, writer);
+        }
+
+        String actual = output.toString();
+        // 10bp gap is kept (length >= minGapLength); 4bp gap is dropped.
+        assertTrue(actual.contains("\tgap\t45\t54\t"));
+        assertFalse(actual.contains("\tgap\t99\t102\t"));
+        assertTrue(actual.contains("estimated_length=10"));
+        assertFalse(actual.contains("estimated_length=4"));
+    }
+
+    @Test
     void convertsEmptySequenceWithNoGaps() throws Exception {
         Path fasta = Files.createTempFile("empty", ".fasta");
         Files.writeString(fasta, ">EMPTY | {\"description\":\"No gaps\"}\nATGCATGCATGC\n");
 
         ValidationEngine engine = new ValidationEngineBuilder().build();
-        FastaToGff3Converter converter = new FastaToGff3Converter(engine, fasta, SequenceFormat.fasta);
+        FastaToGff3Converter converter = new FastaToGff3Converter(
+                engine, fasta, SequenceFormat.fasta, FastaToGff3Converter.DEFAULT_MIN_GAP_LENGTH);
 
         StringWriter output = new StringWriter();
         try (BufferedReader reader = new BufferedReader(new StringReader(""));
