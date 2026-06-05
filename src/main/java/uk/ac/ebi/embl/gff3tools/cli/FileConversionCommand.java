@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
@@ -99,6 +100,8 @@ public class FileConversionCommand extends AbstractCommand {
         // Determine if we're writing to a file or stdout
         boolean writingToFile = !outputFilePath.toString().isEmpty();
         Path tempFile = null;
+        // Temporary decompressed copy of a gzipped FASTA input, if one is created below.
+        Path decompressedInput = null;
 
         try {
             // Write to a temp file first to ensure atomic output: if conversion fails,
@@ -112,20 +115,40 @@ public class FileConversionCommand extends AbstractCommand {
 
             final Path effectiveOutputPath = writingToFile ? tempFile : null;
 
-            List<FileSequenceSource> sources =
-                    buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
+            // Resolve formats up front so the input FASTA can be registered as a sequence source
+            // before the engine providers are built.
+            fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
+            toFileType = validateFileType(toFileType, outputFilePath, "-t");
+
+            List<FileSequenceSource> sources = new ArrayList<>(
+                    buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat));
+
+            // For FASTA -> GFF3, register the input FASTA as a sequence source so the engine gains
+            // its sequence/header context (read once) and the same sequence/annotation/fasta-header
+            // validations run as in the FASTA+GFF3 case.
+            FileSequenceSource inputFastaSource = null;
+            if (fromFileType == ConversionFileFormat.fasta && toFileType == ConversionFileFormat.gff3) {
+                SequenceFormat fmt = resolveSequenceFormat(inputFilePath, sequenceOptions.sequenceFormat);
+                // fastareader cannot read gzip directly; decompress once to a temp file if needed.
+                Path sourcePath = decompressIfGzipped(inputFilePath);
+                if (!sourcePath.equals(inputFilePath)) {
+                    decompressedInput = sourcePath;
+                }
+                inputFastaSource = new FileSequenceSource(sourcePath, fmt, null);
+                sources.add(inputFastaSource);
+            }
+
             CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
             MasterMetadataProvider metadataProvider = buildMetadataProvider(masterFilePath);
             FastaHeaderProvider headerProvider = buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
 
+            final FileSequenceSource inputFastaSourceFinal = inputFastaSource;
             try (BufferedReader inputReader = createInputReader();
                     BufferedWriter outputWriter =
                             writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
-                fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
-                toFileType = validateFileType(toFileType, outputFilePath, "-t");
                 try (ValidationEngine engine =
                         initValidationEngine(ruleOverrides, compositeProvider, metadataProvider, headerProvider)) {
-                    Converter converter = getConverter(engine, fromFileType, toFileType);
+                    Converter converter = getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal);
                     converter.convert(inputReader, outputWriter);
                 }
             }
@@ -153,6 +176,48 @@ public class FileConversionCommand extends AbstractCommand {
                 }
             }
             throw new RuntimeException(e.getMessage(), e);
+        } finally {
+            // The engine (and its sequence source) is closed by now, so the decompressed copy
+            // is no longer in use and can be removed.
+            if (decompressedInput != null) {
+                try {
+                    Files.deleteIfExists(decompressedInput);
+                } catch (Exception deleteEx) {
+                    log.warn("Failed to delete temporary decompressed input: {}", decompressedInput);
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns the original path if the file is not gzip-compressed, otherwise decompresses it to a
+     * temporary file and returns that path. Used so {@code fastareader} (which cannot read gzip)
+     * can open a gzipped FASTA input.
+     */
+    private Path decompressIfGzipped(Path path) throws ReadException, NonExistingFile {
+        boolean gzipped;
+        try (InputStream peekStream = Files.newInputStream(path)) {
+            int byte1 = peekStream.read();
+            int byte2 = peekStream.read();
+            gzipped = (byte1 == GZIP_MAGIC_BYTE1 && byte2 == GZIP_MAGIC_BYTE2);
+        } catch (NoSuchFileException e) {
+            throw new NonExistingFile("The file does not exist: " + path, e);
+        } catch (IOException e) {
+            throw new ReadException("Error checking file format: " + path, e);
+        }
+
+        if (!gzipped) {
+            return path;
+        }
+
+        try {
+            Path tempFile = Files.createTempFile("gff3tools-fasta-", ".fasta");
+            try (InputStream gzipIn = new GZIPInputStream(Files.newInputStream(path))) {
+                Files.copy(gzipIn, tempFile, StandardCopyOption.REPLACE_EXISTING);
+            }
+            return tempFile;
+        } catch (IOException e) {
+            throw new ReadException("Failed to decompress gzipped FASTA: " + path, e);
         }
     }
 
@@ -196,7 +261,10 @@ public class FileConversionCommand extends AbstractCommand {
     }
 
     private Converter getConverter(
-            ValidationEngine engine, ConversionFileFormat inputFileType, ConversionFileFormat outputFileType)
+            ValidationEngine engine,
+            ConversionFileFormat inputFileType,
+            ConversionFileFormat outputFileType,
+            FileSequenceSource inputFastaSource)
             throws FormatSupportException, CLIException {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
             return new Gff3ToFFConverter(engine, inputFilePath);
@@ -207,8 +275,8 @@ public class FileConversionCommand extends AbstractCommand {
             // TSV to GFF3 conversion using sequencetools template processing
             return new TSVToGFF3Converter(engine, fastaOutputPath);
         } else if (inputFileType == ConversionFileFormat.fasta && outputFileType == ConversionFileFormat.gff3) {
-            SequenceFormat format = resolveSequenceFormat(inputFilePath, null);
-            return new FastaToGff3Converter(engine, inputFilePath, format, minGapLength, gapType, linkageEvidence);
+            // inputFastaSource is the same source registered on the engine, so the FASTA is read once.
+            return new FastaToGff3Converter(engine, inputFastaSource, minGapLength, gapType, linkageEvidence);
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }

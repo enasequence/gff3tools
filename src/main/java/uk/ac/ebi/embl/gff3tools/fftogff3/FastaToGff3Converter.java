@@ -10,16 +10,16 @@
  */
 package uk.ac.ebi.embl.gff3tools.fftogff3;
 
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.util.*;
-import java.util.zip.GZIPInputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
 import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.Converter;
-import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.exception.WriteException;
@@ -42,40 +42,39 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
  * known), so no {@code gap_type} or {@code linkage_evidence} attribute is emitted by default and
  * the feature maps to a plain INSDC {@code gap}. A caller that genuinely knows the gap type may
  * supply {@code gapType} (and, where the type requires it, {@code linkageEvidence}); the feature
- * then maps to an INSDC {@code assembly_gap}. Value validity is enforced downstream by
- * {@code AssemblyGapValidation}.
+ * then maps to an INSDC {@code assembly_gap}. Value validity is enforced by the validation engine
+ * ({@code AssemblyGapValidation}).
+ *
+ * <p>The converter reads the sequence through a shared {@link FileSequenceSource} that is also
+ * registered on the {@link ValidationEngine}. This means the FASTA is opened only once, and the
+ * engine's sequence/annotation/fasta-header validations run over the generated GFF3 exactly as
+ * they would for a FASTA+GFF3 submission. The source is owned by the engine (closed when the
+ * engine closes) so this converter never opens or closes it itself.
  */
 @Slf4j
 public class FastaToGff3Converter implements Converter {
-
-    private static final int GZIP_MAGIC_BYTE1 = 0x1f;
-    private static final int GZIP_MAGIC_BYTE2 = 0x8b;
 
     /** Default minimum gap length, matching sequencetools {@code Entry.DEFAULT_MIN_GAP_LENGTH}. */
     public static final int DEFAULT_MIN_GAP_LENGTH = 10;
 
     private final ValidationEngine validationEngine;
-    private final Path inputFilePath;
-    private final SequenceFormat sequenceFormat;
+    private final FileSequenceSource source;
     private final int minGapLength;
     private final String gapType;
     private final String linkageEvidence;
 
-    public FastaToGff3Converter(
-            ValidationEngine validationEngine, Path inputFilePath, SequenceFormat sequenceFormat, int minGapLength) {
-        this(validationEngine, inputFilePath, sequenceFormat, minGapLength, null, null);
+    public FastaToGff3Converter(ValidationEngine validationEngine, FileSequenceSource source, int minGapLength) {
+        this(validationEngine, source, minGapLength, null, null);
     }
 
     public FastaToGff3Converter(
             ValidationEngine validationEngine,
-            Path inputFilePath,
-            SequenceFormat sequenceFormat,
+            FileSequenceSource source,
             int minGapLength,
             String gapType,
             String linkageEvidence) {
         this.validationEngine = validationEngine;
-        this.inputFilePath = inputFilePath;
-        this.sequenceFormat = sequenceFormat;
+        this.source = source;
         // Defensive: a run of N is only ever a gap if it has at least one base.
         this.minGapLength = Math.max(1, minGapLength);
         // Blank values are treated as "not supplied" so we emit a plain gap.
@@ -91,19 +90,17 @@ public class FastaToGff3Converter implements Converter {
     public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException {
 
-        // The BufferedReader is not used; fastareader requires a File.
-        Path effectivePath = resolveGzippedPath(inputFilePath);
-
-        FileSequenceSource source = new FileSequenceSource(effectivePath, sequenceFormat, null);
-
-        // Trigger lazy initialisation so getFormatReader() is non-null
+        // The BufferedReader is intentionally unused: the sequence is read exactly once via the
+        // shared FileSequenceSource. Triggering initialisation here is a no-op when the engine's
+        // providers have already opened the source.
         source.getSeqIdToHeader();
+        SequenceFormatReader formatReader = source.getFormatReader();
 
         GFF3Header header = new GFF3Header(GFF3Header.DEFAULT_VERSION);
         List<GFF3Annotation> annotations = new ArrayList<>();
 
-        for (long ordinal : source.getFormatReader().getOrderedIds()) {
-            String seqId = findSeqIdForOrdinal(source, ordinal);
+        for (long ordinal : formatReader.getOrderedIds()) {
+            String seqId = findSeqIdForOrdinal(ordinal);
             if (seqId == null) {
                 log.warn("No sequence ID found for ordinal {}", ordinal);
                 continue;
@@ -112,8 +109,8 @@ public class FastaToGff3Converter implements Converter {
             long length;
             List<GapRegion> gaps;
             try {
-                length = source.getFormatReader().getStats(ordinal).totalBases();
-                gaps = source.getFormatReader().getGapRegions(ordinal);
+                length = formatReader.getStats(ordinal).totalBases();
+                gaps = formatReader.getGapRegions(ordinal);
             } catch (Exception e) {
                 throw new ReadException(
                         "Failed to read sequence for ordinal " + ordinal + ": " + e.getMessage(),
@@ -153,10 +150,15 @@ public class FastaToGff3Converter implements Converter {
                 if (linkageEvidence != null) {
                     feature.addAttribute(GFF3Attributes.LINKAGE_EVIDENCE, linkageEvidence);
                 }
+                // Run feature-level fixes/validations (e.g. AssemblyGapValidation) over the
+                // generated gap, mirroring the FF->GFF3 path. Generated content has no line number.
+                validationEngine.validate(feature, -1);
                 annotation.addFeature(feature);
                 gapIndex++;
             }
 
+            // Run annotation-level fixes/validations over the generated annotation.
+            validationEngine.validate(annotation, -1);
             annotations.add(annotation);
         }
 
@@ -164,53 +166,18 @@ public class FastaToGff3Converter implements Converter {
                 GFF3File.builder().header(header).annotations(annotations).build();
 
         file.writeGFF3String(writer);
-        source.close();
 
-        // Clean up temporary decompressed file if one was created
-        if (!effectivePath.equals(inputFilePath)) {
-            try {
-                Files.deleteIfExists(effectivePath);
-            } catch (IOException e) {
-                log.warn("Failed to delete temporary decompressed file: {}", effectivePath);
-            }
-        }
+        // Surface any non-fail-fast errors collected while validating the generated GFF3.
+        validationEngine.throwIfErrorsCollected();
     }
 
-    /**
-     * Returns the original path if the file is not gzip-compressed,
-     * otherwise decompresses to a temporary file and returns that path.
-     */
-    private Path resolveGzippedPath(Path path) throws ReadException {
-        boolean gzipped;
-        try (InputStream peekStream = Files.newInputStream(path)) {
-            int byte1 = peekStream.read();
-            int byte2 = peekStream.read();
-            gzipped = (byte1 == GZIP_MAGIC_BYTE1 && byte2 == GZIP_MAGIC_BYTE2);
-        } catch (IOException e) {
-            throw new ReadException("Error checking file format: " + path, e);
-        }
-
-        if (!gzipped) {
-            return path;
-        }
-
-        try {
-            Path tempFile = Files.createTempFile("gff3tools-fasta-", ".fasta");
-            try (InputStream gzipIn = new GZIPInputStream(Files.newInputStream(path))) {
-                Files.copy(gzipIn, tempFile, StandardCopyOption.REPLACE_EXISTING);
-            }
-            return tempFile;
-        } catch (IOException e) {
-            throw new ReadException("Failed to decompress gzipped FASTA: " + path, e);
-        }
-    }
-
-    private String findSeqIdForOrdinal(FileSequenceSource source, long ordinal) {
+    private String findSeqIdForOrdinal(long ordinal) {
         for (Map.Entry<String, Long> entry : source.getSeqIdToOrdinal().entrySet()) {
             if (entry.getValue() == ordinal) {
                 return entry.getKey();
             }
         }
-        return null;
+        // Plain sequences have no header-derived IDs; fall back to the source key when present.
+        return source.getSequenceKey();
     }
 }

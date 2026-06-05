@@ -18,29 +18,45 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FileFastaHeaderSource;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
+import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 
 class FastaToGff3ConverterTest {
 
-    @Test
-    void convertsFastaToGff3WithGapFeatures() throws Exception {
-        Path fasta = Path.of("src/test/resources/fasta_to_gff3/single_sequence.fasta");
-        Path expected = Path.of("src/test/resources/fasta_to_gff3/single_sequence_expected.gff3");
+    private static final Path SINGLE_SEQUENCE = Path.of("src/test/resources/fasta_to_gff3/single_sequence.fasta");
 
-        ValidationEngine engine = new ValidationEngineBuilder().build();
-        // minGapLength=1 reports every run of N, so both gaps in the fixture are emitted.
-        FastaToGff3Converter converter = new FastaToGff3Converter(engine, fasta, SequenceFormat.fasta, 1);
-
+    /** Runs the converter and returns the GFF3 output as a string. */
+    private static String runConversion(FastaToGff3Converter converter) throws Exception {
         StringWriter output = new StringWriter();
         try (BufferedReader reader = new BufferedReader(new StringReader(""));
                 BufferedWriter writer = new BufferedWriter(output)) {
             converter.convert(reader, writer);
         }
+        return output.toString();
+    }
 
-        String actual = output.toString();
+    @Test
+    void convertsFastaToGff3WithGapFeatures() throws Exception {
+        Path expected = Path.of("src/test/resources/fasta_to_gff3/single_sequence_expected.gff3");
+
+        ValidationEngine engine = new ValidationEngineBuilder().build();
+        FileSequenceSource source = new FileSequenceSource(SINGLE_SEQUENCE, SequenceFormat.fasta, null);
+        // minGapLength=1 reports every run of N, so both gaps in the fixture are emitted.
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 1);
+
+        String actual = runConversion(converter);
+        source.close();
+
         String expectedContent = Files.readString(expected, StandardCharsets.UTF_8);
-        assertEquals(expectedContent, actual);
+        // Trim trailing whitespace, matching the FF->GFF3 converter test convention.
+        assertEquals(expectedContent.trim(), actual.trim());
         // By default a plain gap is emitted: gap_type cannot be inferred from a run of Ns.
         assertFalse(actual.contains("gap_type"));
         assertFalse(actual.contains("linkage_evidence"));
@@ -48,19 +64,13 @@ class FastaToGff3ConverterTest {
 
     @Test
     void emitsGapTypeAndLinkageEvidenceWhenSupplied() throws Exception {
-        Path fasta = Path.of("src/test/resources/fasta_to_gff3/single_sequence.fasta");
-
         ValidationEngine engine = new ValidationEngineBuilder().build();
-        FastaToGff3Converter converter =
-                new FastaToGff3Converter(engine, fasta, SequenceFormat.fasta, 1, "within scaffold", "unspecified");
+        FileSequenceSource source = new FileSequenceSource(SINGLE_SEQUENCE, SequenceFormat.fasta, null);
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 1, "within scaffold", "unspecified");
 
-        StringWriter output = new StringWriter();
-        try (BufferedReader reader = new BufferedReader(new StringReader(""));
-                BufferedWriter writer = new BufferedWriter(output)) {
-            converter.convert(reader, writer);
-        }
+        String actual = runConversion(converter);
+        source.close();
 
-        String actual = output.toString();
         assertTrue(actual.contains("gap_type=within scaffold"));
         assertTrue(actual.contains("linkage_evidence=unspecified"));
     }
@@ -68,18 +78,13 @@ class FastaToGff3ConverterTest {
     @Test
     void minGapLengthFiltersShortGaps() throws Exception {
         // Fixture has a 10bp gap (45..54) and a 4bp gap (99..102).
-        Path fasta = Path.of("src/test/resources/fasta_to_gff3/single_sequence.fasta");
-
         ValidationEngine engine = new ValidationEngineBuilder().build();
-        FastaToGff3Converter converter = new FastaToGff3Converter(engine, fasta, SequenceFormat.fasta, 10);
+        FileSequenceSource source = new FileSequenceSource(SINGLE_SEQUENCE, SequenceFormat.fasta, null);
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 10);
 
-        StringWriter output = new StringWriter();
-        try (BufferedReader reader = new BufferedReader(new StringReader(""));
-                BufferedWriter writer = new BufferedWriter(output)) {
-            converter.convert(reader, writer);
-        }
+        String actual = runConversion(converter);
+        source.close();
 
-        String actual = output.toString();
         // 10bp gap is kept (length >= minGapLength); 4bp gap is dropped.
         assertTrue(actual.contains("\tgap\t45\t54\t"));
         assertFalse(actual.contains("\tgap\t99\t102\t"));
@@ -93,20 +98,75 @@ class FastaToGff3ConverterTest {
         Files.writeString(fasta, ">EMPTY | {\"description\":\"No gaps\"}\nATGCATGCATGC\n");
 
         ValidationEngine engine = new ValidationEngineBuilder().build();
-        FastaToGff3Converter converter = new FastaToGff3Converter(
-                engine, fasta, SequenceFormat.fasta, FastaToGff3Converter.DEFAULT_MIN_GAP_LENGTH);
+        FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
+        FastaToGff3Converter converter =
+                new FastaToGff3Converter(engine, source, FastaToGff3Converter.DEFAULT_MIN_GAP_LENGTH);
 
-        StringWriter output = new StringWriter();
-        try (BufferedReader reader = new BufferedReader(new StringReader(""));
-                BufferedWriter writer = new BufferedWriter(output)) {
-            converter.convert(reader, writer);
-        }
+        String actual = runConversion(converter);
+        source.close();
 
-        String actual = output.toString();
         assertTrue(actual.contains("##gff-version 3.1.26"));
         assertTrue(actual.contains("##sequence-region EMPTY 1 12"));
         assertFalse(actual.contains("\tgap\t"));
 
         Files.deleteIfExists(fasta);
+    }
+
+    @Test
+    void convertsFastaWithSubmissionIdWithoutDot() throws Exception {
+        // seqId without a "." should round-trip through the header parser and into the GFF3 seqId.
+        Path fasta = Files.createTempFile("no_dot", ".fasta");
+        Files.writeString(fasta, ">TEST01 | {\"description\":\"No dot in id\"}\nATGCATGCNNNNNNNNNNATGCATGC\n");
+
+        ValidationEngine engine = new ValidationEngineBuilder().build();
+        FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 1);
+
+        String actual = runConversion(converter);
+        // Submission ID is extracted with no "." present.
+        assertTrue(source.getSeqIdToOrdinal().containsKey("TEST01"));
+        assertTrue(actual.contains("##sequence-region TEST01 1 26"));
+        assertTrue(actual.contains("TEST01\t.\tgap\t9\t18\t"));
+        source.close();
+
+        Files.deleteIfExists(fasta);
+    }
+
+    @Test
+    void feedsSequenceLookupAndFastaHeaderContextFromInputFasta() throws Exception {
+        // Wire the input FASTA into the engine providers exactly as the conversion command does,
+        // then verify the engine context exposes the submission IDs, sequence and FASTA header.
+        FileSequenceSource source = new FileSequenceSource(SINGLE_SEQUENCE, SequenceFormat.fasta, null);
+
+        CompositeSequenceProvider sequenceProvider = new CompositeSequenceProvider();
+        sequenceProvider.addSource(source);
+        FastaHeaderProvider headerProvider = new FastaHeaderProvider();
+        headerProvider.addSource(new FileFastaHeaderSource(source.getSeqIdToHeader()));
+
+        ValidationEngine engine = new ValidationEngineBuilder()
+                .withProvider(sequenceProvider)
+                .withProvider(headerProvider)
+                .build();
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 1);
+
+        runConversion(converter);
+
+        // Submission ID extracted from the FASTA header (seqIdToOrdinal map).
+        assertTrue(source.getSeqIdToOrdinal().containsKey("TEST01.1"));
+
+        ValidationContext context = engine.getContext();
+
+        // SequenceLookup resolves a slice for the submission ID (sequence info reachable).
+        SequenceLookup lookup = context.get(SequenceLookup.class);
+        assertNotNull(lookup);
+        assertEquals("ATGC", lookup.getSequenceSlice("TEST01.1", 1, 4));
+
+        // FASTA header reachable from the context for the same submission ID.
+        FastaHeaderProvider providerFromContext = context.get(FastaHeaderProvider.class);
+        FastaHeader header = providerFromContext.getHeader("TEST01.1").orElse(null);
+        assertNotNull(header);
+
+        // Closing the engine closes the registered source.
+        engine.close();
     }
 }
