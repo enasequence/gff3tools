@@ -71,6 +71,18 @@ public class FileConversionCommand extends AbstractCommand {
                     + "Default: ${DEFAULT-VALUE}.")
     public int minGapLength = FastaToGff3Converter.DEFAULT_MIN_GAP_LENGTH;
 
+    @CommandLine.Option(
+            names = {"--gap-type", "-gt"},
+            description = "Optional INSDC gap_type for generated gap features (FASTA to GFF3 conversion only). "
+                    + "When set, gaps map to assembly_gap; otherwise a plain gap is emitted.")
+    public String gapType;
+
+    @CommandLine.Option(
+            names = {"--linkage-evidence", "-le"},
+            description = "Optional INSDC linkage_evidence for generated gap features (FASTA to GFF3 conversion "
+                    + "only). Only valid with a gap_type that requires it (e.g. \"within scaffold\").")
+    public String linkageEvidence;
+
     @CommandLine.Parameters(
             paramLabel = "[output-file]",
             defaultValue = "",
@@ -196,7 +208,7 @@ public class FileConversionCommand extends AbstractCommand {
             return new TSVToGFF3Converter(engine, fastaOutputPath);
         } else if (inputFileType == ConversionFileFormat.fasta && outputFileType == ConversionFileFormat.gff3) {
             SequenceFormat format = resolveSequenceFormat(inputFilePath, null);
-            return new FastaToGff3Converter(engine, inputFilePath, format, minGapLength);
+            return new FastaToGff3Converter(engine, inputFilePath, format, minGapLength, gapType, linkageEvidence);
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }

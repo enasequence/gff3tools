@@ -33,18 +33,23 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
  * Converts a FASTA (or plain) sequence file to a GFF3 file containing only gap features.
  *
  * <p>Each sequence entry is scanned for contiguous runs of {@code N}/{@code n} bases.
- * Every run whose length is at least {@code minGapLength} becomes a {@code gap} feature with
- * {@code estimated_length}, {@code gap_type}, and {@code linkage_evidence} attributes. Runs
- * shorter than {@code minGapLength} are ignored, mirroring the INSDC assembly behaviour
- * implemented in sequencetools ({@code SequenceToGapFeatureBasesFix}).
+ * Every run whose length is at least {@code minGapLength} becomes a {@code gap} feature with an
+ * {@code estimated_length} attribute. Runs shorter than {@code minGapLength} are ignored,
+ * mirroring the INSDC assembly behaviour implemented in sequencetools
+ * ({@code SequenceToGapFeatureBasesFix}).
+ *
+ * <p>The biological gap type cannot be inferred from a run of {@code N}s (only its length is
+ * known), so no {@code gap_type} or {@code linkage_evidence} attribute is emitted by default and
+ * the feature maps to a plain INSDC {@code gap}. A caller that genuinely knows the gap type may
+ * supply {@code gapType} (and, where the type requires it, {@code linkageEvidence}); the feature
+ * then maps to an INSDC {@code assembly_gap}. Value validity is enforced downstream by
+ * {@code AssemblyGapValidation}.
  */
 @Slf4j
 public class FastaToGff3Converter implements Converter {
 
     private static final int GZIP_MAGIC_BYTE1 = 0x1f;
     private static final int GZIP_MAGIC_BYTE2 = 0x8b;
-    private static final String GAP_TYPE_DEFAULT = "within scaffold";
-    private static final String LINKAGE_EVIDENCE_DEFAULT = "unspecified";
 
     /** Default minimum gap length, matching sequencetools {@code Entry.DEFAULT_MIN_GAP_LENGTH}. */
     public static final int DEFAULT_MIN_GAP_LENGTH = 10;
@@ -53,14 +58,33 @@ public class FastaToGff3Converter implements Converter {
     private final Path inputFilePath;
     private final SequenceFormat sequenceFormat;
     private final int minGapLength;
+    private final String gapType;
+    private final String linkageEvidence;
 
     public FastaToGff3Converter(
             ValidationEngine validationEngine, Path inputFilePath, SequenceFormat sequenceFormat, int minGapLength) {
+        this(validationEngine, inputFilePath, sequenceFormat, minGapLength, null, null);
+    }
+
+    public FastaToGff3Converter(
+            ValidationEngine validationEngine,
+            Path inputFilePath,
+            SequenceFormat sequenceFormat,
+            int minGapLength,
+            String gapType,
+            String linkageEvidence) {
         this.validationEngine = validationEngine;
         this.inputFilePath = inputFilePath;
         this.sequenceFormat = sequenceFormat;
         // Defensive: a run of N is only ever a gap if it has at least one base.
         this.minGapLength = Math.max(1, minGapLength);
+        // Blank values are treated as "not supplied" so we emit a plain gap.
+        this.gapType = isBlank(gapType) ? null : gapType.trim();
+        this.linkageEvidence = isBlank(linkageEvidence) ? null : linkageEvidence.trim();
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     @Override
@@ -121,8 +145,14 @@ public class FastaToGff3Converter implements Converter {
                         ".");
                 feature.addAttribute(GFF3Attributes.ATTRIBUTE_ID, id);
                 feature.addAttribute(GFF3Attributes.ESTIMATED_LENGTH, String.valueOf(gap.lengthBases()));
-                feature.addAttribute(GFF3Attributes.GAP_TYPE, GAP_TYPE_DEFAULT);
-                feature.addAttribute(GFF3Attributes.LINKAGE_EVIDENCE, LINKAGE_EVIDENCE_DEFAULT);
+                // Rule: gap_type/linkage_evidence are not inferable from sequence and are emitted
+                // only when explicitly supplied; otherwise the feature stays a plain INSDC gap.
+                if (gapType != null) {
+                    feature.addAttribute(GFF3Attributes.GAP_TYPE, gapType);
+                }
+                if (linkageEvidence != null) {
+                    feature.addAttribute(GFF3Attributes.LINKAGE_EVIDENCE, linkageEvidence);
+                }
                 annotation.addFeature(feature);
                 gapIndex++;
             }

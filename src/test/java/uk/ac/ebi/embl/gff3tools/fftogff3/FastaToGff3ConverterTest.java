@@ -41,6 +41,28 @@ class FastaToGff3ConverterTest {
         String actual = output.toString();
         String expectedContent = Files.readString(expected, StandardCharsets.UTF_8);
         assertEquals(expectedContent, actual);
+        // By default a plain gap is emitted: gap_type cannot be inferred from a run of Ns.
+        assertFalse(actual.contains("gap_type"));
+        assertFalse(actual.contains("linkage_evidence"));
+    }
+
+    @Test
+    void emitsGapTypeAndLinkageEvidenceWhenSupplied() throws Exception {
+        Path fasta = Path.of("src/test/resources/fasta_to_gff3/single_sequence.fasta");
+
+        ValidationEngine engine = new ValidationEngineBuilder().build();
+        FastaToGff3Converter converter =
+                new FastaToGff3Converter(engine, fasta, SequenceFormat.fasta, 1, "within scaffold", "unspecified");
+
+        StringWriter output = new StringWriter();
+        try (BufferedReader reader = new BufferedReader(new StringReader(""));
+                BufferedWriter writer = new BufferedWriter(output)) {
+            converter.convert(reader, writer);
+        }
+
+        String actual = output.toString();
+        assertTrue(actual.contains("gap_type=within scaffold"));
+        assertTrue(actual.contains("linkage_evidence=unspecified"));
     }
 
     @Test
