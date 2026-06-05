@@ -136,6 +136,13 @@ public class FileConversionCommand extends AbstractCommand {
             if (fromFileType == ConversionFileFormat.fasta && toFileType == ConversionFileFormat.gff3) {
                 validateGapOptions();
                 SequenceFormat fmt = resolveSequenceFormat(inputFilePath, sequenceOptions.sequenceFormat);
+                // Plain (headerless) sequences carry no submission ID, so there is nothing to put
+                // in the GFF3 seqId column or sequence-region directive. Fail fast with a clear
+                // message rather than silently emitting an empty GFF3.
+                if (fmt == SequenceFormat.plain) {
+                    throw new CLIException("FASTA to GFF3 conversion requires FASTA input with sequence headers; "
+                            + "plain sequence input (--sequence-format plain) has no sequence ID to emit.");
+                }
                 // fastareader cannot read gzip directly; decompress once to a temp file if needed.
                 Path sourcePath = decompressIfGzipped(inputFilePath);
                 if (!sourcePath.equals(inputFilePath)) {

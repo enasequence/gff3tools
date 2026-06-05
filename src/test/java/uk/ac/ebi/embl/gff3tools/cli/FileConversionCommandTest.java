@@ -404,6 +404,22 @@ class FileConversionCommandTest {
         assertFalse(Files.exists(outputFile));
     }
 
+    @Test
+    void fastaToGff3_plainSequenceFormat_failsWithUsageError() throws Exception {
+        Path inputFile = tempDir.resolve("input.fasta");
+        Files.writeString(inputFile, GAPPY_FASTA);
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode = executeConversion(
+                "conversion", "--sequence-format", "plain", inputFile.toString(), outputFile.toString());
+
+        assertEquals(
+                CLIExitCode.USAGE.asInt(),
+                exitCode,
+                "plain sequence input to FASTA to GFF3 should be a usage error, not silent empty output");
+        assertFalse(Files.exists(outputFile), "No output file should be created on a usage error");
+    }
+
     private int executeConversion(String... args) {
         StringWriter err = new StringWriter();
         StringWriter out = new StringWriter();
