@@ -12,12 +12,7 @@ package uk.ac.ebi.embl.gff3tools.cli;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -65,6 +60,11 @@ public class FileConversionCommand extends AbstractCommand {
     public ConversionFileFormat toFileType;
 
     @CommandLine.Option(
+            names = {"--master-entry", "-m"},
+            description = "Optional master entry file. Accepts MasterEntry JSON (.json) or EMBL flatfile (.embl/.ff).")
+    public Path masterFilePath;
+
+    @CommandLine.Option(
             names = {"--output-sequence", "-os"},
             description = "Output path for nucleotide sequences in FASTA format (TSV to GFF3 conversion only)")
     public Path fastaOutputPath;
@@ -92,11 +92,6 @@ public class FileConversionCommand extends AbstractCommand {
             defaultValue = "",
             showDefaultValue = CommandLine.Help.Visibility.NEVER)
     public Path outputFilePath;
-
-    @CommandLine.Option(
-            names = {"--master-entry", "-m"},
-            description = "Optional master entry file. Accepts MasterEntry JSON (.json) or EMBL flatfile (.embl/.ff).")
-    public Path masterFilePath;
 
     @CommandLine.Mixin
     public SequenceOptions sequenceOptions;
