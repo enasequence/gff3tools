@@ -31,6 +31,7 @@ import uk.ac.ebi.embl.gff3tools.exception.FormatSupportException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
+import uk.ac.ebi.embl.gff3tools.fftogff3.FastaToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
@@ -187,6 +188,9 @@ public class FileConversionCommand extends AbstractCommand {
         } else if (inputFileType == ConversionFileFormat.tsv && outputFileType == ConversionFileFormat.gff3) {
             // TSV to GFF3 conversion using sequencetools template processing
             return new TSVToGFF3Converter(engine, fastaOutputPath);
+        } else if (inputFileType == ConversionFileFormat.fasta && outputFileType == ConversionFileFormat.gff3) {
+            SequenceFormat format = resolveSequenceFormat(inputFilePath, null);
+            return new FastaToGff3Converter(engine, inputFilePath, format);
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }
