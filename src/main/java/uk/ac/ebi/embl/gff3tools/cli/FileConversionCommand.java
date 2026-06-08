@@ -18,8 +18,10 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.GZIPInputStream;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -31,6 +33,7 @@ import uk.ac.ebi.embl.gff3tools.exception.FormatSupportException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
+import uk.ac.ebi.embl.gff3tools.fftogff3.FastaToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
@@ -48,6 +51,11 @@ public class FileConversionCommand extends AbstractCommand {
     private static final int GZIP_MAGIC_BYTE1 = 0x1f;
     private static final int GZIP_MAGIC_BYTE2 = 0x8b;
 
+    // INSDC gap types for which linkage_evidence is both required and allowed. Mirrors
+    // AssemblyGapValidation; kept here only to fail fast with a clear usage message.
+    private static final Set<String> GAP_TYPES_REQUIRING_LINKAGE =
+            Set.of("within scaffold", "repeat within scaffold", "contamination");
+
     @CommandLine.Option(names = "-f", description = "The type of the input file to be converted")
     public ConversionFileFormat fromFileType;
 
@@ -63,6 +71,24 @@ public class FileConversionCommand extends AbstractCommand {
             names = {"--output-sequence", "-os"},
             description = "Output path for nucleotide sequences in FASTA format (TSV to GFF3 conversion only)")
     public Path fastaOutputPath;
+
+    @CommandLine.Option(
+            names = {"--min-gap-length", "-mgl"},
+            description = "Minimum run of N bases reported as a gap feature (FASTA to GFF3 conversion only). "
+                    + "Default: ${DEFAULT-VALUE}.")
+    public int minGapLength = FastaToGff3Converter.DEFAULT_MIN_GAP_LENGTH;
+
+    @CommandLine.Option(
+            names = {"--gap-type", "-gt"},
+            description = "Optional INSDC gap_type for generated gap features (FASTA to GFF3 conversion only). "
+                    + "When set, gaps map to assembly_gap; otherwise a plain gap is emitted.")
+    public String gapType;
+
+    @CommandLine.Option(
+            names = {"--linkage-evidence", "-le"},
+            description = "Optional INSDC linkage_evidence for generated gap features (FASTA to GFF3 conversion "
+                    + "only). Only valid with a gap_type that requires it (e.g. \"within scaffold\").")
+    public String linkageEvidence;
 
     @CommandLine.Parameters(
             paramLabel = "[output-file]",
@@ -80,6 +106,8 @@ public class FileConversionCommand extends AbstractCommand {
         // Determine if we're writing to a file or stdout
         boolean writingToFile = !outputFilePath.toString().isEmpty();
         Path tempFile = null;
+        // Temporary decompressed copy of a gzipped FASTA input, if one is created below.
+        Path decompressedInput = null;
 
         try {
             // Write to a temp file first to ensure atomic output: if conversion fails,
@@ -93,20 +121,52 @@ public class FileConversionCommand extends AbstractCommand {
 
             final Path effectiveOutputPath = writingToFile ? tempFile : null;
 
-            List<FileSequenceSource> sources =
-                    buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
+            // Resolve formats up front so the input FASTA can be registered as a sequence source
+            // before the engine providers are built.
+            fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
+            toFileType = validateFileType(toFileType, outputFilePath, "-t");
+
+            List<FileSequenceSource> sources = new ArrayList<>(
+                    buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat));
+
+            // For FASTA -> GFF3, register the input FASTA as a sequence source so the engine gains
+            // its sequence/header context (read once) and the same sequence/annotation/fasta-header
+            // validations run as in the FASTA+GFF3 case.
+            FileSequenceSource inputFastaSource = null;
+            if (fromFileType == ConversionFileFormat.fasta && toFileType == ConversionFileFormat.gff3) {
+                validateGapOptions();
+                SequenceFormat fmt = resolveSequenceFormat(inputFilePath, sequenceOptions.sequenceFormat);
+                // Plain (headerless) sequences carry no submission ID, so there is nothing to put
+                // in the GFF3 seqId column or sequence-region directive. Fail fast with a clear
+                // message rather than silently emitting an empty GFF3.
+                if (fmt == SequenceFormat.plain) {
+                    throw new CLIException("FASTA to GFF3 conversion requires FASTA input with sequence headers; "
+                            + "plain sequence input (--sequence-format plain) has no sequence ID to emit.");
+                }
+                // fastareader cannot read gzip directly; decompress once to a temp file if needed.
+                Path sourcePath = decompressIfGzipped(inputFilePath);
+                if (!sourcePath.equals(inputFilePath)) {
+                    decompressedInput = sourcePath;
+                }
+                inputFastaSource = new FileSequenceSource(sourcePath, fmt, null);
+                sources.add(inputFastaSource);
+            }
+
             CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
             MasterMetadataProvider metadataProvider = buildMetadataProvider(masterFilePath);
             FastaHeaderProvider headerProvider = buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
 
-            try (BufferedReader inputReader = createInputReader();
+            final FileSequenceSource inputFastaSourceFinal = inputFastaSource;
+            // FASTA -> GFF3 reads the sequence exclusively through the shared FileSequenceSource,
+            // so we avoid opening (and, for gzip, decompressing) the input a second time here.
+            try (BufferedReader inputReader = inputFastaSourceFinal != null
+                            ? new BufferedReader(new StringReader(""))
+                            : createInputReader();
                     BufferedWriter outputWriter =
                             writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
-                fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
-                toFileType = validateFileType(toFileType, outputFilePath, "-t");
                 try (ValidationEngine engine =
                         initValidationEngine(ruleOverrides, compositeProvider, metadataProvider, headerProvider)) {
-                    Converter converter = getConverter(engine, fromFileType, toFileType);
+                    Converter converter = getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal);
                     converter.convert(inputReader, outputWriter);
                 }
             }
@@ -134,6 +194,72 @@ public class FileConversionCommand extends AbstractCommand {
                 }
             }
             throw new RuntimeException(e.getMessage(), e);
+        } finally {
+            // The engine (and its sequence source) is closed by now, so the decompressed copy
+            // is no longer in use and can be removed.
+            if (decompressedInput != null) {
+                try {
+                    Files.deleteIfExists(decompressedInput);
+                } catch (Exception deleteEx) {
+                    log.warn("Failed to delete temporary decompressed input: {}", decompressedInput);
+                }
+            }
+        }
+    }
+
+    /**
+     * Fails fast with a clear usage message for inconsistent gap options, instead of deferring to
+     * the validation engine (which would report a less obvious VALIDATION_ERROR). Value validity is
+     * still enforced downstream by {@code AssemblyGapValidation}.
+     */
+    private void validateGapOptions() throws CLIException {
+        boolean hasGapType = gapType != null && !gapType.isBlank();
+        boolean hasLinkageEvidence = linkageEvidence != null && !linkageEvidence.isBlank();
+        if (hasLinkageEvidence && !hasGapType) {
+            throw new CLIException("--linkage-evidence requires --gap-type to be set");
+        }
+        if (hasGapType) {
+            String normalizedGapType = gapType.trim().toLowerCase();
+            boolean requiresLinkage = GAP_TYPES_REQUIRING_LINKAGE.contains(normalizedGapType);
+            if (requiresLinkage && !hasLinkageEvidence) {
+                throw new CLIException("--gap-type \"" + gapType.trim() + "\" requires --linkage-evidence to be set");
+            }
+            if (!requiresLinkage && hasLinkageEvidence) {
+                throw new CLIException("--linkage-evidence is only valid with --gap-type "
+                        + "\"within scaffold\", \"repeat within scaffold\" or \"contamination\"");
+            }
+        }
+    }
+
+    /**
+     * Returns the original path if the file is not gzip-compressed, otherwise decompresses it to a
+     * temporary file and returns that path. Used so {@code fastareader} (which cannot read gzip)
+     * can open a gzipped FASTA input.
+     */
+    private Path decompressIfGzipped(Path path) throws ReadException, NonExistingFile {
+        boolean gzipped;
+        try (InputStream peekStream = Files.newInputStream(path)) {
+            int byte1 = peekStream.read();
+            int byte2 = peekStream.read();
+            gzipped = (byte1 == GZIP_MAGIC_BYTE1 && byte2 == GZIP_MAGIC_BYTE2);
+        } catch (NoSuchFileException e) {
+            throw new NonExistingFile("The file does not exist: " + path, e);
+        } catch (IOException e) {
+            throw new ReadException("Error checking file format: " + path, e);
+        }
+
+        if (!gzipped) {
+            return path;
+        }
+
+        try {
+            Path tempFile = Files.createTempFile("gff3tools-fasta-", ".fasta");
+            try (InputStream gzipIn = new GZIPInputStream(Files.newInputStream(path))) {
+                Files.copy(gzipIn, tempFile, StandardCopyOption.REPLACE_EXISTING);
+            }
+            return tempFile;
+        } catch (IOException e) {
+            throw new ReadException("Failed to decompress gzipped FASTA: " + path, e);
         }
     }
 
@@ -177,7 +303,10 @@ public class FileConversionCommand extends AbstractCommand {
     }
 
     private Converter getConverter(
-            ValidationEngine engine, ConversionFileFormat inputFileType, ConversionFileFormat outputFileType)
+            ValidationEngine engine,
+            ConversionFileFormat inputFileType,
+            ConversionFileFormat outputFileType,
+            FileSequenceSource inputFastaSource)
             throws FormatSupportException, CLIException {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
             return new Gff3ToFFConverter(engine, inputFilePath);
@@ -187,6 +316,9 @@ public class FileConversionCommand extends AbstractCommand {
         } else if (inputFileType == ConversionFileFormat.tsv && outputFileType == ConversionFileFormat.gff3) {
             // TSV to GFF3 conversion using sequencetools template processing
             return new TSVToGFF3Converter(engine, fastaOutputPath);
+        } else if (inputFileType == ConversionFileFormat.fasta && outputFileType == ConversionFileFormat.gff3) {
+            // inputFastaSource is the same source registered on the engine, so the FASTA is read once.
+            return new FastaToGff3Converter(engine, inputFastaSource, minGapLength, gapType, linkageEvidence);
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }

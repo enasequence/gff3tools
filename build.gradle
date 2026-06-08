@@ -10,7 +10,11 @@ plugins {
 base {
     archivesName = 'gff3tools'
     group = 'uk.ac.ebi.ena'
+<<<<<<< TTNA-244/gap-annotations-from-sequence
+    version = '4.6.0'
+=======
     version = '4.5.1'
+>>>>>>> main
 }
 
 java {
@@ -67,7 +71,7 @@ dependencies {
     implementation("org.projectlombok:lombok:1.18.30")
     annotationProcessor("org.projectlombok:lombok:1.18.30")
     implementation('uk.ac.ebi.ena.sequence:sequencetools:2.+')
-    implementation("uk.ac.ebi.ena:fastareader:1.1.0")
+    implementation("uk.ac.ebi.ena:fastareader:1.2.0")
     implementation "io.vavr:vavr:0.10.5"
     implementation "org.jgrapht:jgrapht-core:1.5.2"
     implementation("info.picocli:picocli:4.7.6")

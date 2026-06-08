@@ -12,10 +12,12 @@ package uk.ac.ebi.embl.gff3tools.cli;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.zip.GZIPOutputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
@@ -335,6 +337,87 @@ class FileConversionCommandTest {
         assertEquals(Path.of("seqs.fasta"), cmd.fastaOutputPath);
         assertEquals(ConversionFileFormat.embl, cmd.fromFileType);
         assertEquals(ConversionFileFormat.gff3, cmd.toFileType);
+    }
+
+    private static final String GAPPY_FASTA =
+            ">TEST01.1 | {\"description\":\"gappy\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
+                    + "ATGCATGCNNNNNNNNNNATGCATGC\n";
+
+    @Test
+    void fastaToGff3_emitsGapFeatures() throws Exception {
+        Path inputFile = tempDir.resolve("input.fasta");
+        Files.writeString(inputFile, GAPPY_FASTA);
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode = executeConversion("conversion", inputFile.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "FASTA to GFF3 conversion should succeed");
+        assertTrue(Files.exists(outputFile), "Output GFF3 file should be created");
+        String content = Files.readString(outputFile);
+        assertTrue(content.contains("##sequence-region TEST01.1 1 26"), content);
+        assertTrue(content.contains("TEST01.1\t.\tgap\t9\t18\t"), content);
+        assertTrue(content.contains("estimated_length=10"), content);
+    }
+
+    @Test
+    void fastaToGff3_gzippedInput_emitsGapFeatures() throws Exception {
+        Path inputFile = tempDir.resolve("input.fasta.gz");
+        try (OutputStream gz = new GZIPOutputStream(Files.newOutputStream(inputFile))) {
+            gz.write(GAPPY_FASTA.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode = executeConversion("conversion", inputFile.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "Gzipped FASTA to GFF3 conversion should succeed");
+        assertTrue(Files.exists(outputFile), "Output GFF3 file should be created");
+        assertTrue(Files.readString(outputFile).contains("TEST01.1\t.\tgap\t9\t18\t"));
+    }
+
+    @Test
+    void fastaToGff3_linkageEvidenceWithoutGapType_failsWithUsageError() throws Exception {
+        Path inputFile = tempDir.resolve("input.fasta");
+        Files.writeString(inputFile, GAPPY_FASTA);
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode =
+                executeConversion("conversion", "-le", "unspecified", inputFile.toString(), outputFile.toString());
+
+        assertEquals(
+                CLIExitCode.USAGE.asInt(), exitCode, "--linkage-evidence without --gap-type should be a usage error");
+        assertFalse(Files.exists(outputFile), "No output file should be created on a usage error");
+    }
+
+    @Test
+    void fastaToGff3_gapTypeRequiringLinkage_withoutLinkage_failsWithUsageError() throws Exception {
+        Path inputFile = tempDir.resolve("input.fasta");
+        Files.writeString(inputFile, GAPPY_FASTA);
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode =
+                executeConversion("conversion", "-gt", "within scaffold", inputFile.toString(), outputFile.toString());
+
+        assertEquals(
+                CLIExitCode.USAGE.asInt(),
+                exitCode,
+                "--gap-type requiring linkage without --linkage-evidence should be a usage error");
+        assertFalse(Files.exists(outputFile));
+    }
+
+    @Test
+    void fastaToGff3_plainSequenceFormat_failsWithUsageError() throws Exception {
+        Path inputFile = tempDir.resolve("input.fasta");
+        Files.writeString(inputFile, GAPPY_FASTA);
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode = executeConversion(
+                "conversion", "--sequence-format", "plain", inputFile.toString(), outputFile.toString());
+
+        assertEquals(
+                CLIExitCode.USAGE.asInt(),
+                exitCode,
+                "plain sequence input to FASTA to GFF3 should be a usage error, not silent empty output");
+        assertFalse(Files.exists(outputFile), "No output file should be created on a usage error");
     }
 
     private int executeConversion(String... args) {

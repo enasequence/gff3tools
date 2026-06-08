@@ -1,0 +1,4 @@
+##gff-version 3.1.26
+##sequence-region TEST01.1 1 146
+TEST01.1	.	gap	45	54	.	+	.	ID=gap;estimated_length=10;
+TEST01.1	.	gap	99	102	.	+	.	ID=gap_1;estimated_length=4;
