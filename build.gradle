@@ -10,7 +10,11 @@ plugins {
 base {
     archivesName = 'gff3tools'
     group = 'uk.ac.ebi.ena'
+<<<<<<< TTNA-244/gap-annotations-from-sequence
     version = '4.6.0'
+=======
+    version = '4.5.1'
+>>>>>>> main
 }
 
 java {

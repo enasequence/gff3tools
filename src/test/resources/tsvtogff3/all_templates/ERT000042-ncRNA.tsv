@@ -1,0 +1,3 @@
+#template_accession ERT000042
+ENTRYNUMBER	NCRMOLTYPE	ORGANISM	ENVSAM	NCRNACLASS	NCRNASTART	NCRNAEND	PRODUCT	FUNCTION	SEQUENCE	
+1	genomic DNA	Arabidopsis thaliana	no	lncRNA	1	100	LNCrna1234	unknown	acatgactacacatgactacacatgactacacatgactacacatgactacacatgactacacatgactacacatgactacacatgactacacatgactac	
