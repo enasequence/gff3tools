@@ -10,15 +10,20 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
+import java.io.Reader;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
+import uk.ac.ebi.embl.fastareader.SequenceStats;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReaderFactory;
+import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.JsonHeaderParser;
@@ -98,6 +103,50 @@ public class FileSequenceSource implements SequenceSource {
         ensureInitialized();
         long ordinal = resolveOrdinal(seqId);
         return formatReader.getSequenceSlice(ordinal, fromBase, toBase);
+    }
+
+    @Override
+    public long getSequenceLength(String seqId) throws Exception {
+        ensureInitialized();
+        long ordinal = resolveOrdinal(seqId);
+        return formatReader.getStats(ordinal).totalBases();
+    }
+
+    @Override
+    public SequenceStats getSequenceStats(String seqId) throws Exception {
+        ensureInitialized();
+        long ordinal = resolveOrdinal(seqId);
+        return formatReader.getStats(ordinal);
+    }
+
+    @Override
+    public List<GapRegion> getGapRegions(String seqId) throws Exception {
+        ensureInitialized();
+        long ordinal = resolveOrdinal(seqId);
+        return formatReader.getGapRegions(ordinal);
+    }
+
+    @Override
+    public List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase) throws Exception {
+        ensureInitialized();
+        long ordinal = resolveOrdinal(seqId);
+        return formatReader.getGapRegions(ordinal, fromBase, toBase);
+    }
+
+    @Override
+    public Set<String> knownSeqIds() {
+        ensureInitialized();
+        if (formatReader.getSequenceFileFormat() == SequenceFileFormat.PLAIN_SEQUENCE) {
+            return sequenceKey != null ? Set.of(sequenceKey) : Set.of();
+        }
+        return Collections.unmodifiableSet(seqIdToOrdinal.keySet());
+    }
+
+    @Override
+    public Reader getSequenceSliceReader(String seqId, long fromBase, long toBase) throws Exception {
+        ensureInitialized();
+        long ordinal = resolveOrdinal(seqId);
+        return formatReader.getSequenceSliceReader(ordinal, fromBase, toBase);
     }
 
     @Override

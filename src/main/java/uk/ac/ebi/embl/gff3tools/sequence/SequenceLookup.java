@@ -10,8 +10,14 @@
  */
 package uk.ac.ebi.embl.gff3tools.sequence;
 
+import java.io.Reader;
+import java.util.List;
+import java.util.Set;
+import uk.ac.ebi.embl.fastareader.SequenceStats;
+import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
+
 /**
- * Minimal interface for looking up nucleotide sequence slices by GFF3 seqId.
+ * Interface for looking up nucleotide sequence data by GFF3 seqId.
  *
  * <p>Backed by the library's {@code SequenceFormatReader}; the string-to-ordinal
  * ID mapping is handled by the implementing provider layer.
@@ -27,4 +33,27 @@ public interface SequenceLookup {
      * @return the nucleotide string
      */
     String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception;
+
+    /** Total length of the sequence in bases. */
+    long getSequenceLength(String seqId) throws Exception;
+
+    /** Full stats for the sequence (base counts, N-counts, edge Ns). */
+    SequenceStats getSequenceStats(String seqId) throws Exception;
+
+    /** All contiguous N-runs in the whole sequence. */
+    List<GapRegion> getGapRegions(String seqId) throws Exception;
+
+    /**
+     * N-runs overlapping [fromBase, toBase] (1-based inclusive).
+     * Returned regions are not clipped to the range.
+     */
+    List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase) throws Exception;
+
+    /** All seqIds known to this lookup. */
+    Set<String> knownSeqIds();
+
+    /**
+     * Streaming reader over a sequence slice. Caller must close the returned Reader.
+     */
+    Reader getSequenceSliceReader(String seqId, long fromBase, long toBase) throws Exception;
 }

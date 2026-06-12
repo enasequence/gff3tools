@@ -10,10 +10,16 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
+import java.io.Reader;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import lombok.Getter;
+import uk.ac.ebi.embl.fastareader.SequenceStats;
+import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
@@ -55,13 +61,53 @@ public class CompositeSequenceProvider implements ContextProvider<SequenceLookup
             return null;
         }
         if (cachedLookup == null) {
-            cachedLookup = (seqId, fromBase, toBase) -> {
-                for (SequenceSource source : sources) {
-                    if (source.hasSequence(seqId)) {
-                        return source.getSequenceSlice(seqId, fromBase, toBase);
+            cachedLookup = new SequenceLookup() {
+
+                private SequenceSource sourceFor(String seqId) {
+                    for (SequenceSource source : sources) {
+                        if (source.hasSequence(seqId)) return source;
                     }
+                    throw new IllegalArgumentException("No sequence source found for seqId: " + seqId);
                 }
-                throw new IllegalArgumentException("No sequence source found for seqId: " + seqId);
+
+                @Override
+                public String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception {
+                    return sourceFor(seqId).getSequenceSlice(seqId, fromBase, toBase);
+                }
+
+                @Override
+                public long getSequenceLength(String seqId) throws Exception {
+                    return sourceFor(seqId).getSequenceLength(seqId);
+                }
+
+                @Override
+                public SequenceStats getSequenceStats(String seqId) throws Exception {
+                    return sourceFor(seqId).getSequenceStats(seqId);
+                }
+
+                @Override
+                public List<GapRegion> getGapRegions(String seqId) throws Exception {
+                    return sourceFor(seqId).getGapRegions(seqId);
+                }
+
+                @Override
+                public List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase) throws Exception {
+                    return sourceFor(seqId).getGapRegions(seqId, fromBase, toBase);
+                }
+
+                @Override
+                public Set<String> knownSeqIds() {
+                    Set<String> all = new LinkedHashSet<>();
+                    for (SequenceSource source : sources) {
+                        all.addAll(source.knownSeqIds());
+                    }
+                    return Collections.unmodifiableSet(all);
+                }
+
+                @Override
+                public Reader getSequenceSliceReader(String seqId, long fromBase, long toBase) throws Exception {
+                    return sourceFor(seqId).getSequenceSliceReader(seqId, fromBase, toBase);
+                }
             };
         }
         return cachedLookup;

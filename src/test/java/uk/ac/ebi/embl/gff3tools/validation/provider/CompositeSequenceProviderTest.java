@@ -12,7 +12,14 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.Reader;
+import java.io.StringReader;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.fastareader.SequenceStats;
+import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
@@ -134,6 +141,72 @@ class CompositeSequenceProviderTest {
         assertNotSame(first, second);
     }
 
+    // --- new method tests ---
+
+    @Test
+    void getSequenceLengthDelegatesToSource() throws Exception {
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        provider.addSource(fullStubSource("seq1", 300L));
+
+        assertEquals(300L, provider.get(new ValidationContext()).getSequenceLength("seq1"));
+    }
+
+    @Test
+    void getSequenceStatsDelegatesToSource() throws Exception {
+        SequenceStats stats = new SequenceStats(100L, 90L, 0L, 0L, Map.of('N', 10L));
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        provider.addSource(fullStubSource("seq1", stats));
+
+        assertSame(stats, provider.get(new ValidationContext()).getSequenceStats("seq1"));
+    }
+
+    @Test
+    void getGapRegionsWholeSequenceDelegatesToSource() throws Exception {
+        List<GapRegion> gaps = List.of(new GapRegion(5L, 14L));
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        provider.addSource(fullStubSourceWithGaps("seq1", gaps));
+
+        assertEquals(gaps, provider.get(new ValidationContext()).getGapRegions("seq1"));
+    }
+
+    @Test
+    void getGapRegionsRangeDelegatesToSource() throws Exception {
+        List<GapRegion> gaps = List.of(new GapRegion(5L, 14L));
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        provider.addSource(fullStubSourceWithGaps("seq1", gaps));
+
+        assertEquals(gaps, provider.get(new ValidationContext()).getGapRegions("seq1", 1L, 20L));
+    }
+
+    @Test
+    void knownSeqIdsAggregatesAcrossSources() {
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        provider.addSource(fullStubSource("seq1", 100L));
+        provider.addSource(fullStubSource("seq2", 200L));
+
+        assertEquals(Set.of("seq1", "seq2"), provider.get(new ValidationContext()).knownSeqIds());
+    }
+
+    @Test
+    void getSequenceSliceReaderDelegatesToSource() throws Exception {
+        Reader expected = new StringReader("ATGAAA");
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        provider.addSource(fullStubSourceWithReader("seq1", expected));
+
+        assertSame(expected, provider.get(new ValidationContext()).getSequenceSliceReader("seq1", 1L, 6L));
+    }
+
+    @Test
+    void newMethodsThrowForUnknownSeqId() {
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        provider.addSource(stubSource("seq1", "AAA"));
+
+        SequenceLookup lookup = provider.get(new ValidationContext());
+        assertThrows(IllegalArgumentException.class, () -> lookup.getSequenceLength("unknown"));
+        assertThrows(IllegalArgumentException.class, () -> lookup.getSequenceStats("unknown"));
+        assertThrows(IllegalArgumentException.class, () -> lookup.getGapRegions("unknown"));
+    }
+
     private SequenceSource stubSource(String seqId, String sequence) {
         return new SequenceSource() {
             @Override
@@ -145,6 +218,64 @@ class CompositeSequenceProviderTest {
             public String getSequenceSlice(String id, long fromBase, long toBase) {
                 return sequence;
             }
+        };
+    }
+
+    private SequenceSource fullStubSource(String seqId, long length) {
+        return new SequenceSource() {
+            @Override
+            public boolean hasSequence(String id) { return seqId.equals(id); }
+            @Override
+            public String getSequenceSlice(String id, long f, long t) { return ""; }
+            @Override
+            public long getSequenceLength(String id) { return length; }
+            @Override
+            public SequenceStats getSequenceStats(String id) { return null; }
+            @Override
+            public Set<String> knownSeqIds() { return Set.of(seqId); }
+        };
+    }
+
+    private SequenceSource fullStubSource(String seqId, SequenceStats stats) {
+        return new SequenceSource() {
+            @Override
+            public boolean hasSequence(String id) { return seqId.equals(id); }
+            @Override
+            public String getSequenceSlice(String id, long f, long t) { return ""; }
+            @Override
+            public long getSequenceLength(String id) { return stats.totalBases(); }
+            @Override
+            public SequenceStats getSequenceStats(String id) { return stats; }
+            @Override
+            public Set<String> knownSeqIds() { return Set.of(seqId); }
+        };
+    }
+
+    private SequenceSource fullStubSourceWithGaps(String seqId, List<GapRegion> gaps) {
+        return new SequenceSource() {
+            @Override
+            public boolean hasSequence(String id) { return seqId.equals(id); }
+            @Override
+            public String getSequenceSlice(String id, long f, long t) { return ""; }
+            @Override
+            public List<GapRegion> getGapRegions(String id) { return gaps; }
+            @Override
+            public List<GapRegion> getGapRegions(String id, long f, long t) { return gaps; }
+            @Override
+            public Set<String> knownSeqIds() { return Set.of(seqId); }
+        };
+    }
+
+    private SequenceSource fullStubSourceWithReader(String seqId, Reader reader) {
+        return new SequenceSource() {
+            @Override
+            public boolean hasSequence(String id) { return seqId.equals(id); }
+            @Override
+            public String getSequenceSlice(String id, long f, long t) { return ""; }
+            @Override
+            public Reader getSequenceSliceReader(String id, long f, long t) { return reader; }
+            @Override
+            public Set<String> knownSeqIds() { return Set.of(seqId); }
         };
     }
 }

@@ -13,12 +13,17 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import java.io.Reader;
+import java.io.StringReader;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
+import uk.ac.ebi.embl.fastareader.SequenceStats;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
+import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 
@@ -124,6 +129,89 @@ class FileSequenceSourceTest {
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> source.hasSequence("dup_id"));
         assertTrue(ex.getMessage().contains("Duplicate submission ID"));
+    }
+
+    // --- new method tests ---
+
+    @Test
+    void getSequenceLengthDelegatesForFasta() throws Exception {
+        SequenceFormatReader mockReader = mockFastaReader("seq1");
+        SequenceStats stats = new SequenceStats(200L, 190L, 0L, 0L, Map.of('N', 10L));
+        when(mockReader.getStats(0L)).thenReturn(stats);
+
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+        assertEquals(200L, source.getSequenceLength("seq1"));
+    }
+
+    @Test
+    void getSequenceLengthDelegatesForPlain() throws Exception {
+        SequenceFormatReader mockReader = mockPlainReader();
+        SequenceStats stats = new SequenceStats(50L, 50L, 0L, 0L, Map.of());
+        when(mockReader.getStats(0L)).thenReturn(stats);
+
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.plain, null);
+        assertEquals(50L, source.getSequenceLength("any-id"));
+    }
+
+    @Test
+    void getSequenceStatsDelegatesForFasta() throws Exception {
+        SequenceFormatReader mockReader = mockFastaReader("seq1");
+        SequenceStats stats = new SequenceStats(100L, 90L, 2L, 3L, Map.of('N', 10L));
+        when(mockReader.getStats(0L)).thenReturn(stats);
+
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+        assertSame(stats, source.getSequenceStats("seq1"));
+    }
+
+    @Test
+    void getGapRegionsWholeSequenceDelegatesForFasta() throws Exception {
+        SequenceFormatReader mockReader = mockFastaReader("seq1");
+        List<GapRegion> gaps = List.of(new GapRegion(5L, 14L), new GapRegion(50L, 99L));
+        when(mockReader.getGapRegions(0L)).thenReturn(gaps);
+
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+        assertEquals(gaps, source.getGapRegions("seq1"));
+    }
+
+    @Test
+    void getGapRegionsRangeDelegatesForFasta() throws Exception {
+        SequenceFormatReader mockReader = mockFastaReader("seq1");
+        List<GapRegion> gaps = List.of(new GapRegion(5L, 14L));
+        when(mockReader.getGapRegions(0L, 1L, 20L)).thenReturn(gaps);
+
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+        assertEquals(gaps, source.getGapRegions("seq1", 1L, 20L));
+    }
+
+    @Test
+    void knownSeqIdsReturnsFastaIds() {
+        SequenceFormatReader mockReader = mockFastaReader("seq1", "seq2");
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+        assertEquals(Set.of("seq1", "seq2"), source.knownSeqIds());
+    }
+
+    @Test
+    void knownSeqIdsReturnsSingletonForPlainWithKey() {
+        SequenceFormatReader mockReader = mockPlainReader();
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.plain, "chr1");
+        assertEquals(Set.of("chr1"), source.knownSeqIds());
+    }
+
+    @Test
+    void knownSeqIdsReturnsEmptySetForPlainWithoutKey() {
+        SequenceFormatReader mockReader = mockPlainReader();
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.plain, null);
+        assertTrue(source.knownSeqIds().isEmpty());
+    }
+
+    @Test
+    void getSequenceSliceReaderDelegatesForFasta() throws Exception {
+        SequenceFormatReader mockReader = mockFastaReader("seq1");
+        Reader expected = new StringReader("ATGAAA");
+        when(mockReader.getSequenceSliceReader(0L, 1L, 6L)).thenReturn(expected);
+
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+        assertSame(expected, source.getSequenceSliceReader("seq1", 1L, 6L));
     }
 
     /** Creates a mock plain sequence reader with a single ordinal 0. */
