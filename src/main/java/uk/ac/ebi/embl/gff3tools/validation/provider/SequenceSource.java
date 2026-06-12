@@ -35,27 +35,33 @@ public interface SequenceSource {
     String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception;
 
     default long getSequenceLength(String seqId) throws Exception {
-        throw new UnsupportedOperationException("getSequenceLength not implemented by " + getClass().getSimpleName());
+        throw new UnsupportedOperationException(
+                "getSequenceLength not implemented by " + getClass().getSimpleName());
     }
 
     default SequenceStats getSequenceStats(String seqId) throws Exception {
-        throw new UnsupportedOperationException("getSequenceStats not implemented by " + getClass().getSimpleName());
+        throw new UnsupportedOperationException(
+                "getSequenceStats not implemented by " + getClass().getSimpleName());
     }
 
     default List<GapRegion> getGapRegions(String seqId) throws Exception {
-        throw new UnsupportedOperationException("getGapRegions not implemented by " + getClass().getSimpleName());
+        throw new UnsupportedOperationException(
+                "getGapRegions not implemented by " + getClass().getSimpleName());
     }
 
     default List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase) throws Exception {
-        throw new UnsupportedOperationException("getGapRegions not implemented by " + getClass().getSimpleName());
+        throw new UnsupportedOperationException(
+                "getGapRegions not implemented by " + getClass().getSimpleName());
     }
 
     default Set<String> knownSeqIds() {
-        throw new UnsupportedOperationException("knownSeqIds not implemented by " + getClass().getSimpleName());
+        throw new UnsupportedOperationException(
+                "knownSeqIds not implemented by " + getClass().getSimpleName());
     }
 
     default Reader getSequenceSliceReader(String seqId, long fromBase, long toBase) throws Exception {
-        throw new UnsupportedOperationException("getSequenceSliceReader not implemented by " + getClass().getSimpleName());
+        throw new UnsupportedOperationException(
+                "getSequenceSliceReader not implemented by " + getClass().getSimpleName());
     }
 
     /** Release any resources held by this source. */

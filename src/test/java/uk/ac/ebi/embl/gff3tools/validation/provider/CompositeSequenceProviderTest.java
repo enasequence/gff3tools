@@ -184,7 +184,8 @@ class CompositeSequenceProviderTest {
         provider.addSource(fullStubSource("seq1", 100L));
         provider.addSource(fullStubSource("seq2", 200L));
 
-        assertEquals(Set.of("seq1", "seq2"), provider.get(new ValidationContext()).knownSeqIds());
+        assertEquals(
+                Set.of("seq1", "seq2"), provider.get(new ValidationContext()).knownSeqIds());
     }
 
     @Test
@@ -224,58 +225,111 @@ class CompositeSequenceProviderTest {
     private SequenceSource fullStubSource(String seqId, long length) {
         return new SequenceSource() {
             @Override
-            public boolean hasSequence(String id) { return seqId.equals(id); }
+            public boolean hasSequence(String id) {
+                return seqId.equals(id);
+            }
+
             @Override
-            public String getSequenceSlice(String id, long f, long t) { return ""; }
+            public String getSequenceSlice(String id, long f, long t) {
+                return "";
+            }
+
             @Override
-            public long getSequenceLength(String id) { return length; }
+            public long getSequenceLength(String id) {
+                return length;
+            }
+
             @Override
-            public SequenceStats getSequenceStats(String id) { return null; }
+            public SequenceStats getSequenceStats(String id) {
+                return null;
+            }
+
             @Override
-            public Set<String> knownSeqIds() { return Set.of(seqId); }
+            public Set<String> knownSeqIds() {
+                return Set.of(seqId);
+            }
         };
     }
 
     private SequenceSource fullStubSource(String seqId, SequenceStats stats) {
         return new SequenceSource() {
             @Override
-            public boolean hasSequence(String id) { return seqId.equals(id); }
+            public boolean hasSequence(String id) {
+                return seqId.equals(id);
+            }
+
             @Override
-            public String getSequenceSlice(String id, long f, long t) { return ""; }
+            public String getSequenceSlice(String id, long f, long t) {
+                return "";
+            }
+
             @Override
-            public long getSequenceLength(String id) { return stats.totalBases(); }
+            public long getSequenceLength(String id) {
+                return stats.totalBases();
+            }
+
             @Override
-            public SequenceStats getSequenceStats(String id) { return stats; }
+            public SequenceStats getSequenceStats(String id) {
+                return stats;
+            }
+
             @Override
-            public Set<String> knownSeqIds() { return Set.of(seqId); }
+            public Set<String> knownSeqIds() {
+                return Set.of(seqId);
+            }
         };
     }
 
     private SequenceSource fullStubSourceWithGaps(String seqId, List<GapRegion> gaps) {
         return new SequenceSource() {
             @Override
-            public boolean hasSequence(String id) { return seqId.equals(id); }
+            public boolean hasSequence(String id) {
+                return seqId.equals(id);
+            }
+
             @Override
-            public String getSequenceSlice(String id, long f, long t) { return ""; }
+            public String getSequenceSlice(String id, long f, long t) {
+                return "";
+            }
+
             @Override
-            public List<GapRegion> getGapRegions(String id) { return gaps; }
+            public List<GapRegion> getGapRegions(String id) {
+                return gaps;
+            }
+
             @Override
-            public List<GapRegion> getGapRegions(String id, long f, long t) { return gaps; }
+            public List<GapRegion> getGapRegions(String id, long f, long t) {
+                return gaps;
+            }
+
             @Override
-            public Set<String> knownSeqIds() { return Set.of(seqId); }
+            public Set<String> knownSeqIds() {
+                return Set.of(seqId);
+            }
         };
     }
 
     private SequenceSource fullStubSourceWithReader(String seqId, Reader reader) {
         return new SequenceSource() {
             @Override
-            public boolean hasSequence(String id) { return seqId.equals(id); }
+            public boolean hasSequence(String id) {
+                return seqId.equals(id);
+            }
+
             @Override
-            public String getSequenceSlice(String id, long f, long t) { return ""; }
+            public String getSequenceSlice(String id, long f, long t) {
+                return "";
+            }
+
             @Override
-            public Reader getSequenceSliceReader(String id, long f, long t) { return reader; }
+            public Reader getSequenceSliceReader(String id, long f, long t) {
+                return reader;
+            }
+
             @Override
-            public Set<String> knownSeqIds() { return Set.of(seqId); }
+            public Set<String> knownSeqIds() {
+                return Set.of(seqId);
+            }
         };
     }
 }
