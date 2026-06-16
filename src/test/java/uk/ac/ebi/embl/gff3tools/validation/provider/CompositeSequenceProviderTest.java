@@ -18,9 +18,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.fastareader.SequenceStats;
-import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
+import uk.ac.ebi.embl.gff3tools.sequence.GapRegion;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 class CompositeSequenceProviderTest {

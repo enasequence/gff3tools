@@ -13,8 +13,6 @@ package uk.ac.ebi.embl.gff3tools.sequence;
 import java.io.Reader;
 import java.util.List;
 import java.util.Set;
-import uk.ac.ebi.embl.fastareader.SequenceStats;
-import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 
 /**
  * Interface for looking up nucleotide sequence data by GFF3 seqId.

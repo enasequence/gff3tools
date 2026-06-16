@@ -20,11 +20,11 @@ import java.util.Set;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
-import uk.ac.ebi.embl.fastareader.SequenceStats;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReaderFactory;
-import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
+import uk.ac.ebi.embl.gff3tools.sequence.GapRegion;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.JsonHeaderParser;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ParsedHeader;
@@ -116,21 +116,31 @@ public class FileSequenceSource implements SequenceSource {
     public SequenceStats getSequenceStats(String seqId) throws Exception {
         ensureInitialized();
         long ordinal = resolveOrdinal(seqId);
-        return formatReader.getStats(ordinal);
+        uk.ac.ebi.embl.fastareader.SequenceStats fr = formatReader.getStats(ordinal);
+        return new SequenceStats(
+                fr.totalBases(),
+                fr.totalBasesWithoutNBases(),
+                fr.leadingNsCount(),
+                fr.trailingNsCount(),
+                fr.baseCount());
     }
 
     @Override
     public List<GapRegion> getGapRegions(String seqId) throws Exception {
         ensureInitialized();
         long ordinal = resolveOrdinal(seqId);
-        return formatReader.getGapRegions(ordinal);
+        return formatReader.getGapRegions(ordinal).stream()
+                .map(g -> new GapRegion(g.startBase, g.endBase))
+                .toList();
     }
 
     @Override
     public List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase) throws Exception {
         ensureInitialized();
         long ordinal = resolveOrdinal(seqId);
-        return formatReader.getGapRegions(ordinal, fromBase, toBase);
+        return formatReader.getGapRegions(ordinal, fromBase, toBase).stream()
+                .map(g -> new GapRegion(g.startBase, g.endBase))
+                .toList();
     }
 
     @Override

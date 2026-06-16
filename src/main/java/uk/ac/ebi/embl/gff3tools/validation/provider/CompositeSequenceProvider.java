@@ -18,9 +18,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import lombok.Getter;
-import uk.ac.ebi.embl.fastareader.SequenceStats;
-import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
+import uk.ac.ebi.embl.gff3tools.sequence.GapRegion;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 

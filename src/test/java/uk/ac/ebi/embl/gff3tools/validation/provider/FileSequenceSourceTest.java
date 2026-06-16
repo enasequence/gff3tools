@@ -21,10 +21,10 @@ import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
-import uk.ac.ebi.embl.fastareader.SequenceStats;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
-import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
+import uk.ac.ebi.embl.gff3tools.sequence.GapRegion;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 
 class FileSequenceSourceTest {
@@ -136,8 +136,8 @@ class FileSequenceSourceTest {
     @Test
     void getSequenceLengthDelegatesForFasta() throws Exception {
         SequenceFormatReader mockReader = mockFastaReader("seq1");
-        SequenceStats stats = new SequenceStats(200L, 190L, 0L, 0L, Map.of('N', 10L));
-        when(mockReader.getStats(0L)).thenReturn(stats);
+        when(mockReader.getStats(0L))
+                .thenReturn(new uk.ac.ebi.embl.fastareader.SequenceStats(200L, 190L, 0L, 0L, Map.of('N', 10L)));
 
         FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
         assertEquals(200L, source.getSequenceLength("seq1"));
@@ -146,8 +146,8 @@ class FileSequenceSourceTest {
     @Test
     void getSequenceLengthDelegatesForPlain() throws Exception {
         SequenceFormatReader mockReader = mockPlainReader();
-        SequenceStats stats = new SequenceStats(50L, 50L, 0L, 0L, Map.of());
-        when(mockReader.getStats(0L)).thenReturn(stats);
+        when(mockReader.getStats(0L))
+                .thenReturn(new uk.ac.ebi.embl.fastareader.SequenceStats(50L, 50L, 0L, 0L, Map.of()));
 
         FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.plain, null);
         assertEquals(50L, source.getSequenceLength("any-id"));
@@ -156,31 +156,33 @@ class FileSequenceSourceTest {
     @Test
     void getSequenceStatsDelegatesForFasta() throws Exception {
         SequenceFormatReader mockReader = mockFastaReader("seq1");
-        SequenceStats stats = new SequenceStats(100L, 90L, 2L, 3L, Map.of('N', 10L));
-        when(mockReader.getStats(0L)).thenReturn(stats);
+        when(mockReader.getStats(0L))
+                .thenReturn(new uk.ac.ebi.embl.fastareader.SequenceStats(100L, 90L, 2L, 3L, Map.of('N', 10L)));
 
         FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
-        assertSame(stats, source.getSequenceStats("seq1"));
+        assertEquals(new SequenceStats(100L, 90L, 2L, 3L, Map.of('N', 10L)), source.getSequenceStats("seq1"));
     }
 
     @Test
     void getGapRegionsWholeSequenceDelegatesForFasta() throws Exception {
         SequenceFormatReader mockReader = mockFastaReader("seq1");
-        List<GapRegion> gaps = List.of(new GapRegion(5L, 14L), new GapRegion(50L, 99L));
-        when(mockReader.getGapRegions(0L)).thenReturn(gaps);
+        when(mockReader.getGapRegions(0L))
+                .thenReturn(List.of(
+                        new uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion(5L, 14L),
+                        new uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion(50L, 99L)));
 
         FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
-        assertEquals(gaps, source.getGapRegions("seq1"));
+        assertEquals(List.of(new GapRegion(5L, 14L), new GapRegion(50L, 99L)), source.getGapRegions("seq1"));
     }
 
     @Test
     void getGapRegionsRangeDelegatesForFasta() throws Exception {
         SequenceFormatReader mockReader = mockFastaReader("seq1");
-        List<GapRegion> gaps = List.of(new GapRegion(5L, 14L));
-        when(mockReader.getGapRegions(0L, 1L, 20L)).thenReturn(gaps);
+        when(mockReader.getGapRegions(0L, 1L, 20L))
+                .thenReturn(List.of(new uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion(5L, 14L)));
 
         FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
-        assertEquals(gaps, source.getGapRegions("seq1", 1L, 20L));
+        assertEquals(List.of(new GapRegion(5L, 14L)), source.getGapRegions("seq1", 1L, 20L));
     }
 
     @Test
