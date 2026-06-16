@@ -26,7 +26,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 @Gff3Validation(
         name = "FEATURE_LOCATION",
         description = "Validates that feature and sequence-region coordinates are within the sequence bounds")
-public class FeatureLocationCheck implements Validation {
+public class FeatureLocationValidation implements Validation {
 
     private static final String RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH = "FEATURE_END_EXCEEDS_SEQUENCE_LENGTH";
     private static final String FEATURE_END_EXCEEDS_SEQUENCE_LENGTH =

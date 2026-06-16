@@ -28,7 +28,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 @Gff3Validation(
         name = "GAP_FEATURE_BASES",
         description = "Validates that gap features span only N bases in the sequence")
-public class GapFeatureBasesCheck implements Validation {
+public class GapFeatureBasesValidation implements Validation {
 
     private static final String RULE_GAP_BASES = "GAP_BASES";
     private static final String GAP_BASES_MESSAGE =

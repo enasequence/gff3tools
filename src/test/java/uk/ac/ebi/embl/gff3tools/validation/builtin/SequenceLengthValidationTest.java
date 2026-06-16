@@ -26,15 +26,15 @@ import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
-public class SequenceLengthCheckTest {
+public class SequenceLengthValidationTest {
 
     private static final String SEQ_ID = "chr1";
 
-    private SequenceLengthCheck check;
+    private SequenceLengthValidation check;
 
     @BeforeEach
     void setUp() {
-        check = new SequenceLengthCheck();
+        check = new SequenceLengthValidation();
     }
 
     private void injectLookup(SequenceLookup mockLookup) {
@@ -66,6 +66,13 @@ public class SequenceLengthCheckTest {
     private GFF3Annotation annotationWithSequenceRegion(long regionStart, long regionEnd) {
         GFF3Annotation annotation = new GFF3Annotation();
         annotation.setSequenceRegion(new GFF3SequenceRegion(SEQ_ID, Optional.empty(), regionStart, regionEnd));
+        return annotation;
+    }
+
+    private GFF3Annotation annotationWithFeature(String featureName) {
+        GFF3Annotation annotation = new GFF3Annotation();
+        annotation.setSequenceRegion(new GFF3SequenceRegion(SEQ_ID, Optional.empty(), 1L, 50L));
+        annotation.addFeature(TestUtils.createGFF3Feature(featureName, SEQ_ID, 1L, 50L, Map.of()));
         return annotation;
     }
 
@@ -131,6 +138,88 @@ public class SequenceLengthCheckTest {
             injectNoLookup();
             assertDoesNotThrow(
                     () -> check.validateSequenceRegionAgainstSequence(annotationWithSequenceRegion(0L, 99999L), 1));
+        }
+    }
+
+    @Nested
+    class ValidateMinimumLength {
+
+        @Test
+        void lengthAbove100Success() throws Exception {
+            injectLookupReturning(SEQ_ID, 150L);
+            assertDoesNotThrow(() -> check.validateMinimumLength(annotationWithSequenceRegion(1L, 150L), 1));
+        }
+
+        @Test
+        void lengthBelow100NoExceptionFailure() throws Exception {
+            injectLookupReturning(SEQ_ID, 50L);
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
+                    () -> check.validateMinimumLength(annotationWithSequenceRegion(1L, 50L), 1));
+            assertTrue(ex.getMessage().contains("SEQUENCE_TOO_SHORT"));
+        }
+
+        @Test
+        void lengthBelow100WithNcRnaGeneSuccess() throws Exception {
+            injectLookupReturning(SEQ_ID, 50L);
+            assertDoesNotThrow(() -> check.validateMinimumLength(annotationWithFeature("ncRNA_gene"), 1));
+        }
+
+        @Test
+        void lengthBelow100WithNcRnaSuccess() throws Exception {
+            injectLookupReturning(SEQ_ID, 50L);
+            assertDoesNotThrow(() -> check.validateMinimumLength(annotationWithFeature("ncRNA"), 1));
+        }
+
+        @Test
+        void lengthBelow100WithMicrosatelliteSuccess() throws Exception {
+            injectLookupReturning(SEQ_ID, 50L);
+            assertDoesNotThrow(() -> check.validateMinimumLength(annotationWithFeature("microsatellite"), 1));
+        }
+
+        @Test
+        void noLookupSkipped() throws Exception {
+            injectNoLookup();
+            assertDoesNotThrow(() -> check.validateMinimumLength(annotationWithSequenceRegion(1L, 50L), 1));
+        }
+    }
+
+    @Nested
+    class ValidateLncRnaLength {
+
+        @Test
+        void lncRnaFeatureLengthAbove200Success() throws Exception {
+            injectLookupReturning(SEQ_ID, 250L);
+            assertDoesNotThrow(() -> check.validateLncRnaLength(annotationWithFeature("lncRNA"), 1));
+        }
+
+        @Test
+        void lncRnaFeatureLengthBelow200Failure() throws Exception {
+            injectLookupReturning(SEQ_ID, 150L);
+            ValidationException ex = assertThrows(
+                    ValidationException.class, () -> check.validateLncRnaLength(annotationWithFeature("lncRNA"), 1));
+            assertTrue(ex.getMessage().contains("LNCRNA_TOO_SHORT"));
+        }
+
+        @Test
+        void lncRnaDescendantFeatureLengthBelow200Failure() throws Exception {
+            injectLookupReturning(SEQ_ID, 150L);
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
+                    () -> check.validateLncRnaLength(annotationWithFeature("antisense_lncRNA"), 1));
+            assertTrue(ex.getMessage().contains("LNCRNA_TOO_SHORT"));
+        }
+
+        @Test
+        void noLncRnaFeatureSkipped() throws Exception {
+            injectLookupReturning(SEQ_ID, 150L);
+            assertDoesNotThrow(() -> check.validateLncRnaLength(annotationWithFeature("gene"), 1));
+        }
+
+        @Test
+        void noLookupSkipped() throws Exception {
+            injectNoLookup();
+            assertDoesNotThrow(() -> check.validateLncRnaLength(annotationWithFeature("lncRNA"), 1));
         }
     }
 }

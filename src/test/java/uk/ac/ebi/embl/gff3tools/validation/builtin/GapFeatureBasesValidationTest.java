@@ -25,15 +25,15 @@ import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
-public class GapFeatureBasesCheckTest {
+public class GapFeatureBasesValidationTest {
 
     private static final String SEQ_ID = TestUtils.DEFAULT_ACCESSION;
 
-    private GapFeatureBasesCheck check;
+    private GapFeatureBasesValidation check;
 
     @BeforeEach
     void setUp() {
-        check = new GapFeatureBasesCheck();
+        check = new GapFeatureBasesValidation();
     }
 
     private void injectWithGapRegions(String seqId, long start, long end, List<GapRegion> regions) throws Exception {

@@ -36,7 +36,7 @@ class TranslationCommandTest {
                 fasta,
                 ">%s | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
                                 .formatted(seqId)
-                        + "ATGAAATAA\n");
+                        + "ATGAAATAATTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n");
         return fasta;
     }
 
@@ -45,7 +45,9 @@ class TranslationCommandTest {
      */
     private Path createPlainSequenceFile(String filename) throws Exception {
         Path seq = tempDir.resolve(filename);
-        Files.writeString(seq, "ATGAAATAA\n");
+        Files.writeString(
+                seq,
+                "ATGAAATAATTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n");
         return seq;
     }
 
@@ -57,7 +59,7 @@ class TranslationCommandTest {
         Path gff3 = tempDir.resolve("input.gff3");
         StringBuilder sb = new StringBuilder("##gff-version 3\n");
         for (String seqId : seqIds) {
-            sb.append("##sequence-region %s 1 9\n".formatted(seqId));
+            sb.append("##sequence-region %s 1 100\n".formatted(seqId));
         }
         int cdsNum = 1;
         for (String seqId : seqIds) {
@@ -216,7 +218,7 @@ class TranslationCommandTest {
         Files.writeString(
                 fa,
                 ">seq1 | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
-                        + "ATGAAATAA\n");
+                        + "ATGAAATAATTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n");
         Path gff3 = createGff3File("seq1");
         Path output = tempDir.resolve("output.gff3");
 
@@ -244,7 +246,9 @@ class TranslationCommandTest {
     void formatDetection_explicitOverride() throws Exception {
         // Create a file with non-standard extension but explicit format
         Path seq = tempDir.resolve("sequence.dat");
-        Files.writeString(seq, "ATGAAATAA\n");
+        Files.writeString(
+                seq,
+                "ATGAAATAATTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n");
         Path gff3 = createGff3File("seq1");
         Path output = tempDir.resolve("output.gff3");
 

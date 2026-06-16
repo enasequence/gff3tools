@@ -24,15 +24,15 @@ import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
-public class FeatureLocationCheckTest {
+public class FeatureLocationValidationTest {
 
     private static final String SEQ_ID = "chr1";
 
-    private FeatureLocationCheck check;
+    private FeatureLocationValidation check;
 
     @BeforeEach
     void setUp() {
-        check = new FeatureLocationCheck();
+        check = new FeatureLocationValidation();
     }
 
     private void injectLookup(SequenceLookup mockLookup) {
