@@ -32,7 +32,7 @@ public interface SequenceLookup {
      */
     String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception;
 
-    /** Total length of the sequence in bases. */
+    /** Total length of the sequence in bases. The last base index should therefore be sequenceLength, as the bases are indexed 1...sequenceLength. */
     long getSequenceLength(String seqId) throws Exception;
 
     /** Full stats for the sequence (base counts, N-counts, edge Ns). */
