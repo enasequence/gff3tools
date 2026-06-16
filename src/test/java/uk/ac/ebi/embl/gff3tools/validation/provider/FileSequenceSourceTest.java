@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderSource;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 
 class FileSequenceSourceTest {
@@ -131,6 +132,117 @@ class FileSequenceSourceTest {
         SequenceFormatReader reader = mock(SequenceFormatReader.class);
         when(reader.getSequenceFileFormat()).thenReturn(SequenceFileFormat.PLAIN_SEQUENCE);
         when(reader.getOrderedIds()).thenReturn(List.of(0L));
+        return reader;
+    }
+
+    // -------------------------------------------------------------------------
+    // FastaHeaderSource path
+    // -------------------------------------------------------------------------
+
+    @Test
+    void hasSequence_withFastaHeaderSource_usesFirstToken() {
+        SequenceFormatReader mockReader = mockFastaReaderPlainHeaders("chr1", "chr2");
+        FastaHeaderSource source = seqId -> Optional.empty();
+
+        FileSequenceSource fss = new FileSequenceSource(mockReader, SequenceFormat.fasta, null, source);
+
+        assertTrue(fss.hasSequence("chr1"));
+        assertTrue(fss.hasSequence("chr2"));
+        assertFalse(fss.hasSequence("chr3"));
+    }
+
+    @Test
+    void hasSequence_withFastaHeaderSource_headerDescriptionOnly() {
+        // Header line has whitespace-separated description — only the first token is the seqId
+        SequenceFormatReader mockReader = mockFastaReaderPlainHeaders("scaffold_1");
+        FastaHeaderSource source = seqId -> Optional.empty();
+
+        FileSequenceSource fss = new FileSequenceSource(mockReader, SequenceFormat.fasta, null, source);
+
+        assertTrue(fss.hasSequence("scaffold_1"));
+        assertFalse(fss.hasSequence("scaffold_1 Homo sapiens chromosome 1"));
+    }
+
+    @Test
+    void getSeqIdToHeader_withFastaHeaderSource_populatesFromSource() {
+        SequenceFormatReader mockReader = mockFastaReaderPlainHeaders("seq1", "seq2");
+        FastaHeader expected = new FastaHeader();
+        expected.setDescription("from-source");
+        FastaHeaderSource source = seqId -> seqId.equals("seq1") ? Optional.of(expected) : Optional.empty();
+
+        FileSequenceSource fss = new FileSequenceSource(mockReader, SequenceFormat.fasta, null, source);
+        Map<String, FastaHeader> headers = fss.getSeqIdToHeader();
+
+        assertEquals(1, headers.size());
+        assertEquals("from-source", headers.get("seq1").getDescription());
+        assertFalse(headers.containsKey("seq2"));
+    }
+
+    @Test
+    void getSeqIdToHeader_withFastaHeaderSource_allEmptyOptionals_returnsEmptyMap() {
+        SequenceFormatReader mockReader = mockFastaReaderPlainHeaders("seq1");
+        FastaHeaderSource source = seqId -> Optional.empty();
+
+        FileSequenceSource fss = new FileSequenceSource(mockReader, SequenceFormat.fasta, null, source);
+
+        assertTrue(fss.getSeqIdToHeader().isEmpty());
+    }
+
+    @Test
+    void duplicateIds_withFastaHeaderSource_throwsRuntimeException() {
+        SequenceFormatReader mockReader = mock(SequenceFormatReader.class);
+        when(mockReader.getSequenceFileFormat()).thenReturn(SequenceFileFormat.FASTA);
+        when(mockReader.getOrderedIds()).thenReturn(List.of(0L, 1L));
+        when(mockReader.getHeaderline(0L)).thenReturn(Optional.of(">dup_id"));
+        when(mockReader.getHeaderline(1L)).thenReturn(Optional.of(">dup_id"));
+        FastaHeaderSource source = seqId -> Optional.empty();
+
+        FileSequenceSource fss = new FileSequenceSource(mockReader, SequenceFormat.fasta, null, source);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> fss.hasSequence("dup_id"));
+        assertTrue(ex.getMessage().contains("Duplicate submission ID"));
+    }
+
+    // -------------------------------------------------------------------------
+    // extractFirstToken
+    // -------------------------------------------------------------------------
+
+    @Test
+    void extractFirstToken_noDescription() {
+        assertEquals("chr1", FileSequenceSource.extractFirstToken(">chr1"));
+    }
+
+    @Test
+    void extractFirstToken_spaceDescription() {
+        assertEquals("chr1", FileSequenceSource.extractFirstToken(">chr1 Homo sapiens chromosome 1"));
+    }
+
+    @Test
+    void extractFirstToken_tabDescription() {
+        assertEquals("scaffold_42", FileSequenceSource.extractFirstToken(">scaffold_42\tsome description"));
+    }
+
+    @Test
+    void extractFirstToken_noCaret() {
+        // Gracefully handles a line without the leading '>'
+        assertEquals("seq1", FileSequenceSource.extractFirstToken("seq1 description"));
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    /** Creates a mock FASTA reader with plain headers like ">seqId description" for each ID. */
+    private SequenceFormatReader mockFastaReaderPlainHeaders(String... seqIds) {
+        SequenceFormatReader reader = mock(SequenceFormatReader.class);
+        when(reader.getSequenceFileFormat()).thenReturn(SequenceFileFormat.FASTA);
+        List<Long> ordinals = new java.util.ArrayList<>();
+        for (int i = 0; i < seqIds.length; i++) {
+            long ordinal = i;
+            ordinals.add(ordinal);
+            when(reader.getHeaderline(ordinal)).thenReturn(Optional.of(">" + seqIds[i] + " plain description"));
+        }
+        when(reader.getOrderedIds()).thenReturn(ordinals);
         return reader;
     }
 

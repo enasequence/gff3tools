@@ -20,6 +20,7 @@ import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReaderFactory;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderSource;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.JsonHeaderParser;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ParsedHeader;
@@ -38,6 +39,11 @@ import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ParsedHeader;
  *
  * <p>For FASTA, it parses headers to extract submission IDs and maps them
  * to the library's ordinal IDs for sequence retrieval.
+ *
+ * <p>By default, FASTA headers are expected in the {@code >ID | JSON} format and are
+ * parsed by {@link JsonHeaderParser}. An optional {@link FastaHeaderSource} may be
+ * supplied instead; in that case the seqId is the plain first whitespace-delimited
+ * token after {@code >} and header metadata is resolved through the provided source.
  */
 @Slf4j
 public class FileSequenceSource implements SequenceSource {
@@ -58,6 +64,7 @@ public class FileSequenceSource implements SequenceSource {
     private final Map<String, Long> seqIdToOrdinal = new HashMap<>();
 
     private final Map<String, FastaHeader> seqIdToHeader = new HashMap<>();
+    private final FastaHeaderSource fastaHeaderSource;
     private boolean initialized;
 
     /**
@@ -68,17 +75,50 @@ public class FileSequenceSource implements SequenceSource {
      * @param sequenceKey optional key for plain sequences (GFF3 seqId); null to match any ID
      */
     public FileSequenceSource(Path path, SequenceFormat format, String sequenceKey) {
+        this(path, format, sequenceKey, null);
+    }
+
+    /**
+     * Creates a provider that will lazily open the sequence file on first access.
+     *
+     * <p>When {@code fastaHeaderSource} is non-null, FASTA headers are parsed using the
+     * plain first-token convention ({@code >seqId ...}) and header metadata is resolved
+     * through the supplied source instead of {@link JsonHeaderParser}.
+     *
+     * @param path path to the sequence file
+     * @param format the sequence format (fasta or plain)
+     * @param sequenceKey optional key for plain sequences (GFF3 seqId); null to match any ID
+     * @param fastaHeaderSource optional source for FASTA header metadata; null uses JSON parser
+     */
+    public FileSequenceSource(
+            Path path, SequenceFormat format, String sequenceKey, FastaHeaderSource fastaHeaderSource) {
         this.path = path;
         this.format = format;
         this.sequenceKey = sequenceKey;
+        this.fastaHeaderSource = fastaHeaderSource;
     }
 
     /** Convenience constructor for tests that supply a pre-opened reader. */
     public FileSequenceSource(SequenceFormatReader formatReader, SequenceFormat format, String sequenceKey) {
+        this(formatReader, format, sequenceKey, null);
+    }
+
+    /**
+     * Convenience constructor for tests that supply a pre-opened reader.
+     *
+     * <p>When {@code fastaHeaderSource} is non-null, FASTA headers are parsed using the
+     * plain first-token convention and header metadata is resolved through the supplied source.
+     */
+    public FileSequenceSource(
+            SequenceFormatReader formatReader,
+            SequenceFormat format,
+            String sequenceKey,
+            FastaHeaderSource fastaHeaderSource) {
         this.path = null;
         this.format = format;
         this.sequenceKey = sequenceKey;
         this.formatReader = formatReader;
+        this.fastaHeaderSource = fastaHeaderSource;
     }
 
     @Override
@@ -146,29 +186,82 @@ public class FileSequenceSource implements SequenceSource {
 
     private void buildIdMapping() {
         if (formatReader.getSequenceFileFormat() == SequenceFileFormat.FASTA) {
-            JsonHeaderParser headerParser = new JsonHeaderParser();
-            for (long ordinal : formatReader.getOrderedIds()) {
-                String headerLine = formatReader
-                        .getHeaderline(ordinal)
-                        .orElseThrow(() -> new RuntimeException("No header found for ordinal " + ordinal));
-                try {
-                    ParsedHeader parsed = headerParser.parse(headerLine);
-                    String submissionId = parsed.getId();
-                    if (seqIdToOrdinal.containsKey(submissionId)) {
-                        throw new RuntimeException("Duplicate submission ID in FASTA: " + submissionId);
-                    }
-                    seqIdToOrdinal.put(submissionId, ordinal);
-                    seqIdToHeader.put(submissionId, parsed.getHeader());
-                } catch (Exception e) {
-                    throw new RuntimeException(
-                            ("Failed to parse FASTA header at ordinal %d: %s. "
-                                            + "Expected format: >ID | {\"key\":\"value\",...}")
-                                    .formatted(ordinal, e.getMessage()),
-                            e);
-                }
+            if (fastaHeaderSource != null) {
+                buildIdMappingFromSource();
+            } else {
+                buildIdMappingFromJsonParser();
             }
         }
         // For plain sequences, no ID mapping needed — resolveOrdinal uses the single ordinal directly
+    }
+
+    /** Parses FASTA headers in {@code >ID | JSON} format using {@link JsonHeaderParser}. */
+    private void buildIdMappingFromJsonParser() {
+        JsonHeaderParser headerParser = new JsonHeaderParser();
+        for (long ordinal : formatReader.getOrderedIds()) {
+            String headerLine = formatReader
+                    .getHeaderline(ordinal)
+                    .orElseThrow(() -> new RuntimeException("No header found for ordinal " + ordinal));
+            try {
+                ParsedHeader parsed = headerParser.parse(headerLine);
+                String submissionId = parsed.getId();
+                if (seqIdToOrdinal.containsKey(submissionId)) {
+                    throw new RuntimeException("Duplicate submission ID in FASTA: " + submissionId);
+                }
+                seqIdToOrdinal.put(submissionId, ordinal);
+                seqIdToHeader.put(submissionId, parsed.getHeader());
+            } catch (Exception e) {
+                throw new RuntimeException(
+                        ("Failed to parse FASTA header at ordinal %d: %s. "
+                                        + "Expected format: >ID | {\"key\":\"value\",...}")
+                                .formatted(ordinal, e.getMessage()),
+                        e);
+            }
+        }
+    }
+
+    /**
+     * Resolves FASTA headers via the caller-supplied {@link FastaHeaderSource}.
+     *
+     * <p>The seqId is the plain first whitespace-delimited token after {@code >}.
+     * Sequences for which the source returns {@link java.util.Optional#empty()} are
+     * still registered in the ordinal map — they simply have no header entry.
+     */
+    private void buildIdMappingFromSource() {
+        for (long ordinal : formatReader.getOrderedIds()) {
+            String headerLine = formatReader
+                    .getHeaderline(ordinal)
+                    .orElseThrow(() -> new RuntimeException("No header found for ordinal " + ordinal));
+            String seqId = extractFirstToken(headerLine);
+            if (seqIdToOrdinal.containsKey(seqId)) {
+                throw new RuntimeException("Duplicate submission ID in FASTA: " + seqId);
+            }
+            seqIdToOrdinal.put(seqId, ordinal);
+            fastaHeaderSource.getHeader(seqId).ifPresent(h -> seqIdToHeader.put(seqId, h));
+        }
+    }
+
+    /**
+     * Extracts the first whitespace-delimited token from a FASTA header line,
+     * stripping the leading {@code >}.
+     *
+     * <p>Examples:
+     * <ul>
+     *   <li>{@code >chr1} → {@code chr1}</li>
+     *   <li>{@code >chr1 some description} → {@code chr1}</li>
+     *   <li>{@code >chr1\tmore info} → {@code chr1}</li>
+     * </ul>
+     */
+    static String extractFirstToken(String headerLine) {
+        String rest = headerLine.startsWith(">") ? headerLine.substring(1) : headerLine;
+        int end = rest.length();
+        for (int i = 0; i < rest.length(); i++) {
+            if (Character.isWhitespace(rest.charAt(i))) {
+                end = i;
+                break;
+            }
+        }
+        return rest.substring(0, end).trim();
     }
 
     private long resolveOrdinal(String seqId) {
