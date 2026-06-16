@@ -113,13 +113,12 @@ class FileSequenceSourceTest {
         FileSequenceSource source = new FileSequenceSource(gzippedFasta, SequenceFormat.fasta, null);
 
         assertTrue(source.hasSequence("seq1"));
-        assertNotNull(source.getDecompressedPathOrNull(), "A gzipped file should be decompressed to a temp file");
+        assertNotNull(source.getDecompressedPath(), "A gzipped file should be decompressed to a temp file");
         assertEquals("ACGT", source.getSequenceSlice("seq1", 1L, 4L));
 
         source.close();
         assertFalse(
-                Files.exists(source.getDecompressedPathOrNull()),
-                "Temporary decompressed file should be deleted on close");
+                Files.exists(source.getDecompressedPath()), "Temporary decompressed file should be deleted on close");
     }
 
     @Test
@@ -128,11 +127,11 @@ class FileSequenceSourceTest {
         FileSequenceSource source = new FileSequenceSource(gzippedSeq, SequenceFormat.plain, null);
 
         assertTrue(source.hasSequence("any-id"));
-        assertNotNull(source.getDecompressedPathOrNull());
+        assertNotNull(source.getDecompressedPath());
         assertEquals("ACGT", source.getSequenceSlice("any-id", 1L, 4L));
 
         source.close();
-        assertFalse(Files.exists(source.getDecompressedPathOrNull()));
+        assertFalse(Files.exists(source.getDecompressedPath()));
     }
 
     @Test
@@ -141,7 +140,7 @@ class FileSequenceSourceTest {
         FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
 
         assertTrue(source.hasSequence("seq1"));
-        assertNull(source.getDecompressedPathOrNull(), "No temp file should be created for an uncompressed file");
+        assertNull(source.getDecompressedPath(), "No temp file should be created for an uncompressed file");
         assertEquals("ACGT", source.getSequenceSlice("seq1", 1L, 4L));
 
         source.close();
@@ -155,7 +154,7 @@ class FileSequenceSourceTest {
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> source.hasSequence("seq1"));
         assertTrue(ex.getMessage().contains("Failed to open sequence file"));
-        assertNull(source.getDecompressedPathOrNull(), "No decompressed path should be recorded on failure");
+        assertNull(source.getDecompressedPath(), "No decompressed path should be recorded on failure");
     }
 
     @Test

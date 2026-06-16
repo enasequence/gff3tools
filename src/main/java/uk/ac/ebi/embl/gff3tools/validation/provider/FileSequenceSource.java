@@ -62,16 +62,11 @@ public class FileSequenceSource implements SequenceSource {
     private final Map<String, Long> seqIdToOrdinal = new HashMap<>();
 
     private final Map<String, FastaHeader> seqIdToHeader = new HashMap<>();
-    private volatile Path decompressedPath;
-    private boolean initialized;
 
-    /**
-     * Returns the path to the temporary decompressed file, or null if the source
-     * was not gzipped. Exposed for tests only.
-     */
-    Path getDecompressedPathOrNull() {
-        return decompressedPath;
-    }
+    @Getter
+    private volatile Path decompressedPath;
+
+    private boolean initialized;
 
     /**
      * Creates a provider that will lazily open the sequence file on first access.
@@ -166,6 +161,9 @@ public class FileSequenceSource implements SequenceSource {
     }
 
     private Path resolvePath() throws NonExistingFile, ReadException {
+        if (decompressedPath != null) {
+            return decompressedPath;
+        }
         Path filePath = decompressIfGzipped(path);
         if (!filePath.equals(path)) {
             decompressedPath = filePath;

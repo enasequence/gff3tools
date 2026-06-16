@@ -51,7 +51,6 @@ public final class GzipUtils {
         Path tempFile = null;
         try {
             tempFile = Files.createTempFile(prefix, suffix);
-            tempFile.toFile().deleteOnExit();
             try (InputStream gzipIn = new GZIPInputStream(Files.newInputStream(source))) {
                 Files.copy(gzipIn, tempFile, StandardCopyOption.REPLACE_EXISTING);
             }
