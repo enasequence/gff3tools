@@ -10,16 +10,24 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReaderFactory;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
+import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
+import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.JsonHeaderParser;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ParsedHeader;
@@ -58,7 +66,19 @@ public class FileSequenceSource implements SequenceSource {
     private final Map<String, Long> seqIdToOrdinal = new HashMap<>();
 
     private final Map<String, FastaHeader> seqIdToHeader = new HashMap<>();
+    private volatile Path decompressedPath;
     private boolean initialized;
+
+    private static final int GZIP_MAGIC_BYTE1 = 0x1f;
+    private static final int GZIP_MAGIC_BYTE2 = 0x8b;
+
+    /**
+     * Returns the path to the temporary decompressed file, or null if the source
+     * was not gzipped. Exposed for tests only.
+     */
+    Path getDecompressedPathOrNull() {
+        return decompressedPath;
+    }
 
     /**
      * Creates a provider that will lazily open the sequence file on first access.
@@ -109,6 +129,13 @@ public class FileSequenceSource implements SequenceSource {
                 log.warn("Failed to close sequence reader: {}", e.getMessage());
             }
         }
+        if (decompressedPath != null) {
+            try {
+                Files.deleteIfExists(decompressedPath);
+            } catch (Exception e) {
+                log.warn("Failed to delete temporary decompressed sequence file: {}", e.getMessage());
+            }
+        }
     }
 
     /**
@@ -138,9 +165,60 @@ public class FileSequenceSource implements SequenceSource {
     }
 
     private SequenceFormatReader openReader() throws Exception {
+        Path filePath = resolvePath();
         return switch (format) {
-            case fasta -> SequenceFormatReaderFactory.readFasta(path.toFile());
-            case plain -> SequenceFormatReaderFactory.readPlainSequence(path.toFile());
+            case fasta -> SequenceFormatReaderFactory.readFasta(filePath.toFile());
+            case plain -> SequenceFormatReaderFactory.readPlainSequence(filePath.toFile());
+        };
+    }
+
+    private Path resolvePath() throws NonExistingFile, ReadException {
+        Path filePath = decompressIfGzipped(path);
+        if (!filePath.equals(path)) {
+            decompressedPath = filePath;
+        }
+        return filePath;
+    }
+
+    private Path decompressIfGzipped(Path filePath) throws NonExistingFile, ReadException {
+        boolean gzipped;
+        try (InputStream peekStream = Files.newInputStream(filePath)) {
+            int byte1 = peekStream.read();
+            int byte2 = peekStream.read();
+            gzipped = (byte1 == GZIP_MAGIC_BYTE1 && byte2 == GZIP_MAGIC_BYTE2);
+        } catch (NoSuchFileException e) {
+            throw new NonExistingFile("The sequence file does not exist: " + filePath, e);
+        } catch (IOException e) {
+            throw new ReadException("Error checking sequence file format: " + filePath, e);
+        }
+
+        if (!gzipped) {
+            return filePath;
+        }
+
+        Path tempFile = null;
+        try {
+            tempFile = Files.createTempFile("gff3tools-sequence-", getFormatSuffix(format));
+            try (InputStream gzipIn = new GZIPInputStream(Files.newInputStream(filePath))) {
+                Files.copy(gzipIn, tempFile, StandardCopyOption.REPLACE_EXISTING);
+            }
+            return tempFile;
+        } catch (IOException e) {
+            if (tempFile != null) {
+                try {
+                    Files.deleteIfExists(tempFile);
+                } catch (IOException ignored) {
+                    // Best-effort cleanup; the original exception is what matters.
+                }
+            }
+            throw new ReadException("Failed to decompress gzipped sequence file: " + filePath, e);
+        }
+    }
+
+    private static String getFormatSuffix(SequenceFormat format) {
+        return switch (format) {
+            case fasta -> ".fasta";
+            case plain -> ".seq";
         };
     }
 

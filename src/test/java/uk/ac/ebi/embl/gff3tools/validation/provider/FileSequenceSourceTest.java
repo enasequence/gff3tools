@@ -13,16 +13,24 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.zip.GZIPOutputStream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 
 class FileSequenceSourceTest {
+
+    @TempDir
+    Path tempDir;
 
     @Test
     void hasSequenceReturnsTrueForPlainSequenceAnyId_noKey() {
@@ -99,6 +107,45 @@ class FileSequenceSourceTest {
     }
 
     @Test
+    void canReadGzippedFastaFile() throws Exception {
+        Path gzippedFasta = gzipToTempFile(">seq1 | {\"description\":\"test\"}\nACGT\n");
+        FileSequenceSource source = new FileSequenceSource(gzippedFasta, SequenceFormat.fasta, null);
+
+        assertTrue(source.hasSequence("seq1"));
+        assertNotNull(source.getDecompressedPathOrNull(), "A gzipped file should be decompressed to a temp file");
+        assertEquals("ACGT", source.getSequenceSlice("seq1", 1L, 4L));
+
+        source.close();
+        assertFalse(
+                Files.exists(source.getDecompressedPathOrNull()),
+                "Temporary decompressed file should be deleted on close");
+    }
+
+    @Test
+    void canReadGzippedPlainSequenceFile() throws Exception {
+        Path gzippedSeq = gzipToTempFile("ACGTACGT");
+        FileSequenceSource source = new FileSequenceSource(gzippedSeq, SequenceFormat.plain, null);
+
+        assertTrue(source.hasSequence("any-id"));
+        assertNotNull(source.getDecompressedPathOrNull());
+        assertEquals("ACGT", source.getSequenceSlice("any-id", 1L, 4L));
+
+        source.close();
+        assertFalse(Files.exists(source.getDecompressedPathOrNull()));
+    }
+
+    @Test
+    void nonGzippedFileStillWorks() throws Exception {
+        Path fasta = Files.writeString(tempDir.resolve("plain.fasta"), ">seq1 | {\"description\":\"test\"}\nACGT\n");
+        FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
+
+        assertTrue(source.hasSequence("seq1"));
+        assertNull(source.getDecompressedPathOrNull(), "No temp file should be created for an uncompressed file");
+
+        source.close();
+    }
+
+    @Test
     void getSeqIdToHeaderReturnsPopulatedMapForFasta() {
         SequenceFormatReader mockReader = mockFastaReader("seq1", "seq2");
         FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
@@ -148,5 +195,13 @@ class FileSequenceSourceTest {
         }
         when(reader.getOrderedIds()).thenReturn(ordinals);
         return reader;
+    }
+
+    private Path gzipToTempFile(String content) throws IOException {
+        Path tempFile = tempDir.resolve("test-%d.gz".formatted(System.nanoTime()));
+        try (GZIPOutputStream gzipOut = new GZIPOutputStream(Files.newOutputStream(tempFile))) {
+            gzipOut.write(content.getBytes());
+        }
+        return tempFile;
     }
 }

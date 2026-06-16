@@ -106,8 +106,6 @@ public class FileConversionCommand extends AbstractCommand {
         // Determine if we're writing to a file or stdout
         boolean writingToFile = !outputFilePath.toString().isEmpty();
         Path tempFile = null;
-        // Temporary decompressed copy of a gzipped FASTA input, if one is created below.
-        Path decompressedInput = null;
 
         try {
             // Write to a temp file first to ensure atomic output: if conversion fails,
@@ -143,12 +141,8 @@ public class FileConversionCommand extends AbstractCommand {
                     throw new CLIException("FASTA to GFF3 conversion requires FASTA input with sequence headers; "
                             + "plain sequence input (--sequence-format plain) has no sequence ID to emit.");
                 }
-                // fastareader cannot read gzip directly; decompress once to a temp file if needed.
-                Path sourcePath = decompressIfGzipped(inputFilePath);
-                if (!sourcePath.equals(inputFilePath)) {
-                    decompressedInput = sourcePath;
-                }
-                inputFastaSource = new FileSequenceSource(sourcePath, fmt, null);
+                // FileSequenceSource will decompress a gzipped input automatically.
+                inputFastaSource = new FileSequenceSource(inputFilePath, fmt, null);
                 sources.add(inputFastaSource);
             }
 
@@ -194,16 +188,6 @@ public class FileConversionCommand extends AbstractCommand {
                 }
             }
             throw new RuntimeException(e.getMessage(), e);
-        } finally {
-            // The engine (and its sequence source) is closed by now, so the decompressed copy
-            // is no longer in use and can be removed.
-            if (decompressedInput != null) {
-                try {
-                    Files.deleteIfExists(decompressedInput);
-                } catch (Exception deleteEx) {
-                    log.warn("Failed to delete temporary decompressed input: {}", decompressedInput);
-                }
-            }
         }
     }
 
@@ -228,38 +212,6 @@ public class FileConversionCommand extends AbstractCommand {
                 throw new CLIException("--linkage-evidence is only valid with --gap-type "
                         + "\"within scaffold\", \"repeat within scaffold\" or \"contamination\"");
             }
-        }
-    }
-
-    /**
-     * Returns the original path if the file is not gzip-compressed, otherwise decompresses it to a
-     * temporary file and returns that path. Used so {@code fastareader} (which cannot read gzip)
-     * can open a gzipped FASTA input.
-     */
-    private Path decompressIfGzipped(Path path) throws ReadException, NonExistingFile {
-        boolean gzipped;
-        try (InputStream peekStream = Files.newInputStream(path)) {
-            int byte1 = peekStream.read();
-            int byte2 = peekStream.read();
-            gzipped = (byte1 == GZIP_MAGIC_BYTE1 && byte2 == GZIP_MAGIC_BYTE2);
-        } catch (NoSuchFileException e) {
-            throw new NonExistingFile("The file does not exist: " + path, e);
-        } catch (IOException e) {
-            throw new ReadException("Error checking file format: " + path, e);
-        }
-
-        if (!gzipped) {
-            return path;
-        }
-
-        try {
-            Path tempFile = Files.createTempFile("gff3tools-fasta-", ".fasta");
-            try (InputStream gzipIn = new GZIPInputStream(Files.newInputStream(path))) {
-                Files.copy(gzipIn, tempFile, StandardCopyOption.REPLACE_EXISTING);
-            }
-            return tempFile;
-        } catch (IOException e) {
-            throw new ReadException("Failed to decompress gzipped FASTA: " + path, e);
         }
     }
 
