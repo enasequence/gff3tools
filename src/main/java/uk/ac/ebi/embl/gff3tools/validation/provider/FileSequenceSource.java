@@ -10,16 +10,11 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.zip.GZIPInputStream;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
@@ -31,6 +26,7 @@ import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.JsonHeaderParser;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ParsedHeader;
+import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 
 /**
  * A {@link SequenceSource} backed by a single file (FASTA or plain sequence).
@@ -68,9 +64,6 @@ public class FileSequenceSource implements SequenceSource {
     private final Map<String, FastaHeader> seqIdToHeader = new HashMap<>();
     private volatile Path decompressedPath;
     private boolean initialized;
-
-    private static final int GZIP_MAGIC_BYTE1 = 0x1f;
-    private static final int GZIP_MAGIC_BYTE2 = 0x8b;
 
     /**
      * Returns the path to the temporary decompressed file, or null if the source
@@ -181,38 +174,10 @@ public class FileSequenceSource implements SequenceSource {
     }
 
     private Path decompressIfGzipped(Path filePath) throws NonExistingFile, ReadException {
-        boolean gzipped;
-        try (InputStream peekStream = Files.newInputStream(filePath)) {
-            int byte1 = peekStream.read();
-            int byte2 = peekStream.read();
-            gzipped = (byte1 == GZIP_MAGIC_BYTE1 && byte2 == GZIP_MAGIC_BYTE2);
-        } catch (NoSuchFileException e) {
-            throw new NonExistingFile("The sequence file does not exist: " + filePath, e);
-        } catch (IOException e) {
-            throw new ReadException("Error checking sequence file format: " + filePath, e);
-        }
-
-        if (!gzipped) {
+        if (!GzipUtils.isGzipped(filePath)) {
             return filePath;
         }
-
-        Path tempFile = null;
-        try {
-            tempFile = Files.createTempFile("gff3tools-sequence-", getFormatSuffix(format));
-            try (InputStream gzipIn = new GZIPInputStream(Files.newInputStream(filePath))) {
-                Files.copy(gzipIn, tempFile, StandardCopyOption.REPLACE_EXISTING);
-            }
-            return tempFile;
-        } catch (IOException e) {
-            if (tempFile != null) {
-                try {
-                    Files.deleteIfExists(tempFile);
-                } catch (IOException ignored) {
-                    // Best-effort cleanup; the original exception is what matters.
-                }
-            }
-            throw new ReadException("Failed to decompress gzipped sequence file: " + filePath, e);
-        }
+        return GzipUtils.decompressToTempFile(filePath, "gff3tools-sequence-", getFormatSuffix(format));
     }
 
     private static String getFormatSuffix(SequenceFormat format) {

@@ -15,7 +15,6 @@ import ch.qos.logback.classic.LoggerContext;
 import java.io.*;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
@@ -38,6 +37,7 @@ import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToGFF3Converter;
+import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
@@ -47,9 +47,6 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 @CommandLine.Command(name = "conversion", description = "Performs format conversions to or from gff3")
 @Slf4j
 public class FileConversionCommand extends AbstractCommand {
-
-    private static final int GZIP_MAGIC_BYTE1 = 0x1f;
-    private static final int GZIP_MAGIC_BYTE2 = 0x8b;
 
     // INSDC gap types for which linkage_evidence is both required and allowed. Mirrors
     // AssemblyGapValidation; kept here only to fail fast with a clear usage message.
@@ -231,16 +228,7 @@ public class FileConversionCommand extends AbstractCommand {
             return new BufferedReader(new InputStreamReader(System.in));
         }
 
-        boolean gzipped;
-        try (InputStream peekStream = Files.newInputStream(inputFilePath)) {
-            int byte1 = peekStream.read();
-            int byte2 = peekStream.read();
-            gzipped = (byte1 == GZIP_MAGIC_BYTE1 && byte2 == GZIP_MAGIC_BYTE2);
-        } catch (NoSuchFileException e) {
-            throw new NonExistingFile("The file does not exist: " + inputFilePath, e);
-        } catch (IOException e) {
-            throw new ReadException("Error opening file: " + inputFilePath, e);
-        }
+        boolean gzipped = GzipUtils.isGzipped(inputFilePath);
 
         try {
             if (gzipped) {

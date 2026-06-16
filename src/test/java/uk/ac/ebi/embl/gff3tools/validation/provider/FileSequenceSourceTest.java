@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -141,8 +142,20 @@ class FileSequenceSourceTest {
 
         assertTrue(source.hasSequence("seq1"));
         assertNull(source.getDecompressedPathOrNull(), "No temp file should be created for an uncompressed file");
+        assertEquals("ACGT", source.getSequenceSlice("seq1", 1L, 4L));
 
         source.close();
+    }
+
+    @Test
+    void corruptGzipDoesNotCreateDecompressedFile() throws Exception {
+        Path corruptGz = tempDir.resolve("corrupt.gz");
+        Files.write(corruptGz, new byte[] {0x1f, (byte) 0x8b, 0x00, 0x00});
+        FileSequenceSource source = new FileSequenceSource(corruptGz, SequenceFormat.fasta, null);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> source.hasSequence("seq1"));
+        assertTrue(ex.getMessage().contains("Failed to open sequence file"));
+        assertNull(source.getDecompressedPathOrNull(), "No decompressed path should be recorded on failure");
     }
 
     @Test
@@ -200,7 +213,7 @@ class FileSequenceSourceTest {
     private Path gzipToTempFile(String content) throws IOException {
         Path tempFile = tempDir.resolve("test-%d.gz".formatted(System.nanoTime()));
         try (GZIPOutputStream gzipOut = new GZIPOutputStream(Files.newOutputStream(tempFile))) {
-            gzipOut.write(content.getBytes());
+            gzipOut.write(content.getBytes(StandardCharsets.UTF_8));
         }
         return tempFile;
     }
