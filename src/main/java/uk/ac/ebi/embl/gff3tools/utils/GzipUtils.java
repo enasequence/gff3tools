@@ -45,7 +45,7 @@ public final class GzipUtils {
      * Decompresses a gzip-compressed file to a temporary file.
      *
      * <p>The caller is responsible for deleting the returned temp file when done (e.g. via
-     * {@link FileSequenceSource#close()}).
+     * {@code FileSequenceSource.close()}).
      */
     public static Path decompressToTempFile(Path source, String prefix, String suffix) throws ReadException {
         Path tempFile = null;
