@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
@@ -20,9 +21,12 @@ import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReaderFactory;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
+import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
+import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.JsonHeaderParser;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ParsedHeader;
+import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 
 /**
  * A {@link SequenceSource} backed by a single file (FASTA or plain sequence).
@@ -58,6 +62,10 @@ public class FileSequenceSource implements SequenceSource {
     private final Map<String, Long> seqIdToOrdinal = new HashMap<>();
 
     private final Map<String, FastaHeader> seqIdToHeader = new HashMap<>();
+
+    @Getter
+    private volatile Path decompressedPath;
+
     private boolean initialized;
 
     /**
@@ -109,6 +117,13 @@ public class FileSequenceSource implements SequenceSource {
                 log.warn("Failed to close sequence reader: {}", e.getMessage());
             }
         }
+        if (decompressedPath != null) {
+            try {
+                Files.deleteIfExists(decompressedPath);
+            } catch (Exception e) {
+                log.warn("Failed to delete temporary decompressed sequence file: {}", e.getMessage());
+            }
+        }
     }
 
     /**
@@ -138,9 +153,35 @@ public class FileSequenceSource implements SequenceSource {
     }
 
     private SequenceFormatReader openReader() throws Exception {
+        Path filePath = resolvePath();
         return switch (format) {
-            case fasta -> SequenceFormatReaderFactory.readFasta(path.toFile());
-            case plain -> SequenceFormatReaderFactory.readPlainSequence(path.toFile());
+            case fasta -> SequenceFormatReaderFactory.readFasta(filePath.toFile());
+            case plain -> SequenceFormatReaderFactory.readPlainSequence(filePath.toFile());
+        };
+    }
+
+    private Path resolvePath() throws NonExistingFile, ReadException {
+        if (decompressedPath != null) {
+            return decompressedPath;
+        }
+        Path filePath = decompressIfGzipped(path);
+        if (!filePath.equals(path)) {
+            decompressedPath = filePath;
+        }
+        return filePath;
+    }
+
+    private Path decompressIfGzipped(Path filePath) throws NonExistingFile, ReadException {
+        if (!GzipUtils.isGzipped(filePath)) {
+            return filePath;
+        }
+        return GzipUtils.decompressToTempFile(filePath, "gff3tools-sequence-", getFormatSuffix(format));
+    }
+
+    private static String getFormatSuffix(SequenceFormat format) {
+        return switch (format) {
+            case fasta -> ".fasta";
+            case plain -> ".seq";
         };
     }
 
