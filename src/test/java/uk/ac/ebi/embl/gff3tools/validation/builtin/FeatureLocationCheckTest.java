@@ -164,8 +164,8 @@ public class FeatureLocationCheckTest {
         void boundsSuccess() throws Exception {
             long seqLen = 1000L;
             injectLookupReturning(SEQ_ID, seqLen);
-            assertDoesNotThrow(() ->
-                    check.validateSequenceRegionWithinSequence(annotationWithSequenceRegion(1L, seqLen), 1));
+            assertDoesNotThrow(
+                    () -> check.validateSequenceRegionWithinSequence(annotationWithSequenceRegion(1L, seqLen), 1));
         }
 
         @Test
@@ -173,8 +173,7 @@ public class FeatureLocationCheckTest {
             injectLookupReturning(SEQ_ID, 1000L);
             ValidationException ex = assertThrows(
                     ValidationException.class,
-                    () -> check.validateSequenceRegionWithinSequence(
-                            annotationWithSequenceRegion(0L, 500L), 1));
+                    () -> check.validateSequenceRegionWithinSequence(annotationWithSequenceRegion(0L, 500L), 1));
             assertTrue(ex.getMessage().contains("start position"));
         }
 
@@ -184,8 +183,7 @@ public class FeatureLocationCheckTest {
             injectLookupReturning(SEQ_ID, seqLen);
             ValidationException ex = assertThrows(
                     ValidationException.class,
-                    () -> check.validateSequenceRegionWithinSequence(
-                            annotationWithSequenceRegion(1L, seqLen + 1), 1));
+                    () -> check.validateSequenceRegionWithinSequence(annotationWithSequenceRegion(1L, seqLen + 1), 1));
             assertTrue(ex.getMessage().contains("end position"));
         }
 
@@ -200,8 +198,8 @@ public class FeatureLocationCheckTest {
         @Test
         void noLookupSkipped() throws Exception {
             injectNoLookup();
-            assertDoesNotThrow(() ->
-                    check.validateSequenceRegionWithinSequence(annotationWithSequenceRegion(0L, 99999L), 1));
+            assertDoesNotThrow(
+                    () -> check.validateSequenceRegionWithinSequence(annotationWithSequenceRegion(0L, 99999L), 1));
         }
     }
 }

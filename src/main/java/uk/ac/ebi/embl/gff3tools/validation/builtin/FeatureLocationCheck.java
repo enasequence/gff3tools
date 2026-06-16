@@ -25,8 +25,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation(
         name = "FEATURE_LOCATION",
-        description =
-                "Validates that feature and sequence-region coordinates are within the sequence bounds")
+        description = "Validates that feature and sequence-region coordinates are within the sequence bounds")
 public class FeatureLocationCheck implements Validation {
 
     private static final String RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH = "FEATURE_END_EXCEEDS_SEQUENCE_LENGTH";
@@ -34,8 +33,7 @@ public class FeatureLocationCheck implements Validation {
             "The end position of the location \"%s\" is greater than the length of the sequence (\"%d\").";
 
     private static final String RULE_FEATURE_START_BELOW_ONE = "FEATURE_START_BELOW_ONE";
-    private static final String FEATURE_START_BELOW_ONE =
-            "The start position of the location \"%s\" is less than 1.";
+    private static final String FEATURE_START_BELOW_ONE = "The start position of the location \"%s\" is less than 1.";
 
     private static final String RULE_SEQUENCE_REGION_OUT_OF_BOUNDS = "SEQUENCE_REGION_OUT_OF_BOUNDS";
     private static final String SEQUENCE_REGION_START_OUT_OF_BOUNDS =
@@ -81,9 +79,7 @@ public class FeatureLocationCheck implements Validation {
             if (feature.getStart() < 1) {
                 String location = feature.getStart() + ".." + feature.getEnd();
                 throw new ValidationException(
-                        RULE_FEATURE_START_BELOW_ONE,
-                        line,
-                        FEATURE_START_BELOW_ONE.formatted(location));
+                        RULE_FEATURE_START_BELOW_ONE, line, FEATURE_START_BELOW_ONE.formatted(location));
             }
         }
     }
@@ -93,8 +89,7 @@ public class FeatureLocationCheck implements Validation {
             description = "Sequence region start and end positions must be within {1, sequenceLength}",
             type = ValidationType.ANNOTATION,
             priority = ValidationPriority.NORMAL)
-    public void validateSequenceRegionWithinSequence(GFF3Annotation annotation, int line)
-            throws ValidationException {
+    public void validateSequenceRegionWithinSequence(GFF3Annotation annotation, int line) throws ValidationException {
         GFF3SequenceRegion sequenceRegion = annotation.getSequenceRegion();
         if (sequenceRegion == null) {
             return;

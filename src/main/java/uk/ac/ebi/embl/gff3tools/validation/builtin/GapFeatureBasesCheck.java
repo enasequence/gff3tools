@@ -62,11 +62,9 @@ public class GapFeatureBasesCheck implements Validation {
         } catch (Exception e) {
             return;
         }
-        boolean covered = gapRegions.stream()
-                .anyMatch(g -> g.startBase() <= start && g.endBase() >= end);
+        boolean covered = gapRegions.stream().anyMatch(g -> g.startBase() <= start && g.endBase() >= end);
         if (!covered) {
-            throw new ValidationException(
-                    RULE_GAP_BASES, line, GAP_BASES_MESSAGE.formatted(start, end));
+            throw new ValidationException(RULE_GAP_BASES, line, GAP_BASES_MESSAGE.formatted(start, end));
         }
     }
 }
