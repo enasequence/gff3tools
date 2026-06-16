@@ -13,9 +13,7 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 import java.util.HashMap;
 import java.util.Map;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
@@ -36,12 +34,6 @@ public class FeatureLocationCheck implements Validation {
 
     private static final String RULE_FEATURE_START_BELOW_ONE = "FEATURE_START_BELOW_ONE";
     private static final String FEATURE_START_BELOW_ONE = "The start position of the location \"%s\" is less than 1.";
-
-    private static final String RULE_SEQUENCE_REGION_OUT_OF_BOUNDS = "SEQUENCE_REGION_OUT_OF_BOUNDS";
-    private static final String SEQUENCE_REGION_START_OUT_OF_BOUNDS =
-            "The start position of the sequence region (\"%d\") is not equal to 1.";
-    private static final String SEQUENCE_REGION_END_OUT_OF_BOUNDS =
-            "The end position of the sequence region (\"%d\") is not equal to the length of the sequence (\"%d\").";
 
     @InjectContext
     private ValidationContext context;
@@ -77,34 +69,6 @@ public class FeatureLocationCheck implements Validation {
             String location = feature.getStart() + ".." + feature.getEnd();
             throw new ValidationException(
                     RULE_FEATURE_START_BELOW_ONE, line, FEATURE_START_BELOW_ONE.formatted(location));
-        }
-    }
-
-    @ValidationMethod(
-            rule = RULE_SEQUENCE_REGION_OUT_OF_BOUNDS,
-            description = "Sequence region start and end positions must be exactly {1, sequenceLength}",
-            type = ValidationType.ANNOTATION,
-            priority = ValidationPriority.LOW)
-    public void validateSequenceRegionAgainstSequence(GFF3Annotation annotation, int line) throws ValidationException {
-        GFF3SequenceRegion sequenceRegion = annotation.getSequenceRegion();
-        if (sequenceRegion == null) {
-            return;
-        }
-        Long lastBaseIndex = resolveSequenceLength(annotation.getAccession());
-        if (lastBaseIndex == null) {
-            return;
-        }
-        if (sequenceRegion.start() != 1) {
-            throw new ValidationException(
-                    RULE_SEQUENCE_REGION_OUT_OF_BOUNDS,
-                    line,
-                    SEQUENCE_REGION_START_OUT_OF_BOUNDS.formatted(sequenceRegion.start()));
-        }
-        if (sequenceRegion.end() != lastBaseIndex) {
-            throw new ValidationException(
-                    RULE_SEQUENCE_REGION_OUT_OF_BOUNDS,
-                    line,
-                    SEQUENCE_REGION_END_OUT_OF_BOUNDS.formatted(sequenceRegion.end(), lastBaseIndex));
         }
     }
 
