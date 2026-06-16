@@ -23,7 +23,6 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
-import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation(
@@ -42,8 +41,7 @@ public class GapFeatureBasesCheck implements Validation {
     @ValidationMethod(
             rule = RULE_GAP_BASES,
             description = "Gap feature span must contain only N/n bases",
-            type = ValidationType.FEATURE,
-            priority = ValidationPriority.NORMAL)
+            type = ValidationType.FEATURE)
     public void validateGapBases(GFF3Feature feature, int line) throws ValidationException {
         OntologyClient ontologyClient = context.get(OntologyClient.class);
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
@@ -58,7 +56,7 @@ public class GapFeatureBasesCheck implements Validation {
         long end = feature.getEnd();
         List<GapRegion> gapRegions;
         try {
-            gapRegions = lookup.getGapRegions(feature.getSeqId(), start, end);
+            gapRegions = lookup.getGapRegions(feature.accession(), start, end);
         } catch (Exception e) {
             return;
         }
