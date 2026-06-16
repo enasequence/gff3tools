@@ -39,9 +39,9 @@ public class FeatureLocationCheck implements Validation {
 
     private static final String RULE_SEQUENCE_REGION_OUT_OF_BOUNDS = "SEQUENCE_REGION_OUT_OF_BOUNDS";
     private static final String SEQUENCE_REGION_START_OUT_OF_BOUNDS =
-            "The start position of the sequence region (\"%d\") is less than 1.";
+            "The start position of the sequence region (\"%d\") is not equal to 1.";
     private static final String SEQUENCE_REGION_END_OUT_OF_BOUNDS =
-            "The end position of the sequence region (\"%d\") is greater than the length of the sequence (\"%d\").";
+            "The end position of the sequence region (\"%d\") is not equal to the length of the sequence (\"%d\").";
 
     @InjectContext
     private ValidationContext context;
@@ -82,10 +82,10 @@ public class FeatureLocationCheck implements Validation {
 
     @ValidationMethod(
             rule = RULE_SEQUENCE_REGION_OUT_OF_BOUNDS,
-            description = "Sequence region start and end positions must be within {1, sequenceLength}",
+            description = "Sequence region start and end positions must be exactly {1, sequenceLength}",
             type = ValidationType.ANNOTATION,
             priority = ValidationPriority.LOW)
-    public void validateSequenceRegionWithinSequence(GFF3Annotation annotation, int line) throws ValidationException {
+    public void validateSequenceRegionAgainstSequence(GFF3Annotation annotation, int line) throws ValidationException {
         GFF3SequenceRegion sequenceRegion = annotation.getSequenceRegion();
         if (sequenceRegion == null) {
             return;
