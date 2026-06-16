@@ -109,7 +109,7 @@ public class FileSequenceSource implements SequenceSource {
      * <p>When {@code fastaHeaderSource} is non-null, FASTA headers are parsed using the
      * plain first-token convention and header metadata is resolved through the supplied source.
      */
-    public FileSequenceSource(
+    FileSequenceSource(
             SequenceFormatReader formatReader,
             SequenceFormat format,
             String sequenceKey,
@@ -232,12 +232,22 @@ public class FileSequenceSource implements SequenceSource {
             String headerLine = formatReader
                     .getHeaderline(ordinal)
                     .orElseThrow(() -> new RuntimeException("No header found for ordinal " + ordinal));
-            String seqId = extractFirstToken(headerLine);
-            if (seqIdToOrdinal.containsKey(seqId)) {
-                throw new RuntimeException("Duplicate submission ID in FASTA: " + seqId);
+            try {
+                String seqId = extractFirstToken(headerLine);
+                if (seqId.isEmpty()) {
+                    throw new RuntimeException("FASTA header has no id token. Header: " + headerLine);
+                }
+                if (seqIdToOrdinal.containsKey(seqId)) {
+                    throw new RuntimeException("Duplicate submission ID in FASTA: " + seqId);
+                }
+                seqIdToOrdinal.put(seqId, ordinal);
+                fastaHeaderSource.getHeader(seqId).ifPresent(h -> seqIdToHeader.put(seqId, h));
+            } catch (Exception e) {
+                throw new RuntimeException(
+                        "Failed to process FASTA header at ordinal %d: %s. Header: %s"
+                                .formatted(ordinal, e.getMessage(), headerLine),
+                        e);
             }
-            seqIdToOrdinal.put(seqId, ordinal);
-            fastaHeaderSource.getHeader(seqId).ifPresent(h -> seqIdToHeader.put(seqId, h));
         }
     }
 
@@ -261,7 +271,7 @@ public class FileSequenceSource implements SequenceSource {
                 break;
             }
         }
-        return rest.substring(0, end).trim();
+        return rest.substring(0, end);
     }
 
     private long resolveOrdinal(String seqId) {

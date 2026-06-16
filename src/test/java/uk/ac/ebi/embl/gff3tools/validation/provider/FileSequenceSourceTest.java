@@ -189,6 +189,31 @@ class FileSequenceSourceTest {
     }
 
     @Test
+    void buildIdMappingFromSource_emptySeqIdThrowsRuntimeException() {
+        SequenceFormatReader mockReader = mock(SequenceFormatReader.class);
+        when(mockReader.getSequenceFileFormat()).thenReturn(SequenceFileFormat.FASTA);
+        when(mockReader.getOrderedIds()).thenReturn(List.of(0L));
+        when(mockReader.getHeaderline(0L)).thenReturn(Optional.of("> description with no id"));
+        FastaHeaderSource source = seqId -> Optional.empty();
+
+        FileSequenceSource fss = new FileSequenceSource(mockReader, SequenceFormat.fasta, null, source);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> fss.hasSequence("x"));
+        assertTrue(ex.getMessage().contains("ordinal 0"));
+    }
+
+    @Test
+    void getSequenceSlice_withFastaHeaderSource_resolvesCorrectOrdinal() throws Exception {
+        SequenceFormatReader mockReader = mockFastaReaderPlainHeaders("chrA", "chrB");
+        when(mockReader.getSequenceSlice(1L, 1L, 5L)).thenReturn("ATGCC");
+        FastaHeaderSource source = seqId -> Optional.empty();
+
+        FileSequenceSource fss = new FileSequenceSource(mockReader, SequenceFormat.fasta, null, source);
+
+        assertEquals("ATGCC", fss.getSequenceSlice("chrB", 1L, 5L));
+    }
+
+    @Test
     void duplicateIds_withFastaHeaderSource_throwsRuntimeException() {
         SequenceFormatReader mockReader = mock(SequenceFormatReader.class);
         when(mockReader.getSequenceFileFormat()).thenReturn(SequenceFileFormat.FASTA);
@@ -226,6 +251,16 @@ class FileSequenceSourceTest {
     void extractFirstToken_noCaret() {
         // Gracefully handles a line without the leading '>'
         assertEquals("seq1", FileSequenceSource.extractFirstToken("seq1 description"));
+    }
+
+    @Test
+    void extractFirstToken_emptyAfterCaret() {
+        assertEquals("", FileSequenceSource.extractFirstToken(">"));
+    }
+
+    @Test
+    void extractFirstToken_onlyWhitespaceAfterCaret() {
+        assertEquals("", FileSequenceSource.extractFirstToken("> "));
     }
 
     // -------------------------------------------------------------------------
