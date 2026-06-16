@@ -10,6 +10,8 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
+import java.util.HashMap;
+import java.util.Map;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
@@ -44,43 +46,37 @@ public class FeatureLocationCheck implements Validation {
     @InjectContext
     private ValidationContext context;
 
+    private final Map<String, Long> sequenceLengthCache = new HashMap<>();
+
     @ValidationMethod(
             rule = RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH,
             description = "Feature end position must not exceed the sequence length",
-            type = ValidationType.ANNOTATION,
-            priority = ValidationPriority.NORMAL)
-    public void validateFeatureEndWithinSequence(GFF3Annotation annotation, int line) throws ValidationException {
-        Long lastBaseIndex = resolveSequenceLength(annotation.getAccession());
+            type = ValidationType.FEATURE,
+            priority = ValidationPriority.LOW)
+    public void validateFeatureEndWithinSequence(GFF3Feature feature, int line) throws ValidationException {
+        Long lastBaseIndex = resolveSequenceLength(feature.accession());
         if (lastBaseIndex == null) {
             return;
         }
-        for (GFF3Feature feature : annotation.getFeatures()) {
-            if (feature.getEnd() > lastBaseIndex) {
-                String location = feature.getStart() + ".." + feature.getEnd();
-                throw new ValidationException(
-                        RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH,
-                        line,
-                        FEATURE_END_EXCEEDS_SEQUENCE_LENGTH.formatted(location, lastBaseIndex));
-            }
+        if (feature.getEnd() > lastBaseIndex) {
+            String location = feature.getStart() + ".." + feature.getEnd();
+            throw new ValidationException(
+                    RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH,
+                    line,
+                    FEATURE_END_EXCEEDS_SEQUENCE_LENGTH.formatted(location, lastBaseIndex));
         }
     }
 
     @ValidationMethod(
             rule = RULE_FEATURE_START_BELOW_ONE,
             description = "Feature start position must be at least 1",
-            type = ValidationType.ANNOTATION,
-            priority = ValidationPriority.NORMAL)
-    public void validateFeatureStartAboveZero(GFF3Annotation annotation, int line) throws ValidationException {
-        Long lastBaseIndex = resolveSequenceLength(annotation.getAccession());
-        if (lastBaseIndex == null) {
-            return;
-        }
-        for (GFF3Feature feature : annotation.getFeatures()) {
-            if (feature.getStart() < 1) {
-                String location = feature.getStart() + ".." + feature.getEnd();
-                throw new ValidationException(
-                        RULE_FEATURE_START_BELOW_ONE, line, FEATURE_START_BELOW_ONE.formatted(location));
-            }
+            type = ValidationType.FEATURE,
+            priority = ValidationPriority.LOW)
+    public void validateFeatureStartAboveZero(GFF3Feature feature, int line) throws ValidationException {
+        if (feature.getStart() < 1) {
+            String location = feature.getStart() + ".." + feature.getEnd();
+            throw new ValidationException(
+                    RULE_FEATURE_START_BELOW_ONE, line, FEATURE_START_BELOW_ONE.formatted(location));
         }
     }
 
@@ -88,7 +84,7 @@ public class FeatureLocationCheck implements Validation {
             rule = RULE_SEQUENCE_REGION_OUT_OF_BOUNDS,
             description = "Sequence region start and end positions must be within {1, sequenceLength}",
             type = ValidationType.ANNOTATION,
-            priority = ValidationPriority.NORMAL)
+            priority = ValidationPriority.LOW)
     public void validateSequenceRegionWithinSequence(GFF3Annotation annotation, int line) throws ValidationException {
         GFF3SequenceRegion sequenceRegion = annotation.getSequenceRegion();
         if (sequenceRegion == null) {
@@ -98,13 +94,13 @@ public class FeatureLocationCheck implements Validation {
         if (lastBaseIndex == null) {
             return;
         }
-        if (sequenceRegion.start() < 1) {
+        if (sequenceRegion.start() != 1) {
             throw new ValidationException(
                     RULE_SEQUENCE_REGION_OUT_OF_BOUNDS,
                     line,
                     SEQUENCE_REGION_START_OUT_OF_BOUNDS.formatted(sequenceRegion.start()));
         }
-        if (sequenceRegion.end() > lastBaseIndex) {
+        if (sequenceRegion.end() != lastBaseIndex) {
             throw new ValidationException(
                     RULE_SEQUENCE_REGION_OUT_OF_BOUNDS,
                     line,
@@ -113,11 +109,16 @@ public class FeatureLocationCheck implements Validation {
     }
 
     private Long resolveSequenceLength(String seqId) {
+        if (sequenceLengthCache.containsKey(seqId)) {
+            return sequenceLengthCache.get(seqId);
+        }
         if (context.contains(SequenceLookup.class)) {
             SequenceLookup lookup = context.get(SequenceLookup.class);
             if (lookup != null) {
                 try {
-                    return lookup.getSequenceLength(seqId);
+                    Long length = lookup.getSequenceLength(seqId);
+                    sequenceLengthCache.put(seqId, length);
+                    return length;
                 } catch (Exception ex) {
                     throw new IllegalStateException("Unable to resolve sequence length for " + seqId, ex);
                 }

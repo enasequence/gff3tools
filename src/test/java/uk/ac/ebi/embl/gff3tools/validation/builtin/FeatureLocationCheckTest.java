@@ -70,12 +70,6 @@ public class FeatureLocationCheckTest {
         TestUtils.injectContext(check);
     }
 
-    private GFF3Annotation annotationWithFeature(GFF3Feature feature) {
-        GFF3Annotation annotation = new GFF3Annotation();
-        annotation.addFeature(feature);
-        return annotation;
-    }
-
     private GFF3Annotation annotationWithSequenceRegion(long regionStart, long regionEnd) {
         GFF3Annotation annotation = new GFF3Annotation();
         annotation.setSequenceRegion(new GFF3SequenceRegion(SEQ_ID, Optional.empty(), regionStart, regionEnd));
@@ -90,7 +84,7 @@ public class FeatureLocationCheckTest {
             long seqLen = 1000L;
             injectLookupReturning(SEQ_ID, seqLen);
             GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 1L, seqLen, Map.of());
-            assertDoesNotThrow(() -> check.validateFeatureEndWithinSequence(annotationWithFeature(feature), 1));
+            assertDoesNotThrow(() -> check.validateFeatureEndWithinSequence(feature, 1));
         }
 
         @Test
@@ -98,7 +92,7 @@ public class FeatureLocationCheckTest {
             long seqLen = 1000L;
             injectLookupReturning(SEQ_ID, seqLen);
             GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 1L, seqLen - 1, Map.of());
-            assertDoesNotThrow(() -> check.validateFeatureEndWithinSequence(annotationWithFeature(feature), 1));
+            assertDoesNotThrow(() -> check.validateFeatureEndWithinSequence(feature, 1));
         }
 
         @Test
@@ -106,9 +100,8 @@ public class FeatureLocationCheckTest {
             long seqLen = 1000L;
             injectLookupReturning(SEQ_ID, seqLen);
             GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 1L, seqLen + 1, Map.of());
-            ValidationException ex = assertThrows(
-                    ValidationException.class,
-                    () -> check.validateFeatureEndWithinSequence(annotationWithFeature(feature), 1));
+            ValidationException ex =
+                    assertThrows(ValidationException.class, () -> check.validateFeatureEndWithinSequence(feature, 1));
             assertTrue(ex.getMessage().contains("end position"));
         }
 
@@ -116,16 +109,14 @@ public class FeatureLocationCheckTest {
         void lookupThrowsIllegalState() throws Exception {
             injectLookupThrowing(SEQ_ID);
             GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 1L, 500L, Map.of());
-            assertThrows(
-                    IllegalStateException.class,
-                    () -> check.validateFeatureEndWithinSequence(annotationWithFeature(feature), 1));
+            assertThrows(IllegalStateException.class, () -> check.validateFeatureEndWithinSequence(feature, 1));
         }
 
         @Test
         void noLookupSkipped() throws Exception {
             injectNoLookup();
             GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 1L, 999999L, Map.of());
-            assertDoesNotThrow(() -> check.validateFeatureEndWithinSequence(annotationWithFeature(feature), 1));
+            assertDoesNotThrow(() -> check.validateFeatureEndWithinSequence(feature, 1));
         }
     }
 
@@ -134,26 +125,24 @@ public class FeatureLocationCheckTest {
 
         @Test
         void startEqualsOneSuccess() throws Exception {
-            injectLookupReturning(SEQ_ID, 1000L);
+            injectNoLookup();
             GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 1L, 500L, Map.of());
-            assertDoesNotThrow(() -> check.validateFeatureStartAboveZero(annotationWithFeature(feature), 1));
+            assertDoesNotThrow(() -> check.validateFeatureStartAboveZero(feature, 1));
         }
 
         @Test
         void startBelowOneFailure() throws Exception {
-            injectLookupReturning(SEQ_ID, 1000L);
+            injectNoLookup();
             GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 0L, 500L, Map.of());
-            ValidationException ex = assertThrows(
-                    ValidationException.class,
-                    () -> check.validateFeatureStartAboveZero(annotationWithFeature(feature), 1));
+            ValidationException ex =
+                    assertThrows(ValidationException.class, () -> check.validateFeatureStartAboveZero(feature, 1));
             assertTrue(ex.getMessage().contains("start position"));
         }
 
         @Test
-        void noLookupSkipped() throws Exception {
-            injectNoLookup();
+        void startBelowOneFailureWithoutContext() throws Exception {
             GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, -10L, 500L, Map.of());
-            assertDoesNotThrow(() -> check.validateFeatureStartAboveZero(annotationWithFeature(feature), 1));
+            assertThrows(ValidationException.class, () -> check.validateFeatureStartAboveZero(feature, 1));
         }
     }
 
@@ -178,12 +167,31 @@ public class FeatureLocationCheckTest {
         }
 
         @Test
+        void startAboveOneFailure() throws Exception {
+            injectLookupReturning(SEQ_ID, 1000L);
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
+                    () -> check.validateSequenceRegionWithinSequence(annotationWithSequenceRegion(2L, 1000L), 1));
+            assertTrue(ex.getMessage().contains("start position"));
+        }
+
+        @Test
         void endExceedsSequenceLengthFailure() throws Exception {
             long seqLen = 1000L;
             injectLookupReturning(SEQ_ID, seqLen);
             ValidationException ex = assertThrows(
                     ValidationException.class,
                     () -> check.validateSequenceRegionWithinSequence(annotationWithSequenceRegion(1L, seqLen + 1), 1));
+            assertTrue(ex.getMessage().contains("end position"));
+        }
+
+        @Test
+        void endBelowSequenceLengthFailure() throws Exception {
+            long seqLen = 1000L;
+            injectLookupReturning(SEQ_ID, seqLen);
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
+                    () -> check.validateSequenceRegionWithinSequence(annotationWithSequenceRegion(1L, seqLen - 1), 1));
             assertTrue(ex.getMessage().contains("end position"));
         }
 
