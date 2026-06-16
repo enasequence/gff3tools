@@ -29,11 +29,6 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 @Slf4j
 public class ValidationCommand extends AbstractCommand {
 
-    @CommandLine.Option(
-            names = "--taxon-id",
-            description = "Optional NCBI taxon ID used by taxonomy-aware validation rules.")
-    public Long taxonId;
-
     @CommandLine.Mixin
     public SequenceOptions sequenceOptions;
 
