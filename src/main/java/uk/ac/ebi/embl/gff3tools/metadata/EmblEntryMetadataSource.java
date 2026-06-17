@@ -28,11 +28,7 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
     private final MasterMetadata metadata;
 
     public EmblEntryMetadataSource(Entry entry) {
-        this(entry, new TaxonProvider());
-    }
-
-    public EmblEntryMetadataSource(Entry entry, TaxonProvider taxonProvider) {
-        this.metadata = fromEntry(entry, taxonProvider);
+        this.metadata = fromEntry(entry);
     }
 
     @Override
@@ -48,7 +44,7 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
         return metadata;
     }
 
-    private static MasterMetadata fromEntry(Entry entry, TaxonProvider taxonProvider) {
+    private static MasterMetadata fromEntry(Entry entry) {
         MasterMetadata meta = new MasterMetadata();
 
         if (entry.getPrimaryAccession() != null) {
@@ -70,7 +66,6 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
             meta.setComment(entry.getComment().getText());
         }
 
-        // Sequence-level fields
         if (entry.getSequence() != null) {
             if (entry.getSequence().getMoleculeType() != null) {
                 meta.setMoleculeType(entry.getSequence().getMoleculeType());
@@ -81,9 +76,8 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
         }
 
         // Source feature fields. SourceFeature.getTaxon() returns the Taxon populated
-        // by the EMBL reader (from OS/OC/organism lines) regardless of whether the
-        // underlying organism qualifier is the OrganismQualifier subclass or a plain Qualifier,
-        // so we read all taxon-shaped fields from there.
+        // by the EMBL reader (from OS/OC/organism lines), so we read all taxon-shaped
+        // fields from there.
         SourceFeature sourceFeature = entry.getPrimarySourceFeature();
         if (sourceFeature != null) {
             Taxon taxon = sourceFeature.getTaxon();
@@ -102,16 +96,16 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
                 }
             }
 
-            // Fallback: recover taxon metadata from db_xref="taxon:N" when the Taxon path
-            // didn't supply a taxon ID. The db_xref itself only stores the ID, so resolve it
-            // via taxonomy to fill lineage/commonName/scientificName where possible.
+            // Fallback: recover the taxon ID from db_xref="taxon:N" when the Taxon path
+            // didn't supply one. Only the raw ID is recovered; scientific name and lineage
+            // remain whatever the EMBL reader provided.
             if (meta.getTaxon() == null) {
                 sourceFeature.getQualifiers("db_xref").stream()
                         .map(Qualifier::getValue)
                         .filter(v -> v != null && v.startsWith("taxon:"))
                         .findFirst()
                         .map(v -> v.substring("taxon:".length()))
-                        .ifPresent(taxId -> applyTaxonFromDbXref(meta, taxId, taxonProvider));
+                        .ifPresent(meta::setTaxon);
             }
 
             // Fallback: recover scientific name from a plain /organism qualifier value
@@ -124,7 +118,6 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
             }
         }
 
-        // Keywords
         if (!entry.getKeywords().isEmpty()) {
             meta.setKeywords(entry.getKeywords().stream()
                     .map(uk.ac.ebi.embl.api.entry.Text::getText)
@@ -132,7 +125,6 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
                     .toList());
         }
 
-        // Project accessions
         if (!entry.getProjectAccessions().isEmpty()) {
             meta.setProject(entry.getProjectAccessions().stream()
                     .map(uk.ac.ebi.embl.api.entry.Text::getText)
@@ -141,7 +133,6 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
                     .orElse(null));
         }
 
-        // Secondary accessions
         if (!entry.getSecondaryAccessions().isEmpty()) {
             meta.setSecondaryAccessions(entry.getSecondaryAccessions().stream()
                     .map(uk.ac.ebi.embl.api.entry.Text::getText)
@@ -150,30 +141,5 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
         }
 
         return meta;
-    }
-
-    private static void applyTaxonFromDbXref(MasterMetadata meta, String taxId, TaxonProvider taxonProvider) {
-        meta.setTaxon(taxId);
-        try {
-            Long numericTaxId = Long.parseLong(taxId);
-            taxonProvider.getTaxonByTaxId(numericTaxId).ifPresent(taxon -> applyTaxonFields(meta, taxon));
-        } catch (NumberFormatException ignored) {
-            // Keep the taxon ID recovered from db_xref even if it is non-numeric.
-        }
-    }
-
-    private static void applyTaxonFields(MasterMetadata meta, Taxon taxon) {
-        if (taxon.getScientificName() != null) {
-            meta.setScientificName(taxon.getScientificName());
-        }
-        if (taxon.getCommonName() != null) {
-            meta.setCommonName(taxon.getCommonName());
-        }
-        if (taxon.getLineage() != null) {
-            meta.setLineage(taxon.getLineage());
-        }
-        if (taxon.getTaxId() != null) {
-            meta.setTaxon(String.valueOf(taxon.getTaxId()));
-        }
     }
 }
