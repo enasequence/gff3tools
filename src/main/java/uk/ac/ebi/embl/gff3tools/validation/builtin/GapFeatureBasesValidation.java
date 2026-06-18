@@ -16,6 +16,7 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.GapRegion;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
@@ -56,7 +57,7 @@ public class GapFeatureBasesValidation implements Validation {
         long end = feature.getEnd();
         List<GapRegion> gapRegions;
         try {
-            gapRegions = lookup.getGapRegions(feature.accession(), start, end);
+            gapRegions = lookup.getGapRegions(feature.accession(), start, end, SequenceRangeOption.WHOLE_SEQUENCE);
         } catch (Exception e) {
             return;
         }

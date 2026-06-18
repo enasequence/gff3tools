@@ -24,6 +24,7 @@ import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReaderFactory;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
 import uk.ac.ebi.embl.gff3tools.sequence.GapRegion;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.JsonHeaderParser;
@@ -99,17 +100,22 @@ public class FileSequenceSource implements SequenceSource {
     }
 
     @Override
-    public String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception {
+    public String getSequenceSlice(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+            throws Exception {
         ensureInitialized();
         long ordinal = resolveOrdinal(seqId);
-        return formatReader.getSequenceSlice(ordinal, fromBase, toBase);
+        return formatReader.getSequenceSlice(ordinal, fromBase, toBase, toFastaOption(option));
     }
 
     @Override
-    public long getSequenceLength(String seqId) throws Exception {
+    public long getSequenceLength(String seqId, SequenceRangeOption option) throws Exception {
         ensureInitialized();
         long ordinal = resolveOrdinal(seqId);
-        return formatReader.getStats(ordinal).totalBases();
+        uk.ac.ebi.embl.fastareader.SequenceStats fr = formatReader.getStats(ordinal);
+        return switch (option) {
+            case WHOLE_SEQUENCE -> fr.totalBases();
+            case WITHOUT_EDGE_N_BASES -> fr.totalBases() - fr.leadingNsCount() - fr.trailingNsCount();
+        };
     }
 
     @Override
@@ -126,19 +132,20 @@ public class FileSequenceSource implements SequenceSource {
     }
 
     @Override
-    public List<GapRegion> getGapRegions(String seqId) throws Exception {
+    public List<GapRegion> getGapRegions(String seqId, SequenceRangeOption option) throws Exception {
         ensureInitialized();
         long ordinal = resolveOrdinal(seqId);
-        return formatReader.getGapRegions(ordinal).stream()
+        return formatReader.getGapRegions(ordinal, toFastaOption(option)).stream()
                 .map(g -> new GapRegion(g.startBase, g.endBase))
                 .toList();
     }
 
     @Override
-    public List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase) throws Exception {
+    public List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+            throws Exception {
         ensureInitialized();
         long ordinal = resolveOrdinal(seqId);
-        return formatReader.getGapRegions(ordinal, fromBase, toBase).stream()
+        return formatReader.getGapRegions(ordinal, fromBase, toBase, toFastaOption(option)).stream()
                 .map(g -> new GapRegion(g.startBase, g.endBase))
                 .toList();
     }
@@ -153,10 +160,11 @@ public class FileSequenceSource implements SequenceSource {
     }
 
     @Override
-    public Reader getSequenceSliceReader(String seqId, long fromBase, long toBase) throws Exception {
+    public Reader getSequenceSliceReader(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+            throws Exception {
         ensureInitialized();
         long ordinal = resolveOrdinal(seqId);
-        return formatReader.getSequenceSliceReader(ordinal, fromBase, toBase);
+        return formatReader.getSequenceSliceReader(ordinal, fromBase, toBase, toFastaOption(option));
     }
 
     @Override
@@ -228,6 +236,13 @@ public class FileSequenceSource implements SequenceSource {
             }
         }
         // For plain sequences, no ID mapping needed — resolveOrdinal uses the single ordinal directly
+    }
+
+    private uk.ac.ebi.embl.fastareader.SequenceRangeOption toFastaOption(SequenceRangeOption option) {
+        return switch (option) {
+            case WHOLE_SEQUENCE -> uk.ac.ebi.embl.fastareader.SequenceRangeOption.WHOLE_SEQUENCE;
+            case WITHOUT_EDGE_N_BASES -> uk.ac.ebi.embl.fastareader.SequenceRangeOption.WITHOUT_EDGE_N_BASES;
+        };
     }
 
     private long resolveOrdinal(String seqId) {

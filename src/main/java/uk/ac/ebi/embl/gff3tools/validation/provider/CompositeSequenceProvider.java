@@ -20,6 +20,7 @@ import java.util.Set;
 import lombok.Getter;
 import uk.ac.ebi.embl.gff3tools.sequence.GapRegion;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
@@ -71,13 +72,14 @@ public class CompositeSequenceProvider implements ContextProvider<SequenceLookup
                 }
 
                 @Override
-                public String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception {
-                    return sourceFor(seqId).getSequenceSlice(seqId, fromBase, toBase);
+                public String getSequenceSlice(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+                        throws Exception {
+                    return sourceFor(seqId).getSequenceSlice(seqId, fromBase, toBase, option);
                 }
 
                 @Override
-                public long getSequenceLength(String seqId) throws Exception {
-                    return sourceFor(seqId).getSequenceLength(seqId);
+                public long getSequenceLength(String seqId, SequenceRangeOption option) throws Exception {
+                    return sourceFor(seqId).getSequenceLength(seqId, option);
                 }
 
                 @Override
@@ -86,13 +88,14 @@ public class CompositeSequenceProvider implements ContextProvider<SequenceLookup
                 }
 
                 @Override
-                public List<GapRegion> getGapRegions(String seqId) throws Exception {
-                    return sourceFor(seqId).getGapRegions(seqId);
+                public List<GapRegion> getGapRegions(String seqId, SequenceRangeOption option) throws Exception {
+                    return sourceFor(seqId).getGapRegions(seqId, option);
                 }
 
                 @Override
-                public List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase) throws Exception {
-                    return sourceFor(seqId).getGapRegions(seqId, fromBase, toBase);
+                public List<GapRegion> getGapRegions(
+                        String seqId, long fromBase, long toBase, SequenceRangeOption option) throws Exception {
+                    return sourceFor(seqId).getGapRegions(seqId, fromBase, toBase, option);
                 }
 
                 @Override
@@ -105,8 +108,9 @@ public class CompositeSequenceProvider implements ContextProvider<SequenceLookup
                 }
 
                 @Override
-                public Reader getSequenceSliceReader(String seqId, long fromBase, long toBase) throws Exception {
-                    return sourceFor(seqId).getSequenceSliceReader(seqId, fromBase, toBase);
+                public Reader getSequenceSliceReader(
+                        String seqId, long fromBase, long toBase, SequenceRangeOption option) throws Exception {
+                    return sourceFor(seqId).getSequenceSliceReader(seqId, fromBase, toBase, option);
                 }
             };
         }

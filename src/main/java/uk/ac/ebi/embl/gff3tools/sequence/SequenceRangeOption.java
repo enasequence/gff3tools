@@ -1,0 +1,26 @@
+/*
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+package uk.ac.ebi.embl.gff3tools.sequence;
+
+/**
+ * Controls which portion of a sequence is considered when retrieving slices or gap regions.
+ *
+ * <p>Mirrors {@code uk.ac.ebi.embl.fastareader.SequenceRangeOption} so callers do not need
+ * a direct dependency on the fastareader library.
+ */
+public enum SequenceRangeOption {
+
+    /** The full sequence, including any leading/trailing N bases at the edges. */
+    WHOLE_SEQUENCE,
+
+    /** The sequence with leading and trailing N bases excluded from consideration. */
+    WITHOUT_EDGE_N_BASES
+}

@@ -24,6 +24,7 @@ import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
 import uk.ac.ebi.embl.gff3tools.sequence.GapRegion;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 
@@ -70,19 +71,21 @@ class FileSequenceSourceTest {
     @Test
     void getSequenceSliceDelegatesForFasta() throws Exception {
         SequenceFormatReader mockReader = mockFastaReader("seq1");
-        when(mockReader.getSequenceSlice(0L, 1L, 9L)).thenReturn("ATGAAATAA");
+        when(mockReader.getSequenceSlice(0L, 1L, 9L, uk.ac.ebi.embl.fastareader.SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("ATGAAATAA");
 
         FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
-        assertEquals("ATGAAATAA", source.getSequenceSlice("seq1", 1L, 9L));
+        assertEquals("ATGAAATAA", source.getSequenceSlice("seq1", 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE));
     }
 
     @Test
     void getSequenceSliceDelegatesForPlain() throws Exception {
         SequenceFormatReader mockReader = mockPlainReader();
-        when(mockReader.getSequenceSlice(0L, 1L, 9L)).thenReturn("ATGAAATAA");
+        when(mockReader.getSequenceSlice(0L, 1L, 9L, uk.ac.ebi.embl.fastareader.SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("ATGAAATAA");
 
         FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.plain, null);
-        assertEquals("ATGAAATAA", source.getSequenceSlice("any-id", 1L, 9L));
+        assertEquals("ATGAAATAA", source.getSequenceSlice("any-id", 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE));
     }
 
     @Test
@@ -90,7 +93,9 @@ class FileSequenceSourceTest {
         SequenceFormatReader mockReader = mockFastaReader("seq1");
         FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
 
-        assertThrows(IllegalArgumentException.class, () -> source.getSequenceSlice("unknown", 1L, 9L));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> source.getSequenceSlice("unknown", 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE));
     }
 
     @Test
@@ -140,7 +145,7 @@ class FileSequenceSourceTest {
                 .thenReturn(new uk.ac.ebi.embl.fastareader.SequenceStats(200L, 190L, 0L, 0L, Map.of('N', 10L)));
 
         FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
-        assertEquals(200L, source.getSequenceLength("seq1"));
+        assertEquals(200L, source.getSequenceLength("seq1", SequenceRangeOption.WHOLE_SEQUENCE));
     }
 
     @Test
@@ -150,7 +155,7 @@ class FileSequenceSourceTest {
                 .thenReturn(new uk.ac.ebi.embl.fastareader.SequenceStats(50L, 50L, 0L, 0L, Map.of()));
 
         FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.plain, null);
-        assertEquals(50L, source.getSequenceLength("any-id"));
+        assertEquals(50L, source.getSequenceLength("any-id", SequenceRangeOption.WHOLE_SEQUENCE));
     }
 
     @Test
@@ -166,23 +171,27 @@ class FileSequenceSourceTest {
     @Test
     void getGapRegionsWholeSequenceDelegatesForFasta() throws Exception {
         SequenceFormatReader mockReader = mockFastaReader("seq1");
-        when(mockReader.getGapRegions(0L))
+        when(mockReader.getGapRegions(0L, uk.ac.ebi.embl.fastareader.SequenceRangeOption.WHOLE_SEQUENCE))
                 .thenReturn(List.of(
                         new uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion(5L, 14L),
                         new uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion(50L, 99L)));
 
         FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
-        assertEquals(List.of(new GapRegion(5L, 14L), new GapRegion(50L, 99L)), source.getGapRegions("seq1"));
+        assertEquals(
+                List.of(new GapRegion(5L, 14L), new GapRegion(50L, 99L)),
+                source.getGapRegions("seq1", SequenceRangeOption.WHOLE_SEQUENCE));
     }
 
     @Test
     void getGapRegionsRangeDelegatesForFasta() throws Exception {
         SequenceFormatReader mockReader = mockFastaReader("seq1");
-        when(mockReader.getGapRegions(0L, 1L, 20L))
+        when(mockReader.getGapRegions(0L, 1L, 20L, uk.ac.ebi.embl.fastareader.SequenceRangeOption.WHOLE_SEQUENCE))
                 .thenReturn(List.of(new uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion(5L, 14L)));
 
         FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
-        assertEquals(List.of(new GapRegion(5L, 14L)), source.getGapRegions("seq1", 1L, 20L));
+        assertEquals(
+                List.of(new GapRegion(5L, 14L)),
+                source.getGapRegions("seq1", 1L, 20L, SequenceRangeOption.WHOLE_SEQUENCE));
     }
 
     @Test
@@ -210,10 +219,82 @@ class FileSequenceSourceTest {
     void getSequenceSliceReaderDelegatesForFasta() throws Exception {
         SequenceFormatReader mockReader = mockFastaReader("seq1");
         Reader expected = new StringReader("ATGAAA");
-        when(mockReader.getSequenceSliceReader(0L, 1L, 6L)).thenReturn(expected);
+        when(mockReader.getSequenceSliceReader(
+                        0L, 1L, 6L, uk.ac.ebi.embl.fastareader.SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn(expected);
 
         FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
-        assertSame(expected, source.getSequenceSliceReader("seq1", 1L, 6L));
+        assertSame(expected, source.getSequenceSliceReader("seq1", 1L, 6L, SequenceRangeOption.WHOLE_SEQUENCE));
+    }
+
+    // --- WITHOUT_EDGE_N_BASES option tests ---
+
+    @Test
+    void getSequenceSlicePassesThroughWithoutEdgeNBasesOption() throws Exception {
+        SequenceFormatReader mockReader = mockFastaReader("seq1");
+        when(mockReader.getSequenceSlice(
+                        0L, 1L, 9L, uk.ac.ebi.embl.fastareader.SequenceRangeOption.WITHOUT_EDGE_N_BASES))
+                .thenReturn("ATGAAATAA");
+
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+        assertEquals("ATGAAATAA", source.getSequenceSlice("seq1", 1L, 9L, SequenceRangeOption.WITHOUT_EDGE_N_BASES));
+    }
+
+    @Test
+    void getSequenceLengthWithoutEdgeNBasesSubtractsLeadingAndTrailingNs() throws Exception {
+        SequenceFormatReader mockReader = mockFastaReader("seq1");
+        // totalBases=100, leadingNs=5, trailingNs=3 → expected length = 92
+        when(mockReader.getStats(0L))
+                .thenReturn(new uk.ac.ebi.embl.fastareader.SequenceStats(100L, 88L, 5L, 3L, Map.of('N', 12L)));
+
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+        assertEquals(92L, source.getSequenceLength("seq1", SequenceRangeOption.WITHOUT_EDGE_N_BASES));
+    }
+
+    @Test
+    void getSequenceLengthWholeSequenceReturnsTotalBases() throws Exception {
+        SequenceFormatReader mockReader = mockFastaReader("seq1");
+        when(mockReader.getStats(0L))
+                .thenReturn(new uk.ac.ebi.embl.fastareader.SequenceStats(100L, 88L, 5L, 3L, Map.of('N', 12L)));
+
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+        assertEquals(100L, source.getSequenceLength("seq1", SequenceRangeOption.WHOLE_SEQUENCE));
+    }
+
+    @Test
+    void getGapRegionsPassesThroughWithoutEdgeNBasesOption() throws Exception {
+        SequenceFormatReader mockReader = mockFastaReader("seq1");
+        when(mockReader.getGapRegions(0L, uk.ac.ebi.embl.fastareader.SequenceRangeOption.WITHOUT_EDGE_N_BASES))
+                .thenReturn(List.of(new uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion(10L, 19L)));
+
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+        assertEquals(
+                List.of(new GapRegion(10L, 19L)),
+                source.getGapRegions("seq1", SequenceRangeOption.WITHOUT_EDGE_N_BASES));
+    }
+
+    @Test
+    void getGapRegionsRangePassesThroughWithoutEdgeNBasesOption() throws Exception {
+        SequenceFormatReader mockReader = mockFastaReader("seq1");
+        when(mockReader.getGapRegions(0L, 1L, 50L, uk.ac.ebi.embl.fastareader.SequenceRangeOption.WITHOUT_EDGE_N_BASES))
+                .thenReturn(List.of(new uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion(10L, 19L)));
+
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+        assertEquals(
+                List.of(new GapRegion(10L, 19L)),
+                source.getGapRegions("seq1", 1L, 50L, SequenceRangeOption.WITHOUT_EDGE_N_BASES));
+    }
+
+    @Test
+    void getSequenceSliceReaderPassesThroughWithoutEdgeNBasesOption() throws Exception {
+        SequenceFormatReader mockReader = mockFastaReader("seq1");
+        Reader expected = new StringReader("ATGAAA");
+        when(mockReader.getSequenceSliceReader(
+                        0L, 1L, 6L, uk.ac.ebi.embl.fastareader.SequenceRangeOption.WITHOUT_EDGE_N_BASES))
+                .thenReturn(expected);
+
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+        assertSame(expected, source.getSequenceSliceReader("seq1", 1L, 6L, SequenceRangeOption.WITHOUT_EDGE_N_BASES));
     }
 
     /** Creates a mock plain sequence reader with a single ordinal 0. */

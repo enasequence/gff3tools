@@ -28,30 +28,46 @@ public interface SequenceLookup {
      * @param seqId the GFF3 seqId (e.g. chromosome name)
      * @param fromBase 1-based start position (inclusive)
      * @param toBase 1-based end position (inclusive)
+     * @param option controls which portion of the sequence is considered
      * @return the nucleotide string
      */
-    String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception;
+    String getSequenceSlice(String seqId, long fromBase, long toBase, SequenceRangeOption option) throws Exception;
 
-    /** Total length of the sequence in bases. The last base index should therefore be sequenceLength, as the bases are indexed 1...sequenceLength. */
-    long getSequenceLength(String seqId) throws Exception;
+    /**
+     * Total length of the sequence in bases.
+     * The last base index should therefore be sequenceLength, as the bases are indexed 1...sequenceLength.
+     *
+     * @param option controls which portion of the sequence is considered
+     */
+    long getSequenceLength(String seqId, SequenceRangeOption option) throws Exception;
 
     /** Full stats for the sequence (base counts, N-counts, edge Ns). */
     SequenceStats getSequenceStats(String seqId) throws Exception;
 
-    /** All contiguous N-runs in the whole sequence. */
-    List<GapRegion> getGapRegions(String seqId) throws Exception;
+    /**
+     * All contiguous N-runs in the whole sequence.
+     *
+     * @param option controls which portion of the sequence is considered
+     */
+    List<GapRegion> getGapRegions(String seqId, SequenceRangeOption option) throws Exception;
 
     /**
      * N-runs overlapping [fromBase, toBase] (1-based inclusive).
      * Returned regions are not clipped to the range.
+     *
+     * @param option controls which portion of the sequence is considered
      */
-    List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase) throws Exception;
+    List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+            throws Exception;
 
     /** All seqIds known to this lookup. */
     Set<String> knownSeqIds();
 
     /**
      * Streaming reader over a sequence slice. Caller must close the returned Reader.
+     *
+     * @param option controls which portion of the sequence is considered
      */
-    Reader getSequenceSliceReader(String seqId, long fromBase, long toBase) throws Exception;
+    Reader getSequenceSliceReader(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+            throws Exception;
 }

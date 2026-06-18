@@ -21,6 +21,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.translation.TranslationResult;
 import uk.ac.ebi.embl.gff3tools.translation.Translator;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -138,8 +139,8 @@ public class TranslationFix {
             // For uniform-strand joins, concatenate raw and let the Translator apply overall RC.
             StringBuilder concatenated = new StringBuilder();
             for (GFF3Feature segment : sortedFeatures) {
-                String slice =
-                        sequenceLookup.getSequenceSlice(segment.accession(), segment.getStart(), segment.getEnd());
+                String slice = sequenceLookup.getSequenceSlice(
+                        segment.accession(), segment.getStart(), segment.getEnd(), SequenceRangeOption.WHOLE_SEQUENCE);
                 if (hasMixedStrands && segment.isComplement()) {
                     slice = new String(Translator.reverseComplement(slice.getBytes()));
                 }

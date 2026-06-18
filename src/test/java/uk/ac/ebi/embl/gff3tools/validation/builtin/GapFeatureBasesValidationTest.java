@@ -22,6 +22,7 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.GapRegion;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
@@ -38,7 +39,8 @@ public class GapFeatureBasesValidationTest {
 
     private void injectWithGapRegions(String seqId, long start, long end, List<GapRegion> regions) throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getGapRegions(seqId, start, end)).thenReturn(regions);
+        when(mockLookup.getGapRegions(seqId, start, end, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn(regions);
 
         ValidationContext context = TestUtils.createTestContext();
         context.register(SequenceLookup.class, new ContextProvider<>() {

@@ -14,6 +14,7 @@ import java.io.Reader;
 import java.util.List;
 import java.util.Set;
 import uk.ac.ebi.embl.gff3tools.sequence.GapRegion;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
 
 /**
@@ -24,45 +25,23 @@ import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
  */
 public interface SequenceSource {
 
-    /**
-     * Returns {@code true} if this source can provide a sequence for the given seqId.
-     */
     boolean hasSequence(String seqId);
 
-    /**
-     * Returns a nucleotide subsequence for the given GFF3 sequence ID.
-     */
-    String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception;
+    String getSequenceSlice(String seqId, long fromBase, long toBase, SequenceRangeOption option) throws Exception;
 
-    default long getSequenceLength(String seqId) throws Exception {
-        throw new UnsupportedOperationException(
-                "getSequenceLength not implemented by " + getClass().getSimpleName());
-    }
+    long getSequenceLength(String seqId, SequenceRangeOption option) throws Exception;
 
-    default SequenceStats getSequenceStats(String seqId) throws Exception {
-        throw new UnsupportedOperationException(
-                "getSequenceStats not implemented by " + getClass().getSimpleName());
-    }
+    SequenceStats getSequenceStats(String seqId) throws Exception;
 
-    default List<GapRegion> getGapRegions(String seqId) throws Exception {
-        throw new UnsupportedOperationException(
-                "getGapRegions not implemented by " + getClass().getSimpleName());
-    }
+    List<GapRegion> getGapRegions(String seqId, SequenceRangeOption option) throws Exception;
 
-    default List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase) throws Exception {
-        throw new UnsupportedOperationException(
-                "getGapRegions not implemented by " + getClass().getSimpleName());
-    }
+    List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+            throws Exception;
 
-    default Set<String> knownSeqIds() {
-        throw new UnsupportedOperationException(
-                "knownSeqIds not implemented by " + getClass().getSimpleName());
-    }
+    Set<String> knownSeqIds();
 
-    default Reader getSequenceSliceReader(String seqId, long fromBase, long toBase) throws Exception {
-        throw new UnsupportedOperationException(
-                "getSequenceSliceReader not implemented by " + getClass().getSimpleName());
-    }
+    Reader getSequenceSliceReader(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+            throws Exception;
 
     /** Release any resources held by this source. */
     default void close() {}
