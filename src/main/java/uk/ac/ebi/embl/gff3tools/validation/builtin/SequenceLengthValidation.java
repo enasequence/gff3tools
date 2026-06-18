@@ -41,7 +41,7 @@ public class SequenceLengthValidation implements Validation {
                     + " or complete exons) and therefore cannot be accepted for submission into ENA's EMBL-Bank."
                     + " Exceptions require the submitter to demonstrate that a peer-reviewed journal has accepted"
                     + " a manuscript confirming the relevance of the short sequences to the scientific community."
-                    + " Please contact us if you can demonstrate this, or if your sequence belongs to the"
+                    + " Please contact ENA helpdesk if you can demonstrate this, or if your sequence belongs to the"
                     + " 'ancient DNA' or 'complete exon' category.";
     private static final String MESSAGE_LNCRNA_TOO_SHORT =
             "lncRNA sequences usually have a length greater than 200bp. Please check that you are certain about this annotation.";
