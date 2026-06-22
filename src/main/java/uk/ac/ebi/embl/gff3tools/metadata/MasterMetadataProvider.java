@@ -27,11 +27,7 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
  */
 public class MasterMetadataProvider implements ContextProvider<MasterMetadataProvider> {
 
-    private final List<MasterMetadataSource> sources;
-
-    public MasterMetadataProvider() {
-        this.sources = new ArrayList<>();
-    }
+    private final List<MasterMetadataSource> sources = new ArrayList<>();
 
     @Override
     public MasterMetadataProvider get(ValidationContext context) {

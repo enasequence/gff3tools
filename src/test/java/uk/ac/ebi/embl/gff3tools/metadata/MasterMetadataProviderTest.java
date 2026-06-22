@@ -41,7 +41,6 @@ class MasterMetadataProviderTest {
     void firstSourceWinsEntirely() {
         MasterMetadata source1 = new MasterMetadata();
         source1.setDescription("From source 1");
-        // taxon is null — but source 1 still wins entirely
 
         MasterMetadata source2 = new MasterMetadata();
         source2.setDescription("From source 2");
@@ -63,7 +62,7 @@ class MasterMetadataProviderTest {
         meta.setDescription("From second source");
 
         MasterMetadataProvider provider = new MasterMetadataProvider();
-        provider.addSource(seqId -> Optional.empty()); // this source has nothing
+        provider.addSource(seqId -> Optional.empty());
         provider.addSource(seqId -> Optional.of(meta));
 
         Optional<MasterMetadata> result = provider.getMetadata("seq1");
@@ -88,10 +87,10 @@ class MasterMetadataProviderTest {
         provider.addSource(seqId -> Optional.of(source2));
 
         MasterMetadata result = provider.getMetadata("seq1").get();
-        assertSame(source1, result, "Should return the exact object from the first matching source");
+        assertSame(source1, result);
         assertEquals("desc", result.getDescription());
         assertEquals("genomic DNA", result.getMoleculeType());
-        assertNull(result.getTaxon(), "Fields from source2 should not be present");
+        assertNull(result.getTaxon());
     }
 
     @Test
@@ -102,7 +101,6 @@ class MasterMetadataProviderTest {
 
         MasterEntryJsonMetadataSource source = new MasterEntryJsonMetadataSource(metadata);
 
-        // Returns same metadata for any seqId
         Optional<MasterMetadata> result = source.getMetadata("any_seq_id");
         assertTrue(result.isPresent());
         assertEquals("GCA_001", result.get().getId());

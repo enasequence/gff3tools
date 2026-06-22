@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 import uk.ac.ebi.ena.taxonomy.taxon.TaxonFactory;
 
@@ -21,26 +22,50 @@ class TaxonProviderTest {
 
     private final TaxonFactory taxonFactory = new TaxonFactory();
 
-    @Test
-    void emptyProviderReturnsEmpty() {
-        TaxonProvider provider = new TaxonProvider();
+    private static TaxonProvider providerReturning(Optional<Taxon> value) {
+        return new TaxonProvider() {
+            @Override
+            public Optional<Taxon> resolve(long taxId) {
+                return value;
+            }
 
-        assertTrue(provider.getTaxonByTaxId(12345L).isEmpty());
-        assertTrue(provider.getTaxonByTaxId(null).isEmpty());
+            @Override
+            public TaxonProvider get(ValidationContext context) {
+                return this;
+            }
+        };
     }
 
     @Test
-    void returnsFirstTaxonFromRegisteredSources() {
-        Taxon first = taxonFactory.createTaxon();
-        first.setTaxId(1L);
-        Taxon second = taxonFactory.createTaxon();
-        second.setTaxId(2L);
+    void typeIsAlwaysTaxonProvider() {
+        assertEquals(TaxonProvider.class, providerReturning(Optional.empty()).type());
+    }
 
-        TaxonProvider provider = new TaxonProvider();
-        provider.addSource(taxId -> Optional.empty());
-        provider.addSource(taxId -> Optional.of(first));
-        provider.addSource(taxId -> Optional.of(second));
+    @Test
+    void getReturnsSelf() {
+        TaxonProvider provider = providerReturning(Optional.empty());
+        assertSame(provider, provider.get(new ValidationContext()));
+    }
 
-        assertSame(first, provider.getTaxonByTaxId(12345L).orElseThrow());
+    @Test
+    void resolveReturnsValueFromImplementation() {
+        Taxon taxon = taxonFactory.createTaxon();
+        taxon.setTaxId(9606L);
+        taxon.setScientificName("Homo sapiens");
+
+        TaxonProvider provider = new TaxonProvider() {
+            @Override
+            public Optional<Taxon> resolve(long taxId) {
+                return taxId == 9606L ? Optional.of(taxon) : Optional.empty();
+            }
+
+            @Override
+            public TaxonProvider get(ValidationContext context) {
+                return this;
+            }
+        };
+
+        assertSame(taxon, provider.resolve(9606L).orElseThrow());
+        assertTrue(provider.resolve(1L).isEmpty());
     }
 }

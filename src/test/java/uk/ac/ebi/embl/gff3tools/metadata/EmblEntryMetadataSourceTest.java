@@ -146,36 +146,10 @@ class EmblEntryMetadataSourceTest {
     }
 
     @Test
-    void fallsBackToDbXrefForTaxon() {
-        // Entry with a plain organism qualifier (not OrganismQualifier) and a db_xref
+    void recoversTaxonIdFromDbXref() {
         Entry entry = entryFactory.createEntry();
         SourceFeature source = featureFactory.createSourceFeature();
         source.addQualifier(qualifierFactory.createQualifier("organism", "Unknown species"));
-        source.addQualifier(qualifierFactory.createQualifier("db_xref", "taxon:12345"));
-        entry.addFeature(source);
-
-        Taxon resolvedTaxon = taxonFactory.createTaxon();
-        resolvedTaxon.setTaxId(12345L);
-        resolvedTaxon.setScientificName("Resolved species");
-        resolvedTaxon.setCommonName("resolved common name");
-        resolvedTaxon.setLineage("Eukaryota; Test lineage;");
-
-        TaxonProvider taxonProvider = new TaxonProvider();
-        taxonProvider.addSource(taxId -> taxId.equals(12345L) ? Optional.of(resolvedTaxon) : Optional.empty());
-
-        EmblEntryMetadataSource metaSource = new EmblEntryMetadataSource(entry, taxonProvider);
-        MasterMetadata meta = metaSource.getMetadata();
-
-        assertEquals("12345", meta.getTaxon());
-        assertEquals("Resolved species", meta.getScientificName());
-        assertEquals("resolved common name", meta.getCommonName());
-        assertEquals("Eukaryota; Test lineage;", meta.getLineage());
-    }
-
-    @Test
-    void defaultConstructorDoesNotResolveTaxonFromDbXref() {
-        Entry entry = entryFactory.createEntry();
-        SourceFeature source = featureFactory.createSourceFeature();
         source.addQualifier(qualifierFactory.createQualifier("db_xref", "taxon:12345"));
         entry.addFeature(source);
 
@@ -183,7 +157,7 @@ class EmblEntryMetadataSourceTest {
         MasterMetadata meta = metaSource.getMetadata();
 
         assertEquals("12345", meta.getTaxon());
-        assertNull(meta.getScientificName());
+        assertEquals("Unknown species", meta.getScientificName());
         assertNull(meta.getCommonName());
         assertNull(meta.getLineage());
     }

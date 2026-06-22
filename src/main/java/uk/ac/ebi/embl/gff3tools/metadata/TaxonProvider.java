@@ -10,42 +10,26 @@
  */
 package uk.ac.ebi.embl.gff3tools.metadata;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
+import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 /**
- * Chain-of-responsibility provider that returns taxonomy data from the first
- * {@link TaxonSource} that has data for a given taxon ID.
+ * SPI for resolving NCBI taxon IDs to {@link Taxon} objects.
  *
- * <p>The default provider has no sources and is offline-only. Network-backed sources
- * should be provided by environment-specific extensions and registered explicitly.
+ * <p>Core ships no implementation (offline by default). Online-backed implementations
+ * are registered by downstream modules (e.g. gff3-validations) or by the processing /
+ * ingestion pipeline at initialization time.
  */
-public class TaxonProvider {
-
-    private final List<TaxonSource> sources = new ArrayList<>();
+public interface TaxonProvider extends ContextProvider<TaxonProvider> {
 
     /**
-     * Registers a taxon source. Sources are queried in registration order.
+     * Returns the {@link Taxon} for the given taxon ID, or empty if not available.
      */
-    public void addSource(TaxonSource source) {
-        sources.add(source);
-    }
+    Optional<Taxon> resolve(long taxId);
 
-    /**
-     * Returns the {@link Taxon} from the first source that has data for the given taxon ID.
-     */
-    public Optional<Taxon> getTaxonByTaxId(Long taxId) {
-        if (taxId == null) {
-            return Optional.empty();
-        }
-        for (TaxonSource source : sources) {
-            Optional<Taxon> taxon = source.getTaxonByTaxId(taxId);
-            if (taxon.isPresent()) {
-                return taxon;
-            }
-        }
-        return Optional.empty();
+    @Override
+    default Class<TaxonProvider> type() {
+        return TaxonProvider.class;
     }
 }
