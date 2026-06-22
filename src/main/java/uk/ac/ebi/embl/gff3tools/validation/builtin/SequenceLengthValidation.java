@@ -72,12 +72,12 @@ public class SequenceLengthValidation implements Validation {
         if (region == null) {
             return;
         }
-        Long firstBaseIndex = 1L;
+        long firstBaseIndex = 1L;
         Long lastBaseIndex = resolveSequenceLength(annotation.getAccession());
         if (lastBaseIndex == null) {
             return;
         }
-        if (!firstBaseIndex.equals(annotation.getSequenceRegion().start())) {
+        if (firstBaseIndex != annotation.getSequenceRegion().start()) {
             throw new ValidationException(
                     RULE_SEQUENCE_REGION_OUT_OF_BOUNDS,
                     line,
