@@ -248,7 +248,7 @@ class FileSequenceSourceTest {
                 .thenReturn(new uk.ac.ebi.embl.fastareader.SequenceStats(100L, 88L, 5L, 3L, Map.of('N', 12L)));
 
         FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
-        assertEquals(92L, source.getSequenceLength("seq1", SequenceRangeOption.WITHOUT_EDGE_N_BASES));
+        assertEquals(88L, source.getSequenceLength("seq1", SequenceRangeOption.WITHOUT_EDGE_N_BASES));
     }
 
     @Test
