@@ -195,8 +195,6 @@ class FileSequenceSourceTest {
         assertTrue(ex.getMessage().contains("Duplicate submission ID"));
     }
 
-    // --- new method tests ---
-
     @Test
     void getSequenceLengthDelegatesForFasta() throws Exception {
         SequenceFormatReader mockReader = mockFastaReader("seq1");
