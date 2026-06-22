@@ -60,7 +60,7 @@ public interface SequenceLookup {
     List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase, SequenceRangeOption option)
             throws Exception;
 
-    /** All seqIds known to this lookup. */
+    /** All seqIds currently known to this lookup. */
     Set<String> knownSeqIds();
 
     /**

@@ -12,15 +12,10 @@ package uk.ac.ebi.embl.gff3tools.sequence;
 
 /**
  * Controls which portion of a sequence is considered when retrieving slices or gap regions.
- *
- * <p>Mirrors {@code uk.ac.ebi.embl.fastareader.SequenceRangeOption} so callers do not need
- * a direct dependency on the fastareader library.
  */
 public enum SequenceRangeOption {
-
     /** The full sequence, including any leading/trailing N bases at the edges. */
     WHOLE_SEQUENCE,
-
     /** The sequence with leading and trailing N bases excluded from consideration. */
     WITHOUT_EDGE_N_BASES
 }

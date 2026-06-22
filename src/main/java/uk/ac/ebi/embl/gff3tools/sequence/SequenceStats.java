@@ -12,13 +12,6 @@ package uk.ac.ebi.embl.gff3tools.sequence;
 
 import java.util.Map;
 
-/**
- * Base-count statistics for a single sequence entry.
- *
- * <p>Letter keys in {@code baseCount} are canonicalized to uppercase.
- * Non-letter permitted characters (e.g. {@code '-'}, {@code '.'}) appear as-is.
- * Characters not present have a count of zero.
- */
 public record SequenceStats(
         long totalBases,
         long totalBasesWithoutEdgeNBases,

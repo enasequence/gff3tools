@@ -18,6 +18,5 @@ public enum AnalysisType {
     SEQUENCE_ASSEMBLY,
     /*** This is the default AnalysisType for previous Transcriptome pipeline submissions*/
     TRANSCRIPTOME_ASSEMBLY,
-    /** Fallback used when no analysis type is supplied. */
     UNKNOWN
 }
