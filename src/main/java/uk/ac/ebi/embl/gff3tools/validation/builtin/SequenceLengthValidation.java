@@ -23,6 +23,8 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
 
 @Gff3Validation(
         name = "SEQUENCE_LENGTH",
@@ -32,9 +34,11 @@ public class SequenceLengthValidation implements Validation {
     private static final String RULE_SEQUENCE_REGION_OUT_OF_BOUNDS = "SEQUENCE_REGION_OUT_OF_BOUNDS";
     private static final String RULE_SEQUENCE_TOO_SHORT = "SEQUENCE_TOO_SHORT";
     private static final String RULE_LNCRNA_TOO_SHORT = "LNCRNA_TOO_SHORT";
+    private static final String RULE_ASSEMBLY_SEQUENCE_TOO_SHORT = "ASSEMBLY_SEQUENCE_TOO_SHORT";
 
     private static final Integer UNIVERSAL_MINIMUM_SEQUENCE_LENGTH = 100;
     private static final Integer LNCRNA_MINIMUM_SEQUENCE_LENGTH = 200;
+    private static final Integer ASSEMBLY_MINIMUM_SEQUENCE_LENGTH = 1000;
 
     private static final String MESSAGE_SEQUENCE_REGION_START_OUT_OF_BOUNDS =
             "The start position of the sequence region (\"%d\") is not equal to 1.";
@@ -49,13 +53,14 @@ public class SequenceLengthValidation implements Validation {
                     + " 'ancient DNA' or 'complete exon' category.";
     private static final String MESSAGE_LNCRNA_TOO_SHORT =
             "lncRNA sequences usually have a length greater than 200bp. Please check that you are certain about this annotation.";
-
-    // TODO: WGS minimum 1000 nt (3.3) — requires dataclass context, no defined source in GFF3 submissions yet
+    private static final String MESSAGE_ASSEMBLY_SEQUENCE_TOO_SHORT =
+            "Sequence assembly submissions require sequences to be at least 1000 nt long.";
 
     @InjectContext
     private ValidationContext context;
 
     private final Map<String, Long> sequenceLengthCache = new HashMap<>();
+    private Boolean sequenceAssembly;
 
     @ValidationMethod(
             rule = RULE_SEQUENCE_REGION_OUT_OF_BOUNDS,
@@ -93,11 +98,22 @@ public class SequenceLengthValidation implements Validation {
             priority = ValidationPriority.NORMAL)
     public void validateMinimumLength(GFF3Annotation annotation, int line) throws ValidationException {
         Long length = resolveSequenceLength(annotation.getAccession());
-        if (length == null) {
-            return;
-        }
-        if (length < UNIVERSAL_MINIMUM_SEQUENCE_LENGTH && !hasMinimumLengthException(annotation)) {
+
+        if (length != null && length < UNIVERSAL_MINIMUM_SEQUENCE_LENGTH && !hasMinimumLengthException(annotation)) {
             throw new ValidationException(RULE_SEQUENCE_TOO_SHORT, line, MESSAGE_SEQUENCE_TOO_SHORT);
+        }
+    }
+
+    @ValidationMethod(
+            rule = RULE_ASSEMBLY_SEQUENCE_TOO_SHORT,
+            description = "Whole genome sequence submissions must be at least 1000 nt",
+            type = ValidationType.ANNOTATION,
+            priority = ValidationPriority.NORMAL)
+    public void validateWGSMinimumLength(GFF3Annotation annotation, int line) throws ValidationException {
+        Long length = resolveSequenceLength(annotation.getAccession());
+
+        if (isSequenceAssembly() && length != null && length < ASSEMBLY_MINIMUM_SEQUENCE_LENGTH) {
+            throw new ValidationException(RULE_ASSEMBLY_SEQUENCE_TOO_SHORT, line, MESSAGE_ASSEMBLY_SEQUENCE_TOO_SHORT);
         }
     }
 
@@ -108,13 +124,21 @@ public class SequenceLengthValidation implements Validation {
             severity = RuleSeverity.WARN,
             priority = ValidationPriority.NORMAL)
     public void validateLncRnaLength(GFF3Annotation annotation, int line) throws ValidationException {
-        if (findLncRnaFeature(annotation).isEmpty()) {
-            return;
-        }
         Long length = resolveSequenceLength(annotation.getAccession());
-        if (length != null && length < LNCRNA_MINIMUM_SEQUENCE_LENGTH) {
+
+        if (findLncRnaFeature(annotation).isPresent() && length != null && length < LNCRNA_MINIMUM_SEQUENCE_LENGTH) {
             throw new ValidationException(RULE_LNCRNA_TOO_SHORT, line, MESSAGE_LNCRNA_TOO_SHORT);
         }
+    }
+
+    private boolean isSequenceAssembly() {
+        if (sequenceAssembly == null) {
+            AnalysisContext analysisContext =
+                    context.contains(AnalysisContext.class) ? context.get(AnalysisContext.class) : null;
+            sequenceAssembly =
+                    analysisContext != null && analysisContext.getAnalysisType() == AnalysisType.SEQUENCE_ASSEMBLY;
+        }
+        return sequenceAssembly;
     }
 
     private Optional<GFF3Feature> findLncRnaFeature(GFF3Annotation annotation) {

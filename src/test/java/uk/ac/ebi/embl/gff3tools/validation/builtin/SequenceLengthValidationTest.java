@@ -26,6 +26,8 @@ import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
 
 public class SequenceLengthValidationTest {
 
@@ -59,6 +61,36 @@ public class SequenceLengthValidationTest {
         when(mockLookup.getSequenceLength(seqId, SequenceRangeOption.WITHOUT_EDGE_N_BASES))
                 .thenReturn(len);
         injectLookup(mockLookup);
+    }
+
+    private void injectLookupReturning(String seqId, long len, AnalysisType analysisType) throws Exception {
+        SequenceLookup mockLookup = mock(SequenceLookup.class);
+        when(mockLookup.getSequenceLength(seqId, SequenceRangeOption.WITHOUT_EDGE_N_BASES))
+                .thenReturn(len);
+        ValidationContext context = TestUtils.createTestContext();
+        context.register(SequenceLookup.class, new ContextProvider<>() {
+            @Override
+            public SequenceLookup get(ValidationContext ctx) {
+                return mockLookup;
+            }
+
+            @Override
+            public Class<SequenceLookup> type() {
+                return SequenceLookup.class;
+            }
+        });
+        context.register(AnalysisContext.class, new ContextProvider<>() {
+            @Override
+            public AnalysisContext get(ValidationContext ctx) {
+                return new AnalysisContext(analysisType, 10);
+            }
+
+            @Override
+            public Class<AnalysisContext> type() {
+                return AnalysisContext.class;
+            }
+        });
+        TestUtils.injectContext(check, context);
     }
 
     private void injectNoLookup() {
@@ -183,6 +215,43 @@ public class SequenceLengthValidationTest {
         void noLookupSkipped() throws Exception {
             injectNoLookup();
             assertDoesNotThrow(() -> check.validateMinimumLength(annotationWithSequenceRegion(1L, 50L), 1));
+        }
+    }
+
+    @Nested
+    class ValidateAssemblyMinimumLength {
+
+        @Test
+        void assemblyLengthAbove1000Success() throws Exception {
+            injectLookupReturning(SEQ_ID, 1500L, AnalysisType.SEQUENCE_ASSEMBLY);
+            assertDoesNotThrow(() -> check.validateWGSMinimumLength(annotationWithSequenceRegion(1L, 1500L), 1));
+        }
+
+        @Test
+        void assemblyLengthBelow1000Failure() throws Exception {
+            injectLookupReturning(SEQ_ID, 500L, AnalysisType.SEQUENCE_ASSEMBLY);
+            ValidationException ex = assertThrows(
+                    ValidationException.class,
+                    () -> check.validateWGSMinimumLength(annotationWithSequenceRegion(1L, 500L), 1));
+            assertTrue(ex.getMessage().contains("ASSEMBLY_SEQUENCE_TOO_SHORT"));
+        }
+
+        @Test
+        void nonAssemblyLengthBelow1000Skipped() throws Exception {
+            injectLookupReturning(SEQ_ID, 500L, AnalysisType.SEQUENCE_FLATFILE);
+            assertDoesNotThrow(() -> check.validateWGSMinimumLength(annotationWithSequenceRegion(1L, 500L), 1));
+        }
+
+        @Test
+        void noAnalysisContextSkipped() throws Exception {
+            injectLookupReturning(SEQ_ID, 500L);
+            assertDoesNotThrow(() -> check.validateWGSMinimumLength(annotationWithSequenceRegion(1L, 500L), 1));
+        }
+
+        @Test
+        void noLookupSkipped() throws Exception {
+            injectNoLookup();
+            assertDoesNotThrow(() -> check.validateWGSMinimumLength(annotationWithSequenceRegion(1L, 500L), 1));
         }
     }
 
