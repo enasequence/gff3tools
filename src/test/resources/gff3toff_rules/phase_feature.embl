@@ -9,13 +9,13 @@ XX
 FH   Key             Location/Qualifiers
 FH
 FT   source          1..315242
-FT   gene            133806..191728
+FT   ncRNA           133806..191728
 FT                   /gene="RHD"
-FT   gene            133806..191728
+FT   ncRNA           133806..191728
 FT                   /gene="matK"
-FT   gene            133806..191728
+FT   ncRNA           133806..191728
 FT                   /gene="RHCE"
-FT   gene            133806..191728
+FT   ncRNA           133806..191728
 FT                   /gene="SMP1"
 FT   mRNA            133806..133969
 FT                   /gene="RHD"
