@@ -33,6 +33,9 @@ public class SequenceLengthValidation implements Validation {
     private static final String RULE_SEQUENCE_TOO_SHORT = "SEQUENCE_TOO_SHORT";
     private static final String RULE_LNCRNA_TOO_SHORT = "LNCRNA_TOO_SHORT";
 
+    private static final Integer UNIVERSAL_MINIMUM_SEQUENCE_LENGTH = 100;
+    private static final Integer LNCRNA_MINIMUM_SEQUENCE_LENGTH = 200;
+
     private static final String MESSAGE_SEQUENCE_REGION_START_OUT_OF_BOUNDS =
             "The start position of the sequence region (\"%d\") is not equal to 1.";
     private static final String MESSAGE_SEQUENCE_REGION_END_OUT_OF_BOUNDS =
@@ -93,7 +96,7 @@ public class SequenceLengthValidation implements Validation {
         if (length == null) {
             return;
         }
-        if (length < 100 && !hasMinimumLengthException(annotation)) {
+        if (length < UNIVERSAL_MINIMUM_SEQUENCE_LENGTH && !hasMinimumLengthException(annotation)) {
             throw new ValidationException(RULE_SEQUENCE_TOO_SHORT, line, MESSAGE_SEQUENCE_TOO_SHORT);
         }
     }
@@ -109,7 +112,7 @@ public class SequenceLengthValidation implements Validation {
             return;
         }
         Long length = resolveSequenceLength(annotation.getAccession());
-        if (length != null && length < 200) {
+        if (length != null && length < LNCRNA_MINIMUM_SEQUENCE_LENGTH) {
             throw new ValidationException(RULE_LNCRNA_TOO_SHORT, line, MESSAGE_LNCRNA_TOO_SHORT);
         }
     }
@@ -133,7 +136,7 @@ public class SequenceLengthValidation implements Validation {
             SequenceLookup lookup = context.get(SequenceLookup.class);
             if (lookup != null) {
                 try {
-                    Long length = lookup.getSequenceLength(seqId, SequenceRangeOption.WHOLE_SEQUENCE);
+                    Long length = lookup.getSequenceLength(seqId, SequenceRangeOption.WITHOUT_EDGE_N_BASES);
                     sequenceLengthCache.put(seqId, length);
                     return length;
                 } catch (Exception ex) {

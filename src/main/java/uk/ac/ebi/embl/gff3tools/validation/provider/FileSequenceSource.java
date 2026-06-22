@@ -114,7 +114,7 @@ public class FileSequenceSource implements SequenceSource {
         uk.ac.ebi.embl.fastareader.SequenceStats fr = formatReader.getStats(ordinal);
         return switch (option) {
             case WHOLE_SEQUENCE -> fr.totalBases();
-            case WITHOUT_EDGE_N_BASES -> fr.totalBases() - fr.leadingNsCount() - fr.trailingNsCount();
+            case WITHOUT_EDGE_N_BASES -> fr.totalBasesWithoutNBases();
         };
     }
 
