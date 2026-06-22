@@ -38,7 +38,6 @@ public class SequenceMappingValidation implements Validation {
     @InjectContext
     private ValidationContext context;
 
-    /** Accessions already confirmed to map to a sequence. */
     private final Set<String> validatedAccessions = new HashSet<>();
 
     @ValidationMethod(
@@ -49,31 +48,26 @@ public class SequenceMappingValidation implements Validation {
     public void validateSequenceMapping(GFF3Feature feature, int line) throws ValidationException {
         SequenceLookup lookup = registeredSequenceLookup();
         if (lookup == null) {
-            return; // No sequence provider registered: there is nothing to map against.
+            return;
         }
 
         String accession = feature.accession();
         if (!validatedAccessions.add(accession)) {
-            return; // Already resolved this accession; do not re-validate.
+            return;
         }
 
         resolveOrExplode(lookup, accession, line);
     }
 
-    /** The registered sequence lookup, or {@code null} if no sequence provider is available. */
     private SequenceLookup registeredSequenceLookup() {
         return context.contains(SequenceLookup.class) ? context.get(SequenceLookup.class) : null;
     }
 
-    /**
-     * Confirms the provider can supply a sequence for {@code accession}. A registered provider must
-     * resolve every accession, so this errors out at the first sign of mapping failing rather than aggregating errors.
-     */
     private void resolveOrExplode(SequenceLookup lookup, String accession, int line) throws ValidationException {
         try {
             lookup.getSequenceLength(accession, SequenceRangeOption.WHOLE_SEQUENCE);
         } catch (Exception e) {
-            validatedAccessions.remove(accession); // A failed accession must not be remembered as validated.
+            validatedAccessions.remove(accession);
             throw new ValidationException(RULE_SEQUENCE_MAPPING, line, NO_MAPPING_MESSAGE.formatted(accession));
         }
     }
