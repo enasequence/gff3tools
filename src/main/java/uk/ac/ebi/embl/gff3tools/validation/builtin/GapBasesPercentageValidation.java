@@ -11,10 +11,10 @@
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import java.util.Optional;
+import uk.ac.ebi.embl.fastareader.SequenceStats;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
-import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
@@ -64,7 +64,7 @@ public class GapBasesPercentageValidation implements Validation {
             throw new IllegalStateException("No sequence stats available for sequence " + seqId);
         }
 
-        long lengthWithoutEdges = stats.totalBasesWithoutEdgeNBases();
+        long lengthWithoutEdges = stats.totalBasesWithoutNBases();
         long nCount = countInteriorNs(stats);
         if (lengthWithoutEdges < 0 || nCount < 0) {
             throw new IllegalStateException("Negative gap-base counts for sequence " + seqId + ": length="

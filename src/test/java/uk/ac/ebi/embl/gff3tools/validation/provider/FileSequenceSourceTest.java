@@ -27,11 +27,11 @@ import java.util.zip.GZIPOutputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
+import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
+import uk.ac.ebi.embl.fastareader.SequenceStats;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
+import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
-import uk.ac.ebi.embl.gff3tools.sequence.GapRegion;
-import uk.ac.ebi.embl.gff3tools.sequence.SequenceRangeOption;
-import uk.ac.ebi.embl.gff3tools.sequence.SequenceStats;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 
 class FileSequenceSourceTest {

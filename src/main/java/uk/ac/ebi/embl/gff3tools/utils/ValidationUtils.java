@@ -11,8 +11,8 @@
 package uk.ac.ebi.embl.gff3tools.utils;
 
 import java.util.Map;
+import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
-import uk.ac.ebi.embl.gff3tools.sequence.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 public class ValidationUtils {
