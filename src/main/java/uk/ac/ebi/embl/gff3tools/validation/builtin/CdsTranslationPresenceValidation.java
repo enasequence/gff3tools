@@ -63,7 +63,12 @@ public class CdsTranslationPresenceValidation {
             String key = TranslationState.buildKey(
                     representative.accession(), representative.getId().orElse(null));
             if (key == null) {
-                continue;
+                throw new IllegalStateException(
+                        "Cannot build a translation key for CDS without an ID on accession '%s' at %d-%d"
+                                .formatted(
+                                        representative.accession(),
+                                        representative.getStart(),
+                                        representative.getEnd()));
             }
 
             if (!hasGeneratedTranslation(state.get(key))) {
@@ -96,7 +101,9 @@ public class CdsTranslationPresenceValidation {
     }
 
     private boolean hasGeneratedTranslation(TranslationState.TranslationEntry entry) {
-        return entry != null && entry.newTranslation() != null;
+        return entry != null
+                && entry.newTranslation() != null
+                && !entry.newTranslation().isBlank();
     }
 
     private boolean isExempt(List<GFF3Feature> segments) {

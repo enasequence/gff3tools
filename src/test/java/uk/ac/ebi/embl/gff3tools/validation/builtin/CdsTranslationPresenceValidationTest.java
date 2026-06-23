@@ -107,8 +107,8 @@ class CdsTranslationPresenceValidationTest {
     }
 
     @Test
-    void exemptsIdlessCds() throws Exception {
-        // CDS with no ID cannot be keyed into TranslationState => exempt.
+    void throwsForIdlessCds() {
+        // CDS with no ID cannot be keyed into TranslationState => unexpected state.
         GFF3Feature cds = new GFF3Feature(
                 Optional.empty(),
                 Optional.empty(),
@@ -123,7 +123,10 @@ class CdsTranslationPresenceValidationTest {
                 "0");
         GFF3Annotation annotation = createAnnotation(cds);
 
-        validation.validateTranslationPresence(annotation, 1);
+        IllegalStateException ex =
+                assertThrows(IllegalStateException.class, () -> validation.validateTranslationPresence(annotation, 1));
+        assertTrue(ex.getMessage().contains("seq1"));
+        assertTrue(ex.getMessage().contains("1-9"));
     }
 
     @Test
