@@ -24,7 +24,7 @@ import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
-public class SequenceMappingValidationTest {
+class SequenceMappingValidationTest {
 
     private static final String SEQ_ID = "chr1";
 

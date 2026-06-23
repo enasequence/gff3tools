@@ -29,7 +29,7 @@ import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
-public class GapBasesPercentageValidationTest {
+class GapBasesPercentageValidationTest {
 
     private static final String SEQ_ID = "chr1";
 
