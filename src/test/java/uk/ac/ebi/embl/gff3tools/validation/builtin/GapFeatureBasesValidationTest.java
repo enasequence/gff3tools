@@ -94,6 +94,32 @@ public class GapFeatureBasesValidationTest {
     }
 
     @Test
+    public void testValidateGapBasesLookupFailureThrows() throws Exception {
+        SequenceLookup mockLookup = mock(SequenceLookup.class);
+        when(mockLookup.getGapRegions(SEQ_ID, 1L, 5L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenThrow(new RuntimeException("boom"));
+
+        ValidationContext context = TestUtils.createTestContext();
+        context.register(SequenceLookup.class, new ContextProvider<>() {
+            @Override
+            public SequenceLookup get(ValidationContext ctx) {
+                return mockLookup;
+            }
+
+            @Override
+            public Class<SequenceLookup> type() {
+                return SequenceLookup.class;
+            }
+        });
+        TestUtils.injectContext(check, context);
+
+        GFF3Feature gap = TestUtils.createGFF3Feature("gap", SEQ_ID, 1L, 5L, Map.of());
+        ValidationException ex = assertThrows(ValidationException.class, () -> check.validateGapBases(gap, 1));
+        assertTrue(ex.getMessage().contains("Unable to retrieve gap regions"));
+        assertTrue(ex.getMessage().contains("boom"));
+    }
+
+    @Test
     public void testValidateGapBasesNonGapFeatureSkipped() throws Exception {
         injectWithGapRegions(SEQ_ID, 1L, 5L, List.of());
         GFF3Feature cds = TestUtils.createGFF3Feature("CDS", SEQ_ID, 1L, 5L, Map.of());

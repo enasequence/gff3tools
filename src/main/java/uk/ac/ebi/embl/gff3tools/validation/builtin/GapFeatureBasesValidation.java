@@ -49,17 +49,20 @@ public class GapFeatureBasesValidation implements Validation {
         if (soIdOpt.isEmpty() || !OntologyTerm.GAP.ID.equals(soIdOpt.get())) {
             return;
         }
-        if (!context.contains(SequenceLookup.class)) {
+        SequenceLookup lookup = context.contains(SequenceLookup.class) ? context.get(SequenceLookup.class) : null;
+        if (lookup == null) {
             return;
         }
-        SequenceLookup lookup = context.get(SequenceLookup.class);
         long start = feature.getStart();
         long end = feature.getEnd();
         List<GapRegion> gapRegions;
         try {
             gapRegions = lookup.getGapRegions(feature.accession(), start, end, SequenceRangeOption.WHOLE_SEQUENCE);
         } catch (Exception e) {
-            return;
+            throw new ValidationException(
+                    RULE_GAP_BASES,
+                    line,
+                    "Unable to retrieve gap regions for locations %d-%d: %s".formatted(start, end, e.getMessage()));
         }
         boolean covered = gapRegions.stream().anyMatch(g -> g.startBase() <= start && g.endBase() >= end);
         if (!covered) {
