@@ -74,11 +74,13 @@ public class GapBasesPercentageValidation implements Validation {
             return;
         }
 
-        if (useLooseGapCheck(seqId)) {
+        if (isChromosomeSequence(seqId)) {
+            // For chromosomes, only check N count is less than the sequence count.
             if (nCount >= lengthWithoutEdges) {
                 throw new ValidationException(RULE_GAP_BASES_PERCENTAGE, line, MESSAGE_ALL_NS.formatted(seqId));
             }
         } else {
+            // N percentage check for non-chromosome sequences
             if (nCount > lengthWithoutEdges * MAX_GAP_FRACTION) {
                 double percentage = 100.0 * nCount / lengthWithoutEdges;
                 throw new ValidationException(
@@ -99,7 +101,7 @@ public class GapBasesPercentageValidation implements Validation {
         return stats.baseCount().getOrDefault('N', 0L) - stats.leadingNsCount() - stats.trailingNsCount();
     }
 
-    private boolean useLooseGapCheck(String seqId) {
+    private boolean isChromosomeSequence(String seqId) {
         if (!context.contains(FastaHeaderProvider.class)) {
             return true;
         }

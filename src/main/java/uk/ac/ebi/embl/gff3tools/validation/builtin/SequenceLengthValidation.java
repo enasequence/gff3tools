@@ -74,7 +74,8 @@ public class SequenceLengthValidation implements Validation {
         long firstBaseIndex = 1L;
         Long lastBaseIndex =
                 ValidationUtils.resolveSequenceLength(annotation.getAccession(), sequenceLengthCache, context);
-        if (lastBaseIndex == null) {
+        if (lastBaseIndex
+                == null) { // When lastBaseIndex is null then sequence is not resolved from the ValidationContext
             return;
         }
         if (firstBaseIndex != annotation.getSequenceRegion().start()) {
