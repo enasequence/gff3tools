@@ -17,10 +17,9 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
-import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
-import uk.ac.ebi.embl.gff3tools.sequence.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
@@ -73,7 +72,8 @@ public class SequenceLengthValidation implements Validation {
             return;
         }
         long firstBaseIndex = 1L;
-        Long lastBaseIndex = resolveSequenceLength(annotation.getAccession());
+        Long lastBaseIndex =
+                ValidationUtils.resolveSequenceLength(annotation.getAccession(), sequenceLengthCache, context);
         if (lastBaseIndex == null) {
             return;
         }
@@ -97,7 +97,7 @@ public class SequenceLengthValidation implements Validation {
             type = ValidationType.ANNOTATION,
             priority = ValidationPriority.NORMAL)
     public void validateMinimumLength(GFF3Annotation annotation, int line) throws ValidationException {
-        Long length = resolveSequenceLength(annotation.getAccession());
+        Long length = ValidationUtils.resolveSequenceLength(annotation.getAccession(), sequenceLengthCache, context);
 
         if (length != null && length < UNIVERSAL_MINIMUM_SEQUENCE_LENGTH && !hasMinimumLengthException(annotation)) {
             throw new ValidationException(RULE_SEQUENCE_TOO_SHORT, line, MESSAGE_SEQUENCE_TOO_SHORT);
@@ -110,7 +110,7 @@ public class SequenceLengthValidation implements Validation {
             type = ValidationType.ANNOTATION,
             priority = ValidationPriority.NORMAL)
     public void validateWGSMinimumLength(GFF3Annotation annotation, int line) throws ValidationException {
-        Long length = resolveSequenceLength(annotation.getAccession());
+        Long length = ValidationUtils.resolveSequenceLength(annotation.getAccession(), sequenceLengthCache, context);
 
         if (isSequenceAssembly() && length != null && length < ASSEMBLY_MINIMUM_SEQUENCE_LENGTH) {
             throw new ValidationException(RULE_ASSEMBLY_SEQUENCE_TOO_SHORT, line, MESSAGE_ASSEMBLY_SEQUENCE_TOO_SHORT);
@@ -124,7 +124,7 @@ public class SequenceLengthValidation implements Validation {
             severity = RuleSeverity.WARN,
             priority = ValidationPriority.NORMAL)
     public void validateLncRnaLength(GFF3Annotation annotation, int line) throws ValidationException {
-        Long length = resolveSequenceLength(annotation.getAccession());
+        Long length = ValidationUtils.resolveSequenceLength(annotation.getAccession(), sequenceLengthCache, context);
 
         if (findLncRnaFeature(annotation).isPresent() && length != null && length < LNCRNA_MINIMUM_SEQUENCE_LENGTH) {
             throw new ValidationException(RULE_LNCRNA_TOO_SHORT, line, MESSAGE_LNCRNA_TOO_SHORT);
@@ -150,25 +150,6 @@ public class SequenceLengthValidation implements Validation {
             }
         }
         return Optional.empty();
-    }
-
-    private Long resolveSequenceLength(String seqId) {
-        if (sequenceLengthCache.containsKey(seqId)) {
-            return sequenceLengthCache.get(seqId);
-        }
-        if (context.contains(SequenceLookup.class)) {
-            SequenceLookup lookup = context.get(SequenceLookup.class);
-            if (lookup != null) {
-                try {
-                    Long length = lookup.getSequenceLength(seqId, SequenceRangeOption.WITHOUT_EDGE_N_BASES);
-                    sequenceLengthCache.put(seqId, length);
-                    return length;
-                } catch (Exception ex) {
-                    throw new IllegalStateException("Unable to resolve sequence length for " + seqId, ex);
-                }
-            }
-        }
-        return null;
     }
 
     private boolean hasMinimumLengthException(GFF3Annotation annotation) {

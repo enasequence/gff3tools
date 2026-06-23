@@ -14,8 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
-import uk.ac.ebi.embl.gff3tools.sequence.SequenceRangeOption;
+import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
@@ -47,7 +46,7 @@ public class FeatureLocationValidation implements Validation {
             type = ValidationType.FEATURE,
             priority = ValidationPriority.LOW)
     public void validateFeatureEndWithinSequence(GFF3Feature feature, int line) throws ValidationException {
-        Long lastBaseIndex = resolveSequenceLength(feature.accession());
+        Long lastBaseIndex = ValidationUtils.resolveSequenceLength(feature.accession(), sequenceLengthCache, context);
         if (lastBaseIndex == null) {
             return;
         }
@@ -71,24 +70,5 @@ public class FeatureLocationValidation implements Validation {
             throw new ValidationException(
                     RULE_FEATURE_START_BELOW_ONE, line, FEATURE_START_BELOW_ONE.formatted(location));
         }
-    }
-
-    private Long resolveSequenceLength(String seqId) {
-        if (sequenceLengthCache.containsKey(seqId)) {
-            return sequenceLengthCache.get(seqId);
-        }
-        if (context.contains(SequenceLookup.class)) {
-            SequenceLookup lookup = context.get(SequenceLookup.class);
-            if (lookup != null) {
-                try {
-                    Long length = lookup.getSequenceLength(seqId, SequenceRangeOption.WHOLE_SEQUENCE);
-                    sequenceLengthCache.put(seqId, length);
-                    return length;
-                } catch (Exception ex) {
-                    throw new IllegalStateException("Unable to resolve sequence length for " + seqId, ex);
-                }
-            }
-        }
-        return null;
     }
 }

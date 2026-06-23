@@ -54,14 +54,14 @@ public class FeatureLocationValidationTest {
 
     private void injectLookupReturning(String seqId, long len) throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getSequenceLength(seqId, SequenceRangeOption.WHOLE_SEQUENCE))
+        when(mockLookup.getSequenceLength(seqId, SequenceRangeOption.WITHOUT_EDGE_N_BASES))
                 .thenReturn(len);
         injectLookup(mockLookup);
     }
 
     private void injectLookupThrowing(String seqId) throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getSequenceLength(seqId, SequenceRangeOption.WHOLE_SEQUENCE))
+        when(mockLookup.getSequenceLength(seqId, SequenceRangeOption.WITHOUT_EDGE_N_BASES))
                 .thenThrow(new RuntimeException("seqId not found"));
         injectLookup(mockLookup);
     }
