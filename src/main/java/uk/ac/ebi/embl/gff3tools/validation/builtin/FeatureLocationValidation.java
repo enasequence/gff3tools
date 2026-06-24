@@ -16,6 +16,7 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ExitMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
@@ -70,5 +71,10 @@ public class FeatureLocationValidation implements Validation {
             throw new ValidationException(
                     RULE_FEATURE_START_BELOW_ONE, line, FEATURE_START_BELOW_ONE.formatted(location));
         }
+    }
+
+    @ExitMethod
+    public void clear() {
+        sequenceLengthCache.clear();
     }
 }

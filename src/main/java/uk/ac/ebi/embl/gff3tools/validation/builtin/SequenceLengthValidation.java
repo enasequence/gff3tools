@@ -153,6 +153,12 @@ public class SequenceLengthValidation implements Validation {
         return Optional.empty();
     }
 
+    @ExitMethod
+    public void clear() {
+        sequenceLengthCache.clear();
+        sequenceAssembly = null;
+    }
+
     private boolean hasMinimumLengthException(GFF3Annotation annotation) {
         OntologyClient ontologyClient = context.get(OntologyClient.class);
         for (GFF3Feature feature : annotation.getFeatures()) {
