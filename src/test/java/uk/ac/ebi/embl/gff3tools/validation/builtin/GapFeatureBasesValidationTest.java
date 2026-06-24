@@ -114,7 +114,7 @@ class GapFeatureBasesValidationTest {
         TestUtils.injectContext(check, context);
 
         GFF3Feature gap = TestUtils.createGFF3Feature("gap", SEQ_ID, 1L, 5L, Map.of());
-        ValidationException ex = assertThrows(ValidationException.class, () -> check.validateGapBases(gap, 1));
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> check.validateGapBases(gap, 1));
         assertTrue(ex.getMessage().contains("Unable to retrieve gap regions"));
         assertTrue(ex.getMessage().contains("boom"));
     }

@@ -59,10 +59,8 @@ public class GapFeatureBasesValidation implements Validation {
         try {
             gapRegions = lookup.getGapRegions(feature.accession(), start, end, SequenceRangeOption.WHOLE_SEQUENCE);
         } catch (Exception e) {
-            throw new ValidationException(
-                    RULE_GAP_BASES,
-                    line,
-                    "Unable to retrieve gap regions for locations %d-%d: %s".formatted(start, end, e.getMessage()));
+            throw new IllegalStateException(
+                    "Unable to retrieve gap regions for locations %d-%d: %s".formatted(start, end, e.getMessage()), e);
         }
         boolean covered = gapRegions.stream().anyMatch(g -> g.startBase <= start && g.endBase >= end);
         if (!covered) {
