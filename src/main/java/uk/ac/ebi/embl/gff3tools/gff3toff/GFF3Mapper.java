@@ -404,10 +404,8 @@ public class GFF3Mapper {
                 entry.addKeyword(new Text(kw));
             }
         }
-        // For WGS contigs the reference flatfile carries `KW   WGS.`. master.json doesn't
-        // ship that keyword on the SET master entry, so add it ourselves when the contig
-        // dataclass identifies the entry as WGS and the keyword isn't already present.
-        if (isWgsContig && "WGS".equalsIgnoreCase(m.getContigDataclass())) {
+        // For WGS contigs the reference flatfile carries `KW   WGS.`; add it when absent.
+        if (isWgsContig) {
             boolean hasWgsKeyword = entry.getKeywords().stream()
                     .map(Text::getText)
                     .filter(Objects::nonNull)
