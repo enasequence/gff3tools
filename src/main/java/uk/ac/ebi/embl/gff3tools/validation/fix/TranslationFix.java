@@ -16,6 +16,7 @@ import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -138,8 +139,8 @@ public class TranslationFix {
             // For uniform-strand joins, concatenate raw and let the Translator apply overall RC.
             StringBuilder concatenated = new StringBuilder();
             for (GFF3Feature segment : sortedFeatures) {
-                String slice =
-                        sequenceLookup.getSequenceSlice(segment.accession(), segment.getStart(), segment.getEnd());
+                String slice = sequenceLookup.getSequenceSlice(
+                        segment.accession(), segment.getStart(), segment.getEnd(), SequenceRangeOption.WHOLE_SEQUENCE);
                 if (hasMixedStrands && segment.isComplement()) {
                     slice = new String(Translator.reverseComplement(slice.getBytes()));
                 }

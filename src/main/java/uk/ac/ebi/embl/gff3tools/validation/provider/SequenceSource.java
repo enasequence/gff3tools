@@ -10,6 +10,13 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
+import java.io.Reader;
+import java.util.List;
+import java.util.Set;
+import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
+import uk.ac.ebi.embl.fastareader.SequenceStats;
+import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
+
 /**
  * A source of nucleotide sequences that can be queried by GFF3 seqId.
  *
@@ -18,15 +25,23 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
  */
 public interface SequenceSource {
 
-    /**
-     * Returns {@code true} if this source can provide a sequence for the given seqId.
-     */
     boolean hasSequence(String seqId);
 
-    /**
-     * Returns a nucleotide subsequence for the given GFF3 sequence ID.
-     */
-    String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception;
+    String getSequenceSlice(String seqId, long fromBase, long toBase, SequenceRangeOption option) throws Exception;
+
+    long getSequenceLength(String seqId, SequenceRangeOption option) throws Exception;
+
+    SequenceStats getSequenceStats(String seqId) throws Exception;
+
+    List<GapRegion> getGapRegions(String seqId, SequenceRangeOption option) throws Exception;
+
+    List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+            throws Exception;
+
+    Set<String> knownSeqIds();
+
+    Reader getSequenceSliceReader(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+            throws Exception;
 
     /** Release any resources held by this source. */
     default void close() {}

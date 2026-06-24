@@ -10,16 +10,22 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
+import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
+import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
+import uk.ac.ebi.embl.fastareader.SequenceStats;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReaderFactory;
+import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
@@ -102,10 +108,61 @@ public class FileSequenceSource implements SequenceSource {
     }
 
     @Override
-    public String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception {
+    public String getSequenceSlice(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+            throws Exception {
         ensureInitialized();
         long ordinal = resolveOrdinal(seqId);
-        return formatReader.getSequenceSlice(ordinal, fromBase, toBase);
+        return formatReader.getSequenceSlice(ordinal, fromBase, toBase, option);
+    }
+
+    @Override
+    public long getSequenceLength(String seqId, SequenceRangeOption option) throws Exception {
+        ensureInitialized();
+        long ordinal = resolveOrdinal(seqId);
+        SequenceStats fr = formatReader.getStats(ordinal);
+        return switch (option) {
+            case WHOLE_SEQUENCE -> fr.totalBases();
+            case WITHOUT_EDGE_N_BASES -> fr.totalBasesWithoutNBases();
+        };
+    }
+
+    @Override
+    public SequenceStats getSequenceStats(String seqId) throws Exception {
+        ensureInitialized();
+        long ordinal = resolveOrdinal(seqId);
+        return formatReader.getStats(ordinal);
+    }
+
+    @Override
+    public List<GapRegion> getGapRegions(String seqId, SequenceRangeOption option) throws Exception {
+        ensureInitialized();
+        long ordinal = resolveOrdinal(seqId);
+        return formatReader.getGapRegions(ordinal, option);
+    }
+
+    @Override
+    public List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+            throws Exception {
+        ensureInitialized();
+        long ordinal = resolveOrdinal(seqId);
+        return formatReader.getGapRegions(ordinal, fromBase, toBase, option);
+    }
+
+    @Override
+    public Set<String> knownSeqIds() {
+        ensureInitialized();
+        if (formatReader.getSequenceFileFormat() == SequenceFileFormat.PLAIN_SEQUENCE) {
+            return sequenceKey != null ? Set.of(sequenceKey) : Set.of();
+        }
+        return Collections.unmodifiableSet(seqIdToOrdinal.keySet());
+    }
+
+    @Override
+    public Reader getSequenceSliceReader(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+            throws Exception {
+        ensureInitialized();
+        long ordinal = resolveOrdinal(seqId);
+        return formatReader.getSequenceSliceReader(ordinal, fromBase, toBase, option);
     }
 
     @Override
