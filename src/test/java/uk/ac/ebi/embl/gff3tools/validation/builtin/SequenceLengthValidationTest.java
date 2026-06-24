@@ -29,7 +29,7 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
 
-public class SequenceLengthValidationTest {
+class SequenceLengthValidationTest {
 
     private static final String SEQ_ID = "chr1";
 
