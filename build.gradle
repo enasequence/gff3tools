@@ -198,3 +198,20 @@ static String getSymlinkTarget(deployBaseDir, assemble){
 def printSeparationLine(){
     println("*" * 100)
 }
+
+// Checks whether `gff3validations` has been added as a dependency by mistake.
+// Ideally, `gff3validations` should run as a plugin to `gff3tools` within the EBI network.
+// In submitters' environments, `gff3tools` is expected to run without `gff3validations`.
+configurations.configureEach { cfg ->
+    cfg.withDependencies { deps ->
+        def forbidden = deps.findAll {
+            it.group == 'uk.ac.ebi.ena' && it.name == 'gff3validations'
+        }
+        if (!forbidden.isEmpty()) {
+            throw new GradleException(
+                    "gff3validations must not be added as a dependency of gff3tools. " +
+                            "Load it only as an external plugin jar."
+            )
+        }
+    }
+}
