@@ -3,10 +3,6 @@
 gff3tools is a Java based library and command line utility for converting EMBL flat files to GFF3 format, and vice versa.
 It uses [sequencetools](https://github.com/enasequence/sequencetools) to read the flat file.
 
-# Conversion Rules and Assumptions
-
-Conversion rules and Assumptions are added to the code under `// Rule:` and `// Assumption:` comments for now.
-
 # Building the project
 
 Checkout the project
@@ -24,6 +20,7 @@ Checkout the project
 ```./gradlew clean build```
 
 After build, you will find two JARs in build/libs:
+
 * gff3tools-1.0.jar → plain JAR (library, not runnable directly)
 * gff3tools-1.0-all.jar → shadow JAR (includes all dependencies, runnable)
 * Use the shadow JAR for runnable
