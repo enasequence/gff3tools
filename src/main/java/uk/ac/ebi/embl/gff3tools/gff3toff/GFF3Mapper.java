@@ -332,7 +332,8 @@ public class GFF3Mapper {
         // When converting one of those per-contig entries we must materialise contig-
         // level fields (dataClass=WGS, per-contig length, RP, SET cross-references)
         // instead of inheriting the SET-level master fields verbatim.
-        boolean isWgsContig = m.getContigDataclass() != null;
+        boolean isWgsContig = "WGS".equalsIgnoreCase(m.getContigDataclass());
+        long contigLength = isWgsContig ? sequenceRegion.end() - sequenceRegion.start() + 1 : 0L;
 
         // DE line: description (title as fallback)
         if (m.getDescription() != null) {
@@ -481,13 +482,7 @@ public class GFF3Mapper {
         // References: RF lines. For WGS contigs the EMBL flatfile carries a per-contig
         // RP line (`RP   1-<length>`) on each submission reference; pass the contig
         // length through so mapReference can attach it.
-        Long contigRpLength = null;
-        if (isWgsContig) {
-            long len = sequenceRegion.end() - sequenceRegion.start() + 1;
-            if (len > 0) {
-                contigRpLength = len;
-            }
-        }
+        Long contigRpLength = (isWgsContig && contigLength > 0) ? contigLength : null;
         if (m.getReferences() != null) {
             for (ReferenceData refData : m.getReferences()) {
                 mapReference(refData, entry, contigRpLength);
@@ -556,7 +551,6 @@ public class GFF3Mapper {
         // SET/master/annotationOnlyCON entries, so for non-SET entries we set
         // annotationOnlyCON so the IDWriter picks up the length.
         if (isWgsContig) {
-            long contigLength = sequenceRegion.end() - sequenceRegion.start() + 1;
             if (contigLength > 0) {
                 entry.setIdLineSequenceLength(contigLength);
                 entry.setAnnotationOnlyCON(true);
@@ -692,11 +686,15 @@ public class GFF3Mapper {
     }
 
     /**
-     * Derives the WGS "root set" accession (the SET-level accession that contains every
-     * version of the WGS project) from the master entry's `wgsSet` field. The wgsSet is
-     * typically an 8-char letter+digit prefix such as "CAXMYH01"; the root set accession
-     * is the 6-char letter prefix followed by nine zeros (e.g. "CAXMYH000000000").
-     * Returns null when the input is null or doesn't have at least 6 characters of letters.
+     * Derives the WGS "root set" accession from the master entry's {@code wgsSet} field.
+     *
+     * <p>WGS set accessions come in two forms:
+     * <ul>
+     *   <li>4-letter prefix (legacy): {@code XXXX01} → {@code XXXX00000000} (12 chars)</li>
+     *   <li>6-letter prefix (modern): {@code XXXXXX01} → {@code XXXXXX000000000} (15 chars)</li>
+     * </ul>
+     *
+     * <p>Returns null when {@code wgsSet} is null or has fewer than 4 leading letters.
      */
     static String wgsRootSetAccession(String wgsSet) {
         if (wgsSet == null) {
@@ -714,8 +712,9 @@ public class GFF3Mapper {
         if (prefix.length() < 4) {
             return null;
         }
-        // WGS accessions are 15 chars: <letter prefix><digits>. Pad with zeros.
-        while (prefix.length() < 15) {
+        // Pad to 12 chars for 4-letter prefixes, 15 chars for 6-letter prefixes.
+        int targetLength = prefix.length() <= 4 ? 12 : 15;
+        while (prefix.length() < targetLength) {
             prefix.append('0');
         }
         return prefix.toString();

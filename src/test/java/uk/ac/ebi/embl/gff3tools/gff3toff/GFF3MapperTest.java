@@ -1164,12 +1164,30 @@ class GFF3MapperTest {
 
     @Test
     void wgsRootSetAccessionDerivesFromWgsSetField() {
-        // 8-char wgsSet "CAXMYH01" → 6-char letter prefix "CAXMYH" + nine zeros
+        // 8-char wgsSet "CAXMYH01" → 6-char letter prefix "CAXMYH" + nine zeros (15 chars)
         assertEquals("CAXMYH000000000", GFF3Mapper.wgsRootSetAccession("CAXMYH01"));
         // Lowercase letters are normalised
         assertEquals("CAXMYH000000000", GFF3Mapper.wgsRootSetAccession("caxmyh01"));
+        // Legacy 4-letter prefix → 12-char root set accession (4 letters + 8 zeros)
+        assertEquals("ABCD00000000", GFF3Mapper.wgsRootSetAccession("ABCD01"));
         // null and too-short prefixes return null
         assertNull(GFF3Mapper.wgsRootSetAccession(null));
         assertNull(GFF3Mapper.wgsRootSetAccession("ABC"));
+    }
+
+    @Test
+    void wgsKeywordNotDuplicatedWhenAlreadyPresent() throws Exception {
+        MasterMetadata meta = createWgsSetMasterMetadata();
+        meta.setKeywords(List.of("WGS"));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("CAXMYH010000001", meta));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("CAXMYH010000001", 1, 3118321));
+
+        long wgsCount = entry.getKeywords().stream()
+                .map(text -> text.getText())
+                .filter("WGS"::equalsIgnoreCase)
+                .count();
+        assertEquals(1, wgsCount, "WGS keyword should appear exactly once even when pre-populated");
     }
 }
