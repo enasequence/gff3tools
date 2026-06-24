@@ -9,7 +9,7 @@ XX
 FH   Key             Location/Qualifiers
 FH
 FT   source          1..822
-FT   ncRNA           1..822
+FT   gene            1..822
 FT                   /gene="matK"
 FT                   /locus_tag="TEST"
 FT                   /old_locus_tag="test1"

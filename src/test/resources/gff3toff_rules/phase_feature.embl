@@ -8,26 +8,11 @@ KW   .
 XX
 FH   Key             Location/Qualifiers
 FH
-FT   source          1..315242
-FT   ncRNA           133806..191728
+FT   source          1..515242
+FT   gene            133806..191728
 FT                   /gene="RHD"
-FT   ncRNA           133806..191728
-FT                   /gene="matK"
-FT   ncRNA           133806..191728
-FT                   /gene="RHCE"
-FT   ncRNA           133806..191728
-FT                   /gene="SMP1"
 FT   mRNA            133806..133969
 FT                   /gene="RHD"
-FT                   /number=1
-FT   mRNA            133806..133969
-FT                   /gene="matK"
-FT                   /number=1
-FT   mRNA            133806..133969
-FT                   /gene="RHCE"
-FT                   /number=1
-FT   mRNA            133806..133969
-FT                   /gene="SMP1"
 FT                   /number=1
 FT   CDS             133822..190207
 FT                   /gene="RHD"
@@ -38,7 +23,12 @@ FT                   ASYQVGQDLTVMAAIGLGFLTSSFRRHSWSSVAFNLFMLALGVQWAILLDGFLSQFPSG
 FT                   KVVITLFSIRLATMSAFQVLLSIGELSLAIVIALTSGLLTGLLLNLKIWKAPHEAKYFD
 FT                   DQVFWKFPHLAVGF"
 FT                   /phase=1
-FT   CDS             133822..190207
+FT   gene            233806..291728
+FT                   /gene="matK"
+FT   mRNA            233806..233969
+FT                   /gene="matK"
+FT                   /number=1
+FT   CDS             233822..290207
 FT                   /codon_start=1
 FT                   /gene="matK"
 FT                   /product="matK protein"
@@ -48,7 +38,12 @@ FT                   ASYQVGQDLTVMAAIGLGFLTSSFRRHSWSSVAFNLFMLALGVQWAILLDGFLSQFPSG
 FT                   KVVITLFSIRLATMSATYYAVAVSVVTAISGSSLAHPQGKISKTYVHSAVLAGGVAVGT
 FT                   SCHLIPSPWLAMVLGLVAGLISVGGAKYLPGCCNRVLGIPHSSIMGYNFSLLGLLGEII
 FT                   YIVLLVLDTVGAGNGMIG"
-FT   CDS             133822..190207
+FT   gene            333806..391728
+FT                   /gene="RHCE"
+FT   mRNA            333806..333969
+FT                   /gene="RHCE"
+FT                   /number=1
+FT   CDS             333822..390207
 FT                   /codon_start=2
 FT                   /gene="RHCE"
 FT                   /product="RHCE protein"
@@ -57,7 +52,12 @@ FT                   /translation="MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEDQKGLV
 FT                   ASYQVGQDLTVMAAIGLGFLTSSFRRHSWSSVAFNLFMLALGVQWAILLDGFLSQFPSG
 FT                   KVVITLFSIRLATMSALSVLISVDAVLGKVNLAQLVVMVLVEVTALGNLRMVISNIFNT
 FT                   DYHMNMMHIYVFAAYFG"
-FT   CDS             133822..190207
+FT   gene            433806..491728
+FT                   /gene="SMP1"
+FT   mRNA            433806..433969
+FT                   /gene="SMP1"
+FT                   /number=1
+FT   CDS             433822..490207
 FT                   /codon_start=3
 FT                   /gene="SMP1"
 FT                   /product="SMP1 protein"
