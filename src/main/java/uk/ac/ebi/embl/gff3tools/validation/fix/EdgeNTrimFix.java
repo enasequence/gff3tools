@@ -76,30 +76,23 @@ public class EdgeNTrimFix implements Fix {
             type = ANNOTATION,
             priority = ValidationPriority.CRITICAL)
     public void fixAnnotation(GFF3Annotation annotation, int line) throws ValidationException {
-        if (!context.contains(SequenceLookup.class)) {
-            return;
-        }
-        SequenceLookup sequenceLookup = context.get(SequenceLookup.class);
+        SequenceLookup sequenceLookup =
+                context.contains(SequenceLookup.class) ? context.get(SequenceLookup.class) : null;
         if (sequenceLookup == null) {
+            log.warn("Sequence lookup could not be found. Proceeding with original coordinates.");
             return;
         }
+
         if (annotation.getFeatures().isEmpty() && annotation.getSequenceRegion() == null) {
             return;
         }
 
         String accession = annotation.getAccession();
-
         SequenceStats stats;
         try {
-            if (!sequenceLookup.knownSeqIds().contains(accession)) {
-                // No sequence available for this accession — nothing to trim against.
-                log.debug("No sequence found for accession '{}' — skipping edge-N trim", accession);
-                return;
-            }
             stats = sequenceLookup.getSequenceStats(accession);
         } catch (Exception e) {
-            throw new ValidationException(
-                    RULE, line, "Failed to read sequence stats for '%s': %s".formatted(accession, e.getMessage()));
+            throw new IllegalStateException("Could not find sequence stats for accession " + accession, e);
         }
 
         long leadingNs = stats.leadingNsCount();
@@ -114,6 +107,7 @@ public class EdgeNTrimFix implements Fix {
         long newLength = totalBases - leadingNs - trailingNs;
         if (newLength <= 0) {
             // TODO: whole-sequence-of-Ns (or all-edge) case — every feature would be dropped and the
+            // TODO: should log error or throw idk. The n percentage validation looks only at edge Ns
             // sequence-region becomes empty. Left unhandled here; needs a product decision on whether
             // such an annotation should be discarded entirely.
             log.warn(
@@ -130,6 +124,8 @@ public class EdgeNTrimFix implements Fix {
         long lastKept = totalBases - trailingNs; // original coordinate of the new last base
 
         List<GFF3Feature> toRemove = new ArrayList<>();
+
+        // Go through all regions and adjust
         for (GFF3Feature feature : new ArrayList<>(annotation.getFeatures())) {
             long start = feature.getStart();
             long end = feature.getEnd();
@@ -149,10 +145,12 @@ public class EdgeNTrimFix implements Fix {
             feature.setEnd(newEnd);
         }
 
+        // Clear out features declared over edge Ns
         for (GFF3Feature feature : toRemove) {
             annotation.removeFeature(feature);
         }
 
+        // Adjust sequence region
         GFF3SequenceRegion region = annotation.getSequenceRegion();
         if (region != null) {
             annotation.setSequenceRegion(
