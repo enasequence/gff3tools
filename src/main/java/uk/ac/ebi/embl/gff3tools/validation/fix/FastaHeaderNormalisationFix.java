@@ -14,6 +14,7 @@ import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION
 
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import uk.ac.ebi.embl.api.validation.helper.Ascii7CharacterConverter;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
@@ -39,21 +40,12 @@ public class FastaHeaderNormalisationFix implements Fix {
     private ValidationContext context;
 
     @FixMethod(
-            rule = "ASCII",
-            description = "Normalises FASTA header values to ASCII.",
+            rule = "FASTA_HEADER_VALUE_NORMALISATION",
+            description =
+                    "Folds FASTA header values to ASCII7 and normalises controlled vocabulary fields to their canonical form.",
             type = ANNOTATION,
             priority = ValidationPriority.HIGH)
-    public void AsciiFix(GFF3Annotation annotation, int line) {
-
-        // use Ascii7CharacterConverter from sequencetools if appropriate
-    }
-
-    @FixMethod(
-            rule = "LOWERCASE",
-            description = "Normalises controlled vocabulary fields to their appropriate form.",
-            type = ANNOTATION,
-            priority = ValidationPriority.HIGH)
-    public void ControlledVocabularyNormalisation(GFF3Annotation annotation, int line) {
+    public void normaliseHeaderValues(GFF3Annotation annotation, int line) {
         // No FASTA header source registered for this run -> nothing to fix.
         if (!context.contains(FastaHeaderProvider.class)) {
             return;
@@ -66,10 +58,20 @@ public class FastaHeaderNormalisationFix implements Fix {
             return;
         }
 
-        // Each controlled-vocabulary field is normalised to its canonical form when present.
-        // Values that do not match any allowed value are left untouched so that the FASTA header
-        // validation can report them.
         FastaHeader header = headerOpt.get();
+
+        // First fold every value to ASCII7 (removes diacritics, strips non-printable characters).
+        // Ascii7CharacterConverter.convert is null-safe (null in -> null out) and a no-op for already-clean values.
+        header.setDescription(Ascii7CharacterConverter.convert(header.getDescription()));
+        header.setMoleculeType(Ascii7CharacterConverter.convert(header.getMoleculeType()));
+        header.setTopology(Ascii7CharacterConverter.convert(header.getTopology()));
+        header.setChromosomeType(Ascii7CharacterConverter.convert(header.getChromosomeType()));
+        header.setChromosomeLocation(Ascii7CharacterConverter.convert(header.getChromosomeLocation()));
+        header.setChromosomeName(Ascii7CharacterConverter.convert(header.getChromosomeName()));
+
+        // Normalise controlled-vocabulary fields to their canonical form when present.
+        // Values that do not match any allowed value are left untouched so that the
+        // validation can report them.
         if (header.getMoleculeType() != null) {
             ControlledVocabularyUtils.canonicalise(MolType.class, header.getMoleculeType())
                     .ifPresent(header::setMoleculeType);

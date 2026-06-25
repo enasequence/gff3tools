@@ -41,7 +41,7 @@ public class FastaHeaderNormalisationFixTest {
     /** Wires the fix with a context exposing the given header, runs the vocabulary fix, and returns it. */
     private FastaHeader runVocabularyFix(FastaHeader header) {
         injectContextWithHeaders(Map.of(ACCESSION, header));
-        fix.ControlledVocabularyNormalisation(annotationFor(ACCESSION), 1);
+        fix.normaliseHeaderValues(annotationFor(ACCESSION), 1);
         return header;
     }
 
@@ -144,15 +144,105 @@ public class FastaHeaderNormalisationFixTest {
         assertNull(result.getChromosomeLocation());
     }
 
+    // ----------------------- ASCII7 folding edge cases -----------------------
+
+    @Test
+    public void foldsDiacriticsThenMatchesVocabulary() {
+        // ASCII folding (é -> e) runs first, letting the value match the controlled vocabulary.
+        FastaHeader header = new FastaHeader();
+        header.setMoleculeType("génomic DNA");
+        assertEquals("genomic DNA", runVocabularyFix(header).getMoleculeType());
+    }
+
+    @Test
+    public void foldsDiacriticsCaseAndDashTogether() {
+        // Diacritic (ñ -> n) + dash->underscore + case-insensitive match all compose.
+        FastaHeader header = new FastaHeader();
+        header.setChromosomeType("Liñkage-Group");
+        assertEquals("linkage_group", runVocabularyFix(header).getChromosomeType());
+    }
+
+    @Test
+    public void foldsTopologyDiacriticAndCase() {
+        FastaHeader header = new FastaHeader();
+        header.setTopology("Línear");
+        assertEquals("linear", runVocabularyFix(header).getTopology());
+    }
+
+    @Test
+    public void replacesNonLatin1CharactersWithQuestionMark() {
+        // Characters beyond Latin-1 (here Greek alpha) become '?'.
+        FastaHeader header = new FastaHeader();
+        header.setDescription("Genome α");
+        assertEquals("Genome ?", runVocabularyFix(header).getDescription());
+    }
+
+    @Test
+    public void replacesSmartQuoteWithQuestionMark() {
+        FastaHeader header = new FastaHeader();
+        header.setDescription("John’s genome");
+        assertEquals("John?s genome", runVocabularyFix(header).getDescription());
+    }
+
+    @Test
+    public void mapsSpecialLatinLettersToAscii() {
+        // Æ -> A and ß -> s via the converter's explicit character mapping.
+        FastaHeader header = new FastaHeader();
+        header.setDescription("Ælfred Straße");
+        assertEquals("Alfred Strase", runVocabularyFix(header).getDescription());
+    }
+
+    @Test
+    public void stripsNonPrintableControlCharacters() {
+        // A lone ASCII control char (BEL, 0x07) triggers conversion and is stripped.
+        FastaHeader header = new FastaHeader();
+        header.setDescription("abcd");
+        assertEquals("abcd", runVocabularyFix(header).getDescription());
+    }
+
+    @Test
+    public void foldsChromosomeNameEvenThoughItIsNotControlledVocabulary() {
+        FastaHeader header = new FastaHeader();
+        header.setChromosomeName("chrömosome1");
+        assertEquals("chromosome1", runVocabularyFix(header).getChromosomeName());
+    }
+
+    @Test
+    public void leavesCleanAsciiValuesUnchanged() {
+        FastaHeader header = new FastaHeader();
+        header.setDescription("Plain text 123");
+        header.setMoleculeType("genomic DNA");
+        FastaHeader result = runVocabularyFix(header);
+        assertEquals("Plain text 123", result.getDescription());
+        assertEquals("genomic DNA", result.getMoleculeType());
+    }
+
+    @Test
+    public void leavesEmptyStringUnchanged() {
+        FastaHeader header = new FastaHeader();
+        header.setMoleculeType("");
+        assertEquals("", runVocabularyFix(header).getMoleculeType());
+    }
+
+    @Test
+    public void leavesNonVocabularyValueWithInternalWhitespaceUntouched() {
+        // canonicalise only trims edges; an unmatched value keeps its internal spacing.
+        FastaHeader header = new FastaHeader();
+        header.setChromosomeType("not a type");
+        assertEquals("not a type", runVocabularyFix(header).getChromosomeType());
+    }
+
+    // ----------------------------- guard cases -------------------------------
+
     @Test
     public void ignoresAnnotationWhenNoHeaderRegisteredForAccession() {
         injectContextWithHeaders(Map.of());
-        assertDoesNotThrow(() -> fix.ControlledVocabularyNormalisation(annotationFor(ACCESSION), 1));
+        assertDoesNotThrow(() -> fix.normaliseHeaderValues(annotationFor(ACCESSION), 1));
     }
 
     @Test
     public void ignoresAnnotationWhenNoFastaHeaderProviderRegistered() {
         TestUtils.injectContext(fix, new ValidationContext());
-        assertDoesNotThrow(() -> fix.ControlledVocabularyNormalisation(annotationFor(ACCESSION), 1));
+        assertDoesNotThrow(() -> fix.normaliseHeaderValues(annotationFor(ACCESSION), 1));
     }
 }
