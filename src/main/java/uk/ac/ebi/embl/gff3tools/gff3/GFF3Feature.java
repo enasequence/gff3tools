@@ -17,10 +17,8 @@ import java.util.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
-@RequiredArgsConstructor
 @Getter
 @Setter
 public class GFF3Feature {
@@ -31,8 +29,10 @@ public class GFF3Feature {
     final Optional<Integer> seqIdVersion;
     final String source;
     final String name;
-    final long start;
-    final long end;
+    // start/end are mutable so coordinate-rewriting fixes (e.g. EdgeNTrimFix) can
+    // adjust feature locations in place via the Lombok-generated setStart/setEnd.
+    long start;
+    long end;
     final String score;
     final String strand;
     final String phase;
@@ -45,6 +45,36 @@ public class GFF3Feature {
     // Mutable members
     List<GFF3Feature> children = new ArrayList<>();
     GFF3Feature parent;
+
+    /**
+     * Explicit all-required-args constructor. Mirrors the signature previously produced by
+     * Lombok's {@code @RequiredArgsConstructor}; defined manually because {@code start}/{@code end}
+     * are no longer {@code final} (so Lombok would otherwise omit them from the constructor).
+     */
+    public GFF3Feature(
+            Optional<String> id,
+            Optional<String> parentId,
+            String seqId,
+            Optional<Integer> seqIdVersion,
+            String source,
+            String name,
+            long start,
+            long end,
+            String score,
+            String strand,
+            String phase) {
+        this.id = id;
+        this.parentId = parentId;
+        this.seqId = seqId;
+        this.seqIdVersion = seqIdVersion;
+        this.source = source;
+        this.name = name;
+        this.start = start;
+        this.end = end;
+        this.score = score;
+        this.strand = strand;
+        this.phase = phase;
+    }
 
     // Methods
     public void addChild(GFF3Feature child) {
