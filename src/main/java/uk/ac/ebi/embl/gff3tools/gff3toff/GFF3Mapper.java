@@ -327,7 +327,7 @@ public class GFF3Mapper {
                     sequenceRegion.accessionId(),
                     sequenceRegion.start(),
                     sequenceRegion.end(),
-                    SequenceRangeOption.WHOLE_SEQUENCE);
+                    SequenceRangeOption.WITHOUT_EDGE_N_BASES);
             if (nucleotides == null || nucleotides.isEmpty()) {
                 throw new ReadException("No sequence data returned for '" + sequenceRegion.accessionId() + "'");
             }
