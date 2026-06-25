@@ -119,6 +119,7 @@ public final class ControlledVocabularyUtils {
             this.value = value;
         }
 
+        @Override
         public String getValue() {
             return value;
         }
