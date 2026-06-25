@@ -1,4 +1,4 @@
->TEST01.1 | {"description":"Test sequence with gaps", "molecule_type":"genomic DNA", "topology":"linear"}
+>TEST01.1 | {"description":"Test sequence with gaps", "molecule_type":"GENOMIC DNA", "topology":"linear"}
 ATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGC
 NNNNNNNNNN
 ATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGC
