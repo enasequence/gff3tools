@@ -88,9 +88,8 @@ public class Translator {
 
         setCompoundPartiality(sortedFeatures);
 
-        // TODO: Get translation table from taxon.
         int translationTable =
-                feature.getAttribute("transl_table").map(Integer::parseInt).orElse(DEFAULT_TRANSLATION_TABLE);
+                feature.getAttribute(GFF3Attributes.TRANSL_TABLE).map(Integer::parseInt).orElse(DEFAULT_TRANSLATION_TABLE);
 
         this.codonTranslator = new CodonTranslator(translationTable);
 
