@@ -34,8 +34,8 @@ import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FastaToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
-import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToGFF3Converter;
 import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
@@ -159,7 +159,8 @@ public class FileConversionCommand extends AbstractCommand {
                 SequenceLookup sequenceLookup = compositeProvider.hasSources() ? compositeProvider.get(null) : null;
                 try (ValidationEngine engine =
                         initValidationEngine(ruleOverrides, compositeProvider, metadataProvider, headerProvider)) {
-                    Converter converter = getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal, sequenceLookup);
+                    Converter converter =
+                            getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal, sequenceLookup);
                     converter.convert(inputReader, outputWriter);
                 }
             }

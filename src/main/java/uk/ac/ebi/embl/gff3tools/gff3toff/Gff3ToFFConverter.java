@@ -50,7 +50,8 @@ public class Gff3ToFFConverter implements Converter {
         try (GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, reader, gff3Path)) {
             gff3Reader.readHeader();
             gff3Reader.read(annotation -> {
-                writeEntry(new GFF3Mapper(gff3Reader, validationEngine.getContext(), sequenceLookup), annotation, writer);
+                writeEntry(
+                        new GFF3Mapper(gff3Reader, validationEngine.getContext(), sequenceLookup), annotation, writer);
                 List<ValidationException> warnings = validationEngine.getParsingWarnings();
                 for (ValidationException e : warnings) {
                     log.warn("WARNING: %s".formatted(e.getMessage()));
@@ -84,7 +85,7 @@ public class Gff3ToFFConverter implements Converter {
      * @throws WriteException if an error occurs during writing.
      */
     private void writeEntry(GFF3Mapper mapper, GFF3Annotation annotation, BufferedWriter writer)
-            throws WriteException, ValidationException {
+            throws WriteException, ValidationException, ReadException {
         if (annotation != null) {
             try {
                 EmblEntryWriter entryWriter = new EmblEntryWriter(mapper.mapGFF3ToEntry(annotation));

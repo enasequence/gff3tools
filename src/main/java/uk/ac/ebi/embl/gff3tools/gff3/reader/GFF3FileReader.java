@@ -153,7 +153,7 @@ public class GFF3FileReader implements AutoCloseable {
 
     @FunctionalInterface
     public interface AnnotationHandler<T> {
-        void handle(T entry) throws WriteException, ValidationException;
+        void handle(T entry) throws WriteException, ValidationException, ReadException;
     }
 
     public void read(AnnotationHandler<GFF3Annotation> annotationHandler)

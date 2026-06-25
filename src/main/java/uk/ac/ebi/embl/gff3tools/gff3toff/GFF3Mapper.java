@@ -35,6 +35,8 @@ import uk.ac.ebi.embl.api.entry.qualifier.QualifierFactory;
 import uk.ac.ebi.embl.api.entry.reference.*;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
+import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
+import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
@@ -49,7 +51,6 @@ import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.metadata.ReferenceData;
 import uk.ac.ebi.embl.gff3tools.metadata.SubmissionAccount;
 import uk.ac.ebi.embl.gff3tools.metadata.SubmitterDetails;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
@@ -92,7 +93,7 @@ public class GFF3Mapper {
         this.sequenceLookup = sequenceLookup;
     }
 
-    public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) throws ValidationException {
+    public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) throws ValidationException, ReadException {
 
         parentFeatures.clear();
         joinableFeatureMap.clear();
@@ -314,8 +315,11 @@ public class GFF3Mapper {
      * Populates the nucleotide sequence data on the Sequence object from the SequenceLookup.
      * Gracefully skips if no lookup is available or no sequence region is defined.
      */
-    private void applySequenceData(GFF3SequenceRegion sequenceRegion, Sequence sequence) {
+    private void applySequenceData(GFF3SequenceRegion sequenceRegion, Sequence sequence) throws ReadException {
         if (sequenceLookup == null || sequenceRegion == null) {
+            LOGGER.info(
+                    "No sequence source provided — skipping sequence data for '{}'",
+                    sequenceRegion != null ? sequenceRegion.accessionId() : "unknown");
             return;
         }
         try {
@@ -324,6 +328,9 @@ public class GFF3Mapper {
                     sequenceRegion.start(),
                     sequenceRegion.end(),
                     SequenceRangeOption.WHOLE_SEQUENCE);
+            if (nucleotides == null || nucleotides.isEmpty()) {
+                throw new ReadException("No sequence data returned for '" + sequenceRegion.accessionId() + "'");
+            }
             // Convert to lowercase bytes in a single pass to avoid an intermediate
             // String allocation from toLowerCase() (saves ~2N bytes of peak memory).
             byte[] seqBytes = new byte[nucleotides.length()];
@@ -332,8 +339,12 @@ public class GFF3Mapper {
             }
             sequence.setSequence(ByteBuffer.wrap(seqBytes));
             sequence.setLength((long) seqBytes.length);
+        } catch (ReadException e) {
+            throw e;
         } catch (Exception e) {
-            LOGGER.warn("Failed to retrieve sequence for '{}': {}", sequenceRegion.accessionId(), e.getMessage());
+            throw new ReadException(
+                    "Failed to retrieve sequence for '" + sequenceRegion.accessionId() + "': " + e.getMessage(),
+                    ReadException.wrapAsIOException(e));
         }
     }
 
