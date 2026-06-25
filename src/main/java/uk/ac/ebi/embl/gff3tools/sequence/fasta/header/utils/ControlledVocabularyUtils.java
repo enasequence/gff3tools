@@ -157,4 +157,29 @@ public final class ControlledVocabularyUtils {
                 .filter(vocabulary -> vocabulary.getValue().equals(value))
                 .findFirst();
     }
+
+    /**
+     * Resolves a raw value to its canonical controlled-vocabulary form.
+     *
+     * <p>The value is first trimmed of leading/trailing whitespace and has dashes replaced with
+     * underscores, then matched case-insensitively against the vocabulary's allowed values. When a
+     * match is found the canonical value (with its original casing and spacing) is returned;
+     * otherwise the result is empty and callers should leave the value untouched.
+     *
+     * @param vocabularyType the controlled vocabulary to match against
+     * @param value the raw value to canonicalise
+     * @return the canonical value, or empty if the input does not match any allowed value
+     */
+    public static <T extends Enum<T> & ControlledVocabulary> Optional<String> canonicalise(
+            Class<T> vocabularyType, String value) {
+        if (value == null) {
+            return Optional.empty();
+        }
+
+        String candidate = value.strip().replace('-', '_');
+        return Arrays.stream(vocabularyType.getEnumConstants())
+                .map(ControlledVocabulary::getValue)
+                .filter(canonical -> canonical.equalsIgnoreCase(candidate))
+                .findFirst();
+    }
 }

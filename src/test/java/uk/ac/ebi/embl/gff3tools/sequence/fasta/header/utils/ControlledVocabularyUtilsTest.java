@@ -150,4 +150,53 @@ class ControlledVocabularyUtilsTest {
     void chromosomeLocationExposesOriginalControlledVocabularyValue() {
         assertEquals("Chromatophore", ControlledVocabularyUtils.ChromosomeLocation.CHROMATOPHORE.getValue());
     }
+
+    @Test
+    void canonicaliseMatchesIgnoringCase() {
+        assertEquals(
+                Optional.of("genomic DNA"),
+                ControlledVocabularyUtils.canonicalise(ControlledVocabularyUtils.MolType.class, "GENOMIC DNA"));
+        assertEquals(
+                Optional.of("linear"),
+                ControlledVocabularyUtils.canonicalise(ControlledVocabularyUtils.Topology.class, "Linear"));
+        assertEquals(
+                Optional.of("Mitochondrion"),
+                ControlledVocabularyUtils.canonicalise(
+                        ControlledVocabularyUtils.ChromosomeLocation.class, "mitochondrion"));
+    }
+
+    @Test
+    void canonicaliseTrimsEdgeWhitespace() {
+        assertEquals(
+                Optional.of("circular"),
+                ControlledVocabularyUtils.canonicalise(ControlledVocabularyUtils.Topology.class, "  circular\t"));
+    }
+
+    @Test
+    void canonicaliseTransformsDashToUnderscore() {
+        assertEquals(
+                Optional.of("linkage_group"),
+                ControlledVocabularyUtils.canonicalise(
+                        ControlledVocabularyUtils.ChromosomeType.class, "Linkage-Group"));
+    }
+
+    @Test
+    void canonicaliseReturnsEmptyForUnknownValue() {
+        assertTrue(ControlledVocabularyUtils.canonicalise(ControlledVocabularyUtils.Topology.class, "triangle")
+                .isEmpty());
+    }
+
+    @Test
+    void canonicaliseDoesNotTreatSpaceAsUnderscore() {
+        // Only dashes are converted to underscores; "linkage group" stays unmatched.
+        assertTrue(
+                ControlledVocabularyUtils.canonicalise(ControlledVocabularyUtils.ChromosomeType.class, "linkage group")
+                        .isEmpty());
+    }
+
+    @Test
+    void canonicaliseReturnsEmptyForNullValue() {
+        assertTrue(ControlledVocabularyUtils.canonicalise(ControlledVocabularyUtils.MolType.class, null)
+                .isEmpty());
+    }
 }
