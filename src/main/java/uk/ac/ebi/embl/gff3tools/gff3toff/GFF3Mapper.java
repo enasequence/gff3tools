@@ -52,6 +52,8 @@ import uk.ac.ebi.embl.gff3tools.metadata.ReferenceData;
 import uk.ac.ebi.embl.gff3tools.metadata.SubmissionAccount;
 import uk.ac.ebi.embl.gff3tools.metadata.SubmitterDetails;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -77,6 +79,7 @@ public class GFF3Mapper {
     Entry entry;
     GFF3FileReader gff3FileReader;
     private final MasterMetadataProvider metadataProvider;
+    private final FastaHeaderProvider headerProvider;
     private final SequenceLookup sequenceLookup;
 
     public GFF3Mapper(GFF3FileReader gff3FileReader, ValidationContext context) {
@@ -90,6 +93,8 @@ public class GFF3Mapper {
         this.gff3FileReader = gff3FileReader;
         this.metadataProvider =
                 context.contains(MasterMetadataProvider.class) ? context.get(MasterMetadataProvider.class) : null;
+        this.headerProvider =
+                context.contains(FastaHeaderProvider.class) ? context.get(FastaHeaderProvider.class) : null;
         this.sequenceLookup = sequenceLookup;
     }
 
@@ -117,6 +122,7 @@ public class GFF3Mapper {
         entry.setSequence(sequence);
 
         applyMasterMetadata(sequenceRegion, entry, sequence, sourceFeature);
+        applyFastaHeader(sequenceRegion, entry, sequence, sourceFeature);
 
         for (GFF3Feature gff3Feature : gff3Annotation.getFeatures()) {
             if (gff3Feature.getId().isPresent()) {
@@ -354,6 +360,63 @@ public class GFF3Mapper {
             gff3Feature.getAttributeList(key).ifPresent(values -> attributesMap.put(key, values));
         }
         return attributesMap;
+    }
+
+    /**
+     * Applies FASTA header metadata (description, molecule type, topology, chromosome) to the EMBL
+     * entry, sequence, and source feature. Master metadata takes precedence: fields already set by
+     * {@link #applyMasterMetadata} are left untouched and the header only fills the gaps.
+     */
+    private void applyFastaHeader(
+            GFF3SequenceRegion sequenceRegion, Entry entry, Sequence sequence, SourceFeature sourceFt) {
+        if (headerProvider == null || sequenceRegion == null) {
+            return;
+        }
+
+        Optional<FastaHeader> opt = headerProvider.getHeader(sequenceRegion.accessionId());
+        if (opt.isEmpty()) {
+            return;
+        }
+        FastaHeader h = opt.get();
+
+        // DE line: description
+        if (h.getDescription() != null
+                && (entry.getDescription() == null || entry.getDescription().getText() == null)) {
+            entry.setDescription(new Text(h.getDescription()));
+        }
+
+        // Molecule type: ID line field 4 + /mol_type source qualifier
+        if (h.getMoleculeType() != null && sequence.getMoleculeType() == null) {
+            sequence.setMoleculeType(h.getMoleculeType());
+            sourceFt.addQualifier("mol_type", h.getMoleculeType());
+        }
+
+        // Topology: ID line field 3
+        if (h.getTopology() != null && sequence.getTopology() == null) {
+            mapTopology(h.getTopology(), sequence);
+        }
+
+        // Chromosome type and name -> /chromosome, /plasmid, etc.
+        if (!hasChromosomeQualifier(sourceFt)) {
+            if (h.getChromosomeType() != null) {
+                mapChromosomeType(h.getChromosomeType(), h.getChromosomeName(), sourceFt);
+            } else if (h.getChromosomeName() != null) {
+                sourceFt.addQualifier("chromosome", h.getChromosomeName());
+            }
+        }
+
+        // Chromosome location -> /organelle qualifier
+        if (h.getChromosomeLocation() != null
+                && sourceFt.getQualifiers("organelle").isEmpty()) {
+            mapChromosomeLocation(h.getChromosomeLocation(), sourceFt);
+        }
+    }
+
+    private boolean hasChromosomeQualifier(SourceFeature sourceFt) {
+        return !sourceFt.getQualifiers("chromosome").isEmpty()
+                || !sourceFt.getQualifiers("plasmid").isEmpty()
+                || !sourceFt.getQualifiers("segment").isEmpty()
+                || !sourceFt.getQualifiers("linkage_group").isEmpty();
     }
 
     /**
