@@ -32,7 +32,8 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 @Setter(AccessLevel.PROTECTED)
 public class Translator {
 
-    public static final Integer DEFAULT_TRANSLATION_TABLE = 11;
+    public static final Integer DEFAULT_TRANSLATION_TABLE = 1;
+    public static final Integer PLASTID_TRANSLATION_TABLE = 11;
 
     private final CodonTranslator codonTranslator;
 
