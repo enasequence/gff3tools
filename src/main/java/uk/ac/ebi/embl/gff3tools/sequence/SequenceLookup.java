@@ -10,8 +10,15 @@
  */
 package uk.ac.ebi.embl.gff3tools.sequence;
 
+import java.io.Reader;
+import java.util.List;
+import java.util.Set;
+import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
+import uk.ac.ebi.embl.fastareader.SequenceStats;
+import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
+
 /**
- * Minimal interface for looking up nucleotide sequence slices by GFF3 seqId.
+ * Interface for looking up nucleotide sequence data by GFF3 seqId.
  *
  * <p>Backed by the library's {@code SequenceFormatReader}; the string-to-ordinal
  * ID mapping is handled by the implementing provider layer.
@@ -24,7 +31,46 @@ public interface SequenceLookup {
      * @param seqId the GFF3 seqId (e.g. chromosome name)
      * @param fromBase 1-based start position (inclusive)
      * @param toBase 1-based end position (inclusive)
+     * @param option controls which portion of the sequence is considered
      * @return the nucleotide string
      */
-    String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception;
+    String getSequenceSlice(String seqId, long fromBase, long toBase, SequenceRangeOption option) throws Exception;
+
+    /**
+     * Total length of the sequence in bases.
+     * The last base index should therefore be sequenceLength, as the bases are indexed 1...sequenceLength.
+     *
+     * @param option controls which portion of the sequence is considered
+     */
+    long getSequenceLength(String seqId, SequenceRangeOption option) throws Exception;
+
+    /** Full stats for the sequence (base counts, N-counts, edge Ns). */
+    SequenceStats getSequenceStats(String seqId) throws Exception;
+
+    /**
+     * All contiguous N-runs in the whole sequence.
+     *
+     * @param option controls which portion of the sequence is considered
+     */
+    List<GapRegion> getGapRegions(String seqId, SequenceRangeOption option) throws Exception;
+
+    /**
+     * N-runs overlapping [fromBase, toBase] (1-based inclusive).
+     * Returned regions are not clipped to the range.
+     *
+     * @param option controls which portion of the sequence is considered
+     */
+    List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+            throws Exception;
+
+    /** All seqIds currently known to this lookup. */
+    Set<String> knownSeqIds();
+
+    /**
+     * Streaming reader over a sequence slice. Caller must close the returned Reader.
+     *
+     * @param option controls which portion of the sequence is considered
+     */
+    Reader getSequenceSliceReader(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+            throws Exception;
 }

@@ -178,14 +178,14 @@ class FileConversionCommandTest {
         Files.writeString(
                 fasta,
                 ">seq1 | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
-                        + "ATGAAATAAGGGCCCAAATTT\n");
+                        + "ATGAAATAAGGGCCCAAATTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n");
 
         Path inputFile = tempDir.resolve("valid.gff3");
         Files.writeString(
                 inputFile,
                 """
                 ##gff-version 3
-                ##sequence-region seq1 1 21
+                ##sequence-region seq1 1 100
                 seq1\t.\tgene\t1\t21\t.\t+\t.\tID=gene1
                 seq1\t.\tCDS\t1\t9\t.\t+\t0\tID=cds1;Parent=gene1
                 """);
@@ -341,7 +341,7 @@ class FileConversionCommandTest {
 
     private static final String GAPPY_FASTA =
             ">TEST01.1 | {\"description\":\"gappy\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
-                    + "ATGCATGCNNNNNNNNNNATGCATGC\n";
+                    + "ATGCATGCNNNNNNNNNNATGCATGCTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n";
 
     @Test
     void fastaToGff3_emitsGapFeatures() throws Exception {
@@ -354,7 +354,7 @@ class FileConversionCommandTest {
         assertEquals(0, exitCode, "FASTA to GFF3 conversion should succeed");
         assertTrue(Files.exists(outputFile), "Output GFF3 file should be created");
         String content = Files.readString(outputFile);
-        assertTrue(content.contains("##sequence-region TEST01.1 1 26"), content);
+        assertTrue(content.contains("##sequence-region TEST01.1 1 100"), content);
         assertTrue(content.contains("TEST01.1\t.\tgap\t9\t18\t"), content);
         assertTrue(content.contains("estimated_length=10"), content);
     }

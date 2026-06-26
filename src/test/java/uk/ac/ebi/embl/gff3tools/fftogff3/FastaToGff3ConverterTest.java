@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
@@ -195,7 +196,7 @@ class FastaToGff3ConverterTest {
         // SequenceLookup resolves a slice for the submission ID (sequence info reachable).
         SequenceLookup lookup = context.get(SequenceLookup.class);
         assertNotNull(lookup);
-        assertEquals("ATGC", lookup.getSequenceSlice("TEST01.1", 1, 4));
+        assertEquals("ATGC", lookup.getSequenceSlice("TEST01.1", 1, 4, SequenceRangeOption.WHOLE_SEQUENCE));
 
         // FASTA header reachable from the context for the same submission ID.
         FastaHeaderProvider providerFromContext = context.get(FastaHeaderProvider.class);

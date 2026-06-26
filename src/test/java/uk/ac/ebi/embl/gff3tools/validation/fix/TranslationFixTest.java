@@ -14,10 +14,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.io.Reader;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
+import uk.ac.ebi.embl.fastareader.SequenceStats;
+import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
@@ -51,8 +56,39 @@ class TranslationFixTest {
             }
 
             @Override
-            public String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception {
-                return mockLookup.getSequenceSlice(seqId, fromBase, toBase);
+            public String getSequenceSlice(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+                    throws Exception {
+                return mockLookup.getSequenceSlice(seqId, fromBase, toBase, SequenceRangeOption.WHOLE_SEQUENCE);
+            }
+
+            @Override
+            public long getSequenceLength(String seqId, SequenceRangeOption option) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public SequenceStats getSequenceStats(String seqId) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public List<GapRegion> getGapRegions(String seqId, SequenceRangeOption option) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase, SequenceRangeOption option) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Set<String> knownSeqIds() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Reader getSequenceSliceReader(String seqId, long fromBase, long toBase, SequenceRangeOption option) {
+                throw new UnsupportedOperationException();
             }
         });
         context.register(SequenceLookup.class, compositeProvider);
@@ -95,7 +131,8 @@ class TranslationFixTest {
 
     @Test
     void translatesCdsFeatureForwardStrand() throws Exception {
-        when(mockLookup.getSequenceSlice("seq1", 1L, 9L)).thenReturn("ATGAAATAA");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("ATGAAATAA");
 
         GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
         GFF3Annotation annotation = createAnnotation(feature);
@@ -106,7 +143,8 @@ class TranslationFixTest {
 
     @Test
     void translatesCdsFeatureComplementStrand() throws Exception {
-        when(mockLookup.getSequenceSlice("seq1", 1L, 9L)).thenReturn("TTATTTCAT");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("TTATTTCAT");
 
         GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "-");
         GFF3Annotation annotation = createAnnotation(feature);
@@ -119,7 +157,8 @@ class TranslationFixTest {
     void translatorSkipsNonTranslatingPseudoFeatures() throws Exception {
         // Pseudo features are handled by the Translator constructor (sets nonTranslating=true),
         // not by explicit logic in TranslationFix. This test verifies the end-to-end behavior.
-        when(mockLookup.getSequenceSlice(any(), anyLong(), anyLong())).thenReturn("ATGAAATAA");
+        when(mockLookup.getSequenceSlice(any(), anyLong(), anyLong(), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
+                .thenReturn("ATGAAATAA");
 
         GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
         feature.addAttribute("pseudo", "true");
@@ -131,8 +170,10 @@ class TranslationFixTest {
 
     @Test
     void translatesMultiSegmentCdsJoin() throws Exception {
-        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("ATGAAA");
-        when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("CCCTAA");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("ATGAAA");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 15L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("CCCTAA");
 
         GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "+");
         GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
@@ -157,8 +198,10 @@ class TranslationFixTest {
         String seg2Sequence =
                 "CCTGAGGATAGCACAAGGCACTGCAGGAAGCAGGAGCACTTCACGGTACAGGGCCCTGCTCTTGGTGCTGCTGGGCCTCTTTGCAGGGAAGGGATAAAAATCCAGGGAC";
 
-        when(mockLookup.getSequenceSlice("seq1", seg1Start, seg1End)).thenReturn(seg1Sequence);
-        when(mockLookup.getSequenceSlice("seq1", seg2Start, seg2End)).thenReturn(seg2Sequence);
+        when(mockLookup.getSequenceSlice("seq1", seg1Start, seg1End, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn(seg1Sequence);
+        when(mockLookup.getSequenceSlice("seq1", seg2Start, seg2End, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn(seg2Sequence);
 
         GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", seg1Start, seg1End, "+");
         GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", seg2Start, seg2End, "+");
@@ -179,8 +222,10 @@ class TranslationFixTest {
     void translatesMultiSegmentCdsComplementJoin() throws Exception {
         // seg1="TTATTT" (1-6), seg2="CAT" (10-12) → concat "TTATTTCAT" (9 bases)
         // Rev comp = "ATGAAATAA" → ATG=M, AAA=K, TAA=* → "MK"
-        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("TTATTT");
-        when(mockLookup.getSequenceSlice("seq1", 10L, 12L)).thenReturn("CAT");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("TTATTT");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 12L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("CAT");
 
         GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "-");
         GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 12, "-");
@@ -202,8 +247,10 @@ class TranslationFixTest {
         //
         // Without per-segment reverse complement (RC) the whole concat "TTCATTCCCTAA" would be RC'd by Translator
         // (driven by seg1 being complement), producing a garbled sequence with internal stops.
-        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("TTCATT");
-        when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("CCCTAA");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("TTCATT");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 15L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("CCCTAA");
 
         GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "-");
         GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
@@ -222,9 +269,12 @@ class TranslationFixTest {
         // seg3 plus:  raw "TAA"
         // concat (sorted by start) → "ATG" + "AAA" + "TAA" = "ATGAAATAA"
         // forward translate: ATG=M, AAA=K, TAA=stop → "MK"
-        when(mockLookup.getSequenceSlice("seq1", 1L, 3L)).thenReturn("CAT");
-        when(mockLookup.getSequenceSlice("seq1", 10L, 12L)).thenReturn("AAA");
-        when(mockLookup.getSequenceSlice("seq1", 20L, 22L)).thenReturn("TAA");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 3L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("CAT");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 12L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("AAA");
+        when(mockLookup.getSequenceSlice("seq1", 20L, 22L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("TAA");
 
         GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 3, "-");
         GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 12, "+");
@@ -262,7 +312,8 @@ class TranslationFixTest {
 
     @Test
     void recordsOldAndNewTranslationInState() throws Exception {
-        when(mockLookup.getSequenceSlice("seq1", 1L, 9L)).thenReturn("ATGAAATAA");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("ATGAAATAA");
 
         TranslationStateProvider stateProvider = new TranslationStateProvider();
         context.register(TranslationState.class, stateProvider);
@@ -295,14 +346,46 @@ class TranslationFixTest {
             }
 
             @Override
-            public String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception {
-                return mockLookup.getSequenceSlice(seqId, fromBase, toBase);
+            public String getSequenceSlice(String seqId, long fromBase, long toBase, SequenceRangeOption option)
+                    throws Exception {
+                return mockLookup.getSequenceSlice(seqId, fromBase, toBase, SequenceRangeOption.WHOLE_SEQUENCE);
+            }
+
+            @Override
+            public long getSequenceLength(String seqId, SequenceRangeOption option) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public SequenceStats getSequenceStats(String seqId) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public List<GapRegion> getGapRegions(String seqId, SequenceRangeOption option) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase, SequenceRangeOption option) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Set<String> knownSeqIds() {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Reader getSequenceSliceReader(String seqId, long fromBase, long toBase, SequenceRangeOption option) {
+                throw new UnsupportedOperationException();
             }
         });
         ctxNoState.register(SequenceLookup.class, provider);
         ValidationRegistry.injectContext(fixNoState, ctxNoState);
 
-        when(mockLookup.getSequenceSlice(any(), anyLong(), anyLong())).thenReturn("ATGAAATAA");
+        when(mockLookup.getSequenceSlice(any(), anyLong(), anyLong(), eq(SequenceRangeOption.WHOLE_SEQUENCE)))
+                .thenReturn("ATGAAATAA");
 
         GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
         GFF3Annotation annotation = createAnnotation(feature);
@@ -314,7 +397,8 @@ class TranslationFixTest {
 
     @Test
     void recordsNullOldTranslationWhenNoPriorTranslation() throws Exception {
-        when(mockLookup.getSequenceSlice("seq1", 1L, 9L)).thenReturn("ATGAAATAA");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("ATGAAATAA");
 
         TranslationStateProvider stateProvider = new TranslationStateProvider();
         context.register(TranslationState.class, stateProvider);
@@ -334,8 +418,10 @@ class TranslationFixTest {
     @Test
     void sortsNonTransSplicedSegmentsByGenomicPosition() throws Exception {
         // Segments added in reverse genomic order — without trans_splicing they must be sorted
-        when(mockLookup.getSequenceSlice("seq1", 1L, 9L)).thenReturn("ATGAAAAAA");
-        when(mockLookup.getSequenceSlice("seq1", 10L, 18L)).thenReturn("CCCGGGTAA");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("ATGAAAAAA");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 18L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("CCCGGGTAA");
 
         GFF3Feature segHigh = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 18, "+");
         GFF3Feature segLow = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 9, "+");
@@ -352,8 +438,10 @@ class TranslationFixTest {
     void preservesOriginalOrderForTransSplicedSegments() throws Exception {
         // Trans-spliced join: ATG is at the high-coord segment which appears first in the join
         // Original order must be preserved — sorting by genomic position would break the translation
-        when(mockLookup.getSequenceSlice("seq1", 10L, 18L)).thenReturn("ATGAAAAAA");
-        when(mockLookup.getSequenceSlice("seq1", 1L, 9L)).thenReturn("CCCGGGTAA");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 18L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("ATGAAAAAA");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("CCCGGGTAA");
 
         GFF3Feature segHigh = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 18, "+");
         GFF3Feature segLow = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 9, "+");
@@ -371,8 +459,10 @@ class TranslationFixTest {
     void fivePrimePartialAssignedToFirstSegmentOnForwardStrand() throws Exception {
         // No ATG start codon → Translator fixes 5' partial
         // Forward strand → 5' partial belongs on the first (lowest coord) segment
-        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("AAACAA");
-        when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("CCCTAA");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("AAACAA");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 15L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("CCCTAA");
 
         GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "+");
         GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
@@ -386,8 +476,10 @@ class TranslationFixTest {
     void threePrimePartialAssignedToLastSegmentOnForwardStrand() throws Exception {
         // Has ATG but no stop codon → Translator fixes 3' partial
         // Forward strand → 3' partial belongs on the last (highest coord) segment
-        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("ATGAAA");
-        when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("CCCCCC");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("ATGAAA");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 15L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("CCCCCC");
 
         GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "+");
         GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
@@ -401,8 +493,10 @@ class TranslationFixTest {
     void fivePrimePartialAssignedToLastSegmentOnComplementStrand() throws Exception {
         // Concat "TTATTGTTT" → RC "AAACAATAA" → no ATG, has stop → 5' partial
         // Complement strand → 5' partial belongs on the last (highest coord) segment
-        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("TTATTG");
-        when(mockLookup.getSequenceSlice("seq1", 10L, 12L)).thenReturn("TTT");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("TTATTG");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 12L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("TTT");
 
         GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "-");
         GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 12, "-");
@@ -416,8 +510,10 @@ class TranslationFixTest {
     void threePrimePartialAssignedToFirstSegmentOnComplementStrand() throws Exception {
         // Concat "GGGTTTCAT" → RC "ATGAAACCC" → has ATG, no stop → 3' partial
         // Complement strand → 3' partial belongs on the first (lowest coord) segment
-        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("GGGTTT");
-        when(mockLookup.getSequenceSlice("seq1", 10L, 12L)).thenReturn("CAT");
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("GGGTTT");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 12L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("CAT");
 
         GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "-");
         GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 12, "-");
