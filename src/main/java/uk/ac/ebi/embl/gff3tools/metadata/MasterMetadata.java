@@ -46,6 +46,14 @@ public class MasterMetadata {
     private String dataClass;
     private Long sequenceLength;
 
+    // ── WGS set membership ──
+    // For master entries that describe a WGS set, `dataClass` is "SET" and `contigDataclass`
+    // is the dataClass to assign to each per-contig entry (typically "WGS"). `wgsSet` is the
+    // 8-char WGS prefix+version (e.g. "CAXMYH01"); the 6-char letter prefix identifies the
+    // root set referenced by `DR ENA; <prefix>000000000; SET.`.
+    private String wgsSet;
+    private String contigDataclass;
+
     // ── Project / Sample ──
     private String project;
     private String sample;

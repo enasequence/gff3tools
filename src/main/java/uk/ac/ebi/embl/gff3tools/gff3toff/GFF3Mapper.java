@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3toff;
 
+import java.nio.ByteBuffer;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -34,6 +35,8 @@ import uk.ac.ebi.embl.api.entry.qualifier.QualifierFactory;
 import uk.ac.ebi.embl.api.entry.reference.*;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
+import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
+import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
@@ -48,6 +51,9 @@ import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.metadata.ReferenceData;
 import uk.ac.ebi.embl.gff3tools.metadata.SubmissionAccount;
 import uk.ac.ebi.embl.gff3tools.metadata.SubmitterDetails;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -73,17 +79,26 @@ public class GFF3Mapper {
     Entry entry;
     GFF3FileReader gff3FileReader;
     private final MasterMetadataProvider metadataProvider;
+    private final FastaHeaderProvider headerProvider;
+    private final SequenceLookup sequenceLookup;
 
     public GFF3Mapper(GFF3FileReader gff3FileReader, ValidationContext context) {
+        this(gff3FileReader, context, null);
+    }
+
+    public GFF3Mapper(GFF3FileReader gff3FileReader, ValidationContext context, SequenceLookup sequenceLookup) {
         parentFeatures = new HashMap<>();
         joinableFeatureMap = new HashMap<>();
         entry = null;
         this.gff3FileReader = gff3FileReader;
         this.metadataProvider =
                 context.contains(MasterMetadataProvider.class) ? context.get(MasterMetadataProvider.class) : null;
+        this.headerProvider =
+                context.contains(FastaHeaderProvider.class) ? context.get(FastaHeaderProvider.class) : null;
+        this.sequenceLookup = sequenceLookup;
     }
 
-    public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) throws ValidationException {
+    public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) throws ValidationException, ReadException {
 
         parentFeatures.clear();
         joinableFeatureMap.clear();
@@ -107,6 +122,7 @@ public class GFF3Mapper {
         entry.setSequence(sequence);
 
         applyMasterMetadata(sequenceRegion, entry, sequence, sourceFeature);
+        applyFastaHeader(sequenceRegion, entry, sequence, sourceFeature);
 
         for (GFF3Feature gff3Feature : gff3Annotation.getFeatures()) {
             if (gff3Feature.getId().isPresent()) {
@@ -115,6 +131,9 @@ public class GFF3Mapper {
 
             mapGFF3Feature(gff3Feature, gff3FileReader.getTranslationOffsetMap());
         }
+
+        // Load sequence data after feature mapping to minimise time it spends in memory.
+        applySequenceData(sequenceRegion, sequence);
 
         return entry;
     }
@@ -298,12 +317,106 @@ public class GFF3Mapper {
      * @param gff3Feature the GFF3 feature to extract attributes from
      * @return a map of attribute names to their values
      */
+    /**
+     * Populates the nucleotide sequence data on the Sequence object from the SequenceLookup.
+     * Gracefully skips if no lookup is available or no sequence region is defined.
+     */
+    private void applySequenceData(GFF3SequenceRegion sequenceRegion, Sequence sequence) throws ReadException {
+        if (sequenceLookup == null || sequenceRegion == null) {
+            LOGGER.info(
+                    "No sequence source provided — skipping sequence data for '{}'",
+                    sequenceRegion != null ? sequenceRegion.accessionId() : "unknown");
+            return;
+        }
+        try {
+            String nucleotides = sequenceLookup.getSequenceSlice(
+                    sequenceRegion.accessionId(),
+                    sequenceRegion.start(),
+                    sequenceRegion.end(),
+                    SequenceRangeOption.WHOLE_SEQUENCE);
+            if (nucleotides == null || nucleotides.isEmpty()) {
+                throw new ReadException("No sequence data returned for '" + sequenceRegion.accessionId() + "'");
+            }
+            // Convert to lowercase bytes in a single pass to avoid an intermediate
+            // String allocation from toLowerCase() (saves ~2N bytes of peak memory).
+            byte[] seqBytes = new byte[nucleotides.length()];
+            for (int i = 0; i < nucleotides.length(); i++) {
+                seqBytes[i] = (byte) Character.toLowerCase(nucleotides.charAt(i));
+            }
+            sequence.setSequence(ByteBuffer.wrap(seqBytes));
+            sequence.setLength((long) seqBytes.length);
+        } catch (ReadException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ReadException(
+                    "Failed to retrieve sequence for '" + sequenceRegion.accessionId() + "': " + e.getMessage(),
+                    ReadException.wrapAsIOException(e));
+        }
+    }
+
     private Map<String, List<String>> getAttributesMap(GFF3Feature gff3Feature) {
         Map<String, List<String>> attributesMap = new HashMap<>();
         for (String key : gff3Feature.getAttributeKeys()) {
             gff3Feature.getAttributeList(key).ifPresent(values -> attributesMap.put(key, values));
         }
         return attributesMap;
+    }
+
+    /**
+     * Applies FASTA header metadata (description, molecule type, topology, chromosome) to the EMBL
+     * entry, sequence, and source feature. Master metadata takes precedence: fields already set by
+     * {@link #applyMasterMetadata} are left untouched and the header only fills the gaps.
+     */
+    private void applyFastaHeader(
+            GFF3SequenceRegion sequenceRegion, Entry entry, Sequence sequence, SourceFeature sourceFt) {
+        if (headerProvider == null || sequenceRegion == null) {
+            return;
+        }
+
+        Optional<FastaHeader> opt = headerProvider.getHeader(sequenceRegion.accessionId());
+        if (opt.isEmpty()) {
+            return;
+        }
+        FastaHeader h = opt.get();
+
+        // DE line: description
+        if (h.getDescription() != null
+                && (entry.getDescription() == null || entry.getDescription().getText() == null)) {
+            entry.setDescription(new Text(h.getDescription()));
+        }
+
+        // Molecule type: ID line field 4 + /mol_type source qualifier
+        if (h.getMoleculeType() != null && sequence.getMoleculeType() == null) {
+            sequence.setMoleculeType(h.getMoleculeType());
+            sourceFt.addQualifier("mol_type", h.getMoleculeType());
+        }
+
+        // Topology: ID line field 3
+        if (h.getTopology() != null && sequence.getTopology() == null) {
+            mapTopology(h.getTopology(), sequence);
+        }
+
+        // Chromosome type and name -> /chromosome, /plasmid, etc.
+        if (!hasChromosomeQualifier(sourceFt)) {
+            if (h.getChromosomeType() != null) {
+                mapChromosomeType(h.getChromosomeType(), h.getChromosomeName(), sourceFt);
+            } else if (h.getChromosomeName() != null) {
+                sourceFt.addQualifier("chromosome", h.getChromosomeName());
+            }
+        }
+
+        // Chromosome location -> /organelle qualifier
+        if (h.getChromosomeLocation() != null
+                && sourceFt.getQualifiers("organelle").isEmpty()) {
+            mapChromosomeLocation(h.getChromosomeLocation(), sourceFt);
+        }
+    }
+
+    private boolean hasChromosomeQualifier(SourceFeature sourceFt) {
+        return !sourceFt.getQualifiers("chromosome").isEmpty()
+                || !sourceFt.getQualifiers("plasmid").isEmpty()
+                || !sourceFt.getQualifiers("segment").isEmpty()
+                || !sourceFt.getQualifiers("linkage_group").isEmpty();
     }
 
     /**
@@ -327,6 +440,13 @@ public class GFF3Mapper {
         }
 
         MasterMetadata m = opt.get();
+
+        // WGS set master entries describe a SET that contains many per-contig entries.
+        // When converting one of those per-contig entries we must materialise contig-
+        // level fields (dataClass=WGS, per-contig length, RP, SET cross-references)
+        // instead of inheriting the SET-level master fields verbatim.
+        boolean isWgsContig = "WGS".equalsIgnoreCase(m.getContigDataclass());
+        long contigLength = isWgsContig ? sequenceRegion.end() - sequenceRegion.start() + 1 : 0L;
 
         // DE line: description (title as fallback)
         if (m.getDescription() != null) {
@@ -363,9 +483,12 @@ public class GFF3Mapper {
             entry.setDivision(m.getDivision());
         }
 
-        // Data class: ID line data class field
-        if (m.getDataClass() != null) {
-            entry.setDataClass(m.getDataClass());
+        // Data class: ID line data class field. For WGS contig entries the master's
+        // dataClass is "SET" (it describes the containing set), so prefer the contig
+        // dataClass when present.
+        String effectiveDataClass = isWgsContig ? m.getContigDataclass() : m.getDataClass();
+        if (effectiveDataClass != null) {
+            entry.setDataClass(effectiveDataClass);
         }
 
         // Accession: primary accession (only when GFF3 ##sequence-region provides no accession)
@@ -394,6 +517,16 @@ public class GFF3Mapper {
                 entry.addKeyword(new Text(kw));
             }
         }
+        // For WGS contigs the reference flatfile carries `KW   WGS.`; add it when absent.
+        if (isWgsContig) {
+            boolean hasWgsKeyword = entry.getKeywords().stream()
+                    .map(Text::getText)
+                    .filter(Objects::nonNull)
+                    .anyMatch("WGS"::equalsIgnoreCase);
+            if (!hasWgsKeyword) {
+                entry.addKeyword(new Text("WGS"));
+            }
+        }
 
         // Comment: CC line
         if (m.getComment() != null) {
@@ -414,8 +547,10 @@ public class GFF3Mapper {
             sourceFt.addQualifier("organism", m.getScientificName());
         }
 
-        // Common name: source feature /note with prefix
-        if (m.getCommonName() != null) {
+        // Common name: source feature /note with prefix.
+        // WGS contig source features omit the common-name note in the reference output
+        // (the common name is implied by /organism + /db_xref). Suppress it to match.
+        if (m.getCommonName() != null && !isWgsContig) {
             sourceFt.addQualifier("note", "common name: " + m.getCommonName());
         }
 
@@ -455,16 +590,31 @@ public class GFF3Mapper {
             entry.addProjectAccession(new Text(m.getProject()));
         }
 
-        // References: RF lines
+        // References: RF lines. For WGS contigs the EMBL flatfile carries a per-contig
+        // RP line (`RP   1-<length>`) on each submission reference; pass the contig
+        // length through so mapReference can attach it.
+        Long contigRpLength = (isWgsContig && contigLength > 0) ? contigLength : null;
         if (m.getReferences() != null) {
             for (ReferenceData refData : m.getReferences()) {
-                mapReference(refData, entry);
+                mapReference(refData, entry, contigRpLength);
             }
         }
 
         // DR lines: database cross-references (ordered to match EMBL convention)
         if (m.getMd5() != null) {
             entry.addXRef(new XRef("MD5", m.getMd5()));
+        }
+        // For WGS contigs the reference flatfile points back to two SET accessions
+        // before the run accession: the master entry (m.accession) and the WGS root
+        // set (6-char letter prefix from m.wgsSet + 9 zeros, e.g. "CAXMYH01" → "CAXMYH000000000").
+        if (isWgsContig) {
+            if (m.getAccession() != null) {
+                entry.addXRef(new XRef("ENA", m.getAccession(), "SET"));
+            }
+            String rootSet = wgsRootSetAccession(m.getWgsSet());
+            if (rootSet != null) {
+                entry.addXRef(new XRef("ENA", rootSet, "SET"));
+            }
         }
         if (m.getRunAccessions() != null) {
             for (String run : m.getRunAccessions()) {
@@ -501,10 +651,22 @@ public class GFF3Mapper {
         }
 
         // Sequence length: ID line BP/SQ count.
-        // The IDWriter only uses idLineSequenceLength for SET/master/annotationOnlyCON
-        // entries. For non-SET entries, we set annotationOnlyCON so the IDWriter picks
-        // up the length. SET entries already use idLineSequenceLength natively.
-        if (m.getSequenceLength() != null && m.getSequenceLength() > 0) {
+        // For WGS contigs the master.json sequenceLength is the SET-level contig count
+        // (e.g. 11435), not the per-contig length. The actual per-contig length comes
+        // from the GFF3 ##sequence-region directive. The EMBL Sequence model only
+        // surfaces a non-zero length when a byte buffer / contigs / AGP rows are
+        // populated, none of which apply to a GFF3-only entry, so we route the per-
+        // contig length through idLineSequenceLength + annotationOnlyCON the same way
+        // we already do for non-SET non-WGS entries.
+        // For non-WGS entries, the IDWriter only uses idLineSequenceLength for
+        // SET/master/annotationOnlyCON entries, so for non-SET entries we set
+        // annotationOnlyCON so the IDWriter picks up the length.
+        if (isWgsContig) {
+            if (contigLength > 0) {
+                entry.setIdLineSequenceLength(contigLength);
+                entry.setAnnotationOnlyCON(true);
+            }
+        } else if (m.getSequenceLength() != null && m.getSequenceLength() > 0) {
             entry.setIdLineSequenceLength(m.getSequenceLength());
             if (!"SET".equals(entry.getDataClass())) {
                 entry.setAnnotationOnlyCON(true);
@@ -523,16 +685,18 @@ public class GFF3Mapper {
 
         // Search fields: source feature qualifiers (geo_loc_name, collection_date, isolate, etc.)
         if (m.getSearchFields() != null) {
-            mapSearchFields(m.getSearchFields(), sourceFt);
+            mapSearchFields(m.getSearchFields(), sourceFt, isWgsContig);
         }
     }
 
     /**
      * Maps a ReferenceData to an EMBL Reference and adds it to the entry.
      * Creates a {@link Submission} when nested submitter details contain a valid
-     * submitted date; otherwise falls back to {@link Unpublished}.
+     * submitted date; otherwise falls back to {@link Unpublished}. When
+     * {@code contigRpLength} is non-null the resulting Reference is given an RP
+     * range of 1..contigRpLength.
      */
-    private void mapReference(ReferenceData refData, Entry entry) {
+    private void mapReference(ReferenceData refData, Entry entry, Long contigRpLength) {
         Publication publication = createSubmissionPublication(refData);
         if (publication == null) {
             publication = referenceFactory.createUnpublished();
@@ -565,6 +729,12 @@ public class GFF3Mapper {
 
         if (refData.getReferenceComment() != null) {
             reference.setComment(refData.getReferenceComment());
+        }
+
+        if (contigRpLength != null && contigRpLength > 0) {
+            Order<LocalRange> rpLocations = new Order<>();
+            rpLocations.addLocation(locationFactory.createLocalRange(1L, contigRpLength));
+            reference.setLocations(rpLocations);
         }
 
         entry.addReference(reference);
@@ -618,7 +788,47 @@ public class GFF3Mapper {
         if (addressLine == null) {
             return institutionLine;
         }
-        return institutionLine + "\n" + addressLine;
+        // Join with a comma so the EMBL RL writer wraps on commas across the
+        // whole address (rather than treating institution and address as two
+        // separate blocks). The writer collapses any embedded newline to a
+        // single space anyway, so a `\n` separator would yield the institution
+        // and address running together with no separator.
+        return institutionLine + ", " + addressLine;
+    }
+
+    /**
+     * Derives the WGS "root set" accession from the master entry's {@code wgsSet} field.
+     *
+     * <p>WGS set accessions come in two forms:
+     * <ul>
+     *   <li>4-letter prefix (legacy): {@code XXXX01} → {@code XXXX00000000} (12 chars)</li>
+     *   <li>6-letter prefix (modern): {@code XXXXXX01} → {@code XXXXXX000000000} (15 chars)</li>
+     * </ul>
+     *
+     * <p>Returns null when {@code wgsSet} is null or has fewer than 4 leading letters.
+     */
+    static String wgsRootSetAccession(String wgsSet) {
+        if (wgsSet == null) {
+            return null;
+        }
+        StringBuilder prefix = new StringBuilder();
+        for (int i = 0; i < wgsSet.length() && prefix.length() < 6; i++) {
+            char c = wgsSet.charAt(i);
+            if (Character.isLetter(c)) {
+                prefix.append(Character.toUpperCase(c));
+            } else {
+                break;
+            }
+        }
+        if (prefix.length() < 4) {
+            return null;
+        }
+        // Pad to 12 chars for 4-letter prefixes, 15 chars for 6-letter prefixes.
+        int targetLength = prefix.length() <= 4 ? 12 : 15;
+        while (prefix.length() < targetLength) {
+            prefix.append('0');
+        }
+        return prefix.toString();
     }
 
     /**
@@ -703,14 +913,26 @@ public class GFF3Mapper {
             "organelle");
 
     /**
+     * SearchFields keys that are SET-level metadata: they describe the assembly project
+     * but not the individual WGS contig. Reference WGS flatfiles omit these from the
+     * per-contig source feature, so we suppress them when emitting a WGS contig entry.
+     */
+    private static final Set<String> WGS_CONTIG_SEARCH_FIELDS_SKIP = Set.of("geo_loc_name", "collection_date");
+
+    /**
      * Maps searchFields entries to source feature qualifiers.
      * Keys that are already handled elsewhere (organism, topology, etc.) are skipped.
+     * For WGS contig entries, additional SET-level keys are suppressed so the source
+     * feature matches the reference WGS contig flatfile.
      */
-    private void mapSearchFields(Map<String, String> searchFields, SourceFeature sourceFt) {
+    private void mapSearchFields(Map<String, String> searchFields, SourceFeature sourceFt, boolean isWgsContig) {
         for (Map.Entry<String, String> field : searchFields.entrySet()) {
             String key = field.getKey();
             String value = field.getValue();
             if (value == null || value.isBlank() || SEARCH_FIELDS_SKIP.contains(key)) {
+                continue;
+            }
+            if (isWgsContig && WGS_CONTIG_SEARCH_FIELDS_SKIP.contains(key)) {
                 continue;
             }
             // Taxon db_xref is emitted from the dedicated taxon path; skip duplicates here

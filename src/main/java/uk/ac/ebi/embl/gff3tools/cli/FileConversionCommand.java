@@ -35,10 +35,10 @@ import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FastaToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToGFF3Converter;
 import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
-import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
@@ -156,14 +156,11 @@ public class FileConversionCommand extends AbstractCommand {
                             : createInputReader();
                     BufferedWriter outputWriter =
                             writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
-                // Only register the FASTA header provider when it actually carries a header source.
-                // An empty provider would otherwise trip header-aware rules (e.g. FASTA_HEADER_MAPPING)
-                // for conversions run without any FASTA header input.
-                ContextProvider<?>[] providers = headerProvider.hasSources()
-                        ? new ContextProvider<?>[] {compositeProvider, metadataProvider, headerProvider}
-                        : new ContextProvider<?>[] {compositeProvider, metadataProvider};
-                try (ValidationEngine engine = initValidationEngine(ruleOverrides, providers)) {
-                    Converter converter = getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal);
+                SequenceLookup sequenceLookup = compositeProvider.hasSources() ? compositeProvider.get(null) : null;
+                try (ValidationEngine engine =
+                        initValidationEngine(ruleOverrides, compositeProvider, metadataProvider, headerProvider)) {
+                    Converter converter =
+                            getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal, sequenceLookup);
                     converter.convert(inputReader, outputWriter);
                 }
             }
@@ -252,10 +249,11 @@ public class FileConversionCommand extends AbstractCommand {
             ValidationEngine engine,
             ConversionFileFormat inputFileType,
             ConversionFileFormat outputFileType,
-            FileSequenceSource inputFastaSource)
+            FileSequenceSource inputFastaSource,
+            SequenceLookup sequenceLookup)
             throws FormatSupportException, CLIException {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
-            return new Gff3ToFFConverter(engine, inputFilePath);
+            return new Gff3ToFFConverter(engine, inputFilePath, sequenceLookup);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
             // Master metadata (from -m) is registered on the engine via buildMetadataProvider
             return new FFToGff3Converter(engine);

@@ -159,7 +159,7 @@ class GFF3AnnotationFactoryTest {
 
         Feature mappedFeature = featureFactory.createFeature("gene");
         Object mappedFeatureResult = method.invoke(gFF3AnnotationFactory, mappedFeature);
-        assertEquals("ncRNA_gene", mappedFeatureResult);
+        assertEquals("gene", mappedFeatureResult);
 
         Feature mappedFeatureWithQualifiers1 = featureFactory.createFeature("ncRNA");
         mappedFeatureWithQualifiers1.addQualifier("ncRNA_class", "snoRNA");
@@ -212,7 +212,7 @@ class GFF3AnnotationFactoryTest {
 
         executeAndValidateGetParentFeature(gFF3AnnotationFactory, "boop", "matK", "");
         executeAndValidateGetParentFeature(gFF3AnnotationFactory, "repeat_region", "", "");
-        executeAndValidateGetParentFeature(gFF3AnnotationFactory, "mRNA", "matK", "ncRNA_gene_matK");
+        executeAndValidateGetParentFeature(gFF3AnnotationFactory, "mRNA", "matK", "gene_matK");
         executeAndValidateGetParentFeature(gFF3AnnotationFactory, "intron", "matK", "mRNA_matK");
 
         // New GFF3AnnotationFactory object but adding features to entry
@@ -223,7 +223,7 @@ class GFF3AnnotationFactoryTest {
 
         gFF3AnnotationFactory.from(entry);
 
-        executeAndValidateGetParentFeature(gFF3AnnotationFactory, "mRNA", "matK", "ncRNA_gene_matK_1");
+        executeAndValidateGetParentFeature(gFF3AnnotationFactory, "mRNA", "matK", "gene_matK_1");
         executeAndValidateGetParentFeature(gFF3AnnotationFactory, "intron", "matK", "mRNA_matK_1");
     }
 
