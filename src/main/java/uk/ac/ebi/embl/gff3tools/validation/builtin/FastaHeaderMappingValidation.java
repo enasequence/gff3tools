@@ -10,15 +10,12 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
-import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
-import uk.ac.ebi.embl.gff3tools.validation.meta.ExitMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
@@ -40,8 +37,6 @@ public class FastaHeaderMappingValidation implements Validation {
     @InjectContext
     private ValidationContext context;
 
-    private final Set<String> validatedAccessions = new HashSet<>();
-
     @ValidationMethod(
             rule = RULE_FASTA_HEADER_MAPPING,
             description =
@@ -55,23 +50,13 @@ public class FastaHeaderMappingValidation implements Validation {
         }
 
         String accession = annotation.getAccession();
-        if (!validatedAccessions.add(accession)) {
-            return;
-        }
-
         Optional<FastaHeader> header = headerProvider.getHeader(accession);
         if (header.isEmpty()) {
-            validatedAccessions.remove(accession);
             throw new ValidationException(RULE_FASTA_HEADER_MAPPING, line, NO_HEADER_MESSAGE.formatted(accession));
         }
     }
 
     private FastaHeaderProvider registeredHeaderProvider() {
         return context.contains(FastaHeaderProvider.class) ? context.get(FastaHeaderProvider.class) : null;
-    }
-
-    @ExitMethod
-    public void clear() {
-        validatedAccessions.clear();
     }
 }
