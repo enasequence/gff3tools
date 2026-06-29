@@ -67,8 +67,8 @@ class FastaHeaderMappingValidationTest {
     void throwsWhenProviderHasNoHeaderForAccession() {
         when(fastaHeaderProvider.getHeader(ACCESSION)).thenReturn(Optional.empty());
 
-        ValidationException exception = assertThrows(
-                ValidationException.class, () -> validation.validateFastaHeaderMapping(annotation, LINE));
+        ValidationException exception =
+                assertThrows(ValidationException.class, () -> validation.validateFastaHeaderMapping(annotation, LINE));
 
         String message = exception.getMessage();
         assertTrue(message.contains("FASTA_HEADER_MAPPING"));
