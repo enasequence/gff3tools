@@ -25,6 +25,7 @@ import uk.ac.ebi.embl.gff3tools.fftogff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.metadata.EmblEntryMetadataSource;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 
 class FFToGFF3ConverterTest {
@@ -92,6 +93,7 @@ class FFToGFF3ConverterTest {
         if (metadataProvider != null) {
             engineBuilder.withProvider(metadataProvider);
         }
+        engineBuilder.excludeProvider(FastaHeaderProvider.class); // no fasta input here
         ValidationEngine engine = engineBuilder.build();
         FFToGff3Converter converter = new FFToGff3Converter(engine);
         try (BufferedReader testFileReader = Files.newBufferedReader(inputFile);

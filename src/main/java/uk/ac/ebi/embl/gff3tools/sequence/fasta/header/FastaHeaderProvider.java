@@ -53,6 +53,14 @@ public class FastaHeaderProvider implements ContextProvider<FastaHeaderProvider>
     }
 
     /**
+     * Returns {@code true} if at least one header source is registered. A provider with no sources
+     * can never resolve a header, so callers may choose not to register it at all.
+     */
+    public boolean hasSources() {
+        return !sources.isEmpty();
+    }
+
+    /**
      * Returns the first non-empty header for the given seqId across all registered sources.
      */
     public Optional<FastaHeader> getHeader(String seqId) {

@@ -14,7 +14,7 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
@@ -29,13 +29,13 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 @Gff3Validation(
         name = "FASTA_HEADER_MAPPING",
         description =
-                "Validates that every feature accession maps to a FASTA header when a FASTA header provider is registered")
+                "Validates that every annotation accession maps to a FASTA header when a FASTA header provider is registered")
 public class FastaHeaderMappingValidation implements Validation {
 
     private static final String RULE_FASTA_HEADER_MAPPING = "FASTA_HEADER_MAPPING";
     private static final String NO_HEADER_MESSAGE =
             "No FASTA header could be resolved for accession \"%s\". A FASTA header provider is registered but does "
-                    + "not supply a header for this feature.";
+                    + "not supply a header for this annotation.";
 
     @InjectContext
     private ValidationContext context;
@@ -44,16 +44,17 @@ public class FastaHeaderMappingValidation implements Validation {
 
     @ValidationMethod(
             rule = RULE_FASTA_HEADER_MAPPING,
-            description = "Every feature accession must map to a FASTA header when a FASTA header provider is registered",
-            type = ValidationType.FEATURE,
+            description =
+                    "Every annotation accession must map to a FASTA header when a FASTA header provider is registered",
+            type = ValidationType.ANNOTATION,
             priority = ValidationPriority.CRITICAL)
-    public void validateFastaHeaderMapping(GFF3Feature feature, int line) throws ValidationException {
+    public void validateFastaHeaderMapping(GFF3Annotation annotation, int line) throws ValidationException {
         FastaHeaderProvider headerProvider = registeredHeaderProvider();
         if (headerProvider == null) {
             return;
         }
 
-        String accession = feature.accession();
+        String accession = annotation.getAccession();
         if (!validatedAccessions.add(accession)) {
             return;
         }
