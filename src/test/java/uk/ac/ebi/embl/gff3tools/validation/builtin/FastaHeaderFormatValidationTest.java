@@ -61,6 +61,7 @@ public class FastaHeaderFormatValidationTest {
         fastaHeaderProvider = mock(FastaHeaderProvider.class);
         annotation = mock(GFF3Annotation.class);
 
+        when(context.contains(FastaHeaderProvider.class)).thenReturn(true);
         when(context.get(FastaHeaderProvider.class)).thenReturn(fastaHeaderProvider);
         when(annotation.getAccession()).thenReturn(ACCESSION);
 

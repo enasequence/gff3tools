@@ -50,6 +50,7 @@ class MoleculeTypeValidationTest {
         ontologyClient = mock(OntologyClient.class);
         annotation = mock(GFF3Annotation.class);
 
+        when(context.contains(FastaHeaderProvider.class)).thenReturn(true);
         when(context.get(FastaHeaderProvider.class)).thenReturn(fastaHeaderProvider);
         when(context.get(OntologyClient.class)).thenReturn(ontologyClient);
         when(annotation.getAccession()).thenReturn(ACCESSION);

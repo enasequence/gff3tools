@@ -53,9 +53,13 @@ public class FastaHeaderFormatValidation implements Validation {
             type = ANNOTATION,
             priority = ValidationPriority.HIGH)
     public void validate(GFF3Annotation annotation, int line) throws ValidationException {
-        FastaHeaderProvider fastaHeaderProvider = context.get(FastaHeaderProvider.class);
-        String id = annotation.getAccession();
+        FastaHeaderProvider fastaHeaderProvider =
+                context.contains(FastaHeaderProvider.class) ? context.get(FastaHeaderProvider.class) : null;
+        if (fastaHeaderProvider == null) {
+            return;
+        }
 
+        String id = annotation.getAccession();
         log.debug("Validating FASTA header for accession {}", id);
         Optional<FastaHeader> header = fastaHeaderProvider.getHeader(id);
 

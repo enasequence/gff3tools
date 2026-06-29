@@ -28,12 +28,15 @@ import uk.ac.ebi.embl.fastareader.api.SequenceFormatReaderFactory;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.exception.WriteException;
+import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.JsonHeaderParser;
 import uk.ac.ebi.embl.gff3tools.utils.SourceFeatureDTO;
 import uk.ac.ebi.embl.gff3tools.utils.SourceFeatureUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.provider.OntologyClientProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationStateProvider;
 
 public class TSVToGff3ConverterTest {
 
@@ -221,6 +224,11 @@ public class TSVToGff3ConverterTest {
                 );
         return new ValidationEngineBuilder()
                 .overrideMethodRules(overriddenRules)
+                .disableAutodetectContextProviders()
+                .withProvider(new MasterMetadataProvider())
+                .withProvider(new OntologyClientProvider())
+                .withProvider(new TranslationStateProvider())
+                .failFast(true)
                 .build();
     }
 }

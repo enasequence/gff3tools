@@ -47,7 +47,8 @@ public class ChromosomeNameFix implements Fix {
         String accession = annotation.getAccession();
         Optional<FastaHeader> headerOpt = context.get(FastaHeaderProvider.class).getHeader(accession);
         if (headerOpt.isEmpty()) {
-            throw new IllegalStateException("No FASTA header found for accession " + accession);
+            log.warn("No FASTA header found for accession {}", accession);
+            return;
         }
 
         FastaHeader header = headerOpt.get();

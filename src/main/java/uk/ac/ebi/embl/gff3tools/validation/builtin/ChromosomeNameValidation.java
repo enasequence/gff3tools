@@ -134,7 +134,9 @@ public class ChromosomeNameValidation implements Validation {
     }
 
     private Optional<FastaHeader> fastaHeaderFor(String id) {
-        return context.get(FastaHeaderProvider.class).getHeader(id);
+        return context.contains(FastaHeaderProvider.class)
+                ? context.get(FastaHeaderProvider.class).getHeader(id)
+                : Optional.empty();
     }
 
     private static Optional<String> chromosomeName(FastaHeader header) {

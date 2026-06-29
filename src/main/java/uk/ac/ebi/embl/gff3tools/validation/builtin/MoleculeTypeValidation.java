@@ -116,7 +116,11 @@ public class MoleculeTypeValidation implements Validation {
     }
 
     private Optional<ControlledVocabularyUtils.MolType> getMoleculeType(String accession) {
-        FastaHeaderProvider fastaHeaderProvider = context.get(FastaHeaderProvider.class);
+        FastaHeaderProvider fastaHeaderProvider =
+                context.contains(FastaHeaderProvider.class) ? context.get(FastaHeaderProvider.class) : null;
+        if (fastaHeaderProvider == null) {
+            return Optional.empty();
+        }
 
         log.debug("Validating molecule type from FASTA header for accession {}", accession);
         Optional<FastaHeader> header = fastaHeaderProvider.getHeader(accession);
