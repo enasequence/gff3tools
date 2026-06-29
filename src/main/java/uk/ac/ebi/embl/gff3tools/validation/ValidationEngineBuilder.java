@@ -22,6 +22,7 @@ public class ValidationEngineBuilder {
     private final ValidationConfig validationConfig;
     private boolean failFast = false;
     private final List<ContextProvider<?>> providerOverrides = new ArrayList<>();
+    private final Set<Class<?>> excludedProviderTypes = new HashSet<>();
     private boolean providerClasspathScanningEnabled = true;
     private boolean validationClassPathScanningEnabled = true;
     private final List<Fix> fixOverrides = new ArrayList<>();
@@ -37,6 +38,7 @@ public class ValidationEngineBuilder {
         ValidationRegistry registry = ValidationRegistry.builder()
                 .config(validationConfig)
                 .providers(providerOverrides)
+                .excludedProviderTypes(excludedProviderTypes)
                 .contextProviderClassPathScanningEnabled(providerClasspathScanningEnabled)
                 .validationClassPathScanningEnabled(validationClassPathScanningEnabled)
                 .fixes(fixOverrides)
@@ -66,6 +68,21 @@ public class ValidationEngineBuilder {
      */
     public ValidationEngineBuilder disableAutodetectContextProviders() {
         this.providerClasspathScanningEnabled = false;
+        return this;
+    }
+
+    /**
+     * Exclude a context provider type from the engine. The given type is never registered on the
+     * context, even if it would otherwise be autodetected via classpath scanning or supplied via
+     * {@link #withProvider(ContextProvider)}. This makes {@code context.contains(type)} return
+     * {@code false}, so rules that guard on the provider's presence become inert.
+     *
+     * @param providerType the provider value type to exclude (e.g. {@code FastaHeaderProvider.class})
+     * @return this builder for chaining
+     */
+    public ValidationEngineBuilder excludeProvider(Class<?> providerType) {
+        Objects.requireNonNull(providerType, "providerType must not be null");
+        excludedProviderTypes.add(providerType);
         return this;
     }
 

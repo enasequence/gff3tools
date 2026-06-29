@@ -90,23 +90,32 @@ public class ValidationRegistry {
             @Singular List<ContextProvider<?>> providers,
             boolean contextProviderClassPathScanningEnabled,
             boolean validationClassPathScanningEnabled,
+            @Singular("excludedProviderType") Set<Class<?>> excludedProviderTypes,
             @Singular("fix") List<Fix> fixes,
             @Singular("validator") List<Validation> validators) {
         this.validationConfig = config;
 
         ValidationContext ctx = new ValidationContext();
 
-        List<ContextProvider<?>> allProviders;
+        // Explicitly registered providers, minus any whose type is excluded. Excluding a provider
+        // wins over both classpath autodetection and explicit registration, so the type ends up
+        // absent from the context entirely.
+        List<ContextProvider<?>> explicitProviders = providers.stream()
+                .filter(provider -> !excludedProviderTypes.contains(provider.type()))
+                .collect(Collectors.toList());
+
+        List<ContextProvider<?>> allProviders = new ArrayList<>();
         if (contextProviderClassPathScanningEnabled) {
-            allProviders = new ArrayList<>(instantiateProviders());
-            for (ContextProvider<?> provider : allProviders) {
+            for (ContextProvider<?> provider : instantiateProviders()) {
+                if (excludedProviderTypes.contains(provider.type())) {
+                    continue;
+                }
+                allProviders.add(provider);
                 ctx.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
             }
-        } else {
-            allProviders = new ArrayList<>();
         }
 
-        for (ContextProvider<?> provider : providers) {
+        for (ContextProvider<?> provider : explicitProviders) {
             ctx.register((Class<Object>) provider.type(), (ContextProvider<Object>) provider);
         }
 
@@ -115,13 +124,13 @@ public class ValidationRegistry {
         // Ordering: classpath providers initialize first, then explicit providers. If a classpath
         // provider's initialize() depends on an explicit provider, it will NOT see it yet.
         Set<Class<?>> explicitTypes =
-                providers.stream().map(ContextProvider::type).collect(Collectors.toSet());
+                explicitProviders.stream().map(ContextProvider::type).collect(Collectors.toSet());
         for (ContextProvider<?> provider : allProviders) {
             if (!explicitTypes.contains(provider.type())) {
                 initializeProvider(provider, ctx);
             }
         }
-        for (ContextProvider<?> provider : providers) {
+        for (ContextProvider<?> provider : explicitProviders) {
             initializeProvider(provider, ctx);
         }
 
