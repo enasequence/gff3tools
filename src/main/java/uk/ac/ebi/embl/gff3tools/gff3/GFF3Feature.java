@@ -26,7 +26,7 @@ import lombok.Setter;
 public class GFF3Feature {
     // Non-Mutable members used in constructor
     final Optional<String> id;
-    final Optional<String> parentId;
+    @NonNull Optional<String> parentId;
     final String seqId;
     final Optional<Integer> seqIdVersion;
     final String source;

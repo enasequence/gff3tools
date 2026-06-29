@@ -67,11 +67,26 @@ public class GeneAssociatedFeatureRemoval implements Fix {
             }
         }
 
+        Set<String> removedGeneIds = new HashSet<>();
         for (GFF3Feature geneAssociatedFeature : geneAssociatedFeatures) {
             String locationKey = geneAssociatedFeature.getStart() + ":" + geneAssociatedFeature.getEnd();
             GFF3Feature toRemove = geneFeatureMap.get(locationKey);
             if (toRemove != null) {
+                toRemove.getId().ifPresent(removedGeneIds::add);
                 gff3Annotation.removeFeature(toRemove);
+            }
+        }
+
+        // Clear Parent reference on any feature whose parent was just removed,
+        // preventing DANGLING_PARENT errors from the validator.
+        if (!removedGeneIds.isEmpty()) {
+            for (GFF3Feature feature : gff3Annotation.getFeatures()) {
+                feature.getParentId()
+                        .filter(removedGeneIds::contains)
+                        .ifPresent(ignored -> {
+                            feature.setParentId(Optional.empty());
+                            feature.removeAttributeList("Parent");
+                        });
             }
         }
     }
