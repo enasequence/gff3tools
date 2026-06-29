@@ -44,7 +44,8 @@ public class FastaHeaderMappingValidation implements Validation {
             type = ValidationType.ANNOTATION,
             priority = ValidationPriority.CRITICAL)
     public void validateFastaHeaderMapping(GFF3Annotation annotation, int line) throws ValidationException {
-        FastaHeaderProvider headerProvider = registeredHeaderProvider();
+        FastaHeaderProvider headerProvider =
+                context.contains(FastaHeaderProvider.class) ? context.get(FastaHeaderProvider.class) : null;
         if (headerProvider == null) {
             return;
         }
@@ -54,9 +55,5 @@ public class FastaHeaderMappingValidation implements Validation {
         if (header.isEmpty()) {
             throw new ValidationException(RULE_FASTA_HEADER_MAPPING, line, NO_HEADER_MESSAGE.formatted(accession));
         }
-    }
-
-    private FastaHeaderProvider registeredHeaderProvider() {
-        return context.contains(FastaHeaderProvider.class) ? context.get(FastaHeaderProvider.class) : null;
     }
 }
