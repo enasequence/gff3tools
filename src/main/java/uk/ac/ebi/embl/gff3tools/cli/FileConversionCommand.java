@@ -39,6 +39,7 @@ import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToGFF3Converter;
 import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
+import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
@@ -157,8 +158,13 @@ public class FileConversionCommand extends AbstractCommand {
                     BufferedWriter outputWriter =
                             writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
                 SequenceLookup sequenceLookup = compositeProvider.hasSources() ? compositeProvider.get(null) : null;
-                try (ValidationEngine engine =
-                        initValidationEngine(ruleOverrides, compositeProvider, metadataProvider, headerProvider)) {
+                // Only register the FASTA header provider when it actually carries a header source.
+                // An empty provider would otherwise trip header-aware rules (e.g. FASTA_HEADER_MAPPING)
+                // for conversions run without any FASTA header input.
+                ContextProvider<?>[] providers = headerProvider.hasSources()
+                        ? new ContextProvider<?>[] {compositeProvider, metadataProvider, headerProvider}
+                        : new ContextProvider<?>[] {compositeProvider, metadataProvider};
+                try (ValidationEngine engine = initValidationEngine(ruleOverrides, providers)) {
                     Converter converter =
                             getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal, sequenceLookup);
                     converter.convert(inputReader, outputWriter);
