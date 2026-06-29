@@ -159,7 +159,7 @@ public class FileConversionCommand extends AbstractCommand {
                             writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
                 SequenceLookup sequenceLookup = compositeProvider.hasSources() ? compositeProvider.get(null) : null;
                 // Only register the FASTA header provider when it actually carries a header source.
-                // An empty provider would otherwise trip header-aware rules (e.g. FASTA_HEADER_MAPPING)
+                // An empty provider will otherwise trip header-aware rules (e.g. FASTA_HEADER_MAPPING)
                 // for conversions run without any FASTA header input.
                 ContextProvider<?>[] providers = headerProvider.hasSources()
                         ? new ContextProvider<?>[] {compositeProvider, metadataProvider, headerProvider}
