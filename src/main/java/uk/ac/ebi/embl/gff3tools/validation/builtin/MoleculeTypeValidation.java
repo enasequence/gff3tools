@@ -46,7 +46,7 @@ public class MoleculeTypeValidation implements Validation {
             rule = REQUIRED_FEATURE_RULE,
             description = "Check that molecule types with mandatory features contain those features",
             type = ANNOTATION,
-            priority = ValidationPriority.HIGH)
+            priority = ValidationPriority.CRITICAL)
     public void validateRequiredFeature(GFF3Annotation annotation, int line) throws ValidationException {
         Optional<ControlledVocabularyUtils.MolType> moleculeType = getMoleculeType(annotation.getAccession());
         if (moleculeType.isEmpty()) {
@@ -79,7 +79,7 @@ public class MoleculeTypeValidation implements Validation {
             rule = MRNA_CDS_COMPLEMENT_RULE,
             description = "Check that CDS features on mRNA entries do not use complement locations",
             type = ANNOTATION,
-            priority = ValidationPriority.HIGH)
+            priority = ValidationPriority.CRITICAL)
     public void validateMrnaCdsComplement(GFF3Annotation annotation, int line) throws ValidationException {
         if (!isMRNA(annotation.getAccession())) {
             return;

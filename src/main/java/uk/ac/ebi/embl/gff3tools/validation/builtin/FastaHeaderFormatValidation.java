@@ -51,7 +51,7 @@ public class FastaHeaderFormatValidation implements Validation {
             rule = VALIDATION_RULE,
             description = "Check if the fields in the FASTA Header are populated correctly",
             type = ANNOTATION,
-            priority = ValidationPriority.HIGH)
+            priority = ValidationPriority.CRITICAL)
     public void validate(GFF3Annotation annotation, int line) throws ValidationException {
         FastaHeaderProvider fastaHeaderProvider =
                 context.contains(FastaHeaderProvider.class) ? context.get(FastaHeaderProvider.class) : null;

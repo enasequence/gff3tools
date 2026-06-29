@@ -49,7 +49,7 @@ public class ChromosomeNameValidation implements Validation {
             rule = CHROMOSOME_NAME_UNIQUE_RULE,
             description = "Check that chromosome_name values in FASTA headers are unique",
             type = ANNOTATION,
-            priority = ValidationPriority.NORMAL)
+            priority = ValidationPriority.CRITICAL)
     public void validateChromosomeNameUnique(GFF3Annotation annotation, int line) throws ValidationException {
         String id = annotation.getAccession();
 
@@ -74,7 +74,7 @@ public class ChromosomeNameValidation implements Validation {
             rule = CHROMOSOME_OR_LINKAGE_GROUP_NAME_NOT_UNASSIGNED_RULE,
             description = "Check that chromosome and linkage group entries do not use unassigned chromosome names",
             type = ANNOTATION,
-            priority = ValidationPriority.HIGH)
+            priority = ValidationPriority.CRITICAL)
     public void validateChromosomeOrLinkageGroupNameAssigned(GFF3Annotation annotation, int line)
             throws ValidationException {
         Optional<FastaHeader> headerOpt = fastaHeaderFor(annotation.getAccession());
@@ -106,7 +106,7 @@ public class ChromosomeNameValidation implements Validation {
             rule = PLASMID_CHROMOSOME_NAME_FORMAT_RULE,
             description = "Check that plasmid entries use permitted plasmid names",
             type = ANNOTATION,
-            priority = ValidationPriority.HIGH)
+            priority = ValidationPriority.CRITICAL)
     public void validatePlasmidChromosomeNameFormat(GFF3Annotation annotation, int line) throws ValidationException {
         Optional<FastaHeader> headerOpt = fastaHeaderFor(annotation.getAccession());
         if (headerOpt.isEmpty()) {

@@ -44,7 +44,7 @@ public class FastaHeaderNormalisationFix implements Fix {
             description =
                     "Folds FASTA header values to ASCII7 and normalises controlled vocabulary fields to their canonical form.",
             type = ANNOTATION,
-            priority = ValidationPriority.HIGH)
+            priority = ValidationPriority.CRITICAL)
     public void normaliseHeaderValues(GFF3Annotation annotation, int line) {
         // No FASTA header source registered for this run -> nothing to fix.
         if (!context.contains(FastaHeaderProvider.class)) {

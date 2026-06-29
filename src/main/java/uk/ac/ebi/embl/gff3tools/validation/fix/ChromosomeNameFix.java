@@ -22,6 +22,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
 
 @Slf4j
 @Gff3Fix(
@@ -37,7 +38,8 @@ public class ChromosomeNameFix implements Fix {
             rule = "CHROMOSOME_NAME",
             description =
                     "Normalises the chromosome_name of the FASTA header registered for the annotation's accession by stripping whitespace, illegal characters and chromosome/linkage-group/plasmid keywords.",
-            type = ANNOTATION)
+            type = ANNOTATION,
+            priority = ValidationPriority.CRITICAL)
     public void fix(GFF3Annotation annotation, int line) {
         // No FASTA header source registered for this run -> nothing to fix.
         if (!context.contains(FastaHeaderProvider.class)) {
