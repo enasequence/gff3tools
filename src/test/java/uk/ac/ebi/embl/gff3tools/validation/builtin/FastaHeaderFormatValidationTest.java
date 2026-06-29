@@ -76,6 +76,14 @@ public class FastaHeaderFormatValidationTest {
     }
 
     @Test
+    void validateDoesNotThrowWhenNoFastaHeaderProviderRegistered() {
+        // No FastaHeaderProvider on the context (e.g. a header-less conversion) -> nothing to validate.
+        when(context.contains(FastaHeaderProvider.class)).thenReturn(false);
+
+        assertDoesNotThrow(() -> validation.validate(annotation, LINE));
+    }
+
+    @Test
     void validateDoesNothingWhenFastaHeaderIsValid() {
         FastaHeader header = validHeader();
 

@@ -38,6 +38,7 @@ class MoleculeTypeValidationTest {
     private static final String ACCESSION = "CM000001.1";
 
     private MoleculeTypeValidation validation;
+    private ValidationContext context;
     private FastaHeaderProvider fastaHeaderProvider;
     private OntologyClient ontologyClient;
     private GFF3Annotation annotation;
@@ -45,7 +46,7 @@ class MoleculeTypeValidationTest {
     @BeforeEach
     void setUp() throws Exception {
         validation = new MoleculeTypeValidation();
-        ValidationContext context = mock(ValidationContext.class);
+        context = mock(ValidationContext.class);
         fastaHeaderProvider = mock(FastaHeaderProvider.class);
         ontologyClient = mock(OntologyClient.class);
         annotation = mock(GFF3Annotation.class);
@@ -135,6 +136,27 @@ class MoleculeTypeValidationTest {
             String message = exception.getMessage();
             assertTrue(message.contains(MoleculeTypeValidation.MRNA_CDS_COMPLEMENT_RULE));
             assertTrue(message.contains("Complement locations are not permitted in CDS features on mRNA entries."));
+        }
+    }
+
+    @Nested
+    class NoFastaHeaderProvider {
+
+        // When no FastaHeaderProvider is registered (e.g. a header-less conversion), the molecule
+        // type cannot be resolved, so neither validation method should throw.
+        @BeforeEach
+        void noProvider() {
+            when(context.contains(FastaHeaderProvider.class)).thenReturn(false);
+        }
+
+        @Test
+        void validateRequiredFeatureDoesNotThrow() {
+            assertDoesNotThrow(() -> validation.validateRequiredFeature(annotation, LINE));
+        }
+
+        @Test
+        void validateMrnaCdsComplementDoesNotThrow() {
+            assertDoesNotThrow(() -> validation.validateMrnaCdsComplement(annotation, LINE));
         }
     }
 

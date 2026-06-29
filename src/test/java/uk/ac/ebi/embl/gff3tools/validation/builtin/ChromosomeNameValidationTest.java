@@ -35,13 +35,14 @@ class ChromosomeNameValidationTest {
     private static final int LINE = 42;
 
     private ChromosomeNameValidation validation;
+    private ValidationContext context;
     private FastaHeaderProvider fastaHeaderProvider;
     private GFF3Annotation annotation;
 
     @BeforeEach
     void setUp() throws Exception {
         validation = new ChromosomeNameValidation();
-        ValidationContext context = mock(ValidationContext.class);
+        context = mock(ValidationContext.class);
         fastaHeaderProvider = mock(FastaHeaderProvider.class);
         annotation = mock(GFF3Annotation.class);
 
@@ -49,6 +50,32 @@ class ChromosomeNameValidationTest {
         when(context.get(FastaHeaderProvider.class)).thenReturn(fastaHeaderProvider);
 
         injectContext(validation, context);
+    }
+
+    @Nested
+    class NoFastaHeaderProvider {
+
+        // When no FastaHeaderProvider is registered (e.g. a header-less conversion), there is no
+        // chromosome_name to resolve, so none of the validation methods should throw.
+        @BeforeEach
+        void noProvider() {
+            when(context.contains(FastaHeaderProvider.class)).thenReturn(false);
+        }
+
+        @Test
+        void validateChromosomeNameUniqueDoesNotThrow() {
+            assertDoesNotThrow(() -> validation.validateChromosomeNameUnique(annotation, LINE));
+        }
+
+        @Test
+        void validateChromosomeOrLinkageGroupNameAssignedDoesNotThrow() {
+            assertDoesNotThrow(() -> validation.validateChromosomeOrLinkageGroupNameAssigned(annotation, LINE));
+        }
+
+        @Test
+        void validatePlasmidChromosomeNameFormatDoesNotThrow() {
+            assertDoesNotThrow(() -> validation.validatePlasmidChromosomeNameFormat(annotation, LINE));
+        }
     }
 
     @Nested
