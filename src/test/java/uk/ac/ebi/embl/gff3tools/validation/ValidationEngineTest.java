@@ -75,7 +75,7 @@ public class ValidationEngineTest {
                 Assertions.assertThrows(ValidationException.class, () -> validationEngine.validate(invalidFeature, 1));
 
         Assertions.assertAll(
-                () -> Assertions.assertTrue(ex.getMessage().contains("Violation of rule LOCATION on line 1")));
+                () -> Assertions.assertTrue(ex.getMessage().contains("Violation of rule FASTA_HEADER_MAPPING on line 1")));
     }
 
     @Test
