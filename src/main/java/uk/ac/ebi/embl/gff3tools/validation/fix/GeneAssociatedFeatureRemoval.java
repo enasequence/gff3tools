@@ -81,12 +81,10 @@ public class GeneAssociatedFeatureRemoval implements Fix {
         // preventing DANGLING_PARENT errors from the validator.
         if (!removedGeneIds.isEmpty()) {
             for (GFF3Feature feature : gff3Annotation.getFeatures()) {
-                feature.getParentId()
-                        .filter(removedGeneIds::contains)
-                        .ifPresent(ignored -> {
-                            feature.setParentId(Optional.empty());
-                            feature.removeAttributeList("Parent");
-                        });
+                feature.getParentId().filter(removedGeneIds::contains).ifPresent(ignored -> {
+                    feature.setParentId(Optional.empty());
+                    feature.removeAttributeList("Parent");
+                });
             }
         }
     }
