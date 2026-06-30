@@ -230,6 +230,9 @@ public class FastaHeaderFormatValidationTest {
         @Test
         void shouldFail_whenInvalidChromosomeType() {
             FastaHeader h = validHeader();
+            // all three chromosome fields present -> valid combination, so only the type value is at fault
+            h.setChromosomeName("seq1_valid");
+            h.setChromosomeLocation("Mitochondrion");
             h.setChromosomeType("invalid_type");
 
             List<String> errors = FastaHeaderFormatValidation.validate(h);
@@ -240,6 +243,9 @@ public class FastaHeaderFormatValidationTest {
         @Test
         void shouldFail_whenInvalidChromosomeLocation() {
             FastaHeader h = validHeader();
+            // all three chromosome fields present -> valid combination, so only the location is at fault
+            h.setChromosomeName("seq1_valid");
+            h.setChromosomeType("chromosome");
             h.setChromosomeLocation("mars");
 
             List<String> errors = FastaHeaderFormatValidation.validate(h);
@@ -291,6 +297,77 @@ public class FastaHeaderFormatValidationTest {
             h.setMoleculeType("genomic DNA");
             h.setTopology("linear");
             return h;
+        }
+    }
+
+    /**
+     * Covers the allowed combinations of the optional chromosome fields. Only three combinations are
+     * valid: none present (unplaced contig), chromosome_name only (unlocalized), or all three present
+     * (chromosome). Every other combination must be reported. Field values below are all individually
+     * valid so the combination rule is the only thing under test.
+     */
+    @Nested
+    public class ChromosomeFieldCombinationTest {
+
+        private static final String COMBINATION_ERROR = "invalid combination of optional chromosome fields";
+
+        private static final String NAME = "seq1_valid";
+        private static final String TYPE = "chromosome";
+        private static final String LOCATION = "Mitochondrion";
+
+        // --- valid combinations ---
+
+        @Test
+        void shouldPass_whenNoChromosomeFieldsPresent() { // table row 1: contig (unplaced)
+            assertFalse(combinationErrors(null, null, null).stream().anyMatch(e -> e.contains(COMBINATION_ERROR)));
+        }
+
+        @Test
+        void shouldPass_whenOnlyChromosomeNamePresent() { // table row 2.a: unlocalized
+            assertFalse(combinationErrors(NAME, null, null).stream().anyMatch(e -> e.contains(COMBINATION_ERROR)));
+        }
+
+        @Test
+        void shouldPass_whenAllThreeChromosomeFieldsPresent() { // table row 4: chromosome
+            assertFalse(combinationErrors(NAME, TYPE, LOCATION).stream().anyMatch(e -> e.contains(COMBINATION_ERROR)));
+        }
+
+        // --- invalid combinations ---
+
+        @Test
+        void shouldFail_whenOnlyChromosomeTypePresent() { // table row 2.b
+            assertTrue(combinationErrors(null, TYPE, null).stream().anyMatch(e -> e.contains(COMBINATION_ERROR)));
+        }
+
+        @Test
+        void shouldFail_whenOnlyChromosomeLocationPresent() { // table row 2.c
+            assertTrue(combinationErrors(null, null, LOCATION).stream().anyMatch(e -> e.contains(COMBINATION_ERROR)));
+        }
+
+        @Test
+        void shouldFail_whenChromosomeTypeAndLocationPresentWithoutName() { // table row 3.a
+            assertTrue(combinationErrors(null, TYPE, LOCATION).stream().anyMatch(e -> e.contains(COMBINATION_ERROR)));
+        }
+
+        @Test
+        void shouldFail_whenChromosomeNameAndLocationPresentWithoutType() { // table row 3.b
+            assertTrue(combinationErrors(NAME, null, LOCATION).stream().anyMatch(e -> e.contains(COMBINATION_ERROR)));
+        }
+
+        @Test
+        void shouldFail_whenChromosomeNameAndTypePresentWithoutLocation() { // table row 3.c
+            assertTrue(combinationErrors(NAME, TYPE, null).stream().anyMatch(e -> e.contains(COMBINATION_ERROR)));
+        }
+
+        private List<String> combinationErrors(String name, String type, String location) {
+            FastaHeader h = new FastaHeader();
+            h.setDescription("desc");
+            h.setMoleculeType("genomic DNA");
+            h.setTopology("linear");
+            h.setChromosomeName(name);
+            h.setChromosomeType(type);
+            h.setChromosomeLocation(location);
+            return FastaHeaderFormatValidation.validate(h);
         }
     }
 
