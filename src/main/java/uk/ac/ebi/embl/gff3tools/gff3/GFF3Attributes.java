@@ -74,4 +74,5 @@ public class GFF3Attributes {
     public static final String PARTIAL = "partial";
     public static final String TRANSLATION = "translation";
     public static final String CODON_START = "codon_start";
+    public static final String TRANS_TABLE = "trans_table";
 }
