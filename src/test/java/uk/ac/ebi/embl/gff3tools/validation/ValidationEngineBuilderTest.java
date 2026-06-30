@@ -12,10 +12,12 @@ package uk.ac.ebi.embl.gff3tools.validation;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.DuplicateValidationRuleException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
@@ -41,6 +43,16 @@ class ValidationEngineBuilderTest {
     static class TestFixB implements Fix {
         @FixMethod(rule = "TEST_FIX_B_RULE", type = ValidationType.FEATURE)
         public void fix(GFF3Feature feature, int line) {}
+    }
+
+    @Gff3Fix(name = "RECORDING_FIX", description = "Records whether its fix method ran")
+    static class RecordingFix implements Fix {
+        boolean invoked = false;
+
+        @FixMethod(rule = "RECORDING_FIX_RULE", type = ValidationType.FEATURE)
+        public void fix(GFF3Feature feature, int line) {
+            invoked = true;
+        }
     }
 
     @Gff3Fix(name = "TEST_FIX_A", description = "Duplicate name fix")
@@ -169,6 +181,49 @@ class ValidationEngineBuilderTest {
     }
 
     @Test
+    @DisplayName("build() with overrideClassRules disabling a class keeps it out of the registry")
+    void build_withOverrideClassRules_disablesValidatorClass() {
+        // overrideClassRules is keyed by the class-level @Gff3Validation/@Gff3Fix name.
+        ValidationEngine engine = new ValidationEngineBuilder()
+                .disableAutodetectValidationsAndFixes()
+                .withValidator(new TestValidationA()) // name = "TEST_VALIDATION_A"
+                .overrideClassRules(Map.of("TEST_VALIDATION_A", false))
+                .build();
+
+        ValidationRegistry registry = getRegistry(engine);
+        assertTrue(
+                registry.getValidations().isEmpty(),
+                "Validator class disabled via overrideClassRules should not be registered");
+    }
+
+    @Test
+    @DisplayName("build() with overrideMethodFixs disabling a fix rule skips that fix at runtime")
+    void build_withOverrideMethodFixs_disablesFixExecution() throws Exception {
+        GFF3Feature feature = TestUtils.createGFF3Feature("featureName", "parentName", new HashMap<>());
+
+        // Baseline: without an override the fix runs (FixMethod.enabled defaults to true).
+        RecordingFix enabledFix = new RecordingFix();
+        ValidationEngine enabledEngine = new ValidationEngineBuilder()
+                .disableAutodetectValidationsAndFixes()
+                .disableAutodetectContextProviders()
+                .withFix(enabledFix)
+                .build();
+        enabledEngine.executeFixes(feature, 1);
+        assertTrue(enabledFix.invoked, "Fix should run when its rule is not overridden");
+
+        // overrideMethodFixs is keyed by the FixMethod rule, and a false value skips the fix.
+        RecordingFix disabledFix = new RecordingFix();
+        ValidationEngine disabledEngine = new ValidationEngineBuilder()
+                .disableAutodetectValidationsAndFixes()
+                .disableAutodetectContextProviders()
+                .withFix(disabledFix)
+                .overrideMethodFixs(Map.of("RECORDING_FIX_RULE", false))
+                .build();
+        disabledEngine.executeFixes(feature, 1);
+        assertFalse(disabledFix.invoked, "Fix should be skipped when its rule is overridden to false");
+    }
+
+    @Test
     @DisplayName("build() with explicit fix overriding scanned replaces scanned fix")
     void build_withExplicitFixOverridingScanned_replacesScannedFix() {
         OverrideLocusTagFix overrideInstance = new OverrideLocusTagFix();
@@ -244,6 +299,28 @@ class ValidationEngineBuilderTest {
         ValidationContext ctx = engine.getContext();
         assertEquals("hello", ctx.get(String.class), "String provider should be resolvable");
         assertEquals(42, ctx.get(Integer.class), "Integer provider should be resolvable");
+    }
+
+    @Test
+    @DisplayName("build() with excludeProvider drops the type even when explicitly supplied")
+    void build_withExcludedProvider_keepsTypeOffContext() {
+        StringProvider stringProvider = new StringProvider("hello");
+        IntegerProvider integerProvider = new IntegerProvider(42);
+
+        ValidationEngine engine = new ValidationEngineBuilder()
+                .disableAutodetectContextProviders()
+                .withProvider(stringProvider)
+                .withProvider(integerProvider)
+                .excludeProvider(String.class)
+                .build();
+
+        ValidationContext ctx = engine.getContext();
+        assertEquals(1, ctx.getNumberOfProviders(), "Only the non-excluded provider should remain");
+        assertEquals(42, ctx.get(Integer.class), "Non-excluded provider should be resolvable");
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> ctx.get(String.class),
+                "Excluded provider should NOT be resolvable even though it was explicitly supplied");
     }
 
     @Test

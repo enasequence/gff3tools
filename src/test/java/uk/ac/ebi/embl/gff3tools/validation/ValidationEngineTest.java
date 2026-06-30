@@ -28,6 +28,7 @@ import uk.ac.ebi.embl.gff3tools.exception.DuplicateValidationRuleException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 public class ValidationEngineTest {
@@ -66,8 +67,9 @@ public class ValidationEngineTest {
         ValidationEngineBuilder validationEngineBuilder = new ValidationEngineBuilder();
 
         // With fail-fast enabled, validation should throw immediately
-        ValidationEngine validationEngine =
-                validationEngineBuilder.failFast(true).build();
+        ValidationEngine validationEngine = validationEngineBuilder
+                .failFast(true)
+                .build();
 
         GFF3Feature invalidFeature =
                 new GFF3Feature(Optional.empty(), Optional.empty(), "", Optional.empty(), "", "", 0L, 2L, "", "", "");
