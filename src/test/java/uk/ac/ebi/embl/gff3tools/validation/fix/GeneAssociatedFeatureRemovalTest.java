@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
@@ -97,5 +98,123 @@ public class GeneAssociatedFeatureRemovalTest {
         geneAssociatedFeatureRemoval.fixAnnotation(gff3Annotation, 1);
         assertEquals(3, gff3Annotation.getFeatures().size());
         assertFalse(gff3Annotation.getFeatures().contains(f4));
+    }
+
+    // Parent-clearing tests
+
+    @Test
+    public void geneWithNoId_childParentReferenceNotCleared() {
+        GFF3Feature gene = new GFF3Feature(
+                Optional.empty(),
+                Optional.empty(),
+                TestUtils.DEFAULT_ACCESSION,
+                Optional.empty(),
+                ".",
+                "gene",
+                100L,
+                200L,
+                ".",
+                "+",
+                "");
+        GFF3Feature cds = cdsWithParent("gene_1", 100L, 200L);
+        gff3Annotation.setFeatures(new ArrayList<>(List.of(gene, cds)));
+
+        geneAssociatedFeatureRemoval.fixAnnotation(gff3Annotation, 1);
+
+        assertFalse(gff3Annotation.getFeatures().contains(gene));
+        assertEquals(Optional.of("gene_1"), cds.getParentId());
+        assertEquals("gene_1", cds.getAttribute("Parent").orElse(null));
+    }
+
+    @Test
+    public void multipleChildrenSameRemovedGene_allParentReferencesCleared() {
+        GFF3Feature gene = geneWithId("gene_1", 100L, 200L);
+        GFF3Feature cds1 = cdsWithParent("gene_1", 100L, 200L);
+        GFF3Feature cds2 = new GFF3Feature(
+                Optional.of("cds_2"),
+                Optional.of("gene_1"),
+                TestUtils.DEFAULT_ACCESSION,
+                Optional.empty(),
+                ".",
+                OntologyTerm.CDS.name(),
+                100L,
+                200L,
+                ".",
+                "+",
+                "");
+        cds2.addAttribute("Parent", "gene_1");
+        gff3Annotation.setFeatures(new ArrayList<>(List.of(gene, cds1, cds2)));
+
+        geneAssociatedFeatureRemoval.fixAnnotation(gff3Annotation, 1);
+
+        assertFalse(gff3Annotation.getFeatures().contains(gene));
+        assertTrue(cds1.getParentId().isEmpty());
+        assertTrue(cds2.getParentId().isEmpty());
+        assertTrue(cds1.getAttribute("Parent").isEmpty());
+        assertTrue(cds2.getAttribute("Parent").isEmpty());
+    }
+
+    @Test
+    public void childOfKeptGene_parentReferenceUnchanged() {
+        GFF3Feature removedGene = geneWithId("gene_1", 100L, 200L);
+        GFF3Feature keptGene = geneWithId("gene_2", 300L, 400L);
+        GFF3Feature cdsMatchingRemovedGene = cdsWithParent("gene_1", 100L, 200L);
+        GFF3Feature cdsChildOfKeptGene = new GFF3Feature(
+                Optional.of("cds_2"),
+                Optional.of("gene_2"),
+                TestUtils.DEFAULT_ACCESSION,
+                Optional.empty(),
+                ".",
+                OntologyTerm.CDS.name(),
+                300L,
+                500L,
+                ".",
+                "+",
+                "");
+        cdsChildOfKeptGene.addAttribute("Parent", "gene_2");
+        gff3Annotation.setFeatures(
+                new ArrayList<>(List.of(removedGene, keptGene, cdsMatchingRemovedGene, cdsChildOfKeptGene)));
+
+        geneAssociatedFeatureRemoval.fixAnnotation(gff3Annotation, 1);
+
+        assertFalse(gff3Annotation.getFeatures().contains(removedGene));
+        assertTrue(gff3Annotation.getFeatures().contains(keptGene));
+        assertTrue(cdsMatchingRemovedGene.getParentId().isEmpty());
+        assertEquals(Optional.of("gene_2"), cdsChildOfKeptGene.getParentId());
+        assertEquals("gene_2", cdsChildOfKeptGene.getAttribute("Parent").orElse(null));
+    }
+
+    private GFF3Feature geneWithId(String id, long start, long end) {
+        GFF3Feature gene = new GFF3Feature(
+                Optional.of(id),
+                Optional.empty(),
+                TestUtils.DEFAULT_ACCESSION,
+                Optional.empty(),
+                ".",
+                "gene",
+                start,
+                end,
+                ".",
+                "+",
+                "");
+        gene.addAttribute("ID", id);
+        return gene;
+    }
+
+    private GFF3Feature cdsWithParent(String parentId, long start, long end) {
+        GFF3Feature cds = new GFF3Feature(
+                Optional.of("cds_1"),
+                Optional.of(parentId),
+                TestUtils.DEFAULT_ACCESSION,
+                Optional.empty(),
+                ".",
+                OntologyTerm.CDS.name(),
+                start,
+                end,
+                ".",
+                "+",
+                "");
+        cds.addAttribute("Parent", parentId);
+        return cds;
     }
 }
