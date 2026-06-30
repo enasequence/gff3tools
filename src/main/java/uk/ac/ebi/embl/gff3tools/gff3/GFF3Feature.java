@@ -24,8 +24,11 @@ import lombok.Setter;
 @Getter
 @Setter
 public class GFF3Feature {
-    // Non-Mutable members used in constructor
+    // Non-Mutable members except parentId used in constructor
     final Optional<String> id;
+    // ParentId could be removed through some fix
+    // e.g. GeneAssociatedFeatureRemoval
+    @NonNull Optional<String> parentId;
     final String seqId;
     final Optional<Integer> seqIdVersion;
     final String source;
@@ -35,11 +38,6 @@ public class GFF3Feature {
     final String score;
     final String strand;
     final String phase;
-
-    // ParentId could be removed through some fix
-    // e.g. GeneAssociatedFeatureRemoval
-    @NonNull
-    Optional<String> parentId;
 
     @Getter(AccessLevel.NONE)
     @Setter(AccessLevel.NONE)
