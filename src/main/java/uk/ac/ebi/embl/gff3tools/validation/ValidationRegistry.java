@@ -97,17 +97,19 @@ public class ValidationRegistry {
 
         ValidationContext ctx = new ValidationContext();
 
-        // Explicitly registered providers, minus any whose type is excluded. Excluding a provider
-        // wins over both classpath autodetection and explicit registration, so the type ends up
-        // absent from the context entirely.
+        // Explicitly registered providers, minus any whose type is excluded or that report
+        // themselves inactive. Excluding a provider wins over both classpath autodetection and
+        // explicit registration; an inactive provider (e.g. one with no sources configured)
+        // self-skips. Either way the type ends up absent from the context entirely.
         List<ContextProvider<?>> explicitProviders = providers.stream()
                 .filter(provider -> !excludedProviderTypes.contains(provider.type()))
+                .filter(ContextProvider::isActive)
                 .collect(Collectors.toList());
 
         List<ContextProvider<?>> allProviders = new ArrayList<>();
         if (contextProviderClassPathScanningEnabled) {
             for (ContextProvider<?> provider : instantiateProviders()) {
-                if (excludedProviderTypes.contains(provider.type())) {
+                if (excludedProviderTypes.contains(provider.type()) || !provider.isActive()) {
                     continue;
                 }
                 allProviders.add(provider);

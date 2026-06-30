@@ -27,6 +27,19 @@ public interface ContextProvider<T> {
     Class<T> type();
 
     /**
+     * Returns true if this provider has enough state to be useful on the context.
+     * A provider returning false is silently skipped — neither autodetected nor
+     * explicitly registered instances of this type land on the context.
+     *
+     * <p>Override when a provider may be constructed but conditionally empty
+     * (e.g. no sources configured). Evaluated once at registration time, so the
+     * provider's state must be settled before the engine is built. Defaults to true.
+     */
+    default boolean isActive() {
+        return true;
+    }
+
+    /**
      * Lifecycle hook called after all providers are registered in the context
      * but before any fixes or validators are initialized.
      */

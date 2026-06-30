@@ -45,7 +45,6 @@ public class GFF3FileReaderTest {
      */
     ValidationEngine getValidationEngineFailFast() {
         return getValidationEngineBuilder()
-                .excludeProvider(FastaHeaderProvider.class)
                 .failFast(true)
                 .build();
     }

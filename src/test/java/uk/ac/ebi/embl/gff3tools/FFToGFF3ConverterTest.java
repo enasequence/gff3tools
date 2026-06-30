@@ -93,7 +93,6 @@ class FFToGFF3ConverterTest {
         if (metadataProvider != null) {
             engineBuilder.withProvider(metadataProvider);
         }
-        engineBuilder.excludeProvider(FastaHeaderProvider.class); // no fasta input here
         ValidationEngine engine = engineBuilder.build();
         FFToGff3Converter converter = new FFToGff3Converter(engine);
         try (BufferedReader testFileReader = Files.newBufferedReader(inputFile);

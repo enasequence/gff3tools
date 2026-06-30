@@ -73,19 +73,12 @@ public abstract class AbstractCommand implements Runnable {
         ValidationEngineBuilder builder =
                 new ValidationEngineBuilder().overrideMethodRules(ruleOverrides).failFast(failFast);
 
-        boolean suppliedFastaHeaderProvider = false;
+        // Providers gate their own registration via ContextProvider#isActive(). An empty
+        // FastaHeaderProvider (no header source supplied) reports inactive and is kept off the
+        // context, so header-aware rules such as FASTA_HEADER_MAPPING stay inert unless a caller
+        // supplies a real header source.
         for (ContextProvider<?> provider : additionalProviders) {
             builder.withProvider(provider);
-            if (provider.type() == FastaHeaderProvider.class) {
-                suppliedFastaHeaderProvider = true;
-            }
-        }
-
-        // When no caller supplies a FASTA header source, keep the autodetected (empty)
-        // FastaHeaderProvider out of the context. Otherwise header-aware rules such as
-        // FASTA_HEADER_MAPPING would fire against accessions for which no header was ever provided.
-        if (!suppliedFastaHeaderProvider) {
-            builder.excludeProvider(FastaHeaderProvider.class);
         }
 
         return builder.build();

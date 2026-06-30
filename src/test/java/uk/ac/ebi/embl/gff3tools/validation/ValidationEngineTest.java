@@ -68,7 +68,6 @@ public class ValidationEngineTest {
 
         // With fail-fast enabled, validation should throw immediately
         ValidationEngine validationEngine = validationEngineBuilder
-                .excludeProvider(FastaHeaderProvider.class)
                 .failFast(true)
                 .build();
 

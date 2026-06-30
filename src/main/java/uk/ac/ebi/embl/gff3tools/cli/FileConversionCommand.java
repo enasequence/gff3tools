@@ -158,12 +158,10 @@ public class FileConversionCommand extends AbstractCommand {
                     BufferedWriter outputWriter =
                             writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
                 SequenceLookup sequenceLookup = compositeProvider.hasSources() ? compositeProvider.get(null) : null;
-                // Only register the FASTA header provider when it actually carries a header source.
-                // An empty provider will otherwise trip header-aware rules (e.g. FASTA_HEADER_MAPPING)
-                // for conversions run without any FASTA header input.
-                ContextProvider<?>[] providers = headerProvider.hasSources()
-                        ? new ContextProvider<?>[] {compositeProvider, metadataProvider, headerProvider}
-                        : new ContextProvider<?>[] {compositeProvider, metadataProvider};
+                // The header provider self-skips when it carries no header source (see
+                // FastaHeaderProvider#isActive), so an empty one never lands on the context and
+                // header-aware rules (e.g. FASTA_HEADER_MAPPING) stay inert.
+                ContextProvider<?>[] providers = {compositeProvider, metadataProvider, headerProvider};
                 try (ValidationEngine engine = initValidationEngine(ruleOverrides, providers)) {
                     Converter converter =
                             getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal, sequenceLookup);
