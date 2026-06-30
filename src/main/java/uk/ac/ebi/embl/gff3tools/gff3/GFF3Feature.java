@@ -28,7 +28,9 @@ public class GFF3Feature {
     final Optional<String> id;
     // ParentId could be removed through some fix
     // e.g. GeneAssociatedFeatureRemoval
-    @NonNull Optional<String> parentId;
+    @NonNull
+    Optional<String> parentId;
+
     final String seqId;
     final Optional<Integer> seqIdVersion;
     final String source;
