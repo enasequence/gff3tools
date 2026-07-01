@@ -55,9 +55,8 @@ public abstract class AbstractCommand implements Runnable {
     protected ValidationEngine initValidationEngine(
             Map<String, RuleSeverity> ruleOverrides, ContextProvider<?>... additionalProviders) {
 
-        ValidationEngineBuilder builder = new ValidationEngineBuilder()
-                .overrideMethodRules(ruleOverrides)
-                .failFast(failFast);
+        ValidationEngineBuilder builder =
+                new ValidationEngineBuilder().overrideMethodRules(ruleOverrides).failFast(failFast);
 
         for (ContextProvider<?> provider : additionalProviders) {
             builder.withProvider(provider);

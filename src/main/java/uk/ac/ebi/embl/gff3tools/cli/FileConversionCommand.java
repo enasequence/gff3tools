@@ -147,7 +147,8 @@ public class FileConversionCommand extends AbstractCommand {
 
             CompositeSequenceProvider compositeProvider = Gff3ProviderFactory.buildCompositeProvider(sources);
             MasterMetadataProvider metadataProvider = Gff3ProviderFactory.buildMetadataProvider(masterFilePath);
-            FastaHeaderProvider headerProvider = Gff3ProviderFactory.buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
+            FastaHeaderProvider headerProvider =
+                    Gff3ProviderFactory.buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
 
             final FileSequenceSource inputFastaSourceFinal = inputFastaSource;
             // FASTA -> GFF3 reads the sequence exclusively through the shared FileSequenceSource,

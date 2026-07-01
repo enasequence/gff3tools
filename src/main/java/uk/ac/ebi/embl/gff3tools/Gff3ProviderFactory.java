@@ -54,8 +54,7 @@ public final class Gff3ProviderFactory {
      * Supports {@code .json} (MasterEntry JSON) and {@code .embl}/{@code .ff} (EMBL flatfile).
      * Returns an empty (no-source) provider when {@code masterEntryPath} is {@code null}.
      */
-    public static MasterMetadataProvider buildMetadataProvider(Path masterEntryPath)
-            throws ExitException {
+    public static MasterMetadataProvider buildMetadataProvider(Path masterEntryPath) throws ExitException {
         MasterMetadataProvider provider = new MasterMetadataProvider();
         if (masterEntryPath != null) {
             provider.addSource(parseMasterEntrySource(masterEntryPath));
@@ -76,9 +75,8 @@ public final class Gff3ProviderFactory {
             case "json" -> parseMasterEntryJson(path);
             case "embl", "ff" -> parseMasterEntryEmbl(path);
             default ->
-                throw new CLIException(
-                        "Unrecognized --master-entry file extension '." + ext
-                                + "'. Supported: .json (MasterEntry JSON), .embl/.ff (EMBL flatfile).");
+                throw new CLIException("Unrecognized --master-entry file extension '." + ext
+                        + "'. Supported: .json (MasterEntry JSON), .embl/.ff (EMBL flatfile).");
         };
     }
 
@@ -91,8 +89,8 @@ public final class Gff3ProviderFactory {
      * <p>Pass the same {@code sources} list used for {@link #buildCompositeProvider(List)} so each
      * FASTA file is opened only once.
      */
-    public static FastaHeaderProvider buildHeaderProvider(
-            List<FileSequenceSource> sources, Path fastaHeaderPath) throws ExitException {
+    public static FastaHeaderProvider buildHeaderProvider(List<FileSequenceSource> sources, Path fastaHeaderPath)
+            throws ExitException {
         FastaHeaderProvider headerProvider = new FastaHeaderProvider();
 
         for (FileSequenceSource fss : sources) {
@@ -133,8 +131,7 @@ public final class Gff3ProviderFactory {
         return (dot > 0 && dot < name.length() - 1) ? name.substring(dot + 1).toLowerCase() : "";
     }
 
-    private static MasterEntryJsonMetadataSource parseMasterEntryJson(Path path)
-            throws ExitException {
+    private static MasterEntryJsonMetadataSource parseMasterEntryJson(Path path) throws ExitException {
         if (!Files.exists(path)) {
             throw new NonExistingFile("The --master-entry file does not exist: " + path, null);
         }
@@ -159,8 +156,8 @@ public final class Gff3ProviderFactory {
         try (BufferedReader reader = Files.newBufferedReader(path)) {
             ReaderOptions readerOptions = new ReaderOptions();
             readerOptions.setIgnoreSequence(true);
-            EmblEntryReader entryReader = new EmblEntryReader(
-                    reader, EmblEntryReader.Format.EMBL_FORMAT, "master_reader", readerOptions);
+            EmblEntryReader entryReader =
+                    new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "master_reader", readerOptions);
             Entry masterEntry = null;
             while (entryReader.read() != null && entryReader.isEntry()) {
                 masterEntry = entryReader.getEntry();
