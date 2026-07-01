@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
+import uk.ac.ebi.embl.gff3tools.Gff3ProviderFactory;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
@@ -45,7 +46,7 @@ public class ValidationCommand extends AbstractCommand {
         try {
             List<FileSequenceSource> sources =
                     buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
-            CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
+            CompositeSequenceProvider compositeProvider = Gff3ProviderFactory.buildCompositeProvider(sources);
 
             try (ValidationEngine validationEngine = initValidationEngine(ruleOverrides, compositeProvider)) {
 

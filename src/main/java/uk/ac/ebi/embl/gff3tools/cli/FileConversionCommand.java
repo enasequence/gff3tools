@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.Converter;
+import uk.ac.ebi.embl.gff3tools.Gff3ProviderFactory;
 import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.exception.FormatSupportException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
@@ -144,9 +145,9 @@ public class FileConversionCommand extends AbstractCommand {
                 sources.add(inputFastaSource);
             }
 
-            CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
-            MasterMetadataProvider metadataProvider = buildMetadataProvider(masterFilePath);
-            FastaHeaderProvider headerProvider = buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
+            CompositeSequenceProvider compositeProvider = Gff3ProviderFactory.buildCompositeProvider(sources);
+            MasterMetadataProvider metadataProvider = Gff3ProviderFactory.buildMetadataProvider(masterFilePath);
+            FastaHeaderProvider headerProvider = Gff3ProviderFactory.buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
 
             final FileSequenceSource inputFastaSourceFinal = inputFastaSource;
             // FASTA -> GFF3 reads the sequence exclusively through the shared FileSequenceSource,

@@ -10,37 +10,22 @@
  */
 package uk.ac.ebi.embl.gff3tools.cli;
 
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import io.vavr.Function0;
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
-import uk.ac.ebi.embl.api.entry.Entry;
-import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
-import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
-import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
-import uk.ac.ebi.embl.gff3tools.metadata.*;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.CliFastaHeaderSource;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FileFastaHeaderSource;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
-import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 
 @Slf4j
@@ -70,8 +55,9 @@ public abstract class AbstractCommand implements Runnable {
     protected ValidationEngine initValidationEngine(
             Map<String, RuleSeverity> ruleOverrides, ContextProvider<?>... additionalProviders) {
 
-        ValidationEngineBuilder builder =
-                new ValidationEngineBuilder().overrideMethodRules(ruleOverrides).failFast(failFast);
+        ValidationEngineBuilder builder = new ValidationEngineBuilder()
+                .overrideMethodRules(ruleOverrides)
+                .failFast(failFast);
 
         for (ContextProvider<?> provider : additionalProviders) {
             builder.withProvider(provider);
@@ -100,27 +86,10 @@ public abstract class AbstractCommand implements Runnable {
         }
     }
 
-    protected static Optional<String> getFileExtension(Path path) {
-        String name = path.getFileName().toString();
-
-        if (name.endsWith(".gz")) {
-            name = name.substring(0, name.length() - 3);
-        }
-
-        int dot = name.lastIndexOf('.');
-        return (dot > 0 && dot < name.length() - 1) ? Optional.of(name.substring(dot + 1)) : Optional.empty();
-    }
-
-    // -- Sequence helpers shared by translate / validation / conversion --
+    // ── CLI sequence spec helpers ─────────────────────────────────────────────
 
     protected record ParsedSequenceSpec(String key, Path path) {}
 
-    /**
-     * Parses a {@code --sequence} spec into an optional key and a path.
-     *
-     * <p>Format: {@code [key:]path}. The key is separated by the first colon that is not
-     * part of the path (i.e., the character before the colon contains no path separators).
-     */
     protected ParsedSequenceSpec parseSequenceSpec(String spec) {
         int colonIdx = spec.indexOf(':');
         if (colonIdx > 0) {
@@ -133,9 +102,6 @@ public abstract class AbstractCommand implements Runnable {
         return new ParsedSequenceSpec(null, Path.of(spec));
     }
 
-    /**
-     * Resolve the sequence format from an explicit override or the file extension.
-     */
     protected SequenceFormat resolveSequenceFormat(Path path, SequenceFormat explicitFormat) {
         if (explicitFormat != null) {
             return explicitFormat;
@@ -169,148 +135,12 @@ public abstract class AbstractCommand implements Runnable {
         return sources;
     }
 
-    /**
-     * Builds a {@link CompositeSequenceProvider} from parsed {@code --sequence} specs.
-     * Returns an empty provider (no sources) if no specs are provided.
-     */
-    protected CompositeSequenceProvider buildCompositeProvider(
-            List<String> sequenceSpecs, SequenceFormat sequenceFormat) {
-        return buildCompositeProvider(buildFastaSourceList(sequenceSpecs, sequenceFormat));
-    }
-
-    /**
-     * Builds a {@link CompositeSequenceProvider} from pre-built sequence sources.
-     */
-    protected CompositeSequenceProvider buildCompositeProvider(List<FileSequenceSource> sources) {
-        CompositeSequenceProvider compositeProvider = new CompositeSequenceProvider();
-        for (FileSequenceSource source : sources) {
-            compositeProvider.addSource(source);
+    protected static Optional<String> getFileExtension(Path path) {
+        String name = path.getFileName().toString();
+        if (name.endsWith(".gz")) {
+            name = name.substring(0, name.length() - 3);
         }
-        return compositeProvider;
-    }
-
-    /**
-     * Builds a {@link FastaHeaderProvider} from pre-built sequence sources and optional
-     * {@code --fasta-header} path. FASTA-embedded headers take precedence over the CLI header.
-     *
-     * <p>Callers should pass the same sources list they used for
-     * {@link #buildCompositeProvider(List)} so each FASTA file is opened only once.
-     */
-    protected FastaHeaderProvider buildHeaderProvider(List<FileSequenceSource> sources, Path fastaHeaderPath)
-            throws ExitException {
-        FastaHeaderProvider headerProvider = new FastaHeaderProvider();
-
-        // Register FASTA-embedded header sources (highest priority).
-        // getSeqIdToHeader() returns an empty map for non-FASTA sources, so no format check needed.
-        for (FileSequenceSource fss : sources) {
-            Map<String, FastaHeader> headerMap = fss.getSeqIdToHeader();
-            if (!headerMap.isEmpty()) {
-                headerProvider.addSource(new FileFastaHeaderSource(headerMap));
-            }
-        }
-
-        // Register CLI global header source (lowest priority / fallback)
-        if (fastaHeaderPath != null) {
-            FastaHeader cliHeader = parseFastaHeaderJson(fastaHeaderPath);
-            headerProvider.addSource(new CliFastaHeaderSource(cliHeader));
-        }
-
-        return headerProvider;
-    }
-
-    /**
-     * Builds an {@link MasterMetadataProvider} from the optional {@code --master-entry} path.
-     * The master entry file (MasterEntry JSON or EMBL flatfile) is the sole metadata source.
-     */
-    protected MasterMetadataProvider buildMetadataProvider(Path masterEntryPath) throws ExitException {
-        MasterMetadataProvider provider = new MasterMetadataProvider();
-        if (masterEntryPath != null) {
-            provider.addSource(parseMasterEntrySource(masterEntryPath));
-        }
-        return provider;
-    }
-
-    /**
-     * Parses a master entry file based on its extension.
-     * .json -> MasterEntry JSON deserialized into MasterMetadata
-     * .embl/.ff -> EMBL flatfile parsed into Entry and adapted to MasterMetadata
-     */
-    protected MasterMetadataSource parseMasterEntrySource(Path path) throws ExitException {
-        String ext = getFileExtension(path).orElse("").toLowerCase();
-        return switch (ext) {
-            case "json" -> parseMasterEntryJson(path);
-            case "embl", "ff" -> parseMasterEntryEmbl(path);
-            default ->
-                throw new CLIException("Unrecognized --master-entry file extension '." + ext
-                        + "'. Supported: .json (MasterEntry JSON), .embl/.ff (EMBL flatfile).");
-        };
-    }
-
-    /**
-     * Parses a MasterEntry JSON file into an MasterMetadata.
-     */
-    private MasterEntryJsonMetadataSource parseMasterEntryJson(Path path) throws ExitException {
-        if (!Files.exists(path)) {
-            throw new NonExistingFile("The --master-entry file does not exist: " + path, null);
-        }
-        try {
-            ObjectMapper mapper = JsonMapper.builder()
-                    .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
-                    .build();
-            MasterMetadata meta = mapper.readValue(path.toFile(), MasterMetadata.class);
-            return new MasterEntryJsonMetadataSource(meta);
-        } catch (NoSuchFileException e) {
-            throw new NonExistingFile("The --master-entry file does not exist: " + path, e);
-        } catch (IOException e) {
-            throw new ReadException(
-                    "Failed to read --master-entry JSON file '%s': %s".formatted(path, e.getMessage()), e);
-        }
-    }
-
-    /**
-     * Parses an EMBL flatfile master entry into an EmblEntryMetadataSource adapter.
-     */
-    private EmblEntryMetadataSource parseMasterEntryEmbl(Path path) throws ExitException {
-        if (!Files.exists(path)) {
-            throw new NonExistingFile("The --master-entry file does not exist: " + path, null);
-        }
-        try (BufferedReader reader = Files.newBufferedReader(path)) {
-            ReaderOptions readerOptions = new ReaderOptions();
-            readerOptions.setIgnoreSequence(true);
-            EmblEntryReader entryReader =
-                    new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "master_reader", readerOptions);
-            Entry masterEntry = null;
-            while (entryReader.read() != null && entryReader.isEntry()) {
-                masterEntry = entryReader.getEntry();
-            }
-            if (masterEntry == null) {
-                throw new CLIException("No entry found in --master-entry EMBL file: " + path);
-            }
-            return new EmblEntryMetadataSource(masterEntry);
-        } catch (IOException e) {
-            throw new ReadException(
-                    "Failed to read --master-entry EMBL file '%s': %s".formatted(path, e.getMessage()), e);
-        }
-    }
-
-    /**
-     * Parses a JSON file at the given path into a {@link FastaHeader}.
-     * Fails fast with a descriptive error if the file is missing or malformed.
-     */
-    private FastaHeader parseFastaHeaderJson(Path path) throws ExitException {
-        if (!Files.exists(path)) {
-            throw new NonExistingFile("The --fasta-header file does not exist: " + path, null);
-        }
-        try {
-            ObjectMapper mapper = JsonMapper.builder()
-                    .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
-                    .build();
-            return mapper.readValue(path.toFile(), FastaHeader.class);
-        } catch (NoSuchFileException e) {
-            throw new NonExistingFile("The --fasta-header file does not exist: " + path, e);
-        } catch (IOException e) {
-            throw new ReadException(
-                    "Failed to read --fasta-header JSON file '%s': %s".formatted(path, e.getMessage()), e);
-        }
+        int dot = name.lastIndexOf('.');
+        return (dot > 0 && dot < name.length() - 1) ? Optional.of(name.substring(dot + 1)) : Optional.empty();
     }
 }
