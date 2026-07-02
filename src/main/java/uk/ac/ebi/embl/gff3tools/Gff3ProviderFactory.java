@@ -66,14 +66,15 @@ public final class Gff3ProviderFactory {
      * Parses a master-entry file into the appropriate {@link MasterMetadataSource} by extension.
      * <ul>
      *   <li>{@code .json} → {@link MasterEntryJsonMetadataSource}</li>
-     *   <li>{@code .embl} / {@code .ff} → {@link EmblEntryMetadataSource}</li>
+     *   <li>{@code .embl} / {@code .ff} / {@code .dat}  → {@link EmblEntryMetadataSource}</li>
+     *   <li> .dat file is produced by sequence processing pipeline
      * </ul>
      */
     public static MasterMetadataSource parseMasterEntrySource(Path path) throws ExitException {
         String ext = getFileExtension(path);
         return switch (ext) {
             case "json" -> parseMasterEntryJson(path);
-            case "embl", "ff" -> parseMasterEntryEmbl(path);
+            case "embl", "ff", "dat" -> parseMasterEntryEmbl(path);
             default ->
                 throw new CLIException("Unrecognized --master-entry file extension '." + ext
                         + "'. Supported: .json (MasterEntry JSON), .embl/.ff (EMBL flatfile).");
