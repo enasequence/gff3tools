@@ -94,6 +94,15 @@ public final class ControlledVocabularyUtils {
         }
     }
 
+    /**
+     * chromosome_location values, i.e. the INSDC-controlled {@code /organelle} vocabulary as listed
+     * in the <a href="https://ena-docs.readthedocs.io/en/latest/submit/fileprep/assembly.html">ENA
+     * assembly submission docs</a> (Chromosome List File, optional fourth column). This field is
+     * optional and independent of chromosome_name/chromosome_type: eukaryotic chromosomes are
+     * assumed nuclear (and prokaryotic chromosomes/plasmids cytoplasmic) whenever it is absent, so
+     * there is deliberately no "nuclear" entry here -- see {@code FastaHeaderNormalisationFix}, which
+     * normalises a submitted literal "nuclear" value back to absent.
+     */
     public enum ChromosomeLocation implements ControlledVocabulary {
         MACRONUCLEAR("Macronuclear"),
         NUCLEOMORPH("Nucleomorph"),

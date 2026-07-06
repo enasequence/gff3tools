@@ -504,7 +504,9 @@ class GFF3MapperTest {
     }
 
     @Test
-    void unrecognisedChromosomeLocationIsPassedThrough() throws Exception {
+    void unrecognisedChromosomeLocationIsSkipped() throws Exception {
+        // Values outside the INSDC /organelle vocabulary must not reach EMBL output --
+        // gff3tools now owns validation of chromosome_location instead of deferring to it.
         MasterMetadata h = createMetadataWithChromosome(null, "Unknown", null);
 
         MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
@@ -513,9 +515,9 @@ class GFF3MapperTest {
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
-        List<Qualifier> quals = source.getQualifiers("organelle");
-        assertFalse(quals.isEmpty(), "Expected /organelle qualifier for unrecognised location");
-        assertEquals("unknown", quals.get(0).getValue());
+        assertTrue(
+                source.getQualifiers("organelle").isEmpty(),
+                "Unrecognised chromosome_location should not produce /organelle qualifier");
     }
 
     @Test

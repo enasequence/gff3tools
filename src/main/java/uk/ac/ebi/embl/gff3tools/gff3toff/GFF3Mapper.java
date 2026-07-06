@@ -53,6 +53,7 @@ import uk.ac.ebi.embl.gff3tools.metadata.SubmissionAccount;
 import uk.ac.ebi.embl.gff3tools.metadata.SubmitterDetails;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
@@ -1060,21 +1061,34 @@ public class GFF3Mapper {
     }
 
     /**
-     * Maps chromosome_location to the EMBL /organelle qualifier on the source feature.
-     * "Nuclear" is the default and produces no qualifier. All other values are passed through
-     * as-is (lowercased); downstream EMBL validation checks qualifier values.
+     * Maps chromosome_location to the EMBL /organelle qualifier on the source feature. Per the ENA
+     * assembly submission docs, a chromosome is assumed nuclear (no /organelle qualifier) when this
+     * field is absent; "nuclear" is handled as a case-insensitive synonym for absent here as a
+     * defensive fallback for inputs (e.g. the legacy MasterMetadata/master-JSON path) that were not
+     * normalised by {@code FastaHeaderNormalisationFix}, which strips it to null for the FastaHeader
+     * path. All other values are matched case-insensitively against the INSDC {@code /organelle}
+     * controlled vocabulary ({@link ControlledVocabularyUtils.ChromosomeLocation}); this tool now
+     * owns validation of that vocabulary, so unrecognised values are rejected here rather than
+     * passed through to EMBL.
      *
      * @param chromosomeLocation  the chromosome location string from the FASTA header
      * @param sourceFt            the source feature to add the qualifier to
      */
     private void mapChromosomeLocation(String chromosomeLocation, SourceFeature sourceFt) {
-        String normalised = chromosomeLocation.toLowerCase();
-
-        if ("nuclear".equals(normalised)) {
+        if ("nuclear".equalsIgnoreCase(chromosomeLocation)) {
             // Nuclear is the default -- no organelle qualifier needed
             return;
         }
 
-        sourceFt.addQualifier("organelle", normalised);
+        Optional<String> canonical = ControlledVocabularyUtils.canonicalise(
+                ControlledVocabularyUtils.ChromosomeLocation.class, chromosomeLocation);
+        if (canonical.isEmpty()) {
+            LOGGER.warn(
+                    "Unrecognised chromosome_location value '{}'; skipping organelle qualifier mapping",
+                    chromosomeLocation);
+            return;
+        }
+
+        sourceFt.addQualifier("organelle", canonical.get().toLowerCase());
     }
 }

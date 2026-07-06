@@ -84,7 +84,11 @@ public class FastaHeaderNormalisationFix implements Fix {
             ControlledVocabularyUtils.canonicalise(ChromosomeType.class, header.getChromosomeType())
                     .ifPresent(header::setChromosomeType);
         }
-        if (header.getChromosomeLocation() != null) {
+        if ("nuclear".equalsIgnoreCase(header.getChromosomeLocation())) {
+            // "nuclear" is not part of the INSDC /organelle vocabulary -- per the ENA assembly
+            // submission docs, a nuclear chromosome_location is expressed by omitting the field.
+            header.setChromosomeLocation(null);
+        } else if (header.getChromosomeLocation() != null) {
             ControlledVocabularyUtils.canonicalise(ChromosomeLocation.class, header.getChromosomeLocation())
                     .ifPresent(header::setChromosomeLocation);
         }

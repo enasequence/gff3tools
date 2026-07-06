@@ -87,6 +87,22 @@ public class FastaHeaderNormalisationFixTest {
     }
 
     @Test
+    public void normalisesNuclearChromosomeLocationToAbsent() {
+        // "nuclear" is not part of the INSDC /organelle vocabulary -- per the ENA assembly
+        // submission docs, a nuclear chromosome_location is expressed by omitting the field.
+        FastaHeader header = new FastaHeader();
+        header.setChromosomeLocation("nuclear");
+        assertNull(runVocabularyFix(header).getChromosomeLocation());
+    }
+
+    @Test
+    public void normalisesNuclearChromosomeLocationToAbsentRegardlessOfCase() {
+        FastaHeader header = new FastaHeader();
+        header.setChromosomeLocation("NUCLEAR");
+        assertNull(runVocabularyFix(header).getChromosomeLocation());
+    }
+
+    @Test
     public void normalisesChromosomeTypeDashAndCase() {
         FastaHeader header = new FastaHeader();
         header.setChromosomeType("Linkage-Group");
