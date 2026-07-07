@@ -24,6 +24,17 @@ import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 public interface TaxonProvider extends ContextProvider<TaxonProvider> {
 
     /**
+     * Returns the submission-level {@link Taxon}, or empty if not available.
+     *
+     * <p>Implementations that are initialised with a specific taxon ID (e.g.
+     * {@code TaxonomyClientTaxonProvider}) resolve and return that taxon here.
+     * The default returns empty so that lookup-only implementations remain valid.
+     */
+    default Optional<Taxon> resolve() {
+        return Optional.empty();
+    }
+
+    /**
      * Returns the {@link Taxon} for the given taxon ID, or empty if not available.
      */
     Optional<Taxon> resolve(long taxId);
