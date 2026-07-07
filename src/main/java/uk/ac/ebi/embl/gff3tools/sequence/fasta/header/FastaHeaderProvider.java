@@ -46,10 +46,28 @@ public class FastaHeaderProvider implements ContextProvider<FastaHeaderProvider>
     }
 
     /**
+     * A header provider with no sources can never resolve a header, so it is kept off the
+     * context entirely. This stops header-aware rules (e.g. FASTA_HEADER_MAPPING) from firing
+     * against accessions for which no header was ever supplied.
+     */
+    @Override
+    public boolean isActive() {
+        return hasSources();
+    }
+
+    /**
      * Registers a header source. Sources are queried in registration order.
      */
     public void addSource(FastaHeaderSource source) {
         this.sources.add(source);
+    }
+
+    /**
+     * Returns {@code true} if at least one header source is registered. A provider with no sources
+     * can never resolve a header, so callers may choose not to register it at all.
+     */
+    public boolean hasSources() {
+        return !sources.isEmpty();
     }
 
     /**

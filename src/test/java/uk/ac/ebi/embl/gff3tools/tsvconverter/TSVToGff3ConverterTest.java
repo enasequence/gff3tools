@@ -221,6 +221,7 @@ public class TSVToGff3ConverterTest {
                 );
         return new ValidationEngineBuilder()
                 .overrideMethodRules(overriddenRules)
+                .failFast(true)
                 .build();
     }
 }

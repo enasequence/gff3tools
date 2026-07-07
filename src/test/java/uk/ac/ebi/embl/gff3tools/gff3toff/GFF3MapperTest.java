@@ -491,8 +491,8 @@ class GFF3MapperTest {
     }
 
     @Test
-    void chromosomeLocationNuclearAddsNoQualifier() throws Exception {
-        MasterMetadata h = createMetadataWithChromosome(null, "Nuclear", null);
+    void chromosomeLocationNucleusAddsNoQualifier() throws Exception {
+        MasterMetadata h = createMetadataWithChromosome(null, "Nucleus", null);
 
         MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
 
@@ -500,11 +500,26 @@ class GFF3MapperTest {
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
-        assertTrue(source.getQualifiers("organelle").isEmpty(), "Nuclear should not produce /organelle qualifier");
+        assertTrue(source.getQualifiers("organelle").isEmpty(), "Nucleus should not produce /organelle qualifier");
     }
 
     @Test
-    void unrecognisedChromosomeLocationIsPassedThrough() throws Exception {
+    void chromosomeLocationCytoplasmAddsNoQualifier() throws Exception {
+        MasterMetadata h = createMetadataWithChromosome(null, "Cytoplasm", null);
+
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
+
+        SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
+        assertTrue(source.getQualifiers("organelle").isEmpty(), "Cytoplasm should not produce /organelle qualifier");
+    }
+
+    @Test
+    void unrecognisedChromosomeLocationIsSkipped() throws Exception {
+        // Values outside the INSDC /organelle vocabulary must not reach EMBL output --
+        // gff3tools now owns validation of chromosome_location instead of deferring to it.
         MasterMetadata h = createMetadataWithChromosome(null, "Unknown", null);
 
         MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", h));
@@ -513,9 +528,9 @@ class GFF3MapperTest {
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
 
         SourceFeature source = (SourceFeature) entry.getFeatures().get(0);
-        List<Qualifier> quals = source.getQualifiers("organelle");
-        assertFalse(quals.isEmpty(), "Expected /organelle qualifier for unrecognised location");
-        assertEquals("unknown", quals.get(0).getValue());
+        assertTrue(
+                source.getQualifiers("organelle").isEmpty(),
+                "Unrecognised chromosome_location should not produce /organelle qualifier");
     }
 
     @Test

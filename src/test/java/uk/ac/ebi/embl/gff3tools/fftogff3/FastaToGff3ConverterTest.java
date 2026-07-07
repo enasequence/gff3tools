@@ -33,6 +33,18 @@ class FastaToGff3ConverterTest {
 
     private static final Path SINGLE_SEQUENCE = Path.of("src/test/resources/fasta_to_gff3/single_sequence.fasta");
 
+    /**
+     * Builds an engine wired with the input FASTA's headers, mirroring the conversion command
+     * (and {@link #feedsSequenceLookupAndFastaHeaderContextFromInputFasta()}). Without a populated
+     * {@link FastaHeaderProvider}, the header-aware fixes have no header to resolve for the
+     * annotation's accession.
+     */
+    private static ValidationEngine engineWithHeaders(FileSequenceSource source) {
+        FastaHeaderProvider headerProvider = new FastaHeaderProvider();
+        headerProvider.addSource(new FileFastaHeaderSource(source.getSeqIdToHeader()));
+        return new ValidationEngineBuilder().withProvider(headerProvider).build();
+    }
+
     /** Runs the converter and returns the GFF3 output as a string. */
     private static String runConversion(FastaToGff3Converter converter) throws Exception {
         StringWriter output = new StringWriter();
@@ -47,8 +59,8 @@ class FastaToGff3ConverterTest {
     void convertsFastaToGff3WithGapFeatures() throws Exception {
         Path expected = Path.of("src/test/resources/fasta_to_gff3/single_sequence_expected.gff3");
 
-        ValidationEngine engine = new ValidationEngineBuilder().build();
         FileSequenceSource source = new FileSequenceSource(SINGLE_SEQUENCE, SequenceFormat.fasta, null);
+        ValidationEngine engine = engineWithHeaders(source);
         // minGapLength=1 reports every run of N, so both gaps in the fixture are emitted.
         FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 1);
 
@@ -65,8 +77,8 @@ class FastaToGff3ConverterTest {
 
     @Test
     void emitsGapTypeAndLinkageEvidenceWhenSupplied() throws Exception {
-        ValidationEngine engine = new ValidationEngineBuilder().build();
         FileSequenceSource source = new FileSequenceSource(SINGLE_SEQUENCE, SequenceFormat.fasta, null);
+        ValidationEngine engine = engineWithHeaders(source);
         FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 1, "within scaffold", "unspecified");
 
         String actual = runConversion(converter);
@@ -79,8 +91,8 @@ class FastaToGff3ConverterTest {
     @Test
     void minGapLengthFiltersShortGaps() throws Exception {
         // Fixture has a 10bp gap (45..54) and a 4bp gap (99..102).
-        ValidationEngine engine = new ValidationEngineBuilder().build();
         FileSequenceSource source = new FileSequenceSource(SINGLE_SEQUENCE, SequenceFormat.fasta, null);
+        ValidationEngine engine = engineWithHeaders(source);
         FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 10);
 
         String actual = runConversion(converter);
@@ -96,10 +108,12 @@ class FastaToGff3ConverterTest {
     @Test
     void convertsEmptySequenceWithNoGaps() throws Exception {
         Path fasta = Files.createTempFile("empty", ".fasta");
-        Files.writeString(fasta, ">EMPTY | {\"description\":\"No gaps\"}\nATGCATGCATGC\n");
+        Files.writeString(
+                fasta,
+                ">EMPTY | {\"description\":\"No gaps\", \"molecule_type\":\"GENOMIC DNA\", \"topology\":\"linear\"}\nATGCATGCATGC\n");
 
-        ValidationEngine engine = new ValidationEngineBuilder().build();
         FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
+        ValidationEngine engine = engineWithHeaders(source);
         FastaToGff3Converter converter =
                 new FastaToGff3Converter(engine, source, FastaToGff3Converter.DEFAULT_MIN_GAP_LENGTH);
 
@@ -117,10 +131,12 @@ class FastaToGff3ConverterTest {
     void convertsFastaWithSubmissionIdWithoutDot() throws Exception {
         // seqId without a "." should round-trip through the header parser and into the GFF3 seqId.
         Path fasta = Files.createTempFile("no_dot", ".fasta");
-        Files.writeString(fasta, ">TEST01 | {\"description\":\"No dot in id\"}\nATGCATGCNNNNNNNNNNATGCATGC\n");
+        Files.writeString(
+                fasta,
+                ">TEST01 | {\"description\":\"No dot in id\", \"molecule_type\":\"GENOMIC DNA\", \"topology\":\"linear\"}\nATGCATGCNNNNNNNNNNATGCATGC\n");
 
-        ValidationEngine engine = new ValidationEngineBuilder().build();
         FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
+        ValidationEngine engine = engineWithHeaders(source);
         FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 1);
 
         String actual = runConversion(converter);
@@ -149,11 +165,11 @@ class FastaToGff3ConverterTest {
         Path fasta = Files.createTempFile("multi", ".fasta");
         Files.writeString(
                 fasta,
-                ">SEQ1.1 | {\"description\":\"first\"}\nATGCNNNNNNNNNNATGC\n"
-                        + ">SEQ2.1 | {\"description\":\"second\"}\nGGGGNNNNNNNNNNGGGG\n");
+                ">SEQ1.1 | {\"description\":\"first\", \"molecule_type\":\"GENOMIC DNA\", \"topology\":\"linear\"}\nATGCNNNNNNNNNNATGC\n"
+                        + ">SEQ2.1 | {\"description\":\"second\", \"molecule_type\":\"GENOMIC DNA\", \"topology\":\"linear\"}\nGGGGNNNNNNNNNNGGGG\n");
 
-        ValidationEngine engine = new ValidationEngineBuilder().build();
         FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
+        ValidationEngine engine = engineWithHeaders(source);
         FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 1);
 
         String actual = runConversion(converter);
