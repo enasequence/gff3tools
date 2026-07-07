@@ -28,7 +28,6 @@ import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3FileFactory;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
@@ -44,9 +43,7 @@ public class GFF3FileReaderTest {
      * Use this for tests that expect exceptions to be thrown immediately on error.
      */
     ValidationEngine getValidationEngineFailFast() {
-        return getValidationEngineBuilder()
-                .failFast(true)
-                .build();
+        return getValidationEngineBuilder().failFast(true).build();
     }
 
     ValidationEngineBuilder getValidationEngineBuilder() {
