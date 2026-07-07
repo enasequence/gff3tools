@@ -1072,7 +1072,10 @@ public class GFF3Mapper {
      * @param sourceFt            the source feature to add the qualifier to
      */
     private void mapChromosomeLocation(String chromosomeLocation, SourceFeature sourceFt) {
-        if ("nucleus".equalsIgnoreCase(chromosomeLocation) || "cytoplasm".equalsIgnoreCase(chromosomeLocation)) {
+        if (ControlledVocabularyUtils.ChromosomeLocation.NUCLEUS.getValue().equalsIgnoreCase(chromosomeLocation)
+                || ControlledVocabularyUtils.ChromosomeLocation.CYTOPLASM
+                        .getValue()
+                        .equalsIgnoreCase(chromosomeLocation)) {
             // Nucleus/Cytoplasm denote the default location -- no organelle qualifier needed
             return;
         }
