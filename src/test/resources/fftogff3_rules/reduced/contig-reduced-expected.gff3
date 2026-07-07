@@ -10,7 +10,7 @@ CAXMMS010000001.1	.	intron	18867	18934	.	-	.	ID=intron;locus_tag=STYATE_LOCUS1;n
 CAXMMS010000001.1	.	intron	19229	19306	.	-	.	ID=intron_1;locus_tag=STYATE_LOCUS1;note=ID%3ASTYATI00000000002,source%3AGeneMark.hmm3;
 CAXMMS010000001.1	.	intron	19518	20591	.	-	.	ID=intron_2;locus_tag=STYATE_LOCUS1;note=ID%3ASTYATI00000000003,source%3AGeneMark.hmm3;
 CAXMMS010000001.1	.	intron	20786	22581	.	-	.	ID=intron_3;locus_tag=STYATE_LOCUS1;note=ID%3ASTYATI00000000004,source%3AGeneMark.hmm3;
-CAXMMS010000001.1	.	ncRNA_gene	22770	24247	.	-	.	ID=ncRNA_gene;locus_tag=STYATE_LOCUS2;note=ID%3ASTYATG00000000002,source%3AGeneMark.hmm3;
+CAXMMS010000001.1	.	gene	22770	24247	.	-	.	ID=gene;locus_tag=STYATE_LOCUS2;note=ID%3ASTYATG00000000002,source%3AGeneMark.hmm3;
 CAXMMS010000001.1	.	mRNA	22770	22798	.	-	.	ID=mRNA;locus_tag=STYATE_LOCUS2;note=ID%3ASTYATM00000000003,source%3AGeneMark.hmm3;product=hypothetical protein;
 CAXMMS010000001.1	.	mRNA	24193	24247	.	-	.	ID=mRNA;locus_tag=STYATE_LOCUS2;note=ID%3ASTYATM00000000003,source%3AGeneMark.hmm3;product=hypothetical protein;
 

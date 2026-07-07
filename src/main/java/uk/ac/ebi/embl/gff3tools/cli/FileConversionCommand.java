@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.Converter;
+import uk.ac.ebi.embl.gff3tools.Gff3ProviderFactory;
 import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.exception.FormatSupportException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
@@ -35,6 +36,7 @@ import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FastaToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToGFF3Converter;
 import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
@@ -143,9 +145,10 @@ public class FileConversionCommand extends AbstractCommand {
                 sources.add(inputFastaSource);
             }
 
-            CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
-            MasterMetadataProvider metadataProvider = buildMetadataProvider(masterFilePath);
-            FastaHeaderProvider headerProvider = buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
+            CompositeSequenceProvider compositeProvider = Gff3ProviderFactory.buildCompositeProvider(sources);
+            MasterMetadataProvider metadataProvider = Gff3ProviderFactory.buildMetadataProvider(masterFilePath);
+            FastaHeaderProvider headerProvider =
+                    Gff3ProviderFactory.buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
 
             final FileSequenceSource inputFastaSourceFinal = inputFastaSource;
             // FASTA -> GFF3 reads the sequence exclusively through the shared FileSequenceSource,
@@ -155,9 +158,11 @@ public class FileConversionCommand extends AbstractCommand {
                             : createInputReader();
                     BufferedWriter outputWriter =
                             writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
+                SequenceLookup sequenceLookup = compositeProvider.hasSources() ? compositeProvider.get(null) : null;
                 try (ValidationEngine engine =
                         initValidationEngine(ruleOverrides, compositeProvider, metadataProvider, headerProvider)) {
-                    Converter converter = getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal);
+                    Converter converter =
+                            getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal, sequenceLookup);
                     converter.convert(inputReader, outputWriter);
                 }
             }
@@ -246,10 +251,11 @@ public class FileConversionCommand extends AbstractCommand {
             ValidationEngine engine,
             ConversionFileFormat inputFileType,
             ConversionFileFormat outputFileType,
-            FileSequenceSource inputFastaSource)
+            FileSequenceSource inputFastaSource,
+            SequenceLookup sequenceLookup)
             throws FormatSupportException, CLIException {
         if (inputFileType == ConversionFileFormat.gff3 && outputFileType == ConversionFileFormat.embl) {
-            return new Gff3ToFFConverter(engine, inputFilePath);
+            return new Gff3ToFFConverter(engine, inputFilePath, sequenceLookup);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
             // Master metadata (from -m) is registered on the engine via buildMetadataProvider
             return new FFToGff3Converter(engine);
