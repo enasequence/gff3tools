@@ -260,9 +260,9 @@ public enum ConversionUtils {
         }
 
         // Fallback to submitter accession if sequence accession is not available
-        return !StringUtil.isNullOrEmpty(entry.getSubmitterAccession())
-                ? entry.getSubmitterAccession()
-                : entry.getPrimaryAccession();
+        return entry.getSubmitterAccession() == null || entry.getSubmitterAccession().isEmpty()
+                ? entry.getPrimaryAccession()
+                : entry.getSubmitterAccession();
     }
 
     /**
