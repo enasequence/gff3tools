@@ -1061,15 +1061,12 @@ public class GFF3Mapper {
     }
 
     /**
-     * Maps chromosome_location to the EMBL /organelle qualifier on the source feature. Per the ENA
-     * assembly submission docs, a chromosome is assumed nuclear (no /organelle qualifier) when this
-     * field is absent; "nuclear" is handled as a case-insensitive synonym for absent here as a
-     * defensive fallback for inputs (e.g. the legacy MasterMetadata/master-JSON path) that were not
-     * normalised by {@code FastaHeaderNormalisationFix}, which strips it to null for the FastaHeader
-     * path. All other values are matched case-insensitively against the INSDC {@code /organelle}
-     * controlled vocabulary ({@link ControlledVocabularyUtils.ChromosomeLocation}); this tool now
-     * owns validation of that vocabulary, so unrecognised values are rejected here rather than
-     * passed through to EMBL.
+     * Maps chromosome_location to the EMBL /organelle qualifier on the source feature. "Nuclear" is
+     * an allowed value denoting the nuclear/cytoplasmic default and maps to no /organelle qualifier
+     * (handled case-insensitively). All other values are matched case-insensitively against the
+     * INSDC {@code /organelle} controlled vocabulary ({@link ControlledVocabularyUtils.ChromosomeLocation});
+     * this tool now owns validation of that vocabulary, so unrecognised values are rejected here
+     * rather than passed through to EMBL.
      *
      * @param chromosomeLocation  the chromosome location string from the FASTA header
      * @param sourceFt            the source feature to add the qualifier to

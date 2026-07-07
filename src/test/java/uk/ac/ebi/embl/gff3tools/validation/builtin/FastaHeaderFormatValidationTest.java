@@ -241,23 +241,9 @@ public class FastaHeaderFormatValidationTest {
         }
 
         @Test
-        void shouldPassValidation_whenNuclearChromosomeOmitsLocation() {
-            // Per the ENA assembly submission docs, a nuclear chromosome is expressed by omitting
-            // chromosome_location entirely -- name + type alone is a valid combination.
-            FastaHeader h = validHeader();
-            h.setChromosomeName("1");
-            h.setChromosomeType("chromosome");
-
-            List<String> errors = FastaHeaderFormatValidation.validate(h);
-
-            assertTrue(errors.isEmpty());
-        }
-
-        @Test
-        void shouldFail_whenChromosomeLocationIsLiteralNuclear() {
-            // "nuclear" is not part of the INSDC /organelle vocabulary, so validate() alone rejects
-            // it as an invalid value; FastaHeaderNormalisationFix strips it to null upstream of
-            // validation in the real pipeline (see FastaHeaderNormalisationFixTest).
+        void shouldPassValidation_whenChromosomeLocationIsNuclear() {
+            // "Nuclear" is an allowed value denoting the nuclear/cytoplasmic default; per the team
+            // decision chromosome_location is mandatory for a chromosome, so all three fields are set.
             FastaHeader h = validHeader();
             h.setChromosomeName("1");
             h.setChromosomeType("chromosome");
@@ -265,7 +251,20 @@ public class FastaHeaderFormatValidationTest {
 
             List<String> errors = FastaHeaderFormatValidation.validate(h);
 
-            assertTrue(errors.contains("invalid chromosome_location - see allowed values list"));
+            assertTrue(errors.isEmpty());
+        }
+
+        @Test
+        void shouldFail_whenNuclearChromosomeOmitsLocation() {
+            // chromosome_location is mandatory when a chromosome is described (name + type present),
+            // so omitting it is an invalid combination even for a nuclear chromosome.
+            FastaHeader h = validHeader();
+            h.setChromosomeName("1");
+            h.setChromosomeType("chromosome");
+
+            List<String> errors = FastaHeaderFormatValidation.validate(h);
+
+            assertTrue(errors.stream().anyMatch(e -> e.contains("invalid combination of optional chromosome fields")));
         }
 
         @Test
@@ -329,12 +328,11 @@ public class FastaHeaderFormatValidationTest {
     }
 
     /**
-     * Covers the allowed combinations of the optional chromosome fields, mirroring the ENA Chromosome
-     * List File column structure: none present (unplaced contig), chromosome_name only (unlocalized),
-     * or chromosome_name + chromosome_type with chromosome_location optional on top (chromosome; a
-     * nuclear/cytoplasmic chromosome omits chromosome_location). Every other combination must be
-     * reported. Field values below are all individually valid so the combination rule is the only
-     * thing under test.
+     * Covers the allowed combinations of the optional chromosome fields. Per the team decision,
+     * chromosome_location is mandatory when a chromosome is described, so only three combinations are
+     * valid: none present (unplaced contig), chromosome_name only (unlocalized), or all three present
+     * (chromosome). Every other combination must be reported. Field values below are all individually
+     * valid so the combination rule is the only thing under test.
      */
     @Nested
     public class ChromosomeFieldCombinationTest {
@@ -358,13 +356,8 @@ public class FastaHeaderFormatValidationTest {
         }
 
         @Test
-        void shouldPass_whenAllThreeChromosomeFieldsPresent() { // table row 4: chromosome, explicit location
+        void shouldPass_whenAllThreeChromosomeFieldsPresent() { // table row 4: chromosome
             assertFalse(combinationErrors(NAME, TYPE, LOCATION).stream().anyMatch(e -> e.contains(COMBINATION_ERROR)));
-        }
-
-        @Test
-        void shouldPass_whenChromosomeNameAndTypePresentWithoutLocation() { // table row 4: chromosome, nuclear default
-            assertFalse(combinationErrors(NAME, TYPE, null).stream().anyMatch(e -> e.contains(COMBINATION_ERROR)));
         }
 
         // --- invalid combinations ---
@@ -387,6 +380,11 @@ public class FastaHeaderFormatValidationTest {
         @Test
         void shouldFail_whenChromosomeNameAndLocationPresentWithoutType() { // table row 3.b
             assertTrue(combinationErrors(NAME, null, LOCATION).stream().anyMatch(e -> e.contains(COMBINATION_ERROR)));
+        }
+
+        @Test
+        void shouldFail_whenChromosomeNameAndTypePresentWithoutLocation() { // table row 3.c
+            assertTrue(combinationErrors(NAME, TYPE, null).stream().anyMatch(e -> e.contains(COMBINATION_ERROR)));
         }
 
         private List<String> combinationErrors(String name, String type, String location) {

@@ -128,17 +128,16 @@ class ControlledVocabularyUtilsTest {
     }
 
     @Test
-    void normaliseChromosomeLocationReturnsEmptyForNuclear() {
-        // "Nuclear" is deliberately not part of the INSDC /organelle vocabulary -- per the ENA
-        // assembly submission docs, a nuclear chromosome is expressed by omitting the field, not by
-        // an explicit value. FastaHeaderNormalisationFix strips a submitted "nuclear" to null.
+    void normaliseChromosomeLocationReturnsEnumForNuclear() {
+        // "Nuclear" is an allowed value (a gff3tools extension of the INSDC /organelle list) used to
+        // express the nuclear/cytoplasmic default explicitly, per the team decision.
         FastaHeader header = new FastaHeader();
         header.setChromosomeLocation("Nuclear");
 
         Optional<ControlledVocabularyUtils.ChromosomeLocation> chromosomeLocation =
                 ControlledVocabularyUtils.normaliseChromosomeLocation(header);
 
-        assertTrue(chromosomeLocation.isEmpty());
+        assertEquals(Optional.of(ControlledVocabularyUtils.ChromosomeLocation.NUCLEAR), chromosomeLocation);
     }
 
     @Test

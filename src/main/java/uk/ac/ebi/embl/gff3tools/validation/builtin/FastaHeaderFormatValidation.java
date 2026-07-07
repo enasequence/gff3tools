@@ -106,10 +106,9 @@ public class FastaHeaderFormatValidation implements Validation {
      *       </li>
      *     </ul>
      *   </li>
-     *   <li><b>Optional field combinations:</b> chromosome_type requires chromosome_name, and
-     *     chromosome_location requires both chromosome_name and chromosome_type. The only valid
-     *     combinations are: none present, chromosome_name only, or chromosome_name + chromosome_type
-     *     (with chromosome_location optional in that last case).</li>
+     *   <li><b>Optional field combinations:</b> chromosome_type and chromosome_location may only be
+     *     present when chromosome_name, chromosome_type and chromosome_location are all present. The
+     *     only valid combinations are: none present, chromosome_name only, or all three present.</li>
      * </ul>
      *
      * @param header the {@link FastaHeader} to validate
@@ -189,20 +188,19 @@ public class FastaHeaderFormatValidation implements Validation {
     /**
      * Validates that the optional chromosome fields appear only in one of the allowed combinations.
      *
-     * <p>Mirrors the ENA Chromosome List File column structure (see the <a
+     * <p>Per the team decision (2026-07), chromosome_location is a mandatory attribute whenever a
+     * chromosome is described, with {@code Nuclear} available as an explicit value for the
+     * nuclear/cytoplasmic default (see the <a
      * href="https://ena-docs.readthedocs.io/en/latest/submit/fileprep/assembly.html">ENA assembly
-     * submission docs</a>): chromosome_name and chromosome_type are mandatory together to describe a
-     * chromosome list entry, and chromosome_location is an independently optional fourth column on
-     * top of that entry (a chromosome is assumed nuclear/cytoplasmic when it is absent). Valid
-     * combinations are:</p>
+     * submission docs</a>). Valid combinations are:</p>
      * <ul>
      *   <li>none present &rarr; unplaced contig</li>
      *   <li>chromosome_name only &rarr; unlocalized</li>
-     *   <li>chromosome_name and chromosome_type, chromosome_location optional &rarr; chromosome</li>
+     *   <li>chromosome_name, chromosome_type and chromosome_location all present &rarr; chromosome</li>
      * </ul>
      *
-     * <p>Equivalently: chromosome_type requires chromosome_name, and chromosome_location requires
-     * both chromosome_name and chromosome_type. Any other combination is rejected.</p>
+     * <p>Equivalently: whenever chromosome_type or chromosome_location is present, all three fields
+     * must be present. Any other combination is rejected.</p>
      *
      * @param header the {@link FastaHeader} to inspect
      * @param errors the error list to append to when the combination is invalid
@@ -216,12 +214,10 @@ public class FastaHeaderFormatValidation implements Validation {
         boolean hasType = !isBlank(header.getChromosomeType());
         boolean hasLocation = !isBlank(header.getChromosomeLocation());
 
-        boolean validCombination = (!hasType && !hasLocation) || (hasName && hasType);
-
-        if (!validCombination) {
-            errors.add("invalid combination of optional chromosome fields - chromosome_type requires "
-                    + "chromosome_name, and chromosome_location requires chromosome_name and chromosome_type "
-                    + "(allowed combinations: none, chromosome_name only, chromosome_name + chromosome_type, "
+        if ((hasType || hasLocation) && !(hasName && hasType && hasLocation)) {
+            errors.add("invalid combination of optional chromosome fields - chromosome_type and "
+                    + "chromosome_location may only be present when chromosome_name, chromosome_type and "
+                    + "chromosome_location are all present (allowed combinations: none, chromosome_name only, "
                     + "or all three)");
         }
     }
