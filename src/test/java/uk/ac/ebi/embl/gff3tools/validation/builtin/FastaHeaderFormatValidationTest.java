@@ -241,13 +241,13 @@ public class FastaHeaderFormatValidationTest {
         }
 
         @Test
-        void shouldPassValidation_whenChromosomeLocationIsNuclear() {
-            // "Nuclear" is an allowed value denoting the nuclear/cytoplasmic default; per the team
+        void shouldPassValidation_whenChromosomeLocationIsNucleus() {
+            // "Nucleus"/"Cytoplasm" are allowed values denoting the default location; per the team
             // decision chromosome_location is mandatory for a chromosome, so all three fields are set.
             FastaHeader h = validHeader();
             h.setChromosomeName("1");
             h.setChromosomeType("chromosome");
-            h.setChromosomeLocation("Nuclear");
+            h.setChromosomeLocation("Nucleus");
 
             List<String> errors = FastaHeaderFormatValidation.validate(h);
 
@@ -255,9 +255,21 @@ public class FastaHeaderFormatValidationTest {
         }
 
         @Test
-        void shouldFail_whenNuclearChromosomeOmitsLocation() {
+        void shouldPassValidation_whenChromosomeLocationIsCytoplasm() {
+            FastaHeader h = validHeader();
+            h.setChromosomeName("1");
+            h.setChromosomeType("plasmid");
+            h.setChromosomeLocation("Cytoplasm");
+
+            List<String> errors = FastaHeaderFormatValidation.validate(h);
+
+            assertTrue(errors.isEmpty());
+        }
+
+        @Test
+        void shouldFail_whenChromosomeOmitsLocation() {
             // chromosome_location is mandatory when a chromosome is described (name + type present),
-            // so omitting it is an invalid combination even for a nuclear chromosome.
+            // so omitting it is an invalid combination even for the default location.
             FastaHeader h = validHeader();
             h.setChromosomeName("1");
             h.setChromosomeType("chromosome");

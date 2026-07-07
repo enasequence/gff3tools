@@ -97,14 +97,16 @@ public final class ControlledVocabularyUtils {
     /**
      * chromosome_location values: the INSDC-controlled {@code /organelle} vocabulary listed in the
      * <a href="https://ena-docs.readthedocs.io/en/latest/submit/fileprep/assembly.html">ENA assembly
-     * submission docs</a> (Chromosome List File, fourth column), extended with {@link #NUCLEAR}. Per
-     * the team decision (2026-07), chromosome_location is a mandatory attribute when a chromosome is
-     * described, so the nuclear/cytoplasmic default is expressed explicitly with {@code Nuclear}
-     * rather than by omitting the field. {@code Nuclear} is a gff3tools extension of the INSDC list
-     * and maps to no {@code /organelle} qualifier in EMBL output.
+     * submission docs</a> (Chromosome List File, fourth column), extended with {@link #NUCLEUS} and
+     * {@link #CYTOPLASM}. Per the team decision (2026-07), chromosome_location is a mandatory
+     * attribute when a chromosome is described, so the default location is expressed explicitly with
+     * {@code Nucleus} (the eukaryotic default) or {@code Cytoplasm} (the prokaryotic/plasmid default)
+     * rather than by omitting the field. Both are gff3tools extensions of the INSDC list and map to
+     * no {@code /organelle} qualifier in EMBL output.
      */
     public enum ChromosomeLocation implements ControlledVocabulary {
-        NUCLEAR("Nuclear"),
+        NUCLEUS("Nucleus"),
+        CYTOPLASM("Cytoplasm"),
         MACRONUCLEAR("Macronuclear"),
         NUCLEOMORPH("Nucleomorph"),
         MITOCHONDRION("Mitochondrion"),

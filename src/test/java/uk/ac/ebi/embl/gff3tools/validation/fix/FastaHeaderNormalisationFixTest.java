@@ -87,19 +87,19 @@ public class FastaHeaderNormalisationFixTest {
     }
 
     @Test
-    public void normalisesNuclearChromosomeLocationCase() {
-        // "Nuclear" is an allowed value (gff3tools extension of the INSDC /organelle list) used to
-        // express the nuclear/cytoplasmic default explicitly; it canonicalises like any other value.
+    public void normalisesNucleusChromosomeLocationCase() {
+        // "Nucleus"/"Cytoplasm" are allowed values (gff3tools extensions of the INSDC /organelle
+        // list) for the default location; they canonicalise like any other value.
         FastaHeader header = new FastaHeader();
-        header.setChromosomeLocation("nuclear");
-        assertEquals("Nuclear", runVocabularyFix(header).getChromosomeLocation());
+        header.setChromosomeLocation("nucleus");
+        assertEquals("Nucleus", runVocabularyFix(header).getChromosomeLocation());
     }
 
     @Test
-    public void normalisesNuclearChromosomeLocationRegardlessOfCase() {
+    public void normalisesCytoplasmChromosomeLocationRegardlessOfCase() {
         FastaHeader header = new FastaHeader();
-        header.setChromosomeLocation("NUCLEAR");
-        assertEquals("Nuclear", runVocabularyFix(header).getChromosomeLocation());
+        header.setChromosomeLocation("CYTOPLASM");
+        assertEquals("Cytoplasm", runVocabularyFix(header).getChromosomeLocation());
     }
 
     @Test

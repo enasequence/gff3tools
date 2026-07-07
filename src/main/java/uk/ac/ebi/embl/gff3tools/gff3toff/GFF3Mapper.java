@@ -1061,19 +1061,19 @@ public class GFF3Mapper {
     }
 
     /**
-     * Maps chromosome_location to the EMBL /organelle qualifier on the source feature. "Nuclear" is
-     * an allowed value denoting the nuclear/cytoplasmic default and maps to no /organelle qualifier
-     * (handled case-insensitively). All other values are matched case-insensitively against the
-     * INSDC {@code /organelle} controlled vocabulary ({@link ControlledVocabularyUtils.ChromosomeLocation});
-     * this tool now owns validation of that vocabulary, so unrecognised values are rejected here
-     * rather than passed through to EMBL.
+     * Maps chromosome_location to the EMBL /organelle qualifier on the source feature. "Nucleus"
+     * (eukaryotic default) and "Cytoplasm" (prokaryotic/plasmid default) are allowed values that map
+     * to no /organelle qualifier (handled case-insensitively). All other values are matched
+     * case-insensitively against the INSDC {@code /organelle} controlled vocabulary
+     * ({@link ControlledVocabularyUtils.ChromosomeLocation}); this tool now owns validation of that
+     * vocabulary, so unrecognised values are rejected here rather than passed through to EMBL.
      *
      * @param chromosomeLocation  the chromosome location string from the FASTA header
      * @param sourceFt            the source feature to add the qualifier to
      */
     private void mapChromosomeLocation(String chromosomeLocation, SourceFeature sourceFt) {
-        if ("nuclear".equalsIgnoreCase(chromosomeLocation)) {
-            // Nuclear is the default -- no organelle qualifier needed
+        if ("nucleus".equalsIgnoreCase(chromosomeLocation) || "cytoplasm".equalsIgnoreCase(chromosomeLocation)) {
+            // Nucleus/Cytoplasm denote the default location -- no organelle qualifier needed
             return;
         }
 

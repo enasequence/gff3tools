@@ -128,16 +128,27 @@ class ControlledVocabularyUtilsTest {
     }
 
     @Test
-    void normaliseChromosomeLocationReturnsEnumForNuclear() {
-        // "Nuclear" is an allowed value (a gff3tools extension of the INSDC /organelle list) used to
-        // express the nuclear/cytoplasmic default explicitly, per the team decision.
+    void normaliseChromosomeLocationReturnsEnumForNucleus() {
+        // "Nucleus" and "Cytoplasm" are allowed values (gff3tools extensions of the INSDC /organelle
+        // list) used to express the default location explicitly, per the team decision.
         FastaHeader header = new FastaHeader();
-        header.setChromosomeLocation("Nuclear");
+        header.setChromosomeLocation("Nucleus");
 
         Optional<ControlledVocabularyUtils.ChromosomeLocation> chromosomeLocation =
                 ControlledVocabularyUtils.normaliseChromosomeLocation(header);
 
-        assertEquals(Optional.of(ControlledVocabularyUtils.ChromosomeLocation.NUCLEAR), chromosomeLocation);
+        assertEquals(Optional.of(ControlledVocabularyUtils.ChromosomeLocation.NUCLEUS), chromosomeLocation);
+    }
+
+    @Test
+    void normaliseChromosomeLocationReturnsEnumForCytoplasm() {
+        FastaHeader header = new FastaHeader();
+        header.setChromosomeLocation("Cytoplasm");
+
+        Optional<ControlledVocabularyUtils.ChromosomeLocation> chromosomeLocation =
+                ControlledVocabularyUtils.normaliseChromosomeLocation(header);
+
+        assertEquals(Optional.of(ControlledVocabularyUtils.ChromosomeLocation.CYTOPLASM), chromosomeLocation);
     }
 
     @Test

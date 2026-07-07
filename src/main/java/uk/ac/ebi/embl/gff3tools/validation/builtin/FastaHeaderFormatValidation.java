@@ -189,8 +189,8 @@ public class FastaHeaderFormatValidation implements Validation {
      * Validates that the optional chromosome fields appear only in one of the allowed combinations.
      *
      * <p>Per the team decision (2026-07), chromosome_location is a mandatory attribute whenever a
-     * chromosome is described, with {@code Nuclear} available as an explicit value for the
-     * nuclear/cytoplasmic default (see the <a
+     * chromosome is described, with {@code Nucleus} (eukaryotic) and {@code Cytoplasm}
+     * (prokaryotic/plasmid) available as explicit values for the default location (see the <a
      * href="https://ena-docs.readthedocs.io/en/latest/submit/fileprep/assembly.html">ENA assembly
      * submission docs</a>). Valid combinations are:</p>
      * <ul>

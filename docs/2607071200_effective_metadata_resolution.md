@@ -46,12 +46,12 @@ of this tool owning validation rather than deferring to downstream EMBL validati
 
 After discussion with the team, **`chromosome_location` is a mandatory attribute** when a
 chromosome is described (i.e. whenever `chromosome_name` and `chromosome_type` are present),
-rather than optional-with-an-implied-nuclear-default. To keep the nuclear/cytoplasmic default
-expressible, **`Nuclear` is supported as an allowed value** of the controlled vocabulary. This
-supersedes the interim change on branch `TTENA-258-fastaheader-fixes-and-moved-validations`
-(commit `cdd6822`) that had made `chromosome_location` optional and stripped a submitted
-`"nuclear"` to absent; that approach is reverted in favour of the mandatory + explicit-`Nuclear`
-model described here.
+rather than optional-with-an-implied-default. To keep the default location expressible,
+**`Nucleus` (eukaryotic) and `Cytoplasm` (prokaryotic/plasmid) are supported as allowed values**
+of the controlled vocabulary, both mapping to no `/organelle` qualifier. This supersedes the
+interim change on branch `TTENA-258-fastaheader-fixes-and-moved-validations` (commit `cdd6822`)
+that had made `chromosome_location` optional and stripped a submitted `"nuclear"` to absent; that
+approach is reverted in favour of the mandatory + explicit-default-value model described here.
 
 # Usage Guidelines
 
@@ -63,12 +63,13 @@ model described here.
 - **Chromosome fields (per team decision):**
   - Allowed combinations: *none* (unplaced contig), *chromosome_name only* (unlocalised), or
     *chromosome_name + chromosome_type + chromosome_location* (chromosome).
-  - `chromosome_location` is mandatory for the chromosome combination; use `Nuclear` for a
-    chromosome residing in the nucleus (or cytoplasm for prokaryotes). Organelle chromosomes use
-    the INSDC `/organelle` values (`Mitochondrion`, `Chloroplast`, …).
+  - `chromosome_location` is mandatory for the chromosome combination; use `Nucleus` for a
+    eukaryotic chromosome residing in the nucleus or `Cytoplasm` for a prokaryotic
+    chromosome/plasmid. Organelle chromosomes use the INSDC `/organelle` values (`Mitochondrion`,
+    `Chloroplast`, …).
 - **Extending vocabularies:** add values to `ControlledVocabularyUtils.ChromosomeLocation`
-  (canonical casing as the enum value). `Nuclear` is a gff3tools extension of the INSDC
-  `/organelle` list; it maps to *no* `/organelle` qualifier in EMBL output.
+  (canonical casing as the enum value). `Nucleus` and `Cytoplasm` are gff3tools extensions of the
+  INSDC `/organelle` list; both map to *no* `/organelle` qualifier in EMBL output.
 
 # System Overview / High-Level Design
 
@@ -127,8 +128,8 @@ public record ChromosomeFields(String name, String type, String location) {
 ```
 
 `ControlledVocabularyUtils.ChromosomeLocation` keeps the 18 INSDC `/organelle` values **plus**
-`NUCLEAR("Nuclear")`, documented as a gff3tools extension that maps to no `/organelle`
-qualifier.
+`NUCLEUS("Nucleus")` and `CYTOPLASM("Cytoplasm")`, gff3tools extensions that both map to no
+`/organelle` qualifier (the eukaryotic and prokaryotic/plasmid defaults respectively).
 
 ## `MetadataResolver`
 
@@ -169,7 +170,7 @@ private void applyMetadata(GFF3SequenceRegion region, Entry entry, Sequence seq,
 }
 ```
 
-`mapChromosomeLocation` keeps mapping `Nuclear` (case-insensitively) to no `/organelle`
+`mapChromosomeLocation` keeps mapping `Nucleus`/`Cytoplasm` (case-insensitively) to no `/organelle`
 qualifier; all other values resolve via the controlled vocabulary, and an unrecognised value is
 rejected rather than passed through.
 
@@ -189,10 +190,10 @@ rejected rather than passed through.
   closes the "no validation on master" gap, but does not address the silent cross-source
   fall-through, because neither source is individually wrong. Rejected as insufficient given both
   sources routinely coexist.
-- **`chromosome_location` optional with implied nuclear default** (interim commit `cdd6822`).
-  Faithful to the ENA "optional fourth column" wording, but leaves the nuclear case implicit and
+- **`chromosome_location` optional with implied default** (interim commit `cdd6822`).
+  Faithful to the ENA "optional fourth column" wording, but leaves the default case implicit and
   under-specified. Superseded by the team decision to make the attribute mandatory with explicit
-  `Nuclear`.
+  `Nucleus`/`Cytoplasm` values.
 - **Full unification of the two providers into one metadata model.** Larger refactor of the
   provider chain; deferred — the resolver captures the merge without forcing the providers to
   merge upstream.
@@ -211,14 +212,14 @@ rejected rather than passed through.
 # Testing Strategy
 
 - **Unit:** `ChromosomeFields.validate()`/`.normalised()` (combination matrix incl. mandatory
-  location and `Nuclear`); `MetadataResolver` precedence (master-only, header-only, both,
+  location and `Nucleus`/`Cytoplasm`); `MetadataResolver` precedence (master-only, header-only, both,
   gap-fill, neither).
 - **Integration:** `GFF3HeaderIntegrationTest`-style cases exercising `--master-entry` alone,
   `--fasta-header` alone, and both together for the same accession, asserting the resolved
-  precedence and the emitted EMBL `/organelle` (or its absence for `Nuclear`).
+  precedence and the emitted EMBL `/organelle` (or its absence for `Nucleus`/`Cytoplasm`).
 - **Regression:** existing `GFF3MapperTest`, `FastaHeaderFormatValidationTest`,
   `ControlledVocabularyUtilsTest`, `FastaHeaderNormalisationFixTest` updated to the mandatory +
-  `Nuclear` model.
+  `Nucleus`/`Cytoplasm` model.
 
 # Deployment & Operations
 

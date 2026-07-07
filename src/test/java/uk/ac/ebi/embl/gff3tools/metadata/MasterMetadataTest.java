@@ -52,7 +52,7 @@ class MasterMetadataTest {
             assertEquals("This is a test assembly", meta.getComment());
             assertEquals("chr1", meta.getChromosomeName());
             assertEquals("Chromosome", meta.getChromosomeType());
-            assertEquals("Nuclear", meta.getChromosomeLocation());
+            assertEquals("Nucleus", meta.getChromosomeLocation());
             assertNotNull(meta.getFirstPublic());
             assertNotNull(meta.getLastUpdated());
             assertEquals("chromosome", meta.getAssemblyLevel());
