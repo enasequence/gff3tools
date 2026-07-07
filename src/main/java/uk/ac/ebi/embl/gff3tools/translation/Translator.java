@@ -89,8 +89,9 @@ public class Translator {
 
         setCompoundPartiality(sortedFeatures);
 
-        int translationTable =
-                feature.getAttribute(GFF3Attributes.TRANSL_TABLE).map(Integer::parseInt).orElse(DEFAULT_TRANSLATION_TABLE);
+        int translationTable = feature.getAttribute(GFF3Attributes.TRANSL_TABLE)
+                .map(Integer::parseInt)
+                .orElse(DEFAULT_TRANSLATION_TABLE);
 
         this.codonTranslator = new CodonTranslator(translationTable);
 
