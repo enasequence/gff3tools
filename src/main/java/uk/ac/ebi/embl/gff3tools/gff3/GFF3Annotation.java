@@ -90,6 +90,11 @@ public class GFF3Annotation implements IGFF3Feature {
         features.add(feature);
     }
 
+    /** Stable sort of features by ascending (start, end); preserves relative order of ties. */
+    public void sortFeatures() {
+        features.sort(Comparator.comparingLong(GFF3Feature::getStart).thenComparingLong(GFF3Feature::getEnd));
+    }
+
     public void merge(GFF3Annotation other) {
         if (this.sequenceRegion == null) {
             this.sequenceRegion = other.sequenceRegion;
