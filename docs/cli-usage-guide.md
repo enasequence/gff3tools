@@ -29,6 +29,7 @@ Add `help` after a subcommand name to see its options:
 $GFF3TOOLS help conversion
 $GFF3TOOLS help validation
 $GFF3TOOLS help translate
+$GFF3TOOLS help fix
 ```
 
 ---
@@ -201,18 +202,52 @@ $GFF3TOOLS translate \
 
 ---
 
-## `process` — process GFF3 and FASTA files
+## `fix` — regenerate gaps and apply fixes to a GFF3 file
 
-Validates and processes a GFF3 file together with a FASTA sequence file for a set of
-accessions. All three inputs are required.
+Runs the full fix pipeline (including gap regeneration) over a GFF3 file and an
+accompanying FASTA sequence, then writes the corrected GFF3. Gap features (`gap` /
+`assembly_gap`) present in the input are discarded and rebuilt from scratch using the
+runs of `N` bases found in the FASTA sequence; every other feature is left untouched.
+`-gff3`, `-o`, and a `--sequence` source are all required.
 
 ```bash
-$GFF3TOOLS process \
-  -accessions ACC001,ACC002,ACC003 \
-  -gff3 annotation.gff3 \
-  -fasta sequences.fasta \
-  -o processed.gff3
+# Basic — regenerate gaps using the default minimum N-run length (10)
+$GFF3TOOLS fix -gff3 annotation.gff3 --sequence sequences.fasta -o fixed.gff3
+
+# Custom minimum gap length
+$GFF3TOOLS fix -gff3 annotation.gff3 --sequence sequences.fasta \
+  --min-gap-length 50 -o fixed.gff3
+
+# Annotate regenerated gaps as assembly_gap with a gap_type that does not require linkage evidence
+$GFF3TOOLS fix -gff3 annotation.gff3 --sequence sequences.fasta \
+  --gap-type "between scaffolds" -o fixed.gff3
+
+# Gap type that requires linkage evidence (within scaffold, repeat within scaffold, contamination)
+$GFF3TOOLS fix -gff3 annotation.gff3 --sequence sequences.fasta \
+  --gap-type "within scaffold" --linkage-evidence "paired-ends" -o fixed.gff3
 ```
+
+### Options
+
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| `-gff3` | Yes | — | GFF3 input file |
+| `-o` | Yes | — | Fixed GFF3 output file (written atomically) |
+| `--sequence` | Yes (at least one) | — | Sequence source; see the Sequence sources section above. Gap regeneration needs the FASTA sequence, so this is required for `fix` |
+| `--min-gap-length`, `-mgl` | No | `10` | Minimum run of `N` bases reported as a gap feature |
+| `--gap-type`, `-gt` | No | — | Optional INSDC `gap_type` for regenerated gap features. When set, gaps map to `assembly_gap`; otherwise a plain `gap` is emitted |
+| `--linkage-evidence`, `-le` | No | — | Optional INSDC `linkage_evidence` for regenerated gap features. Only valid with a `gap_type` that requires it |
+| `--sequence-format` | No | inferred | See the Sequence sources section above |
+| `--fasta-header` | No | — | See the Sequence sources section above |
+| `--rules` | No | — | See the Common options section below |
+| `--fail-fast` | No | — | See the Common options section below |
+
+Valid `--gap-type` values: `within scaffold`, `between scaffolds`, `between scaffold`,
+`centromere`, `short arm`, `heterochromatin`, `telomere`, `repeat within scaffold`,
+`unknown`, `repeat between scaffolds`, `contamination`. `--linkage-evidence` is required
+when `--gap-type` is `within scaffold`, `repeat within scaffold`, or `contamination`, and
+not allowed for any other `gap_type`. Invalid combinations fail fast with a `CLIException`
+before any file is read.
 
 ---
 
