@@ -41,6 +41,8 @@ import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToGFF3Converter;
 import uk.ac.ebi.embl.gff3tools.utils.GapOptionsValidator;
 import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.fix.GapRegenerationFix;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
@@ -140,6 +142,14 @@ public class FileConversionCommand extends AbstractCommand {
                 sources.add(inputFastaSource);
             }
 
+            // Only the FASTA -> GFF3 branch exposes CLI gap options; every other conversion
+            // direction relies on the default classpath-discovered GapRegenerationFix instance,
+            // which is enabled by default and sequence-gated (no-op without a SequenceLookup).
+            List<Fix> extraFixes = List.of();
+            if (fromFileType == ConversionFileFormat.fasta && toFileType == ConversionFileFormat.gff3) {
+                extraFixes = List.of(new GapRegenerationFix(minGapLength, gapType, linkageEvidence));
+            }
+
             CompositeSequenceProvider compositeProvider = Gff3ProviderFactory.buildCompositeProvider(sources);
             MasterMetadataProvider metadataProvider = Gff3ProviderFactory.buildMetadataProvider(masterFilePath);
             FastaHeaderProvider headerProvider =
@@ -154,8 +164,8 @@ public class FileConversionCommand extends AbstractCommand {
                     BufferedWriter outputWriter =
                             writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
                 SequenceLookup sequenceLookup = compositeProvider.hasSources() ? compositeProvider.get(null) : null;
-                try (ValidationEngine engine =
-                        initValidationEngine(ruleOverrides, compositeProvider, metadataProvider, headerProvider)) {
+                try (ValidationEngine engine = initValidationEngine(
+                        ruleOverrides, extraFixes, compositeProvider, metadataProvider, headerProvider)) {
                     Converter converter =
                             getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal, sequenceLookup);
                     converter.convert(inputReader, outputWriter);
@@ -235,7 +245,7 @@ public class FileConversionCommand extends AbstractCommand {
             return new TSVToGFF3Converter(engine, fastaOutputPath);
         } else if (inputFileType == ConversionFileFormat.fasta && outputFileType == ConversionFileFormat.gff3) {
             // inputFastaSource is the same source registered on the engine, so the FASTA is read once.
-            return new FastaToGff3Converter(engine, inputFastaSource, minGapLength, gapType, linkageEvidence);
+            return new FastaToGff3Converter(engine, inputFastaSource);
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }
