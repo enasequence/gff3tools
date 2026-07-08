@@ -177,6 +177,28 @@ class FileFixCommandIntegrationTest {
     }
 
     @Test
+    void fix_invalidFastaHeaderMoleculeType_failsWithValidationError() throws Exception {
+        // Pins existing cross-cutting behavior: `fix` always registers an active FastaHeaderProvider
+        // (it requires --sequence), so FastaHeaderFormatValidation always runs alongside gap
+        // regeneration and rejects a header with a non-controlled-vocabulary molecule_type.
+        Path fasta = tempDir.resolve("invalid_molecule_type.fasta");
+        Files.writeString(
+                fasta,
+                ">seq1 | {\"description\":\"stale gaps fixture\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
+                        + "AAAAAAAAAAAAAAAAAAAANNNNNNNNNNAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
+        Path output = tempDir.resolve("output.gff3");
+
+        int exitCode = executeFix(
+                "fix", "-gff3", STALE_GAPS_GFF3.toString(), "--sequence", fasta.toString(), "-o", output.toString());
+
+        assertEquals(
+                CLIExitCode.VALIDATION_ERROR.asInt(),
+                exitCode,
+                "An invalid molecule_type should fail fix with a validation error, not just a usage error");
+        assertFalse(Files.exists(output), "No output file should be created on failure");
+    }
+
+    @Test
     void fix_missingGff3Option_failsWithUsageError() {
         StringWriter err = new StringWriter();
         Path output = tempDir.resolve("output.gff3");
