@@ -14,6 +14,7 @@ import java.io.*;
 import java.nio.file.Path;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
 import uk.ac.ebi.embl.gff3tools.*;
 import uk.ac.ebi.embl.gff3tools.exception.*;
@@ -88,7 +89,11 @@ public class Gff3ToFFConverter implements Converter {
             throws WriteException, ValidationException, ReadException {
         if (annotation != null) {
             try {
-                EmblEntryWriter entryWriter = new EmblEntryWriter(mapper.mapGFF3ToEntry(annotation));
+                Entry entry = mapper.mapGFF3ToEntry(annotation);
+                StreamingSequenceContext ctx = mapper.getStreamingContext();
+                EmblEntryWriter entryWriter = (ctx != null)
+                        ? new StreamingEmblEntryWriter(entry, sequenceLookup, ctx)
+                        : new EmblEntryWriter(entry);
                 entryWriter.setShowAcStartLine(false);
                 entryWriter.write(writer);
             } catch (IOException e) {
