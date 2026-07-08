@@ -67,7 +67,7 @@ class FileFixCommandIntegrationTest {
 
         String content = Files.readString(output);
         assertTrue(content.contains("gene\t1\t21"), "Non-gap feature must be preserved untouched");
-        assertFalse(content.contains("\t40\t42\t"), "Stale gap feature must be removed");
+        assertFalse(content.contains("\t22\t24\t"), "Stale gap feature must be removed");
         assertTrue(content.contains("\tgap\t21\t30\t"), "New gap must be regenerated from the FASTA N-run");
         assertTrue(content.contains("estimated_length=10"), "Regenerated gap must carry the correct estimated_length");
     }
