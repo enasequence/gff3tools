@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.gff3.reader;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.OptionalLong;
@@ -37,6 +38,8 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 @Slf4j
 public class GFF3TranslationReader implements AutoCloseable {
 
+    // Retained for constructor-signature stability; sequence-character validation now
+    // happens eagerly in FastaReader, not here.
     ValidationEngine validationEngine;
     Path gff3Path;
     private FastaReader fastaReader;
@@ -57,15 +60,15 @@ public class GFF3TranslationReader implements AutoCloseable {
     public Map<String, Long> readTranslationOffset() throws ReadException {
         Map<String, Long> offsetMap = new TreeMap<>();
 
-        OptionalLong boundary = FastaSectionLocator.locate(gff3Path);
-        if (boundary.isEmpty()) {
-            return offsetMap;
-        }
-
         try {
+            OptionalLong boundary = FastaSectionLocator.locate(gff3Path);
+            if (boundary.isEmpty()) {
+                return offsetMap;
+            }
+
             fastaReader =
                     new FastaReader(gff3Path.toFile(), SequenceAlphabet.defaultProteinAlphabet(), boundary.getAsLong());
-        } catch (FastaFileException | IOException e) {
+        } catch (FastaFileException | IOException | UncheckedIOException e) {
             throw new ReadException(
                     "Error reading translations from " + gff3Path + ": " + e.getMessage(),
                     ReadException.wrapAsIOException(e));
@@ -94,7 +97,9 @@ public class GFF3TranslationReader implements AutoCloseable {
         try {
             return fastaReader.getSequenceSlice(id, 1, n).toUpperCase();
         } catch (Exception e) {
-            throw new ReadException("Error reading translation from " + gff3Path + ": " + e.getMessage());
+            throw new ReadException(
+                    "Error reading translation from " + gff3Path + ": " + e.getMessage(),
+                    ReadException.wrapAsIOException(e));
         }
     }
 
