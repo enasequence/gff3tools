@@ -35,7 +35,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
+import uk.ac.ebi.embl.gff3tools.metadata.AuthorData;
 import uk.ac.ebi.embl.gff3tools.metadata.CrossReference;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
@@ -137,16 +137,16 @@ public class GFF3Mapper {
         return entry;
     }
 
-    private void mapGFF3Feature(GFF3Feature gff3Feature, Map<String, OffsetRange> translationMap)
-            throws ValidationException {
+    private void mapGFF3Feature(GFF3Feature gff3Feature, Map<String, Long> translationMap)
+            throws ValidationException, ReadException {
         // A segment crossing the origin maps to two, joined like two lines sharing an ID.
         for (Location location : mapGFF3Location(gff3Feature)) {
             mapGFF3Feature(gff3Feature, location, translationMap);
         }
     }
 
-    private void mapGFF3Feature(GFF3Feature gff3Feature, Location location, Map<String, OffsetRange> translationMap)
-            throws ValidationException {
+    private void mapGFF3Feature(GFF3Feature gff3Feature, Location location, Map<String, Long> translationMap)
+            throws ValidationException, ReadException {
 
         String existingID = gff3Feature.getAttribute("ID").orElse(null);
         String featureHashId = existingID == null ? gff3Feature.hashCodeString() : existingID;
@@ -244,7 +244,8 @@ public class GFF3Mapper {
      * Transform GFF3 translation to /translation qualifier
      */
     private void mapTranslation(
-            GFF3Feature gff3Feature, Feature ffFeature, String featureId, Map<String, OffsetRange> translationMap) {
+            GFF3Feature gff3Feature, Feature ffFeature, String featureId, Map<String, Long> translationMap)
+            throws ReadException {
         String translationKey = TranslationKey.of(gff3Feature.accession(), featureId);
         if (translationMap.get(translationKey) != null) {
             ffFeature.addQualifier("translation", gff3FileReader.getTranslation(translationMap.get(translationKey)));

@@ -22,11 +22,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
+import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.exception.WriteException;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
 import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
@@ -112,13 +112,21 @@ public class GFF3File implements IGFF3Feature {
 
             for (GFF3Annotation ann : annotations) {
                 ann.writeGFF3String(writer);
+
+                if (writeAnnotationFasta) {
+                    Map<String, Long> annOffserMap = gff3Reader.getTranslationOffsetForAnnotation(ann);
+                    // Write translation by annotation offset map
+                    writeFastaFromOffsets(writer, annOffserMap);
+                }
             }
 
-            if (writeAnnotationFasta) {
+            if (!writeAnnotationFasta) {
                 writeTranslationSection(writer);
             }
         } catch (IOException e) {
             throw new WriteException(e);
+        } catch (ReadException e) {
+            throw new WriteException(e.getMessage(), ReadException.wrapAsIOException(e));
         }
     }
 
@@ -134,14 +142,14 @@ public class GFF3File implements IGFF3Feature {
      * content, not by presence: {@code TranslationState} is supplied by an auto-discovered provider
      * and so is never null, and a fallback that only fires on null could never fire at all.
      */
-    private void writeTranslationSection(Writer writer) throws IOException {
+    private void writeTranslationSection(Writer writer) throws IOException, ReadException {
         Set<String> accessions =
                 annotations.stream().map(GFF3Annotation::getAccession).collect(Collectors.toSet());
 
         Map<String, String> translations = new LinkedHashMap<>();
         if (gff3Reader != null) {
             for (GFF3Annotation ann : annotations) {
-                for (Map.Entry<String, OffsetRange> entry :
+                for (Map.Entry<String, Long> entry :
                         gff3Reader.getTranslationOffsetForAnnotation(ann).entrySet()) {
                     translations.put(entry.getKey(), gff3Reader.getTranslation(entry.getValue()));
                 }
@@ -169,6 +177,19 @@ public class GFF3File implements IGFF3Feature {
         }
         log.info("Written {} translation sequences", translations.size());
         writer.write("\n");
+    }
+
+    private void writeFastaFromOffsets(Writer writer, Map<String, Long> translationOffsetMap)
+            throws IOException, ReadException {
+        if (translationOffsetMap.isEmpty()) {
+            return;
+        }
+        writer.write("##FASTA\n");
+        for (Map.Entry<String, Long> entry : translationOffsetMap.entrySet()) {
+            String translation = gff3Reader.getTranslation(entry.getValue());
+            TranslationWriter.writeTranslation(writer, entry.getKey(), translation);
+        }
+        log.info("Written {} sequences from: ", translationOffsetMap.size());
     }
 
     /**
