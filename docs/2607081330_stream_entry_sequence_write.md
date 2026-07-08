@@ -458,10 +458,16 @@ Phase 1.
 
 **Acceptance:** new fixture(s) run and pass; `./gradlew spotlessCheck test` green.
 
-```json phases
+## Phases (JSON)
+
+```json
 {
   "phases": [
     {
+      "phase": 1,
+      "focus": "Streaming write path",
+      "effort": "M",
+      "difficulty": "hard",
       "id": 1,
       "name": "Streaming write path (writer + mapper + converter wiring)",
       "description": "Add StreamingSequenceContext, LowerCaseReader, and StreamingEmblEntryWriter in the gff3toff package. Rework GFF3Mapper.applySequenceData to select streaming vs byte[] (whole-sequence only), set sequence.setLength(totalBases) without materialising the byte[], build lowercase a/c/g/t base counts, and stash a StreamingSequenceContext. Wire Gff3ToFFConverter.writeEntry to pick StreamingEmblEntryWriter when a context is present, opening/closing the Reader via try-with-resources with crc=0 and isExpandedEntry()=true. TDD: write the byte-identity equivalence test first.",
@@ -491,6 +497,10 @@ Phase 1.
       "dependsOn": []
     },
     {
+      "phase": 2,
+      "focus": "Golden SQ fixture coverage",
+      "effort": "S",
+      "difficulty": "standard",
       "id": 2,
       "name": "Golden SQ fixture coverage",
       "description": "Add a .gff3+.embl fixture pair carrying a real SQ block (including a non-acgt base and mixed-case input FASTA) plus a --sequence-backed harness so the emitted SQ header and body are asserted against a golden EMBL file. Closes the current gap where zero gff3toff_rules fixtures contain an SQ block.",
