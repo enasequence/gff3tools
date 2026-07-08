@@ -73,16 +73,25 @@ public final class FastaSectionLocator {
                 lineStart = lo;
             }
 
+            // Blank lines are ambiguous and can occur on either side (e.g. between two
+            // FASTA records), so they carry no boundary information: skip forward within
+            // this probe, without touching lo/hi, until a classifiable line is found. The
+            // skip is bounded by hi as well as fileSize: running into the already-known
+            // FASTA boundary (e.g. a lone blank line immediately preceding it) means the
+            // whole [lo, hi) bracket is blank, so there is nothing left to classify.
             Line line = readLine(channel, lineStart, fileSize);
+            while (line.isBlank() && line.nextLineStart() < fileSize && line.nextLineStart() < hi) {
+                line = readLine(channel, line.nextLineStart(), fileSize);
+            }
 
             if (line.isBlank()) {
-                lo = line.nextLineStart();
+                lo = hi;
                 continue;
             }
 
             if (classify(line.content()) == Classification.FASTA_SIDE) {
                 fastaSideSeen = true;
-                hi = lineStart;
+                hi = line.lineStart();
             } else {
                 lo = line.nextLineStart();
             }

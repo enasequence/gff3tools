@@ -63,8 +63,8 @@ public class GFF3TranslationReader implements AutoCloseable {
         }
 
         try {
-            fastaReader = new FastaReader(
-                    gff3Path.toFile(), SequenceAlphabet.defaultProteinAlphabet(), boundary.getAsLong());
+            fastaReader =
+                    new FastaReader(gff3Path.toFile(), SequenceAlphabet.defaultProteinAlphabet(), boundary.getAsLong());
         } catch (FastaFileException | IOException e) {
             throw new ReadException(
                     "Error reading translations from " + gff3Path + ": " + e.getMessage(),
