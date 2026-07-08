@@ -54,7 +54,7 @@ public class GFF3TranslationReader implements AutoCloseable {
      *
      * <p>A {@link TreeMap} preserves the alphabetical external ordering of ids.
      */
-    public Map<String, Long> readTranslationOffset() {
+    public Map<String, Long> readTranslationOffset() throws ReadException {
         Map<String, Long> offsetMap = new TreeMap<>();
 
         OptionalLong boundary = FastaSectionLocator.locate(gff3Path);
@@ -85,7 +85,7 @@ public class GFF3TranslationReader implements AutoCloseable {
      * with newlines stripped and the result uppercased. A zero-base entry yields
      * an empty string.
      */
-    public String readTranslation(Long id) {
+    public String readTranslation(Long id) throws ReadException {
         SequenceIndex idx = fastaReader.getSequenceIndex(id);
         long n = idx.totalBases();
         if (n == 0) {
