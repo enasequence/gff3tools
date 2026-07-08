@@ -114,6 +114,51 @@ public class ValidationCommandTest {
         assertEquals(0, exitCode, "Validation without --sequence should succeed");
     }
 
+    @Test
+    void validationWithSequence_regeneratesGapsInMemoryWithoutError() throws Exception {
+        // Sequence: 9 bases CDS, a 10-base run of Ns (positions 10-19), then trailing bases padding
+        // the total length above the 100nt SEQUENCE_TOO_SHORT threshold enforced by SequenceLengthValidation.
+        Path fasta = tempDir.resolve("sequence_with_gap.fasta");
+        Files.writeString(
+                fasta,
+                ">seq1 | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
+                        + "ATGAAATAANNNNNNNNNN" + "T".repeat(131) + "\n");
+
+        Path gff3 = tempDir.resolve("input_with_gap.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 150
+                seq1\t.\tCDS\t1\t9\t.\t+\t0\tID=cds1
+                seq1\t.\tgap\t10\t19\t.\t+\t.\tID=gap;estimated_length=10
+                """);
+
+        // The pre-existing gap feature matches the actual N-run, so feature-level validations
+        // (which run before the annotation-level fix removes it) pass; the fix then discards and
+        // regenerates it in-memory. Validation writes no output, so this asserts the run
+        // completes successfully with the fix active.
+        int exitCode = executeValidation("validation", "--sequence", fasta.toString(), gff3.toString());
+        assertEquals(0, exitCode, "Validation with a sequence and an existing gap feature should succeed");
+    }
+
+    @Test
+    void validationWithoutSequence_gapFeaturePresent_fixIsNoOp() throws Exception {
+        Path gff3 = tempDir.resolve("input_with_gap_no_sequence.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 150
+                seq1\t.\tgap\t10\t19\t.\t+\t.\tID=gap;estimated_length=10
+                """);
+
+        // Without --sequence there is no SequenceLookup in the context, so GapRegenerationFix
+        // short-circuits (no-op) and the existing gap feature is left exactly as parsed.
+        int exitCode = executeValidation("validation", gff3.toString());
+        assertEquals(0, exitCode, "Validation without a sequence should be unaffected by GapRegenerationFix");
+    }
+
     private int executeValidation(String... args) {
         StringWriter err = new StringWriter();
         StringWriter out = new StringWriter();
