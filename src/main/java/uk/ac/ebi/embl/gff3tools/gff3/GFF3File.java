@@ -99,7 +99,7 @@ public class GFF3File implements IGFF3Feature {
      * @throws WriteException if the underlying writer fails
      */
     @Override
-    public void writeGFF3String(Writer writer) throws WriteException {
+    public void writeGFF3String(Writer writer) throws WriteException, ReadException {
 
         try {
             if (header != null) {
@@ -125,8 +125,6 @@ public class GFF3File implements IGFF3Feature {
             }
         } catch (IOException e) {
             throw new WriteException(e);
-        } catch (ReadException e) {
-            throw new WriteException(e.getMessage(), ReadException.wrapAsIOException(e));
         }
     }
 
