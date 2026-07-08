@@ -138,6 +138,18 @@ public class GFF3TranslationReaderTest {
     }
 
     @Test
+    void testInvalidSequenceExceptionNamesIllegalCharacterAndPosition() throws IOException {
+        // '1' is byte offset 11 in this content, so the cause message must name both
+        // the offending character and its absolute file position.
+        Files.writeString(tempFile, ">IDBAD\nATGC1234\n", StandardOpenOption.TRUNCATE_EXISTING);
+
+        ReadException exception = Assertions.assertThrows(ReadException.class, () -> reader.readTranslationOffset());
+
+        Assertions.assertTrue(exception.getMessage().contains("Illegal character '1'"));
+        Assertions.assertTrue(exception.getMessage().contains("position 11"));
+    }
+
+    @Test
     void testZeroBaseTranslationReturnsEmptyString() throws Exception {
         // FastaReader's normal load path cannot represent a zero-base entry (its
         // internal scan advances past each entry via its last base byte, which is
