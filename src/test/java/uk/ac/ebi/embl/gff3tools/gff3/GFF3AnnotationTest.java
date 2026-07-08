@@ -148,6 +148,64 @@ public class GFF3AnnotationTest {
         assertEquals("ID8", annotation7.getFeatures().get(0).id.get());
     }
 
+    private static GFF3Feature feature(String id, long start, long end) {
+        return new GFF3Feature(
+                Optional.of(id),
+                Optional.empty(),
+                "ACC00001",
+                Optional.empty(),
+                "source",
+                "type",
+                start,
+                end,
+                ".",
+                "+",
+                ".");
+    }
+
+    @Test
+    public void testSortFeaturesAscending() {
+        GFF3Annotation annotation = new GFF3Annotation();
+        annotation.addFeature(feature("f300", 300, 400));
+        annotation.addFeature(feature("f100", 100, 200));
+        annotation.addFeature(feature("f200", 200, 300));
+
+        annotation.sortFeatures();
+
+        List<GFF3Feature> sorted = annotation.getFeatures();
+        assertEquals(100, sorted.get(0).getStart());
+        assertEquals(200, sorted.get(1).getStart());
+        assertEquals(300, sorted.get(2).getStart());
+    }
+
+    @Test
+    public void testSortFeaturesTieOnStartOrdersByEnd() {
+        GFF3Annotation annotation = new GFF3Annotation();
+        annotation.addFeature(feature("fLong", 100, 500));
+        annotation.addFeature(feature("fShort", 100, 200));
+
+        annotation.sortFeatures();
+
+        List<GFF3Feature> sorted = annotation.getFeatures();
+        assertEquals(200, sorted.get(0).getEnd());
+        assertEquals(500, sorted.get(1).getEnd());
+    }
+
+    @Test
+    public void testSortFeaturesStableOnFullTies() {
+        GFF3Annotation annotation = new GFF3Annotation();
+        annotation.addFeature(feature("first", 100, 200));
+        annotation.addFeature(feature("second", 100, 200));
+        annotation.addFeature(feature("third", 100, 200));
+
+        annotation.sortFeatures();
+
+        List<GFF3Feature> sorted = annotation.getFeatures();
+        assertEquals("first", sorted.get(0).id.get());
+        assertEquals("second", sorted.get(1).id.get());
+        assertEquals("third", sorted.get(2).id.get());
+    }
+
     @Test
     public void testGetAccession() throws IOException, WriteException {
         // Test case 1: Accession from GFF3SequenceRegion directive

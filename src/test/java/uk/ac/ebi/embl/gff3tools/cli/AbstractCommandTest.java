@@ -13,7 +13,15 @@ package uk.ac.ebi.embl.gff3tools.cli;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
+import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 class AbstractCommandTest {
 
@@ -59,5 +67,43 @@ class AbstractCommandTest {
         AbstractCommand.ParsedSequenceSpec parsed = command.parseSequenceSpec("file.fasta");
         assertNull(parsed.key());
         assertEquals(Path.of("file.fasta"), parsed.path());
+    }
+
+    @Gff3Fix(name = "TEST_ABSTRACT_COMMAND_FIX", description = "Stub fix for initValidationEngine overload test")
+    static class StubFix implements Fix {
+        @FixMethod(rule = "TEST_ABSTRACT_COMMAND_FIX_RULE", type = ValidationType.FEATURE)
+        public void fix(GFF3Feature feature, int line) {}
+    }
+
+    @Test
+    void initValidationEngine_withExtraFixes_registersFixOnEngine() throws Exception {
+        StubFix stubFix = new StubFix();
+
+        try (ValidationEngine engine = command.initValidationEngine(Map.of(), List.of(stubFix))) {
+            assertNotNull(engine);
+            assertTrue(fixIsRegistered(engine, stubFix), "Extra fix should be registered on the engine");
+        }
+    }
+
+    @Test
+    void initValidationEngine_legacyOverload_stillWorksWithoutExtraFixes() throws Exception {
+        try (ValidationEngine engine = command.initValidationEngine(Map.of())) {
+            assertNotNull(engine);
+        }
+    }
+
+    private boolean fixIsRegistered(ValidationEngine engine, Fix expected) throws Exception {
+        var field = ValidationEngine.class.getDeclaredField("validationRegistry");
+        field.setAccessible(true);
+        Object registry = field.get(engine);
+        var getFixs = registry.getClass().getMethod("getFixs");
+        List<?> fixs = (List<?>) getFixs.invoke(registry);
+        for (Object descriptor : fixs) {
+            Object instance = descriptor.getClass().getMethod("instance").invoke(descriptor);
+            if (instance == expected) {
+                return true;
+            }
+        }
+        return false;
     }
 }

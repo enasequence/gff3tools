@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,19 @@ public class AssemblyGapValidationTest {
         gff3Annotation = new GFF3Annotation();
         assemblyGapValidation = new AssemblyGapValidation();
         TestUtils.injectContext(assemblyGapValidation);
+    }
+
+    @Test
+    public void testValidGapTypes() {
+        Set<String> gapTypes = AssemblyGapValidation.validGapTypes();
+
+        Assertions.assertTrue(gapTypes.contains("within scaffold"));
+        Assertions.assertTrue(gapTypes.contains("between scaffolds"));
+        Assertions.assertTrue(gapTypes.contains("unknown"));
+        Assertions.assertTrue(gapTypes.contains("contamination"));
+        Assertions.assertTrue(gapTypes.contains("repeat between scaffolds"));
+        Assertions.assertEquals(11, gapTypes.size());
+        Assertions.assertFalse(gapTypes.contains("not a gap type"));
     }
 
     @Test

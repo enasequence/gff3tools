@@ -25,7 +25,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
         name = "gff3tools",
         subcommands = {
             FileConversionCommand.class,
-            FileProcessCommand.class,
+            FileFixCommand.class,
             ValidationCommand.class,
             TranslationCommand.class,
             CommandLine.HelpCommand.class

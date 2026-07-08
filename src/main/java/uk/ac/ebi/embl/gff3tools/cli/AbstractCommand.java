@@ -25,6 +25,7 @@ import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 
@@ -54,9 +55,23 @@ public abstract class AbstractCommand implements Runnable {
 
     protected ValidationEngine initValidationEngine(
             Map<String, RuleSeverity> ruleOverrides, ContextProvider<?>... additionalProviders) {
+        return initValidationEngine(ruleOverrides, List.of(), additionalProviders);
+    }
+
+    /**
+     * Builds a {@link ValidationEngine}, additionally registering explicit {@link Fix} instances
+     * (e.g. a CLI-parameterised {@code GapRegenerationFix}) that override any classpath-discovered
+     * fix registered under the same {@code @Gff3Fix} name.
+     */
+    protected ValidationEngine initValidationEngine(
+            Map<String, RuleSeverity> ruleOverrides, List<Fix> extraFixes, ContextProvider<?>... additionalProviders) {
 
         ValidationEngineBuilder builder =
                 new ValidationEngineBuilder().overrideMethodRules(ruleOverrides).failFast(failFast);
+
+        for (Fix fix : extraFixes) {
+            builder.withFix(fix);
+        }
 
         // Providers gate their own registration via ContextProvider#isActive(). An empty
         // FastaHeaderProvider (no header source supplied) reports inactive and is kept off the
