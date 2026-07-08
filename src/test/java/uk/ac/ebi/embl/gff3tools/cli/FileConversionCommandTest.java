@@ -177,7 +177,7 @@ class FileConversionCommandTest {
         Path fasta = tempDir.resolve("sequence.fasta");
         Files.writeString(
                 fasta,
-                ">seq1 | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
+                ">seq1 | {\"description\":\"test\", \"molecule_type\":\"genomic DNA\", \"topology\":\"linear\"}\n"
                         + "ATGAAATAAGGGCCCAAATTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n");
 
         Path inputFile = tempDir.resolve("valid.gff3");
@@ -340,7 +340,7 @@ class FileConversionCommandTest {
     }
 
     private static final String GAPPY_FASTA =
-            ">TEST01.1 | {\"description\":\"gappy\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
+            ">TEST01.1 | {\"description\":\"gappy\", \"molecule_type\":\"genomic DNA\", \"topology\":\"linear\"}\n"
                     + "ATGCATGCNNNNNNNNNNATGCATGCTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n";
 
     @Test

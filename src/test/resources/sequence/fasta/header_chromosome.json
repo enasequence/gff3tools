@@ -3,6 +3,6 @@
   "molecule_type": "genomic DNA",
   "topology": "linear",
   "chromosome_type": "Chromosome",
-  "chromosome_location": "Nuclear",
+  "chromosome_location": "Nucleus",
   "chromosome_name": "1"
 }

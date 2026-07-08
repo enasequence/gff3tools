@@ -125,7 +125,9 @@ class FastaToGff3ConverterTest {
     @Test
     void convertsEmptySequenceWithNoGaps() throws Exception {
         Path fasta = Files.createTempFile("empty", ".fasta");
-        Files.writeString(fasta, ">EMPTY | {\"description\":\"No gaps\"}\nATGCATGCATGC\n");
+        Files.writeString(
+                fasta,
+                ">EMPTY | {\"description\":\"No gaps\", \"molecule_type\":\"GENOMIC DNA\", \"topology\":\"linear\"}\nATGCATGCATGC\n");
 
         FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
         ValidationEngine engine = engineFor(source, FastaToGff3Converter.DEFAULT_MIN_GAP_LENGTH);
@@ -145,7 +147,9 @@ class FastaToGff3ConverterTest {
     void convertsFastaWithSubmissionIdWithoutDot() throws Exception {
         // seqId without a "." should round-trip through the header parser and into the GFF3 seqId.
         Path fasta = Files.createTempFile("no_dot", ".fasta");
-        Files.writeString(fasta, ">TEST01 | {\"description\":\"No dot in id\"}\nATGCATGCNNNNNNNNNNATGCATGC\n");
+        Files.writeString(
+                fasta,
+                ">TEST01 | {\"description\":\"No dot in id\", \"molecule_type\":\"GENOMIC DNA\", \"topology\":\"linear\"}\nATGCATGCNNNNNNNNNNATGCATGC\n");
 
         FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
         ValidationEngine engine = engineFor(source, 1);
@@ -176,8 +180,8 @@ class FastaToGff3ConverterTest {
         Path fasta = Files.createTempFile("multi", ".fasta");
         Files.writeString(
                 fasta,
-                ">SEQ1.1 | {\"description\":\"first\"}\nATGCNNNNNNNNNNATGC\n"
-                        + ">SEQ2.1 | {\"description\":\"second\"}\nGGGGNNNNNNNNNNGGGG\n");
+                ">SEQ1.1 | {\"description\":\"first\", \"molecule_type\":\"GENOMIC DNA\", \"topology\":\"linear\"}\nATGCNNNNNNNNNNATGC\n"
+                        + ">SEQ2.1 | {\"description\":\"second\", \"molecule_type\":\"GENOMIC DNA\", \"topology\":\"linear\"}\nGGGGNNNNNNNNNNGGGG\n");
 
         FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
         ValidationEngine engine = engineFor(source, 1);
