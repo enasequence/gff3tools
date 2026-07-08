@@ -36,6 +36,7 @@ import uk.ac.ebi.embl.api.entry.reference.*;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
+import uk.ac.ebi.embl.fastareader.SequenceStats;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -79,6 +80,7 @@ public class GFF3Mapper {
 
     Entry entry;
     GFF3FileReader gff3FileReader;
+    private StreamingSequenceContext streamingContext;
     private final MasterMetadataProvider metadataProvider;
     private final FastaHeaderProvider headerProvider;
     private final SequenceLookup sequenceLookup;
@@ -99,10 +101,15 @@ public class GFF3Mapper {
         this.sequenceLookup = sequenceLookup;
     }
 
+    StreamingSequenceContext getStreamingContext() {
+        return streamingContext;
+    }
+
     public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) throws ValidationException, ReadException {
 
         parentFeatures.clear();
         joinableFeatureMap.clear();
+        streamingContext = null;
         entry = entryFactory.createEntry();
         Sequence sequence = sequenceFactory.createSequence();
 
@@ -329,12 +336,33 @@ public class GFF3Mapper {
                     sequenceRegion != null ? sequenceRegion.accessionId() : "unknown");
             return;
         }
+        String seqId = sequenceRegion.accessionId();
+        if (!sequenceLookup.hasSequence(seqId)) {
+            LOGGER.info("Sequence source cannot serve seqId '{}' \u2014 skipping sequence data", seqId);
+            return;
+        }
         try {
+            SequenceStats stats = sequenceLookup.getSequenceStats(seqId);
+            long totalBases = stats.totalBases();
+            // Stream only whole-sequence regions; sub-ranges fall back to the byte[] path below,
+            // whose per-slice base counting is already correct for sub-ranges.
+            if (sequenceRegion.start() == 1 && sequenceRegion.end() == totalBases && totalBases > 0) {
+                Map<Character, Long> lc = new HashMap<>();
+                for (char base : new char[] {'a', 'c', 'g', 't'}) {
+                    lc.put(base, 0L);
+                }
+                for (Map.Entry<Character, Long> e : stats.baseCount().entrySet()) {
+                    char lower = Character.toLowerCase(e.getKey());
+                    if (lc.containsKey(lower)) {
+                        lc.put(lower, e.getValue());
+                    }
+                }
+                sequence.setLength(totalBases);
+                this.streamingContext = new StreamingSequenceContext(seqId, totalBases, lc);
+                return;
+            }
             String nucleotides = sequenceLookup.getSequenceSlice(
-                    sequenceRegion.accessionId(),
-                    sequenceRegion.start(),
-                    sequenceRegion.end(),
-                    SequenceRangeOption.WHOLE_SEQUENCE);
+                    seqId, sequenceRegion.start(), sequenceRegion.end(), SequenceRangeOption.WHOLE_SEQUENCE);
             if (nucleotides == null || nucleotides.isEmpty()) {
                 throw new ReadException("No sequence data returned for '" + sequenceRegion.accessionId() + "'");
             }

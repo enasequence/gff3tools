@@ -73,7 +73,10 @@ repositories {
 dependencies {
     implementation("org.projectlombok:lombok:1.18.30")
     annotationProcessor("org.projectlombok:lombok:1.18.30")
-    implementation('uk.ac.ebi.ena.sequence:sequencetools:2.+')
+    // TEMPORARY local-dev pin: streaming Entry write API from sequencetools PR #199
+    // (published to mavenLocal via `APP_VERSION=2.900.0-streaming ./gradlew publishToMavenLocal`).
+    // Revert to '2.+' once that PR is merged and released.
+    implementation('uk.ac.ebi.ena.sequence:sequencetools:2.900.0-streaming')
     implementation("uk.ac.ebi.ena:fastareader:1.2.0")
     implementation "io.vavr:vavr:0.10.5"
     implementation "org.jgrapht:jgrapht-core:1.5.2"
