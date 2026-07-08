@@ -1,0 +1,4 @@
+##gff-version 3
+##sequence-region seq1 1 100
+seq1	.	gene	1	21	.	+	.	ID=gene1
+seq1	.	gap	22	24	.	+	.	ID=gap;estimated_length=3
