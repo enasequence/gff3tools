@@ -337,7 +337,7 @@ public class GFF3Mapper {
             return;
         }
         String seqId = sequenceRegion.accessionId();
-        if (!sequenceLookup.knownSeqIds().contains(seqId)) {
+        if (!sequenceLookup.hasSequence(seqId)) {
             LOGGER.info("Sequence source cannot serve seqId '{}' \u2014 skipping sequence data", seqId);
             return;
         }

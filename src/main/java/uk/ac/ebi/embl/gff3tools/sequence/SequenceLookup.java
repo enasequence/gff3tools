@@ -67,6 +67,15 @@ public interface SequenceLookup {
     Set<String> knownSeqIds();
 
     /**
+     * Returns {@code true} if this lookup can serve the given GFF3 seqId.
+     *
+     * <p>This is the authoritative "can serve" predicate — unlike {@link #knownSeqIds()}, it
+     * correctly reports {@code true} for sources that match any seqId (e.g. a plain-sequence
+     * source supplied without a key), which {@link #knownSeqIds()} cannot enumerate.
+     */
+    boolean hasSequence(String seqId);
+
+    /**
      * Streaming reader over a sequence slice. Caller must close the returned Reader.
      *
      * @param option controls which portion of the sequence is considered
