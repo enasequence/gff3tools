@@ -20,11 +20,11 @@ import java.util.List;
 import java.util.Map;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
+import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.exception.WriteException;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
 import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
@@ -82,7 +82,7 @@ public class GFF3File implements IGFF3Feature {
                 ann.writeGFF3String(writer);
 
                 if (writeAnnotationFasta) {
-                    Map<String, OffsetRange> annOffserMap = gff3Reader.getTranslationOffsetForAnnotation(ann);
+                    Map<String, Long> annOffserMap = gff3Reader.getTranslationOffsetForAnnotation(ann);
                     // Write translation by annnotation offset map
                     writeFastaFromOffsets(writer, annOffserMap);
                 }
@@ -93,10 +93,12 @@ public class GFF3File implements IGFF3Feature {
             }
         } catch (IOException e) {
             throw new WriteException(e);
+        } catch (ReadException e) {
+            throw new WriteException(e.getMessage(), ReadException.wrapAsIOException(e));
         }
     }
 
-    private void writeTranslationSection(Writer writer) throws IOException {
+    private void writeTranslationSection(Writer writer) throws IOException, ReadException {
         if (translationState != null) {
             writeFastaFromTranslationState(writer);
         } else if (fastaFilePath != null) {
@@ -144,8 +146,8 @@ public class GFF3File implements IGFF3Feature {
         log.info("Write translation sequences from: " + fastaFilePath);
     }
 
-    private void writeFastaFromOffsets(Writer writer, Map<String, OffsetRange> translationOffsetMap)
-            throws IOException {
+    private void writeFastaFromOffsets(Writer writer, Map<String, Long> translationOffsetMap)
+            throws IOException, ReadException {
 
         if (translationOffsetMap.isEmpty()) {
             return;
@@ -153,11 +155,11 @@ public class GFF3File implements IGFF3Feature {
 
         writer.write("##FASTA\n");
 
-        for (Map.Entry<String, OffsetRange> entry : translationOffsetMap.entrySet()) {
+        for (Map.Entry<String, Long> entry : translationOffsetMap.entrySet()) {
             String id = entry.getKey();
-            OffsetRange range = entry.getValue();
+            Long offsetId = entry.getValue();
 
-            String translation = gff3Reader.getTranslation(range);
+            String translation = gff3Reader.getTranslation(offsetId);
             TranslationWriter.writeTranslation(writer, id, translation);
         }
         log.info("Written {} sequences from: ", translationOffsetMap.entrySet().size());
