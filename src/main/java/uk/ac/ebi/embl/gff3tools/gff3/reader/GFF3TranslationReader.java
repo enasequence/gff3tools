@@ -11,31 +11,35 @@
 package uk.ac.ebi.embl.gff3tools.gff3.reader;
 
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.TreeMap;
 import lombok.extern.slf4j.Slf4j;
-import uk.ac.ebi.embl.gff3tools.exception.InvalidGFF3RecordException;
-import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.fastareader.FastaReader;
+import uk.ac.ebi.embl.fastareader.exception.FastaFileException;
+import uk.ac.ebi.embl.fastareader.sequenceutils.SequenceAlphabet;
+import uk.ac.ebi.embl.fastareader.sequenceutils.SequenceIndex;
+import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 
 /**
- * Utility class for efficiently reading protein translation sequences stored in
- * the FASTA section at the end of a GFF3 file.
+ * Reads protein translation sequences stored in the FASTA section at the end of
+ * a GFF3 file.
  *
- * This reader works directly on the underlying file using RandomAccessFile
- * to avoid loading the entire GFF3 or FASTA content into memory. It scans
- * backwards from the end of the file to locate ##FASTA directive
+ * <p>The FASTA boundary is located with {@link FastaSectionLocator} (an
+ * O(log fileSize) binary search over raw byte offsets). A single
+ * {@link FastaReader} is then opened at that offset, indexes the embedded FASTA
+ * section in one forward pass, and serves each translation via buffered
+ * positional slice reads. The reader is cached so extraction can reuse it, and
+ * must therefore be closed once all translations have been read.
  */
 @Slf4j
-public class GFF3TranslationReader {
+public class GFF3TranslationReader implements AutoCloseable {
 
     ValidationEngine validationEngine;
     Path gff3Path;
+    private FastaReader fastaReader;
 
     public GFF3TranslationReader(ValidationEngine validationEngine, Path gff3Path) {
         this.validationEngine = validationEngine;
@@ -43,148 +47,61 @@ public class GFF3TranslationReader {
     }
 
     /**
-     * Scans the GFF3 file backwards to locate the FASTA section and extract
-     * byte offsets for each translation sequence.
+     * Locates the FASTA section and builds a map from translation id (the FASTA
+     * header text with the single leading {@code >} stripped) to the
+     * {@link FastaReader} sequential entry id. Returns an empty map when the file
+     * has no FASTA section, opening no {@link FastaReader} in that case.
      *
-     * The method reads from the end of the file until the ##FASTA
-     * directive is encountered. For each FASTA header line (>accession|id),
-     * the method records the byte offset where the sequence starts and ends.
+     * <p>A {@link TreeMap} preserves the alphabetical external ordering of ids.
      */
-    public Map<String, OffsetRange> readTranslationOffset() {
-        Map<String, OffsetRange> offsetMap = new TreeMap<>();
+    public Map<String, Long> readTranslationOffset() {
+        Map<String, Long> offsetMap = new TreeMap<>();
 
-        try (FileChannel channel = FileChannel.open(gff3Path, StandardOpenOption.READ)) {
+        OptionalLong boundary = FastaSectionLocator.locate(gff3Path);
+        if (boundary.isEmpty()) {
+            return offsetMap;
+        }
 
-            long fileSize = channel.size();
-            long position = fileSize;
-            long seqEnd = fileSize - 1;
-            long cursorPos;
+        try {
+            fastaReader = new FastaReader(
+                    gff3Path.toFile(), SequenceAlphabet.defaultProteinAlphabet(), boundary.getAsLong());
+        } catch (FastaFileException | IOException e) {
+            throw new ReadException(
+                    "Error reading translations from " + gff3Path + ": " + e.getMessage(),
+                    ReadException.wrapAsIOException(e));
+        }
 
-            // 1 MB Buffer size
-            final int bufferSize = 1024 * 1024;
-
-            ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
-
-            StringBuilder lineBuffer = new StringBuilder();
-            boolean stop = false;
-
-            while (position > 0 && !stop) {
-                // Move read window backwards
-                long bytesToRead = Math.min(position, bufferSize);
-                position -= bytesToRead;
-
-                buffer.clear();
-                channel.position(position);
-                channel.read(buffer);
-                buffer.flip();
-
-                // Scan block backwards
-                for (int i = (int) bytesToRead - 1; i >= 0; i--) {
-
-                    byte b = buffer.get(i);
-                    // absolute byte position in file
-                    cursorPos = position + i;
-
-                    if (b == '\n' || b == '\r') {
-
-                        // Empty lines are ignored
-                        if (lineBuffer.length() > 0) {
-                            String line = lineBuffer.reverse().toString();
-                            lineBuffer.setLength(0);
-
-                            // Hit FASTA section
-                            if (line.startsWith("##FASTA")) {
-                                stop = true;
-                                break;
-                            }
-
-                            // Exit when line is not a sequence
-                            if (!isValidSequence(line) && !line.startsWith(">")) {
-                                if (offsetMap.isEmpty()) {
-                                    log.info("Translation sequence not found");
-                                    stop = true;
-                                    break;
-                                } else {
-                                    // Error when unwanted lines appear in the middle of a translation block
-                                    throw new RuntimeException("Invalid GFF3 translation sequence: " + line);
-                                }
-                            }
-
-                            // Header line → store offset range
-                            if (line.startsWith(">")) {
-                                // remove '>'
-                                String id = line.substring(1);
-                                long seqStart = cursorPos + line.length() + 1;
-                                offsetMap.put(id, new OffsetRange(seqStart, seqEnd));
-                                seqEnd = cursorPos; // next sequence ends here
-                            }
-                        }
-
-                    } else {
-                        // Buffer the character
-                        lineBuffer.append((char) b);
-                    }
-                }
-            }
-
-            // Handle last line if needed
-            if (!lineBuffer.isEmpty() && !stop) {
-                String line = lineBuffer.reverse().toString();
-                if (line.startsWith(">")) {
-                    String id = line.substring(1);
-                    offsetMap.put(id, new OffsetRange(position, seqEnd));
-                }
-            }
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        for (long id : fastaReader.getOrderedIds()) {
+            String header = fastaReader.getHeaderline(id).orElse("");
+            String translationId = header.startsWith(">") ? header.substring(1) : header;
+            offsetMap.put(translationId, id);
         }
 
         return offsetMap;
     }
 
     /**
-     * Reads a sequence from the GFF3 FASTA section based on the provided byte offset range
-     * All newline characters are removed to produce a continuous sequence string.
-     * The resulting string is validated using the SEQUENCE_PATTERN
+     * Reads the translation sequence for the given {@link FastaReader} entry id,
+     * with newlines stripped and the result uppercased. A zero-base entry yields
+     * an empty string.
      */
-    public String readTranslation(OffsetRange offset) {
-
-        StringBuilder sequenceBuilder = new StringBuilder();
-        String sequence;
-        long start = offset.start;
-        long end = offset.end;
-        try (RandomAccessFile raf = new RandomAccessFile(gff3Path.toFile(), "r")) {
-
-            while (start <= end) {
-                raf.seek(start);
-                int b = raf.readByte();
-                if (b != '\n') {
-                    sequenceBuilder.append((char) b);
-                }
-                start++;
-            }
-            sequence = sequenceBuilder.toString().toUpperCase();
-            if (!isValidSequence(sequence)) {
-                validationEngine.handleSyntacticError(
-                        new InvalidGFF3RecordException(-1, "Invalid sequenceBuilder record \"" + sequence + "\""));
-            }
-        } catch (IOException | ValidationException e) {
-            throw new RuntimeException(e);
+    public String readTranslation(Long id) {
+        SequenceIndex idx = fastaReader.getSequenceIndex(id);
+        long n = idx.totalBases();
+        if (n == 0) {
+            return "";
         }
-
-        return sequence;
+        try {
+            return fastaReader.getSequenceSlice(id, 1, n).toUpperCase();
+        } catch (Exception e) {
+            throw new ReadException("Error reading translation from " + gff3Path + ": " + e.getMessage());
+        }
     }
 
-    public static boolean isValidSequence(String seq) {
-        seq = seq.toUpperCase();
-        for (int i = 0; i < seq.length(); i++) {
-            char c = seq.charAt(i);
-            // Accept uppercase letters A–Z and *
-            if (!((c >= 'A' && c <= 'Z') || c == '*')) {
-                return false;
-            }
+    @Override
+    public void close() throws IOException {
+        if (fastaReader != null) {
+            fastaReader.close();
         }
-        return true;
     }
 }
