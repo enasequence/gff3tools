@@ -27,13 +27,13 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
-import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonAccessionRegistry;
-import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonomyIdentifier;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.SourceFeatureDTO;
 import uk.ac.ebi.embl.gff3tools.utils.SourceFeatureUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonAccessionRegistry;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonomyIdentifier;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 

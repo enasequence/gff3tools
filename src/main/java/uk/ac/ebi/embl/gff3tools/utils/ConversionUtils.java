@@ -10,7 +10,6 @@
  */
 package uk.ac.ebi.embl.gff3tools.utils;
 
-import ch.qos.logback.core.util.StringUtil;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -260,7 +259,8 @@ public enum ConversionUtils {
         }
 
         // Fallback to submitter accession if sequence accession is not available
-        return entry.getSubmitterAccession() == null || entry.getSubmitterAccession().isEmpty()
+        return entry.getSubmitterAccession() == null
+                        || entry.getSubmitterAccession().isEmpty()
                 ? entry.getPrimaryAccession()
                 : entry.getSubmitterAccession();
     }
