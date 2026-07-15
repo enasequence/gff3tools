@@ -27,11 +27,15 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonAccessionRegistry;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonomyIdentifier;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.SourceFeatureDTO;
 import uk.ac.ebi.embl.gff3tools.utils.SourceFeatureUtils;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
+import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 /**
  * Converts TSV files to GFF3 format.
@@ -100,6 +104,7 @@ public class TSVToGFF3Converter implements Converter {
 
         GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
         GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(validationEngine, directivesFactory);
+        TaxonAccessionRegistry taxonRegistry = resolveTaxonRegistry();
 
         try (TSVEntryReader entryReader = new TSVEntryReader(reader);
                 BufferedWriter nucleotideFastaWriter = createNucleotideFastaWriter()) {
@@ -112,6 +117,9 @@ public class TSVToGFF3Converter implements Converter {
             int entryCount = 0;
             while ((entry = entryReader.read()) != null) {
                 entryCount++;
+
+                // Record organism for each TSV row
+                recordTaxonIdentifier(entry, taxonRegistry);
 
                 if (species == null) {
                     species = directivesFactory.createSpecies(entry, null);
@@ -174,6 +182,35 @@ public class TSVToGFF3Converter implements Converter {
         file.writeGFF3String(writer);
 
         validationEngine.throwIfErrorsCollected();
+    }
+
+    /**
+     * Records this row's organism identity against its accession before the fixes for this entry
+     * run (annotationFactory.from() below), so a downstream taxon-resolving provider can look up
+     * the right organism per feature — a TSV file can carry a different organism per row, unlike
+     * EMBL/FASTA input.
+     */
+    private void recordTaxonIdentifier(Entry entry, TaxonAccessionRegistry taxonRegistry) {
+        String accession = ConversionUtils.getEffectiveAccession(entry);
+        Taxon taxon = entry.getPrimarySourceFeature().getTaxon();
+        if (taxon.getTaxId() != null) {
+            taxonRegistry.record(accession, new TaxonomyIdentifier.ByTaxId(taxon.getTaxId()));
+        } else if (taxon.getScientificName() != null) {
+            taxonRegistry.record(accession, new TaxonomyIdentifier.ByScientificName(taxon.getScientificName()));
+        }
+    }
+
+    /**
+     * Returns the {@link TaxonAccessionRegistry} already registered on the engine's context (e.g.
+     * by {@code FileConversionCommand}), registering a fresh one if the caller built the engine
+     * without one.
+     */
+    private TaxonAccessionRegistry resolveTaxonRegistry() {
+        ValidationContext context = validationEngine.getContext();
+        if (!context.contains(TaxonAccessionRegistry.class)) {
+            context.register(TaxonAccessionRegistry.class, new TaxonAccessionRegistry());
+        }
+        return context.get(TaxonAccessionRegistry.class);
     }
 
     /**

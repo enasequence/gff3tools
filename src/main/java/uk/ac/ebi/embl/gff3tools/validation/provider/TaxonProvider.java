@@ -8,36 +8,27 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.metadata;
+package uk.ac.ebi.embl.gff3tools.validation.provider;
 
 import java.util.Optional;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 /**
- * SPI for resolving NCBI taxon IDs to {@link Taxon} objects.
+ * SPI for resolving an accession's organism to a {@link Taxon}.
  *
- * <p>Core ships no implementation (offline by default). Online-backed implementations
- * are registered by downstream modules (e.g. gff3-validations) or by the processing /
- * ingestion pipeline at initialization time.
+ * <p>Core ships no implementation (offline by default). Online-backed implementations are
+ * registered by downstream modules (e.g. gff3-validations) or by the processing / ingestion
+ * pipeline at initialization time. Implementations that only ever have one taxon for the whole
+ * submission (e.g. a fixed-taxId pipeline input) may ignore {@code accession} and always return
+ * that same taxon.
  */
 public interface TaxonProvider extends ContextProvider<TaxonProvider> {
 
     /**
-     * Returns the submission-level {@link Taxon}, or empty if not available.
-     *
-     * <p>Implementations that are initialised with a specific taxon ID (e.g.
-     * {@code TaxonomyClientTaxonProvider}) resolve and return that taxon here.
-     * The default returns empty so that lookup-only implementations remain valid.
+     * Returns the {@link Taxon} for the given accession, or empty if not available.
      */
-    default Optional<Taxon> resolve() {
-        return Optional.empty();
-    }
-
-    /**
-     * Returns the {@link Taxon} for the given taxon ID, or empty if not available.
-     */
-    Optional<Taxon> resolve(long taxId);
+    Optional<Taxon> resolve(String accession);
 
     @Override
     default Class<TaxonProvider> type() {
