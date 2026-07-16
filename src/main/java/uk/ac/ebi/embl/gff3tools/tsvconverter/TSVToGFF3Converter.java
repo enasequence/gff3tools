@@ -16,7 +16,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -192,10 +191,12 @@ public class TSVToGFF3Converter implements Converter {
      * the right organism per feature — a TSV file can carry a different organism per row, unlike
      * EMBL/FASTA input.
      */
-    private void recordTaxonIdentifier(Entry entry, TaxonAccessionRegistry taxonRegistry) throws NoAccessionPresentException {
+    private void recordTaxonIdentifier(Entry entry, TaxonAccessionRegistry taxonRegistry)
+            throws NoAccessionPresentException {
         String accession = Optional.ofNullable(ConversionUtils.getEffectiveAccession(entry))
                 .orElseThrow(NoAccessionPresentException::new);
-        if(entry.getPrimarySourceFeature() != null && entry.getPrimarySourceFeature().getTaxon() != null) {
+        if (entry.getPrimarySourceFeature() != null
+                && entry.getPrimarySourceFeature().getTaxon() != null) {
             Taxon taxon = entry.getPrimarySourceFeature().getTaxon();
             if (taxon.getTaxId() != null) {
                 taxonRegistry.record(accession, new TaxonomyIdentifier.ByTaxId(taxon.getTaxId()));
