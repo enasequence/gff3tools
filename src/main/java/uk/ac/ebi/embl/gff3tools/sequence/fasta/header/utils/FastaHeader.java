@@ -22,7 +22,7 @@ public class FastaHeader {
     String description; // mandatory
 
     @JsonProperty("molecule_type")
-    @JsonAlias({"molecule-type", "molecule type", "moleculetype"})
+    @JsonAlias({"molecule-type", "molecule type", "moleculetype", "moleculeType"})
     String moleculeType; // mandatory
 
     @JsonProperty("topology")
