@@ -22,7 +22,7 @@ public class FastaHeader {
     String description; // mandatory
 
     @JsonProperty("molecule_type")
-    @JsonAlias({"molecule-type", "molecule type", "moleculetype","moleculeType"})
+    @JsonAlias({"molecule-type", "molecule type", "moleculetype", "moleculeType"})
     String moleculeType; // mandatory
 
     @JsonProperty("topology")
@@ -33,7 +33,7 @@ public class FastaHeader {
     String chromosomeType; // optional (doesn't have to be in the json at all)
 
     @JsonProperty("chromosome_location")
-    @JsonAlias({"chromosome-location", "chromosome location", "chromosomelocation","chromosomeLocation"})
+    @JsonAlias({"chromosome-location", "chromosome location", "chromosomelocation", "chromosomeLocation"})
     String chromosomeLocation; // optional
 
     @JsonProperty("chromosome_name")
