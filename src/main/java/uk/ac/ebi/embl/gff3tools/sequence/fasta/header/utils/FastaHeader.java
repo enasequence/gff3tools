@@ -29,14 +29,14 @@ public class FastaHeader {
     String topology; // mandatory
 
     @JsonProperty("chromosome_type")
-    @JsonAlias({"chromosome-type", "chromosome type", "chromosometype"})
+    @JsonAlias({"chromosome-type", "chromosome type", "chromosometype", "chromosomeType"})
     String chromosomeType; // optional (doesn't have to be in the json at all)
 
     @JsonProperty("chromosome_location")
-    @JsonAlias({"chromosome-location", "chromosome location", "chromosomelocation"})
+    @JsonAlias({"chromosome-location", "chromosome location", "chromosomelocation", "chromosomeLocation"})
     String chromosomeLocation; // optional
 
     @JsonProperty("chromosome_name")
-    @JsonAlias({"chromosome-name", "chromosome name", "chromosomename"})
+    @JsonAlias({"chromosome-name", "chromosome name", "chromosomename", "chromosomeName"})
     String chromosomeName; // optional
 }
