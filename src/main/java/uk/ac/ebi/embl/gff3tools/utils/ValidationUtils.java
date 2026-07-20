@@ -26,7 +26,7 @@ public class ValidationUtils {
             SequenceLookup lookup = context.get(SequenceLookup.class);
             if (lookup != null) {
                 try {
-                    Long length = lookup.getSequenceLength(seqId, SequenceRangeOption.WITHOUT_EDGE_N_BASES);
+                    Long length = lookup.getSequenceLength(seqId, SequenceRangeOption.WHOLE_SEQUENCE);
                     sequenceLengthCache.put(seqId, length);
                     return length;
                 } catch (Exception ex) {

@@ -58,14 +58,14 @@ class SequenceLengthValidationTest {
 
     private void injectLookupReturning(String seqId, long len) throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getSequenceLength(seqId, SequenceRangeOption.WITHOUT_EDGE_N_BASES))
+        when(mockLookup.getSequenceLength(seqId, SequenceRangeOption.WHOLE_SEQUENCE))
                 .thenReturn(len);
         injectLookup(mockLookup);
     }
 
     private void injectLookupReturning(String seqId, long len, AnalysisType analysisType) throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getSequenceLength(seqId, SequenceRangeOption.WITHOUT_EDGE_N_BASES))
+        when(mockLookup.getSequenceLength(seqId, SequenceRangeOption.WHOLE_SEQUENCE))
                 .thenReturn(len);
         ValidationContext context = TestUtils.createTestContext();
         context.register(SequenceLookup.class, new ContextProvider<>() {
