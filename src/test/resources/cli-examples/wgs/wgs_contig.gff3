@@ -1,0 +1,5 @@
+##gff-version 3
+##sequence-region CAXMYH010000001 1 3118321
+CAXMYH010000001	.	gene	900	5100	.	+	.	ID=gene1;gene=myGene;locus_tag=MYORG_001;
+CAXMYH010000001	.	CDS	1000	5000	.	+	0	ID=cds1;Parent=gene1;locus_tag=MYORG_001;product=hypothetical protein;
+###

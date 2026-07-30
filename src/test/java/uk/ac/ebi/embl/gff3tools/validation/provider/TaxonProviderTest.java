@@ -8,7 +8,7 @@
  * CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package uk.ac.ebi.embl.gff3tools.metadata;
+package uk.ac.ebi.embl.gff3tools.validation.provider;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -25,7 +25,7 @@ class TaxonProviderTest {
     private static TaxonProvider providerReturning(Optional<Taxon> value) {
         return new TaxonProvider() {
             @Override
-            public Optional<Taxon> resolve(long taxId) {
+            public Optional<Taxon> resolve(String accession) {
                 return value;
             }
 
@@ -55,8 +55,8 @@ class TaxonProviderTest {
 
         TaxonProvider provider = new TaxonProvider() {
             @Override
-            public Optional<Taxon> resolve(long taxId) {
-                return taxId == 9606L ? Optional.of(taxon) : Optional.empty();
+            public Optional<Taxon> resolve(String accession) {
+                return "seq1".equals(accession) ? Optional.of(taxon) : Optional.empty();
             }
 
             @Override
@@ -65,7 +65,7 @@ class TaxonProviderTest {
             }
         };
 
-        assertSame(taxon, provider.resolve(9606L).orElseThrow());
-        assertTrue(provider.resolve(1L).isEmpty());
+        assertSame(taxon, provider.resolve("seq1").orElseThrow());
+        assertTrue(provider.resolve("seq2").isEmpty());
     }
 }

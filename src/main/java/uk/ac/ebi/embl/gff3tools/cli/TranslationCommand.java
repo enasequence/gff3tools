@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
+import uk.ac.ebi.embl.gff3tools.Gff3ProviderFactory;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
@@ -64,7 +65,7 @@ public class TranslationCommand extends AbstractCommand {
         try {
             List<FileSequenceSource> sources =
                     buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
-            CompositeSequenceProvider compositeProvider = buildCompositeProvider(sources);
+            CompositeSequenceProvider compositeProvider = Gff3ProviderFactory.buildCompositeProvider(sources);
             if (!compositeProvider.hasSources()) {
                 throw new RuntimeException(
                         "A sequence source is required. Provide --sequence or ensure a plugin supplies sequences.");

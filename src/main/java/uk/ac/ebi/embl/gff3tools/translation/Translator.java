@@ -32,7 +32,8 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 @Setter(AccessLevel.PROTECTED)
 public class Translator {
 
-    public static final Integer DEFAULT_TRANSLATION_TABLE = 11;
+    public static final Integer DEFAULT_TRANSLATION_TABLE = 1;
+    public static final Integer PLASTID_TRANSLATION_TABLE = 11;
 
     private final CodonTranslator codonTranslator;
 
@@ -88,9 +89,9 @@ public class Translator {
 
         setCompoundPartiality(sortedFeatures);
 
-        // TODO: Get translation table from taxon.
-        int translationTable =
-                feature.getAttribute("transl_table").map(Integer::parseInt).orElse(DEFAULT_TRANSLATION_TABLE);
+        int translationTable = feature.getAttribute(GFF3Attributes.TRANSL_TABLE)
+                .map(Integer::parseInt)
+                .orElse(DEFAULT_TRANSLATION_TABLE);
 
         this.codonTranslator = new CodonTranslator(translationTable);
 

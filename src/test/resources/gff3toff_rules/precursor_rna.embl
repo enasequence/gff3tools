@@ -9,7 +9,7 @@ XX
 FH   Key             Location/Qualifiers
 FH
 FT   source          1..12000
-FT   gene            100..11000
+FT   ncRNA           100..11000
 FT                   /gene="rRNA_cluster"
 FT                   /locus_tag="GENE001"
 FT   precursor_RNA   100..11000

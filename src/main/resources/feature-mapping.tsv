@@ -16,7 +16,7 @@ SO:0001760	non_processed_pseudogene	A pseudogene that arose from a means other t
 SO:0001759	unitary_pseudogene	A pseudogene, deactivated from original state by mutation, fixed in a population,where the ortholog in a reference species such as mouse remains functional.	gene	/pseudogene="unitary"
 SO:0002189	allelic_pseudogene	A(unitary) pseudogene that is stable in the population but importantly it has a functional alternative allele also in the population. i.e., one strain may have the gene, another strain may have the pseudogene. MHC haplotypes have allelic pseudogenes.	gene	/pseudogene="allelic"
 SO:0000336 	pseudogene	A sequence that closely resembles a known functional gene, at another locus within a genome, that is non-functional as a consequence of (usually several) mutations that prevent either its transcription or translation (or both). In general, pseudogenes result from either reverse transcription of a transcript of their "normal" paralog (SO:0000043) (in which case the pseudogene typically lacks introns and includes a poly(A) tail) or from recombination (SO:0000044) (in which case the pseudogene is typically a tandem duplication of its "normal" paralog).	gene	/pseudogene="unknown"
-SO:0001263	ncRNA_gene	Agene that encodes a non-coding RNA.	gene
+SO:0001263	ncRNA_gene	Agene that encodes a non-coding RNA.	ncRNA
 SO:0000723	iDNA	Genomicsequence removed from the genome, as a normal event, by a process of recombination.	iDNA
 SO:0000188 	intron	A region of a primary transcript that is transcribed, but removed from within the transcript by splicing together the sequences (exons) on either side of it.	intron
 SO:0000662 	spliceosomal_intron	An intron which is spliced by the spliceosome.	intron	/note="spliceosomal_intron"

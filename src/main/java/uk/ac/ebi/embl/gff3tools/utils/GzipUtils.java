@@ -48,22 +48,55 @@ public final class GzipUtils {
      * {@code FileSequenceSource.close()}).
      */
     public static Path decompressToTempFile(Path source, String prefix, String suffix) throws ReadException {
-        Path tempFile = null;
+        Path tempFile;
         try {
             tempFile = Files.createTempFile(prefix, suffix);
-            try (InputStream gzipIn = new GZIPInputStream(Files.newInputStream(source))) {
-                Files.copy(gzipIn, tempFile, StandardCopyOption.REPLACE_EXISTING);
-            }
-            return tempFile;
         } catch (IOException e) {
-            if (tempFile != null) {
-                try {
-                    Files.deleteIfExists(tempFile);
-                } catch (IOException ignored) {
-                    // Best-effort cleanup; the original exception is what matters.
-                }
+            throw new ReadException("Failed to create temp file for decompression of: " + source, e);
+        }
+        boolean success = false;
+        try {
+            Path result = decompressFile(source, tempFile);
+            success = true;
+            return result;
+        } finally {
+            if (!success) {
+                deleteQuietly(tempFile);
             }
+        }
+    }
+
+    /**
+     * Decompresses a gzip-compressed file to {@code destination}.
+     *
+     * <p>Uses a staging write: bytes are first written to a sibling temp file in the same
+     * directory, then renamed to {@code destination} on success. {@code destination} is never
+     * modified if decompression fails.
+     */
+    public static Path decompressFile(Path source, Path destination) throws ReadException {
+        Path staging = null;
+        try {
+            staging = Files.createTempFile(destination.toAbsolutePath().getParent(), ".decomp-", ".tmp");
+            try (InputStream raw = Files.newInputStream(source);
+                    InputStream gzipIn = new GZIPInputStream(raw)) {
+                Files.copy(gzipIn, staging, StandardCopyOption.REPLACE_EXISTING);
+            }
+            Files.move(staging, destination, StandardCopyOption.REPLACE_EXISTING);
+            staging = null;
+            return destination;
+        } catch (IOException e) {
             throw new ReadException("Failed to decompress gzipped file: " + source, e);
+        } finally {
+            if (staging != null) {
+                deleteQuietly(staging);
+            }
+        }
+    }
+
+    private static void deleteQuietly(Path path) {
+        try {
+            Files.deleteIfExists(path);
+        } catch (IOException ignored) {
         }
     }
 }

@@ -41,7 +41,7 @@ without needing a FASTA file or to supplement headers not embedded in the FASTA 
    | Linkage Group      | `/linkage_group`|
    | Monopartite        | _(no qualifier)_|
 
-   `chromosome_location` maps to `/organelle` (lowercased). `"Nuclear"` produces no qualifier.
+   `chromosome_location` maps to `/organelle` (lowercased). `"Nucleus"` and `"Cytoplasm"` produce no qualifier.
    All other values are passed through; downstream EMBL validation checks qualifier values.
 
 6. **FR-6 — Per-entry lookup**
@@ -84,7 +84,7 @@ without needing a FASTA file or to supplement headers not embedded in the FASTA 
 | `topology`             | Yes       | `sequence.setTopology(Sequence.Topology.LINEAR/CIRCULAR)`         | ID line field 3             |
 | `chromosome_name`      | No        | `sourceFt.addQualifier("chromosome", value)`                      | FT source /chromosome       |
 | `chromosome_type`      | No        | mapped to `/plasmid`, `/segment`, `/chromosome`, or `/linkage_group` | FT source qualifier      |
-| `chromosome_location`  | No        | `sourceFt.addQualifier("organelle", lowercased_value)` (when non-nuclear) | FT source /organelle |
+| `chromosome_location`  | No        | `sourceFt.addQualifier("organelle", lowercased_value)` (except `Nucleus`/`Cytoplasm`, which produce no qualifier) | FT source /organelle |
 
 ### Header Source Architecture
 

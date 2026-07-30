@@ -19,7 +19,7 @@
   "comment": "This is a test assembly",
   "chromosomeName": "chr1",
   "chromosomeType": "Chromosome",
-  "chromosomeLocation": "Nuclear",
+  "chromosomeLocation": "Nucleus",
   "firstPublic": "15-JAN-2024",
   "firstPublicRelease": 144,
   "lastUpdated": "01-JUN-2024",

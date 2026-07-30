@@ -257,7 +257,12 @@ public enum ConversionUtils {
                 return accession;
             }
         }
-        return entry.getSubmitterAccession();
+
+        // Fallback to submitter accession if sequence accession is not available
+        return entry.getSubmitterAccession() == null
+                        || entry.getSubmitterAccession().isEmpty()
+                ? entry.getPrimaryAccession()
+                : entry.getSubmitterAccession();
     }
 
     /**
