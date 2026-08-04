@@ -26,8 +26,8 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
 
 /**
- * Removes a redundant {@code complement(...)} wrapper from a {@code transl_except} location, as
- * sequencetools' {@code Transl_exceptLocationFix} does for flat files.
+ * Removes a redundant {@code complement(...)} wrapper from a {@code transl_except} location,
+ * in case it is left-over from FF->GFF3 conversion.
  *
  * Direction lives in column 7, so the wrapper duplicates it — but it is stripped only where that is
  * provable: every fragment containing the codon is on the minus strand. Anything else is left for
@@ -43,15 +43,13 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
         description = "Remove the redundant complement(...) wrapper from transl_except locations")
 public class TranslExceptComplementFix implements Fix {
 
-    private static final String MINUS_STRAND = "-";
-
     // Anchored to a simple range, so join/order, fuzzy bounds and remote accessions never match.
-    // Recomposing groups 1+2+3 drops the wrapper and preserves spacing, case and the aa: token.
+    // Rebuilding prefix + range + suffix drops the wrapper and preserves spacing, case and aa:.
     private static final Pattern POS_COMPLEMENT_PATTERN = Pattern.compile(
-            "^(\\s*\\(\\s*pos\\s*:\\s*)complement\\(\\s*(\\d+(?:\\s*\\.\\.\\s*\\d+)?)\\s*\\)(\\s*,\\s*aa\\s*:\\s*[^\\s,)]+\\s*\\)\\s*)$",
+            "^(?<prefix>\\s*\\(\\s*pos\\s*:\\s*)"
+                    + "complement\\(\\s*(?<range>(?<start>\\d+)(?:\\s*\\.\\.\\s*(?<end>\\d+))?)\\s*\\)"
+                    + "(?<suffix>\\s*,\\s*aa\\s*:\\s*[^\\s,)]+\\s*\\)\\s*)$",
             Pattern.CASE_INSENSITIVE);
-
-    private static final Pattern RANGE_PATTERN = Pattern.compile("^(\\d+)(?:\\s*\\.\\.\\s*(\\d+))?$");
 
     @FixMethod(
             rule = "TRANSL_EXCEPT_COMPLEMENT",
@@ -60,18 +58,11 @@ public class TranslExceptComplementFix implements Fix {
             priority = ValidationPriority.HIGH)
     public void fixAnnotation(GFF3Annotation annotation, int line) {
 
-        Map<String, List<GFF3Feature>> grouped = annotation.getFeatures().stream()
+        Map<String, List<GFF3Feature>> featuresWithAttribute = annotation.getFeatures().stream()
                 .filter(feature -> feature.hasAttribute(TRANSL_EXCEPT))
                 .collect(Collectors.groupingBy(feature -> feature.getId().orElse(feature.hashCodeString())));
 
-        for (List<GFF3Feature> fragments : grouped.values()) {
-            // Must never propagate: executeFixes turns an escape into an unsuppressable error.
-            try {
-                fixGroup(fragments, line);
-            } catch (RuntimeException e) {
-                log.warn("TRANSL_EXCEPT_COMPLEMENT: skipping feature group at line {}: {}", line, e.getMessage());
-            }
-        }
+        featuresWithAttribute.values().forEach(featureGroup -> fixGroup(featureGroup, line));
     }
 
     /**
@@ -81,28 +72,29 @@ public class TranslExceptComplementFix implements Fix {
      */
     private void fixGroup(List<GFF3Feature> fragments, int line) {
 
+        List<String> distinctValues = fragments.stream()
+                .flatMap(fragment -> fragment.getAttributeList(TRANSL_EXCEPT).orElse(List.of()).stream())
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
         Map<String, String> rewrites = new LinkedHashMap<>();
-        Set<String> evaluated = new HashSet<>();
-
-        for (GFF3Feature fragment : fragments) {
-            for (String value : fragment.getAttributeList(TRANSL_EXCEPT).orElse(List.of())) {
-                if (value == null || !evaluated.add(value)) {
-                    continue;
-                }
-                String stripped = stripIfRedundant(value, fragments);
-                if (stripped != null) {
-                    rewrites.put(value, stripped);
-                }
+        for (String value : distinctValues) {
+            String stripped = stripIfRedundant(value, fragments);
+            if (stripped == null) {
+                continue;
             }
+            rewrites.put(value, stripped);
+            log.info(
+                    "Fix: removed redundant complement() from {} on '{}' at line {}: '{}' -> '{}'",
+                    TRANSL_EXCEPT,
+                    fragments.get(0).accession(),
+                    line,
+                    value,
+                    stripped);
         }
 
-        if (rewrites.isEmpty()) {
-            return;
-        }
-
-        for (GFF3Feature fragment : fragments) {
-            applyRewrites(fragment, rewrites, line);
-        }
+        fragments.forEach(fragment -> applyRewrites(fragment, rewrites));
     }
 
     /** @return the normalised value, or {@code null} to leave it untouched. */
@@ -113,16 +105,12 @@ public class TranslExceptComplementFix implements Fix {
             return null;
         }
 
-        Matcher range = RANGE_PATTERN.matcher(matcher.group(2));
-        if (!range.matches()) {
-            return null;
-        }
-
         long start;
         long end;
         try {
-            start = Long.parseLong(range.group(1));
-            end = range.group(2) != null ? Long.parseLong(range.group(2)) : start;
+            start = Long.parseLong(matcher.group("start"));
+            String endGroup = matcher.group("end");
+            end = endGroup != null ? Long.parseLong(endGroup) : start;
         } catch (NumberFormatException e) {
             return null;
         }
@@ -131,7 +119,7 @@ public class TranslExceptComplementFix implements Fix {
             return null;
         }
 
-        return matcher.group(1) + matcher.group(2) + matcher.group(3);
+        return matcher.group("prefix") + matcher.group("range") + matcher.group("suffix");
     }
 
     /**
@@ -144,39 +132,20 @@ public class TranslExceptComplementFix implements Fix {
                 .filter(fragment -> start >= fragment.getStart() && end <= fragment.getEnd())
                 .toList();
 
-        return !containing.isEmpty()
-                && containing.stream().allMatch(fragment -> MINUS_STRAND.equals(fragment.getStrand()));
+        return !containing.isEmpty() && containing.stream().allMatch(GFF3Feature::isComplement);
     }
 
-    private void applyRewrites(GFF3Feature feature, Map<String, String> rewrites, int line) {
+    private void applyRewrites(GFF3Feature feature, Map<String, String> rewrites) {
 
-        List<String> values = feature.getAttributeList(TRANSL_EXCEPT).orElse(null);
-        if (values == null || values.isEmpty()) {
+        List<String> values = feature.getAttributeList(TRANSL_EXCEPT).orElse(List.of());
+        if (values.stream().noneMatch(rewrites::containsKey)) {
             return;
         }
 
-        List<String> updated = new ArrayList<>(values.size());
-        boolean changed = false;
+        List<String> updated = values.stream()
+                .map(value -> rewrites.getOrDefault(value, value))
+                .toList();
 
-        for (String value : values) {
-            String rewritten = rewrites.get(value);
-            if (rewritten == null) {
-                updated.add(value);
-                continue;
-            }
-            changed = true;
-            updated.add(rewritten);
-            log.info(
-                    "Fix: removed redundant complement() from {} on '{}' at line {}: '{}' -> '{}'",
-                    TRANSL_EXCEPT,
-                    feature.accession(),
-                    line,
-                    value,
-                    rewritten);
-        }
-
-        if (changed) {
-            feature.setAttributeList(TRANSL_EXCEPT, updated);
-        }
+        feature.setAttributeList(TRANSL_EXCEPT, new ArrayList<>(updated));
     }
 }
