@@ -592,10 +592,10 @@ public class AttributesLocationValidationTest {
     // -----------------------------------------------------------------
     // TRANSL_EXCEPT_STRAND_CONFLICT
     //
-    // Reports a complement(...) wrapper that TRANSL_EXCEPT_COMPLEMENT refused to strip, i.e. one
-    // whose direction cannot be shown to agree with the feature's strand. Note these features are
-    // built directly rather than through TestUtils, because every TestUtils factory hardcodes
-    // strand "+" and strand is precisely what this rule turns on.
+    // Reports a complement(...) wrapper in a transl_except value that TRANSL_EXCEPT_COMPLEMENT
+    // declined to remove, because the row's strand column does not confirm dropping it is safe.
+    // These features are built directly rather than via TestUtils, whose factories all hardcode
+    // strand "+" - and strand is exactly what this rule keys on.
     // -----------------------------------------------------------------
 
     @Test
@@ -623,8 +623,8 @@ public class AttributesLocationValidationTest {
                 ValidationException.class,
                 () -> attributesLocationValidation.validateTranslExceptStrandConflict(gff3Annotation, 1));
 
-        // Redundancy is unprovable on an unknown strand, so the wrapper is reported rather than
-        // quietly accepted.
+        // A "." strand states no direction at all, so the wrapper cannot be confirmed and is
+        // reported rather than quietly accepted.
         Assertions.assertTrue(ex.getMessage().contains("on strand \".\""));
     }
 
@@ -648,7 +648,7 @@ public class AttributesLocationValidationTest {
         gff3Annotation.addFeature(featureOnStrand(
                 "c1", OntologyTerm.CDS.name(), 4000, 5000, "-", TRANSL_EXCEPT, "(pos:complement(4370..4372),aa:Sec)"));
 
-        // The wrapper merely duplicates column 7 here, so there is nothing to report.
+        // Here the wrapper and the strand column agree, so there is nothing to report.
         Assertions.assertDoesNotThrow(
                 () -> attributesLocationValidation.validateTranslExceptStrandConflict(gff3Annotation, 1));
     }
@@ -661,8 +661,8 @@ public class AttributesLocationValidationTest {
         gff3Annotation.addFeature(
                 featureOnStrand("c1", OntologyTerm.CDS.name(), 6000, 7000, "+", TRANSL_EXCEPT, value));
 
-        // Only the fragment actually containing the codon decides; the unrelated + segment of a
-        // trans-spliced join must not trigger a false positive.
+        // Only the row whose start/end span the position decides. The other row of the same
+        // feature carries a different strand, which must not trigger a false positive.
         Assertions.assertDoesNotThrow(
                 () -> attributesLocationValidation.validateTranslExceptStrandConflict(gff3Annotation, 1));
     }
@@ -688,14 +688,12 @@ public class AttributesLocationValidationTest {
 
     @Test
     public void testStrandConflictNeverAppliesToAntiCodon() {
-        // There is deliberately no anticodon counterpart: sequencetools consumes that complement
-        // flag to re-extract the seq: payload, so it is meaningful rather than redundant.
+        // The lookalike anticodon attribute must never be reported by this rule.
         //
-        // The value is deliberately written WITHOUT a seq: part. With one, it fails the
-        // transl_except grammar (which forbids a second comma) and would be skipped as
-        // unparseable - so the test would pass even if the rule were wrongly extended to
-        // anticodon. Seq-less, it parses cleanly and sits inside the feature on a + strand, so
-        // the attribute filter is the only thing standing between it and a reported conflict.
+        // Keep this value free of a seq: part: with one it fails the transl_except format check and
+        // is skipped as unparseable, so the test would still pass even if the rule were wrongly
+        // extended to anticodon. Seq-less it parses cleanly, leaving the attribute filter as the
+        // only thing preventing a conflict being reported.
         gff3Annotation.addFeature(featureOnStrand(
                 "t1", OntologyTerm.TRNA.name(), 4200, 4300, "+", ANTI_CODON, "(pos:complement(4229..4231),aa:Lys)"));
 

@@ -64,21 +64,10 @@ public class AttributesLocationValidation implements Validation {
     }
 
     /**
-     * Reports a {@code complement(...)} wrapper that {@code TRANSL_EXCEPT_COMPLEMENT} refused to
-     * strip, i.e. one whose direction cannot be shown to agree with the feature's strand.
-     *
-     * <p>The wrapper duplicates information already held in column 7, so it is safe to remove only
-     * when the two agree. When they disagree the fix deliberately leaves the value alone rather
-     * than resolving the conflict in favour of the strand column, and this rule surfaces it — a
-     * silent strip would launder a genuine annotation error into clean-looking data.
-     *
-     * <p>Defaults to {@link RuleSeverity#WARN}: sequencetools strips the wrapper silently and
-     * flags nothing, so raising an error here would reject files ENA itself accepts. Curators can
-     * opt into strictness with {@code --rules TRANSL_EXCEPT_STRAND_CONFLICT:ERROR}.
-     *
-     * <p>There is deliberately no {@code anticodon} counterpart: there the complement flag is
-     * consumed by sequencetools to re-extract the {@code seq:} payload, so it is meaningful rather
-     * than redundant and is never stripped in the first place.
+     * Reports a {@code complement(...)} wrapper in a {@code transl_except} value whose direction the
+     * row's strand column does not confirm. {@code TRANSL_EXCEPT_COMPLEMENT} removes the wrapper
+     * when the two agree; when they disagree one of them is wrong, so this reports it rather than
+     * letting either side silently win.
      */
     @ValidationMethod(
             rule = "TRANSL_EXCEPT_STRAND_CONFLICT",

@@ -26,9 +26,10 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 
 /**
- * The fix removes a {@code complement(...)} wrapper from a {@code transl_except} feature attribute only
- * where it is provably redundant with the feature's strand. These tests pin both halves of that:
- * what is rewritten, and — more importantly — everything that must be left alone.
+ * The fix drops a {@code complement(...)} wrapper from {@code transl_except} attribute values, so
+ * {@code (pos:complement(4370..4372),aa:Sec)} becomes {@code (pos:4370..4372,aa:Sec)} — but only
+ * when the row's strand column confirms that is safe. These tests cover both halves: what gets
+ * rewritten, and the much larger set of cases that must be left exactly as they are.
  */
 public class TranslExceptComplementFixTest {
 
@@ -45,7 +46,7 @@ public class TranslExceptComplementFixTest {
     }
 
     // ---------------------------------------------------------------------
-    // Stripping, where the wrapper is provably redundant
+    // Values that should be rewritten
     // ---------------------------------------------------------------------
 
     @Test
@@ -112,7 +113,7 @@ public class TranslExceptComplementFixTest {
     }
 
     // ---------------------------------------------------------------------
-    // Refusals: the wrapper must survive wherever redundancy is unprovable
+    // Values that must be left exactly as they are
     // ---------------------------------------------------------------------
 
     @Test
@@ -123,8 +124,9 @@ public class TranslExceptComplementFixTest {
 
         fix.fixAnnotation(annotation, 1);
 
-        // Stripping here would silently resolve a genuine contradiction in favour of the strand
-        // column; TRANSL_EXCEPT_STRAND_CONFLICT reports it instead.
+        // The wrapper says "backwards" but the strand column says "forwards", so one of them is
+        // wrong. Rewriting would hide that, so the value stays put and TRANSL_EXCEPT_STRAND_CONFLICT
+        // reports it instead.
         assertEquals(List.of(value), translExcept(cds));
     }
 
@@ -183,8 +185,7 @@ public class TranslExceptComplementFixTest {
         annotation.addFeature(a);
         annotation.addFeature(b);
 
-        // A fix must never propagate an exception: executeFixes turns any escape into a hard
-        // error that --rules cannot suppress.
+        // Values the fix cannot parse are skipped, so one malformed row can never abort the run.
         assertDoesNotThrow(() -> fix.fixAnnotation(annotation, 1));
 
         assertEquals(List.of(malformed), translExcept(a));
@@ -192,12 +193,12 @@ public class TranslExceptComplementFixTest {
     }
 
     // ---------------------------------------------------------------------
-    // Joins: the decision is made per ID-group, never per row
+    // One feature spread over several rows (a join)
     // ---------------------------------------------------------------------
 
     @Test
     public void testUniformMinusStrandJoinRewritesEveryRowIdentically() {
-        // GFF3AnnotationFactory replicates the attribute onto every row of a join.
+        // Rows sharing an ID are one feature, and each row carries its own copy of the attribute.
         String value = "(pos:complement(4370..4372),aa:Sec)";
         GFF3Feature first = cds("c1", 4000, 5000, MINUS, value);
         GFF3Feature second = cds("c1", 6000, 7000, MINUS, value);
@@ -220,7 +221,8 @@ public class TranslExceptComplementFixTest {
 
         fix.fixAnnotation(annotation, 1);
 
-        // Containment - not "the whole group is minus" - keeps a trans-spliced join fixable.
+        // Only the row whose start/end span the position decides, so the other row's strand is
+        // irrelevant here.
         assertEquals(List.of("(pos:4370..4372,aa:Sec)"), translExcept(minusSegment));
         assertEquals(translExcept(minusSegment), translExcept(plusSegment));
     }
@@ -240,14 +242,14 @@ public class TranslExceptComplementFixTest {
     }
 
     // ---------------------------------------------------------------------
-    // Guard: anticodon is never touched
+    // Guard: the lookalike anticodon attribute is never touched
     // ---------------------------------------------------------------------
 
     @Test
     public void testNeverTouchesAntiCodon() {
-        // sequencetools re-extracts the seq: payload through SegmentFactory using the anticodon
-        // location's own complement flag, so stripping it there would make the value internally
-        // false. transl_except carries no such direction-dependent payload.
+        // The anticodon attribute looks almost identical but must never be rewritten: it has an
+        // extra seq: part that other EBI tooling recomputes from the wrapper, so dropping the
+        // wrapper would change what the value says.
         String value = "(pos:complement(4229..4231),aa:Lys,seq:ttt)";
         GFF3Feature tRna = new GFF3Feature(
                 Optional.of("t1"),
