@@ -26,16 +26,20 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
 
 /**
- * Removes a redundant {@code complement(...)} wrapper from a {@code transl_except} location,
- * in case it is left-over from FF->GFF3 conversion.
+ * Rewrites {@code transl_except} attribute values to drop a {@code complement(...)} wrapper around
+ * the position, so {@code (pos:complement(4370..4372),aa:Sec)} becomes {@code (pos:4370..4372,aa:Sec)}.
+ * That wrapper is flat-file syntax meaning "read backwards" and survives FF-&gt;GFF3 conversion, but
+ * GFF3 already states direction in the strand column, so it is duplicated information — the numbers
+ * are identical either way.
  *
- * Direction lives in column 7, so the wrapper duplicates it — but it is stripped only where that is
- * provable: every fragment containing the codon is on the minus strand. Anything else is left for
- * {@code TRANSL_EXCEPT_STRAND_CONFLICT} to report.
+ * <p>It is dropped only when the strand column agrees, i.e. holds the literal {@code "-"}.
+ * Otherwise the two contradict each other, so the value is left
+ * untouched and {@code TRANSL_EXCEPT_STRAND_CONFLICT} reports it rather than this fix silently
+ * picking a winner.
  *
- * <p><strong>{@code anticodon} is deliberately excluded:</strong> sequencetools re-extracts its
- * {@code seq:} payload using that location's own complement flag, so stripping it there would make
- * the value internally false.
+ * <p>The lookalike {@code anticodon} attribute is deliberately left alone: it carries an extra
+ * {@code seq:} part that other EBI tooling recomputes from that same wrapper, so removing it there
+ * would change what the value claims.
  */
 @Slf4j
 @Gff3Fix(
@@ -43,8 +47,10 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
         description = "Remove the redundant complement(...) wrapper from transl_except locations")
 public class TranslExceptComplementFix implements Fix {
 
-    // Anchored to a simple range, so join/order, fuzzy bounds and remote accessions never match.
-    // Rebuilding prefix + range + suffix drops the wrapper and preserves spacing, case and aa:.
+    // Deliberately matches only a plain "123" or "123..456" inside complement(...); anything more
+    // exotic (join(...), <100, OTHER_ACC:100..102) is left untouched for validation to judge.
+    // The named groups let the value be rebuilt as prefix + range + suffix, which removes the
+    // wrapper while keeping the original spacing and casing byte for byte.
     private static final Pattern POS_COMPLEMENT_PATTERN = Pattern.compile(
             "^(?<prefix>\\s*\\(\\s*pos\\s*:\\s*)"
                     + "complement\\(\\s*(?<range>(?<start>\\d+)(?:\\s*\\.\\.\\s*(?<end>\\d+))?)\\s*\\)"
@@ -66,9 +72,10 @@ public class TranslExceptComplementFix implements Fix {
     }
 
     /**
-     * Decides once per distinct value across the whole ID-group, so every row of a join ends up
-     * identical — GFF3Mapper keeps only the first row's attributes when merging a join back to flat
-     * file, making a per-row decision order-dependent.
+     * One feature can span several GFF3 rows sharing an {@code ID} (the fragments of a join), and
+     * each row carries its own copy of the same attribute value. Decide once for the whole group so
+     * every row ends up with identical text — {@code GFF3Mapper} keeps only the first row's
+     * attributes when converting back to flat file, so a per-row decision would depend on row order.
      */
     private void fixGroup(List<GFF3Feature> fragments, int line) {
 
@@ -123,8 +130,9 @@ public class TranslExceptComplementFix implements Fix {
     }
 
     /**
-     * Containment rather than "whole group is minus" keeps a mixed-strand trans-spliced join
-     * fixable when the codon sits in its minus segment.
+     * Only the rows whose own start/end span the position get a say on the strand. Checking those
+     * rather than the whole group matters because the rows of one feature may legitimately carry
+     * different strands.
      */
     private boolean isRedundantWithStrand(List<GFF3Feature> fragments, long start, long end) {
 

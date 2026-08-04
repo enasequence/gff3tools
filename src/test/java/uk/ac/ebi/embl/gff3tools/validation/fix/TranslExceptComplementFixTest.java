@@ -26,7 +26,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 
 /**
- * The fix removes a {@code complement(...)} wrapper from a {@code transl_except} location only
+ * The fix removes a {@code complement(...)} wrapper from a {@code transl_except} feature attribute only
  * where it is provably redundant with the feature's strand. These tests pin both halves of that:
  * what is rewritten, and — more importantly — everything that must be left alone.
  */
