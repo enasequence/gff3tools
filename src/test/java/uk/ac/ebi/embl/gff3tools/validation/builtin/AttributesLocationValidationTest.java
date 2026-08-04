@@ -12,8 +12,10 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -585,5 +587,138 @@ public class AttributesLocationValidationTest {
         Assertions.assertTrue(ex.getMessage()
                 .contains("%s location %s..%s is outside feature range %s..%s"
                         .formatted(TRANSL_EXCEPT, "1000", "1002", f1.getStart(), f2.getEnd())));
+    }
+
+    // -----------------------------------------------------------------
+    // TRANSL_EXCEPT_STRAND_CONFLICT
+    //
+    // Reports a complement(...) wrapper that TRANSL_EXCEPT_COMPLEMENT refused to strip, i.e. one
+    // whose direction cannot be shown to agree with the feature's strand. Note these features are
+    // built directly rather than through TestUtils, because every TestUtils factory hardcodes
+    // strand "+" and strand is precisely what this rule turns on.
+    // -----------------------------------------------------------------
+
+    @Test
+    public void testStrandConflictReportedWhenComplementSitsOnPlusStrand() {
+        String value = "(pos:complement(4370..4372),aa:Sec)";
+        gff3Annotation.addFeature(
+                featureOnStrand("c1", OntologyTerm.CDS.name(), 4000, 5000, "+", TRANSL_EXCEPT, value));
+
+        ValidationException ex = Assertions.assertThrows(
+                ValidationException.class,
+                () -> attributesLocationValidation.validateTranslExceptStrandConflict(gff3Annotation, 1));
+
+        Assertions.assertTrue(ex.getMessage()
+                .contains("%s location is wrapped in complement() but the containing feature is on strand \"%s\": %s"
+                        .formatted(TRANSL_EXCEPT, "+", value)));
+    }
+
+    @Test
+    public void testStrandConflictReportedWhenStrandIsUnknown() {
+        String value = "(pos:complement(4370..4372),aa:Sec)";
+        gff3Annotation.addFeature(
+                featureOnStrand("c1", OntologyTerm.CDS.name(), 4000, 5000, ".", TRANSL_EXCEPT, value));
+
+        ValidationException ex = Assertions.assertThrows(
+                ValidationException.class,
+                () -> attributesLocationValidation.validateTranslExceptStrandConflict(gff3Annotation, 1));
+
+        // Redundancy is unprovable on an unknown strand, so the wrapper is reported rather than
+        // quietly accepted.
+        Assertions.assertTrue(ex.getMessage().contains("on strand \".\""));
+    }
+
+    @Test
+    public void testStrandConflictReportedWhenCodonMatchesNoFragment() {
+        String value = "(pos:complement(9000..9002),aa:Sec)";
+        gff3Annotation.addFeature(
+                featureOnStrand("c1", OntologyTerm.CDS.name(), 4000, 5000, "-", TRANSL_EXCEPT, value));
+
+        ValidationException ex = Assertions.assertThrows(
+                ValidationException.class,
+                () -> attributesLocationValidation.validateTranslExceptStrandConflict(gff3Annotation, 1));
+
+        Assertions.assertTrue(ex.getMessage()
+                .contains("%s location is wrapped in complement() but does not fall within any feature fragment: %s"
+                        .formatted(TRANSL_EXCEPT, value)));
+    }
+
+    @Test
+    public void testNoStrandConflictWhenComplementAgreesWithMinusStrand() {
+        gff3Annotation.addFeature(featureOnStrand(
+                "c1", OntologyTerm.CDS.name(), 4000, 5000, "-", TRANSL_EXCEPT, "(pos:complement(4370..4372),aa:Sec)"));
+
+        // The wrapper merely duplicates column 7 here, so there is nothing to report.
+        Assertions.assertDoesNotThrow(
+                () -> attributesLocationValidation.validateTranslExceptStrandConflict(gff3Annotation, 1));
+    }
+
+    @Test
+    public void testNoStrandConflictWhenCodonSitsInMinusSegmentOfMixedStrandJoin() {
+        String value = "(pos:complement(4370..4372),aa:Sec)";
+        gff3Annotation.addFeature(
+                featureOnStrand("c1", OntologyTerm.CDS.name(), 4000, 5000, "-", TRANSL_EXCEPT, value));
+        gff3Annotation.addFeature(
+                featureOnStrand("c1", OntologyTerm.CDS.name(), 6000, 7000, "+", TRANSL_EXCEPT, value));
+
+        // Only the fragment actually containing the codon decides; the unrelated + segment of a
+        // trans-spliced join must not trigger a false positive.
+        Assertions.assertDoesNotThrow(
+                () -> attributesLocationValidation.validateTranslExceptStrandConflict(gff3Annotation, 1));
+    }
+
+    @Test
+    public void testNoStrandConflictWithoutAComplementWrapper() {
+        gff3Annotation.addFeature(featureOnStrand(
+                "c1", OntologyTerm.CDS.name(), 4000, 5000, "+", TRANSL_EXCEPT, "(pos:4370..4372,aa:Sec)"));
+
+        Assertions.assertDoesNotThrow(
+                () -> attributesLocationValidation.validateTranslExceptStrandConflict(gff3Annotation, 1));
+    }
+
+    @Test
+    public void testStrandConflictLeavesMalformedValuesToTheLocationRule() {
+        gff3Annotation.addFeature(featureOnStrand(
+                "c1", OntologyTerm.CDS.name(), 4000, 5000, "+", TRANSL_EXCEPT, "(pos:complement(abc),aa:Sec)"));
+
+        // An unparseable location is TRANSL_EXCEPT_LOCATION's business, not this rule's.
+        Assertions.assertDoesNotThrow(
+                () -> attributesLocationValidation.validateTranslExceptStrandConflict(gff3Annotation, 1));
+    }
+
+    @Test
+    public void testStrandConflictNeverAppliesToAntiCodon() {
+        // There is deliberately no anticodon counterpart: sequencetools consumes that complement
+        // flag to re-extract the seq: payload, so it is meaningful rather than redundant.
+        //
+        // The value is deliberately written WITHOUT a seq: part. With one, it fails the
+        // transl_except grammar (which forbids a second comma) and would be skipped as
+        // unparseable - so the test would pass even if the rule were wrongly extended to
+        // anticodon. Seq-less, it parses cleanly and sits inside the feature on a + strand, so
+        // the attribute filter is the only thing standing between it and a reported conflict.
+        gff3Annotation.addFeature(featureOnStrand(
+                "t1", OntologyTerm.TRNA.name(), 4200, 4300, "+", ANTI_CODON, "(pos:complement(4229..4231),aa:Lys)"));
+
+        Assertions.assertDoesNotThrow(
+                () -> attributesLocationValidation.validateTranslExceptStrandConflict(gff3Annotation, 1));
+    }
+
+    private GFF3Feature featureOnStrand(
+            String id, String name, long start, long end, String strand, String attribute, String... values) {
+
+        GFF3Feature feature = new GFF3Feature(
+                Optional.of(id),
+                Optional.empty(),
+                TestUtils.DEFAULT_ACCESSION,
+                Optional.empty(),
+                ".",
+                name,
+                start,
+                end,
+                ".",
+                strand,
+                "0");
+        feature.setAttributeList(attribute, new ArrayList<>(List.of(values)));
+        return feature;
     }
 }
