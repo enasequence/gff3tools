@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.*;
 
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -22,6 +23,7 @@ import uk.ac.ebi.embl.gff3tools.translation.except.AminoAcidExcept;
 import uk.ac.ebi.embl.gff3tools.translation.except.AntiCodonAttribute;
 import uk.ac.ebi.embl.gff3tools.translation.except.TranslExceptAttribute;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
@@ -34,6 +36,14 @@ public class AttributesLocationValidation implements Validation {
     private static final String INVALID_LOCATION_VALUE =
             "Invalid %s location: start must be > 0 and less than end at %s..%s";
     private static final String INVALID_LOCATION_SPAN = "%s location span must be \"%s\" at location %s";
+    private static final String COMPLEMENT_STRAND_CONFLICT =
+            "%s location is wrapped in complement() but the containing feature is on strand \"%s\": %s";
+    private static final String COMPLEMENT_UNRESOLVED =
+            "%s location is wrapped in complement() but does not fall within any feature fragment: %s";
+
+    /** Detects a {@code complement(...)} wrapper that survived {@code TRANSL_EXCEPT_COMPLEMENT}. */
+    private static final Pattern POS_COMPLEMENT_PATTERN =
+            Pattern.compile("\\(\\s*pos\\s*:\\s*complement\\(", Pattern.CASE_INSENSITIVE);
 
     @ValidationMethod(rule = "ANTI_CODON_LOCATION", type = ValidationType.ANNOTATION)
     public void validateAntiCodon(GFF3Annotation gff3Annotation, int line) throws ValidationException {
@@ -51,6 +61,77 @@ public class AttributesLocationValidation implements Validation {
                 .collect(Collectors.groupingBy(feature -> feature.getId().orElse(feature.hashCodeString())));
 
         validateCodonAttribute(grouped, TRANSL_EXCEPT, line);
+    }
+
+    /**
+     * Reports a {@code complement(...)} wrapper that {@code TRANSL_EXCEPT_COMPLEMENT} refused to
+     * strip, i.e. one whose direction cannot be shown to agree with the feature's strand.
+     *
+     * <p>The wrapper duplicates information already held in column 7, so it is safe to remove only
+     * when the two agree. When they disagree the fix deliberately leaves the value alone rather
+     * than resolving the conflict in favour of the strand column, and this rule surfaces it — a
+     * silent strip would launder a genuine annotation error into clean-looking data.
+     *
+     * <p>Defaults to {@link RuleSeverity#WARN}: sequencetools strips the wrapper silently and
+     * flags nothing, so raising an error here would reject files ENA itself accepts. Curators can
+     * opt into strictness with {@code --rules TRANSL_EXCEPT_STRAND_CONFLICT:ERROR}.
+     *
+     * <p>There is deliberately no {@code anticodon} counterpart: there the complement flag is
+     * consumed by sequencetools to re-extract the {@code seq:} payload, so it is meaningful rather
+     * than redundant and is never stripped in the first place.
+     */
+    @ValidationMethod(
+            rule = "TRANSL_EXCEPT_STRAND_CONFLICT",
+            type = ValidationType.ANNOTATION,
+            severity = RuleSeverity.WARN)
+    public void validateTranslExceptStrandConflict(GFF3Annotation gff3Annotation, int line) throws ValidationException {
+
+        Map<String, List<GFF3Feature>> grouped = gff3Annotation.getFeatures().stream()
+                .filter(f -> f.hasAttribute(TRANSL_EXCEPT))
+                .collect(Collectors.groupingBy(feature -> feature.getId().orElse(feature.hashCodeString())));
+
+        for (List<GFF3Feature> fragments : grouped.values()) {
+
+            List<String> values = fragments.stream()
+                    .flatMap(f -> f.getAttributeList(TRANSL_EXCEPT).orElse(List.of()).stream())
+                    .distinct()
+                    .toList();
+
+            for (String value : values) {
+                if (value == null || !POS_COMPLEMENT_PATTERN.matcher(value).find()) {
+                    continue;
+                }
+
+                TranslExceptAttribute attribute;
+                try {
+                    attribute = new TranslExceptAttribute(value);
+                } catch (TranslationException e) {
+                    // Malformed values are already reported by TRANSL_EXCEPT_LOCATION.
+                    continue;
+                }
+
+                final long start = attribute.getStartPosition();
+                final long end = attribute.getEndPosition();
+
+                List<GFF3Feature> containing = fragments.stream()
+                        .filter(f -> start >= f.getStart() && end <= f.getEnd())
+                        .toList();
+
+                if (containing.isEmpty()) {
+                    throw new ValidationException(line, COMPLEMENT_UNRESOLVED.formatted(TRANSL_EXCEPT, value));
+                }
+
+                Optional<GFF3Feature> conflicting =
+                        containing.stream().filter(f -> !f.isComplement()).findFirst();
+
+                if (conflicting.isPresent()) {
+                    throw new ValidationException(
+                            line,
+                            COMPLEMENT_STRAND_CONFLICT.formatted(
+                                    TRANSL_EXCEPT, conflicting.get().getStrand(), value));
+                }
+            }
+        }
     }
 
     private void validateCodonAttribute(Map<String, List<GFF3Feature>> groupedFeatures, String attribute, int line)
