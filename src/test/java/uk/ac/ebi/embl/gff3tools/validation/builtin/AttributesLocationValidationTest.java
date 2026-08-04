@@ -320,7 +320,7 @@ public class AttributesLocationValidationTest {
         gff3Annotation.addFeature(f1);
         gff3Annotation.addFeature(f2);
 
-        Assertions.assertDoesNotThrow(() -> attributesLocationValidation.validateAntiCodon(gff3Annotation, 1));
+        Assertions.assertDoesNotThrow(() -> attributesLocationValidation.validateTranslExcept(gff3Annotation, 1));
     }
 
     @Test
@@ -540,7 +540,7 @@ public class AttributesLocationValidationTest {
         gff3Annotation.addFeature(f1);
         gff3Annotation.addFeature(f2);
 
-        Assertions.assertDoesNotThrow(() -> attributesLocationValidation.validateAntiCodon(gff3Annotation, 1));
+        Assertions.assertDoesNotThrow(() -> attributesLocationValidation.validateTranslExcept(gff3Annotation, 1));
     }
 
     @Test
