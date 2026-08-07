@@ -17,7 +17,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -92,11 +91,6 @@ public class AnticodonAttributeFix implements Fix {
 
     /** A parsed position. {@code complement} means the wrapper was there, not that the row is minus-strand. */
     private record Position(boolean complement, long start, long end) {}
-
-    /** Returns the rewritten value, or {@code null} to leave it untouched. */
-    private interface ValueRewrite {
-        String apply(String value, List<GFF3Feature> fragments, int line);
-    }
 
     @FixMethod(
             rule = "ANTICODON_ATTRIBUTE_FIX_AMINO_ACID_CASE",
@@ -190,49 +184,74 @@ public class AnticodonAttributeFix implements Fix {
             throw new IllegalStateException("Sequence lookup could not be found.");
         }
 
-        rewriteGroups(annotation, line, (value, fragments, ln) -> deriveSequence(value, fragments, ln, sequenceLookup));
-    }
-
-    private void rewriteGroups(GFF3Annotation annotation, int line, ValueRewrite rewrite) {
-
-        Map<String, List<GFF3Feature>> featuresWithAttribute = annotation.getFeatures().stream()
-                .filter(feature -> feature.hasAttribute(ANTI_CODON))
-                .collect(Collectors.groupingBy(feature -> feature.getId().orElse(feature.hashCodeString())));
-
-        featuresWithAttribute.values().forEach(featureGroup -> rewriteGroup(featureGroup, line, rewrite));
+        for (List<GFF3Feature> rows : rowsByFeature(annotation).values()) {
+            addSequenceToFeature(rows, line, sequenceLookup);
+        }
     }
 
     /**
-     * One feature can span several GFF3 rows sharing an {@code ID} (the fragments of a join), each
-     * carrying its own copy of the same attribute value. Decide once for the whole group so every row
-     * ends up with identical text. Two things break otherwise: {@code GFF3Mapper} keeps only the first
-     * row's attributes when converting back to flat file, so a per-row decision would depend on row
-     * order; and a row without an {@code ID} is grouped by a hash of its attributes, so rows left
-     * saying different things would be split into separate features further down the line.
+     * Groups the rows carrying an {@code anticodon} by the feature they belong to. Rows sharing an
+     * {@code ID} are the fragments of one feature and each carries its own copy of the attribute.
+     *
+     * <p>Unlike {@link #fixAminoAcidCase} this has to group, because the new value depends on the rows
+     * and not just on the old text. Every row of a feature must end up with the same text: when
+     * converting back to flat file only the first row's attributes are kept, and a row without an
+     * {@code ID} is grouped by a hash of its attributes, so rows left saying different things would be
+     * split into separate features later on.
      */
-    private void rewriteGroup(List<GFF3Feature> fragments, int line, ValueRewrite rewrite) {
+    private Map<String, List<GFF3Feature>> rowsByFeature(GFF3Annotation annotation) {
 
-        List<String> distinctValues = fragments.stream()
-                .flatMap(fragment -> fragment.getAttributeList(ANTI_CODON).orElse(List.of()).stream())
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
+        Map<String, List<GFF3Feature>> rowsByFeature = new LinkedHashMap<>();
 
-        Map<String, String> rewrites = new LinkedHashMap<>();
-        for (String value : distinctValues) {
-            String updated = rewrite.apply(value, fragments, line);
-            if (updated != null && !updated.equals(value)) {
-                rewrites.put(value, updated);
+        for (GFF3Feature feature : annotation.getFeatures()) {
+            if (!feature.hasAttribute(ANTI_CODON)) {
+                continue;
+            }
+            String key = feature.getId().orElse(feature.hashCodeString());
+            rowsByFeature.computeIfAbsent(key, unused -> new ArrayList<>()).add(feature);
+        }
+
+        return rowsByFeature;
+    }
+
+    private void addSequenceToFeature(List<GFF3Feature> rows, int line, SequenceLookup sequenceLookup) {
+
+        Set<String> values = new LinkedHashSet<>();
+        for (GFF3Feature row : rows) {
+            for (String value : row.getAttributeList(ANTI_CODON).orElse(List.of())) {
+                if (value != null) {
+                    values.add(value);
+                }
             }
         }
 
-        if (rewrites.isEmpty()) {
+        Map<String, String> updatedValues = new LinkedHashMap<>();
+        for (String value : values) {
+            String updated = withSequence(value, rows, line, sequenceLookup);
+            if (updated != null && !updated.equals(value)) {
+                updatedValues.put(value, updated);
+            }
+        }
+
+        if (updatedValues.isEmpty()) {
             return;
         }
-        fragments.forEach(fragment -> applyRewrites(fragment, rewrites));
+
+        for (GFF3Feature row : rows) {
+            List<String> rewritten = new ArrayList<>();
+            for (String value : row.getAttributeList(ANTI_CODON).orElse(List.of())) {
+                rewritten.add(updatedValues.getOrDefault(value, value));
+            }
+            row.setAttributeList(ANTI_CODON, rewritten);
+        }
     }
 
-    private String deriveSequence(String value, List<GFF3Feature> fragments, int line, SequenceLookup sequenceLookup) {
+    /**
+     * Reads the bases at the position and puts them in the {@code seq:} part.
+     *
+     * @return the updated value, or {@code null} if there was nothing to change
+     */
+    private String withSequence(String value, List<GFF3Feature> rows, int line, SequenceLookup sequenceLookup) {
 
         Matcher matcher = VALUE_PATTERN.matcher(value);
         if (!matcher.matches()) {
@@ -244,112 +263,103 @@ public class AnticodonAttributeFix implements Fix {
             return null;
         }
 
+        List<GFF3Feature> rowsCoveringPosition = rowsCovering(rows, position);
+        String accession = rowsCoveringPosition.isEmpty()
+                ? rows.get(0).accession()
+                : rowsCoveringPosition.get(0).accession();
+
         // A position covering anything other than three bases is not a codon, so leave it for
-        // validation to reject rather than deriving a seq: of the wrong length.
+        // validation to reject rather than reading a seq: of the wrong length.
         long span = position.end() - position.start() + 1;
         if (span != ANTICODON_LENGTH) {
             log.debug(
-                    "Skipping {} seq: derivation on '{}' at line {}: pos: spans {} bases, not {}",
+                    "Skipping {} seq: on '{}' at line {}: pos: spans {} bases, not {}",
                     ANTI_CODON,
-                    accession(fragments),
+                    accession,
                     line,
                     span,
                     ANTICODON_LENGTH);
             return null;
         }
 
-        List<GFF3Feature> containing = containingFragments(fragments, position);
-        String accession =
-                containing.isEmpty() ? accession(fragments) : containing.get(0).accession();
-
-        String slice;
-        try {
-            slice = sequenceLookup.getSequenceSlice(
-                    accession, position.start(), position.end(), SequenceRangeOption.WHOLE_SEQUENCE);
-        } catch (Exception e) {
-            // An unknown sequence name, or a position past the end of the sequence, both land here.
-            // Neither is this fix's to report, and letting anything out of a fix aborts the whole run.
-            log.debug(
-                    "Skipping {} seq: derivation on '{}' at line {}: {}", ANTI_CODON, accession, line, e.getMessage());
+        String bases = readBases(accession, position, line, sequenceLookup);
+        if (bases == null) {
             return null;
         }
 
-        if (slice == null || slice.length() != ANTICODON_LENGTH) {
-            return null;
-        }
-
-        boolean reverse = isReverseStrand(position, containing);
-        String oriented = reverse ? reverseComplement(slice) : slice;
-        if (oriented == null) {
-            log.debug(
-                    "Skipping {} seq: derivation on '{}' at line {}: cannot complement bases '{}'",
-                    ANTI_CODON,
-                    accession,
-                    line,
-                    slice);
-            return null;
+        boolean readBackwards = isReverseStrand(position, rowsCoveringPosition);
+        if (readBackwards) {
+            bases = reverseComplement(bases);
+            if (bases == null) {
+                log.debug("Skipping {} seq: on '{}' at line {}: cannot complement bases", ANTI_CODON, accession, line);
+                return null;
+            }
         }
 
         // Lowercase last, never before the reverse complement: the complement table only has uppercase
         // entries, so lowercase input would come back as zero bytes. Lowercase is also what the value
         // has to end up as, because the flat-file side compares it case-sensitively.
-        String derived = oriented.toLowerCase(Locale.ROOT);
-        String existing = matcher.group("seq");
+        String newSequence = bases.toLowerCase(Locale.ROOT);
+        String oldSequence = matcher.group("seq");
 
-        if (existing == null) {
-            log.info(
-                    "Fix: added {} seq: on '{}' at line {}: '{}' -> seq:{}",
-                    ANTI_CODON,
-                    accession,
-                    line,
-                    value,
-                    derived);
-        } else if (existing.equalsIgnoreCase(derived)) {
-            if (existing.equals(derived)) {
-                return null;
-            }
+        if (newSequence.equals(oldSequence)) {
+            return null;
+        }
+
+        logSequenceChange(accession, line, oldSequence, newSequence, readBackwards);
+        return withSequenceReplaced(value, matcher, newSequence);
+    }
+
+    private String readBases(String accession, Position position, int line, SequenceLookup sequenceLookup) {
+
+        try {
+            String bases = sequenceLookup.getSequenceSlice(
+                    accession, position.start(), position.end(), SequenceRangeOption.WHOLE_SEQUENCE);
+            return bases != null && bases.length() == ANTICODON_LENGTH ? bases : null;
+        } catch (Exception e) {
+            // An unknown sequence name, or a position past the end of the sequence, both land here.
+            // Neither is this fix's to report, and letting anything out of a fix aborts the whole run.
+            log.debug("Skipping {} seq: on '{}' at line {}: {}", ANTI_CODON, accession, line, e.getMessage());
+            return null;
+        }
+    }
+
+    private void logSequenceChange(
+            String accession, int line, String oldSequence, String newSequence, boolean readBackwards) {
+
+        if (oldSequence == null) {
+            log.info("Fix: added {} seq:{} on '{}' at line {}", ANTI_CODON, newSequence, accession, line);
+        } else if (oldSequence.equalsIgnoreCase(newSequence)) {
             log.debug(
                     "Fix: lowercased {} seq: on '{}' at line {}: '{}' -> '{}'",
                     ANTI_CODON,
                     accession,
                     line,
-                    existing,
-                    derived);
+                    oldSequence,
+                    newSequence);
         } else {
             log.info(
-                    "Fix: corrected {} seq: on '{}' at line {}: '{}' -> '{}' (bases at {}..{}{})",
+                    "Fix: corrected {} seq: on '{}' at line {}: '{}' -> '{}'{}",
                     ANTI_CODON,
                     accession,
                     line,
-                    existing,
-                    derived,
-                    position.start(),
-                    position.end(),
-                    reverse ? ", reverse strand" : "");
+                    oldSequence,
+                    newSequence,
+                    readBackwards ? " (read backwards)" : "");
         }
-
-        return splice(matcher, matcher.group("aa"), derived);
     }
 
-    /**
-     * Rebuilds the value with a new amino acid and {@code seq:}, copying every other part — the
-     * position text and all the original spacing — through unchanged.
-     */
-    private String splice(Matcher matcher, String aminoAcid, String sequence) {
+    /** Replaces an existing {@code seq:}, or adds one just before the closing bracket. */
+    private String withSequenceReplaced(String value, Matcher matcher, String newSequence) {
 
-        StringBuilder rebuilt = new StringBuilder()
-                .append(matcher.group("head"))
-                .append(matcher.group("pos"))
-                .append(matcher.group("aaHead"))
-                .append(aminoAcid);
-
-        if (sequence != null) {
-            // Reuse the original separator when there was already a seq:, so its spacing survives.
-            String seqHead = matcher.group("seqHead");
-            rebuilt.append(seqHead != null ? seqHead : ",seq:").append(sequence);
+        if (matcher.group("seq") != null) {
+            String before = value.substring(0, matcher.start("seq"));
+            String after = value.substring(matcher.end("seq"));
+            return before + newSequence + after;
         }
 
-        return rebuilt.append(matcher.group("tail")).toString();
+        int closingBracket = matcher.start("tail");
+        return value.substring(0, closingBracket) + ",seq:" + newSequence + value.substring(closingBracket);
     }
 
     private Position parsePosition(String positionText) {
@@ -386,10 +396,15 @@ public class AnticodonAttributeFix implements Fix {
      * rather than the whole group matters because the rows of one feature may legitimately carry
      * different strands.
      */
-    private List<GFF3Feature> containingFragments(List<GFF3Feature> fragments, Position position) {
-        return fragments.stream()
-                .filter(fragment -> position.start() >= fragment.getStart() && position.end() <= fragment.getEnd())
-                .toList();
+    private List<GFF3Feature> rowsCovering(List<GFF3Feature> rows, Position position) {
+
+        List<GFF3Feature> covering = new ArrayList<>();
+        for (GFF3Feature row : rows) {
+            if (position.start() >= row.getStart() && position.end() <= row.getEnd()) {
+                covering.add(row);
+            }
+        }
+        return covering;
     }
 
     /**
@@ -400,12 +415,21 @@ public class AnticodonAttributeFix implements Fix {
      * bases the way they read on its own strand. Values converted from flat file always carry the
      * wrapper; this fallback is for GFF3 written by other tools, which use plain forward positions.
      */
-    private boolean isReverseStrand(Position position, List<GFF3Feature> containing) {
+    private boolean isReverseStrand(Position position, List<GFF3Feature> rowsCoveringPosition) {
 
         if (position.complement()) {
             return true;
         }
-        return !containing.isEmpty() && containing.stream().allMatch(GFF3Feature::isComplement);
+        if (rowsCoveringPosition.isEmpty()) {
+            return false;
+        }
+
+        for (GFF3Feature row : rowsCoveringPosition) {
+            if (!row.isComplement()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** @return the reverse complement, or {@code null} if any base is not one the table knows. */
@@ -425,23 +449,5 @@ public class AnticodonAttributeFix implements Fix {
             }
         }
         return new String(complemented, StandardCharsets.US_ASCII);
-    }
-
-    private void applyRewrites(GFF3Feature feature, Map<String, String> rewrites) {
-
-        List<String> values = feature.getAttributeList(ANTI_CODON).orElse(List.of());
-        if (values.stream().noneMatch(rewrites::containsKey)) {
-            return;
-        }
-
-        List<String> updated = values.stream()
-                .map(value -> rewrites.getOrDefault(value, value))
-                .toList();
-
-        feature.setAttributeList(ANTI_CODON, new ArrayList<>(updated));
-    }
-
-    private String accession(List<GFF3Feature> fragments) {
-        return fragments.isEmpty() ? "unknown" : fragments.get(0).accession();
     }
 }
