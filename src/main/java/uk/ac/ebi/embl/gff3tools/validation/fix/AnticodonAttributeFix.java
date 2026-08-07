@@ -167,21 +167,20 @@ public class AnticodonAttributeFix implements Fix {
         return before + preferredSpelling + after;
     }
 
-    // TEMPORARILY DISABLED - uncomment to re-register ANTICODON_ATTRIBUTE_ADD_SEQUENCE
-    //    @FixMethod(
-    //            rule = "ANTICODON_ATTRIBUTE_ADD_SEQUENCE",
-    //            description =
-    //                    "Adds the anticodon sequence section from the bases at positions, correcting it if already
-    // present",
-    //            type = ANNOTATION,
-    //            priority = ValidationPriority.HIGH)
+    @FixMethod(
+            rule = "ANTICODON_ATTRIBUTE_ADD_SEQUENCE",
+            description = "Adds the anticodon sequence section from the bases at positions, correcting it if present",
+            type = ANNOTATION,
+            priority = ValidationPriority.HIGH)
     public void addSequence(GFF3Annotation annotation, int line) {
         if (context == null || !context.contains(SequenceLookup.class)) {
             return;
         }
+        // Registered but empty is the normal case when no sequence was supplied, so skip quietly
+        // rather than failing the run.
         SequenceLookup sequenceLookup = context.get(SequenceLookup.class);
         if (sequenceLookup == null) {
-            throw new IllegalStateException("Sequence lookup could not be found.");
+            return;
         }
 
         for (List<GFF3Feature> rows : rowsByFeature(annotation).values()) {

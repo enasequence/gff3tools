@@ -12,7 +12,6 @@ package uk.ac.ebi.embl.gff3tools.validation.fix;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -263,14 +262,16 @@ class AnticodonAttributeFixTest {
     }
 
     @Test
-    void throwsWhenProviderRegisteredButHasNoSources() {
+    void skipsWhenProviderRegisteredButHasNoSources() {
         AnticodonAttributeFix emptySourceFix = new AnticodonAttributeFix();
         ValidationContext context = new ValidationContext();
         context.register(SequenceLookup.class, new CompositeSequenceProvider());
         ValidationRegistry.injectContext(emptySourceFix, context);
-        tRna("t1", 1, 100, PLUS, "(pos:10..12,aa:Glu)");
+        GFF3Feature feature = tRna("t1", 1, 100, PLUS, "(pos:10..12,aa:Glu)");
 
-        assertThrows(IllegalStateException.class, () -> emptySourceFix.addSequence(annotation, 1));
+        assertDoesNotThrow(() -> emptySourceFix.addSequence(annotation, 1));
+
+        assertEquals(List.of("(pos:10..12,aa:Glu)"), anticodon(feature));
     }
 
     @Test
