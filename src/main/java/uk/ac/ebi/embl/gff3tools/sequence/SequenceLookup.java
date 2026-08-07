@@ -28,7 +28,7 @@ public interface SequenceLookup {
     /**
      * Returns a nucleotide subsequence for the given GFF3 sequence ID.
      *
-     * @param seqId the GFF3 seqId (e.g. chromosome name)
+     * @param seqId the GFF3 seqId
      * @param fromBase 1-based start position (inclusive)
      * @param toBase 1-based end position (inclusive)
      * @param option controls which portion of the sequence is considered
@@ -64,12 +64,9 @@ public interface SequenceLookup {
             throws Exception;
 
     /**
-     * Whether any of the underlying sources can supply this sequence.
+     * Whether any of the underlying sources can supply this sequence.=
      *
-     * <p>Cheaper and quieter than calling one of the reading methods to find out: those throw
-     * {@link IllegalArgumentException} when no source has the seqId.
-     *
-     * @param seqId the GFF3 seqId (e.g. chromosome name)
+     * @param seqId the sequence id
      */
     boolean hasSequence(String seqId);
 
