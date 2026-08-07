@@ -31,27 +31,10 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
 
-/**
- * Fills in the {@code seq:} part of an {@code anticodon} value and fixes the casing of its
- * {@code aa:} part, so {@code (pos:complement(4229..4231),aa:LyS)} becomes
- * {@code (pos:complement(4229..4231),aa:Lys,seq:ttt)}.
- *
- * <p>{@code seq:} is just the three bases the position points at, so it can be read straight off the
- * sequence. Supplying a sequence is optional though, so when there is none that half is skipped and
- * only the casing is fixed.
- *
- * <p>The two jobs are separate {@code @FixMethod}s so each can be switched off on its own. Neither
- * depends on the other having run: each replaces only its own part of the value and copies the rest
- * through unchanged, so running them in either order gives the same result.
- *
- * <p>{@link TranslExceptComplementFix} does the same kind of work on {@code transl_except}. The two
- * never touch the same attribute, so their order does not matter either — as long as both leave every
- * row of a group with identical text, for the reasons on {@link #rewriteGroup}.
- */
 @Slf4j
 @Gff3Fix(
-        name = "ANTICODON",
-        description = "Canonicalise the anticodon amino acid and derive its seq: from the sequence")
+        name = "ANTICODON_ATTRIBUTE",
+        description = "Correct the anticodon amino acid casing and fill in its seq: from the sequence")
 public class AnticodonAttributeFix implements Fix {
 
     @InjectContext
@@ -116,29 +99,95 @@ public class AnticodonAttributeFix implements Fix {
     }
 
     @FixMethod(
-            rule = "ANTICODON_AMINO_ACID",
-            description = "Canonicalise the casing of the anticodon aa: abbreviation",
+            rule = "ANTICODON_ATTRIBUTE_FIX_AMINO_ACID_CASE",
+            description = "Corrects the upper/lower case of amino acid names",
             type = ANNOTATION,
             priority = ValidationPriority.HIGH)
-    public void fixAminoAcid(GFF3Annotation annotation, int line) {
-        rewriteGroups(annotation, line, this::canonicaliseAminoAcid);
+    public void fixAminoAcidCase(GFF3Annotation annotation, int line) {
+
+        for (GFF3Feature feature : annotation.getFeatures()) {
+
+            List<String> values = feature.getAttributeList(ANTI_CODON).orElse(null);
+            if (values == null) {
+                continue;
+            }
+
+            List<String> updatedValues = new ArrayList<>();
+            boolean anythingChanged = false;
+
+            for (String value : values) {
+                String updated = withCorrectedAminoAcidCase(value, feature.accession(), line);
+                if (updated == null) {
+                    updatedValues.add(value);
+                } else {
+                    updatedValues.add(updated);
+                    anythingChanged = true;
+                }
+            }
+
+            if (anythingChanged) {
+                feature.setAttributeList(ANTI_CODON, updatedValues);
+            }
+        }
     }
 
-    @FixMethod(
-            rule = "ANTICODON_SEQUENCE",
-            description = "Derive the anticodon seq: from the bases at pos:, adding or correcting it",
-            type = ANNOTATION,
-            priority = ValidationPriority.HIGH)
-    public void fixSequence(GFF3Annotation annotation, int line) {
+    /**
+     * Replaces the amino acid name with its preferred spelling, e.g. {@code aa:SeC} becomes
+     * {@code aa:Sec}. Every other character in the value is left exactly as it was.
+     *
+     * <p>No grouping by feature ID is needed here, unlike {@link #addSequence}: the new value depends
+     * only on the old text, so two rows of the same feature carrying the same value always come out
+     * the same.
+     *
+     * @return the corrected value, or {@code null} if there was nothing to correct
+     */
+    private String withCorrectedAminoAcidCase(String value, String accession, int line) {
 
-        // The lookup type is registered even when no sequence was supplied, so contains() alone is
-        // not enough — check for a real value too.
+        if (value == null) {
+            return null;
+        }
+
+        Matcher matcher = VALUE_PATTERN.matcher(value);
+        if (!matcher.matches()) {
+            return null;
+        }
+
+        String aminoAcid = matcher.group("aa");
+        String preferredSpelling = CANONICAL_AMINO_ACIDS.get(aminoAcid.toUpperCase());
+
+        if (preferredSpelling == null || preferredSpelling.equals(aminoAcid)) {
+            return null;
+        }
+
+        log.info(
+                "Fix: corrected {} amino acid case on '{}' at line {}: '{}' -> '{}'",
+                ANTI_CODON,
+                accession,
+                line,
+                aminoAcid,
+                preferredSpelling);
+
+        // Swap out just the amino acid, keeping the rest of the string byte for byte.
+        String before = value.substring(0, matcher.start("aa"));
+        String after = value.substring(matcher.end("aa"));
+        return before + preferredSpelling + after;
+    }
+
+    // TEMPORARILY DISABLED - uncomment to re-register ANTICODON_ATTRIBUTE_ADD_SEQUENCE
+    //    @FixMethod(
+    //            rule = "ANTICODON_ATTRIBUTE_ADD_SEQUENCE",
+    //            description =
+    //                    "Adds the anticodon sequence section from the bases at positions, correcting it if already
+    // present",
+    //            type = ANNOTATION,
+    //            priority = ValidationPriority.HIGH)
+    public void addSequence(GFF3Annotation annotation, int line) {
         if (context == null || !context.contains(SequenceLookup.class)) {
             return;
         }
         SequenceLookup sequenceLookup = context.get(SequenceLookup.class);
         if (sequenceLookup == null) {
-            return;
+            throw new IllegalStateException("Sequence lookup could not be found.");
         }
 
         rewriteGroups(annotation, line, (value, fragments, ln) -> deriveSequence(value, fragments, ln, sequenceLookup));
@@ -181,30 +230,6 @@ public class AnticodonAttributeFix implements Fix {
             return;
         }
         fragments.forEach(fragment -> applyRewrites(fragment, rewrites));
-    }
-
-    private String canonicaliseAminoAcid(String value, List<GFF3Feature> fragments, int line) {
-
-        Matcher matcher = VALUE_PATTERN.matcher(value);
-        if (!matcher.matches()) {
-            return null;
-        }
-
-        String aminoAcid = matcher.group("aa");
-        String canonical = CANONICAL_AMINO_ACIDS.get(aminoAcid.toUpperCase());
-        if (canonical == null || canonical.equals(aminoAcid)) {
-            return null;
-        }
-
-        log.info(
-                "Fix: canonicalised {} amino acid on '{}' at line {}: '{}' -> '{}'",
-                ANTI_CODON,
-                accession(fragments),
-                line,
-                aminoAcid,
-                canonical);
-
-        return splice(matcher, canonical, matcher.group("seq"));
     }
 
     private String deriveSequence(String value, List<GFF3Feature> fragments, int line, SequenceLookup sequenceLookup) {
