@@ -89,8 +89,15 @@ public class AnticodonAttributeFix implements Fix {
             Map.entry("TER", "TER"),
             Map.entry("OTHER", "OTHER"));
 
-    /** A parsed position. {@code complement} means the wrapper was there, not that the row is minus-strand. */
-    private record Position(boolean complement, long start, long end) {}
+    private record Position(boolean hasComplementWrapper, long start, long end) {}
+
+    private record SequenceReader(SequenceLookup lookup, String accession, int line) {
+
+        String read(Position position) throws Exception {
+            return lookup.getSequenceSlice(
+                    accession, position.start(), position.end(), SequenceRangeOption.WHOLE_SEQUENCE);
+        }
+    }
 
     @FixMethod(
             rule = "ANTICODON_ATTRIBUTE_FIX_AMINO_ACID_CASE",
@@ -107,19 +114,12 @@ public class AnticodonAttributeFix implements Fix {
             }
 
             List<String> updatedValues = new ArrayList<>();
-            boolean anythingChanged = false;
-
             for (String value : values) {
                 String updated = withCorrectedAminoAcidCase(value, feature.accession(), line);
-                if (updated == null) {
-                    updatedValues.add(value);
-                } else {
-                    updatedValues.add(updated);
-                    anythingChanged = true;
-                }
+                updatedValues.add(updated != null ? updated : value);
             }
 
-            if (anythingChanged) {
+            if (!updatedValues.equals(values)) {
                 feature.setAttributeList(ANTI_CODON, updatedValues);
             }
         }
@@ -196,8 +196,9 @@ public class AnticodonAttributeFix implements Fix {
             return;
         }
 
+        SequenceReader reader = new SequenceReader(sequenceLookup, accession, line);
         for (List<GFF3Feature> rows : rowsByFeature.values()) {
-            addSequenceToFeature(rows, accession, line, sequenceLookup);
+            addSequenceToFeature(rows, reader);
         }
     }
 
@@ -226,8 +227,7 @@ public class AnticodonAttributeFix implements Fix {
         return rowsByFeature;
     }
 
-    private void addSequenceToFeature(List<GFF3Feature> rows, String accession, int line, SequenceLookup sequenceLookup)
-            throws Exception {
+    private void addSequenceToFeature(List<GFF3Feature> rows, SequenceReader reader) throws Exception {
 
         Set<String> values = new LinkedHashSet<>();
         for (GFF3Feature row : rows) {
@@ -240,7 +240,7 @@ public class AnticodonAttributeFix implements Fix {
 
         Map<String, String> updatedValues = new LinkedHashMap<>();
         for (String value : values) {
-            String updated = withSequence(value, rows, accession, line, sequenceLookup);
+            String updated = withSequence(value, rows, reader);
             if (updated != null && !updated.equals(value)) {
                 updatedValues.put(value, updated);
             }
@@ -264,9 +264,7 @@ public class AnticodonAttributeFix implements Fix {
      *
      * @return the updated value, or {@code null} if there was nothing to change
      */
-    private String withSequence(
-            String value, List<GFF3Feature> rows, String accession, int line, SequenceLookup sequenceLookup)
-            throws Exception {
+    private String withSequence(String value, List<GFF3Feature> rows, SequenceReader reader) throws Exception {
 
         Matcher matcher = VALUE_PATTERN.matcher(value);
         if (!matcher.matches()) {
@@ -285,61 +283,57 @@ public class AnticodonAttributeFix implements Fix {
             log.debug(
                     "Skipping {} seq: on '{}' at line {}: pos: spans {} bases, not {}",
                     ANTI_CODON,
-                    accession,
-                    line,
+                    reader.accession(),
+                    reader.line(),
                     span,
                     ANTICODON_LENGTH);
             return null;
         }
 
-        String bases = sequenceLookup.getSequenceSlice(
-                accession, position.start(), position.end(), SequenceRangeOption.WHOLE_SEQUENCE);
+        String bases = reader.read(position);
         if (bases == null || bases.length() != ANTICODON_LENGTH) {
             return null;
         }
 
         boolean readBackwards = isReverseStrand(position, rows);
-        if (readBackwards) {
-            bases = reverseComplement(bases);
-            if (bases == null) {
-                log.debug("Skipping {} seq: on '{}' at line {}: cannot complement bases", ANTI_CODON, accession, line);
-                return null;
-            }
+        String oriented = readBackwards ? reverseComplement(bases) : bases;
+        if (oriented == null) {
+            log.debug(
+                    "Skipping {} seq: on '{}' at line {}: cannot complement bases",
+                    ANTI_CODON,
+                    reader.accession(),
+                    reader.line());
+            return null;
         }
 
-        // Lowercase last, never before the reverse complement: the complement table only has uppercase
-        // entries, so lowercase input would come back as zero bytes. Lowercase is also what the value
-        // has to end up as, because the flat-file side compares it case-sensitively.
-        String newSequence = bases.toLowerCase(Locale.ROOT);
+        // Lowercase because the flat-file side compares seq: case-sensitively.
+        String newSequence = oriented.toLowerCase(Locale.ROOT);
         String oldSequence = matcher.group("seq");
 
         if (newSequence.equals(oldSequence)) {
             return null;
         }
 
-        logSequenceChange(accession, line, oldSequence, newSequence, readBackwards);
+        logSequenceChange(reader, oldSequence, newSequence, readBackwards);
         return withSequenceReplaced(value, matcher, newSequence);
     }
 
     private void logSequenceChange(
-            String accession, int line, String oldSequence, String newSequence, boolean readBackwards) {
+            SequenceReader reader, String oldSequence, String newSequence, boolean readBackwards) {
 
         if (oldSequence == null) {
-            log.info("Fix: added {} seq:{} on '{}' at line {}", ANTI_CODON, newSequence, accession, line);
-        } else if (oldSequence.equalsIgnoreCase(newSequence)) {
-            log.debug(
-                    "Fix: lowercased {} seq: on '{}' at line {}: '{}' -> '{}'",
+            log.info(
+                    "Fix: added {} seq:{} on '{}' at line {}",
                     ANTI_CODON,
-                    accession,
-                    line,
-                    oldSequence,
-                    newSequence);
-        } else {
+                    newSequence,
+                    reader.accession(),
+                    reader.line());
+        } else if (!oldSequence.equalsIgnoreCase(newSequence)) {
             log.info(
                     "Fix: corrected {} seq: on '{}' at line {}: '{}' -> '{}'{}",
                     ANTI_CODON,
-                    accession,
-                    line,
+                    reader.accession(),
+                    reader.line(),
                     oldSequence,
                     newSequence,
                     readBackwards ? " (read backwards)" : "");
@@ -401,7 +395,7 @@ public class AnticodonAttributeFix implements Fix {
      */
     private boolean isReverseStrand(Position position, List<GFF3Feature> rows) {
 
-        if (position.complement()) {
+        if (position.hasComplementWrapper()) {
             return true;
         }
 
