@@ -113,7 +113,7 @@ public class AnticodonAttributeFix implements Fix {
                 continue;
             }
 
-            List<String> updatedValues = new ArrayList<>();
+            List<String> updatedValues = new ArrayList<>(values.size());
             for (String value : values) {
                 String updated = withCorrectedAminoAcidCase(value, feature.accession(), line);
                 updatedValues.add(updated != null ? updated : value);
@@ -154,17 +154,14 @@ public class AnticodonAttributeFix implements Fix {
         }
 
         log.info(
-                "Fix: corrected {} amino acid case on '{}' at line {}: '{}' -> '{}'",
-                ANTI_CODON,
+                "Fix: corrected anticodon amino acid case on '{}' at line {}: '{}' -> '{}'",
                 accession,
                 line,
                 aminoAcid,
                 preferredSpelling);
 
         // Swap out just the amino acid, keeping the rest of the string byte for byte.
-        String before = value.substring(0, matcher.start("aa"));
-        String after = value.substring(matcher.end("aa"));
-        return before + preferredSpelling + after;
+        return value.substring(0, matcher.start("aa")) + preferredSpelling + value.substring(matcher.end("aa"));
     }
 
     @FixMethod(
@@ -192,7 +189,7 @@ public class AnticodonAttributeFix implements Fix {
         // it and both the lookup and the check happen once here rather than per value.
         String accession = annotation.getAccession();
         if (!sequenceLookup.hasSequence(accession)) {
-            log.debug("Skipping {} on '{}' at line {}: no sequence source has it", ANTI_CODON, accession, line);
+            log.debug("Skipping anticodon on '{}' at line {}: no sequence source has it", accession, line);
             return;
         }
 
@@ -281,8 +278,7 @@ public class AnticodonAttributeFix implements Fix {
         long span = position.end() - position.start() + 1;
         if (span != ANTICODON_LENGTH) {
             log.debug(
-                    "Skipping {} seq: on '{}' at line {}: pos: spans {} bases, not {}",
-                    ANTI_CODON,
+                    "Skipping anticodon seq: on '{}' at line {}: pos: spans {} bases, not {}",
                     reader.accession(),
                     reader.line(),
                     span,
@@ -299,8 +295,7 @@ public class AnticodonAttributeFix implements Fix {
         String oriented = readBackwards ? reverseComplement(bases) : bases;
         if (oriented == null) {
             log.debug(
-                    "Skipping {} seq: on '{}' at line {}: cannot complement bases",
-                    ANTI_CODON,
+                    "Skipping anticodon seq: on '{}' at line {}: cannot complement bases",
                     reader.accession(),
                     reader.line());
             return null;
@@ -322,16 +317,10 @@ public class AnticodonAttributeFix implements Fix {
             SequenceReader reader, String oldSequence, String newSequence, boolean readBackwards) {
 
         if (oldSequence == null) {
-            log.info(
-                    "Fix: added {} seq:{} on '{}' at line {}",
-                    ANTI_CODON,
-                    newSequence,
-                    reader.accession(),
-                    reader.line());
+            log.info("Fix: added anticodon seq:{} on '{}' at line {}", newSequence, reader.accession(), reader.line());
         } else if (!oldSequence.equalsIgnoreCase(newSequence)) {
             log.info(
-                    "Fix: corrected {} seq: on '{}' at line {}: '{}' -> '{}'{}",
-                    ANTI_CODON,
+                    "Fix: corrected anticodon seq: on '{}' at line {}: '{}' -> '{}'{}",
                     reader.accession(),
                     reader.line(),
                     oldSequence,
@@ -344,9 +333,7 @@ public class AnticodonAttributeFix implements Fix {
     private String withSequenceReplaced(String value, Matcher matcher, String newSequence) {
 
         if (matcher.group("seq") != null) {
-            String before = value.substring(0, matcher.start("seq"));
-            String after = value.substring(matcher.end("seq"));
-            return before + newSequence + after;
+            return value.substring(0, matcher.start("seq")) + newSequence + value.substring(matcher.end("seq"));
         }
 
         int closingBracket = matcher.start("tail");
@@ -356,11 +343,9 @@ public class AnticodonAttributeFix implements Fix {
     private Position parsePosition(String positionText) {
 
         String text = positionText.trim();
-        boolean complement = false;
-
         Matcher complementMatcher = COMPLEMENT_PATTERN.matcher(text);
-        if (complementMatcher.matches()) {
-            complement = true;
+        boolean complement = complementMatcher.matches();
+        if (complement) {
             text = complementMatcher.group(1);
         }
 
@@ -414,13 +399,8 @@ public class AnticodonAttributeFix implements Fix {
     /** @return the reverse complement, or {@code null} if any base is not one the table knows. */
     private String reverseComplement(String bases) {
 
-        for (int i = 0; i < bases.length(); i++) {
-            // The table is 128 entries indexed by the raw byte, with no bounds check of its own.
-            if (bases.charAt(i) > 127) {
-                return null;
-            }
-        }
-
+        // Anything outside ASCII becomes '?' here, which the table maps to zero like any other
+        // unknown base, so the loop below catches it.
         byte[] complemented = Translator.reverseComplement(bases.getBytes(StandardCharsets.US_ASCII));
         for (byte base : complemented) {
             if (base == 0) {
