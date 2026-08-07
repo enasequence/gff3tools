@@ -172,7 +172,7 @@ public class AnticodonAttributeFix implements Fix {
             description = "Adds the anticodon sequence section from the bases at positions, correcting it if present",
             type = ANNOTATION,
             priority = ValidationPriority.HIGH)
-    public void addSequence(GFF3Annotation annotation, int line) {
+    public void addSequence(GFF3Annotation annotation, int line) throws Exception {
         if (context == null || !context.contains(SequenceLookup.class)) {
             return;
         }
@@ -213,7 +213,8 @@ public class AnticodonAttributeFix implements Fix {
         return rowsByFeature;
     }
 
-    private void addSequenceToFeature(List<GFF3Feature> rows, int line, SequenceLookup sequenceLookup) {
+    private void addSequenceToFeature(List<GFF3Feature> rows, int line, SequenceLookup sequenceLookup)
+            throws Exception {
 
         Set<String> values = new LinkedHashSet<>();
         for (GFF3Feature row : rows) {
@@ -250,7 +251,8 @@ public class AnticodonAttributeFix implements Fix {
      *
      * @return the updated value, or {@code null} if there was nothing to change
      */
-    private String withSequence(String value, List<GFF3Feature> rows, int line, SequenceLookup sequenceLookup) {
+    private String withSequence(String value, List<GFF3Feature> rows, int line, SequenceLookup sequenceLookup)
+            throws Exception {
 
         Matcher matcher = VALUE_PATTERN.matcher(value);
         if (!matcher.matches()) {
@@ -281,8 +283,14 @@ public class AnticodonAttributeFix implements Fix {
             return null;
         }
 
-        String bases = readBases(accession, position, line, sequenceLookup);
-        if (bases == null) {
+        if (!sequenceLookup.hasSequence(accession)) {
+            log.debug("Skipping {} seq: on '{}' at line {}: no sequence source has it", ANTI_CODON, accession, line);
+            return null;
+        }
+
+        String bases = sequenceLookup.getSequenceSlice(
+                accession, position.start(), position.end(), SequenceRangeOption.WHOLE_SEQUENCE);
+        if (bases == null || bases.length() != ANTICODON_LENGTH) {
             return null;
         }
 
@@ -307,20 +315,6 @@ public class AnticodonAttributeFix implements Fix {
 
         logSequenceChange(accession, line, oldSequence, newSequence, readBackwards);
         return withSequenceReplaced(value, matcher, newSequence);
-    }
-
-    private String readBases(String accession, Position position, int line, SequenceLookup sequenceLookup) {
-
-        try {
-            String bases = sequenceLookup.getSequenceSlice(
-                    accession, position.start(), position.end(), SequenceRangeOption.WHOLE_SEQUENCE);
-            return bases != null && bases.length() == ANTICODON_LENGTH ? bases : null;
-        } catch (Exception e) {
-            // An unknown sequence name, or a position past the end of the sequence, both land here.
-            // Neither is this fix's to report, and letting anything out of a fix aborts the whole run.
-            log.debug("Skipping {} seq: on '{}' at line {}: {}", ANTI_CODON, accession, line, e.getMessage());
-            return null;
-        }
     }
 
     private void logSequenceChange(

@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.validation.fix;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -48,6 +49,7 @@ class AnticodonAttributeFixTest {
         fix = new AnticodonAttributeFix();
         annotation = new GFF3Annotation();
         lookup = mock(SequenceLookup.class);
+        when(lookup.hasSequence(anyString())).thenReturn(true);
         ValidationRegistry.injectContext(fix, contextWith(lookup));
     }
 
@@ -240,18 +242,26 @@ class AnticodonAttributeFixTest {
     }
 
     @Test
-    void skipsWhenSequenceLookupFails() throws Exception {
+    void propagatesSequenceLookupFailure() throws Exception {
         when(lookup.getSequenceSlice(anyString(), anyLong(), anyLong(), any()))
                 .thenThrow(new IllegalArgumentException("bad base range: 10..12"));
+        tRna("t1", 1, 100, PLUS, "(pos:10..12,aa:Glu)");
+
+        assertThrows(IllegalArgumentException.class, () -> fix.addSequence(annotation, 1));
+    }
+
+    @Test
+    void skipsWhenNoSourceHasTheSequence() throws Exception {
+        when(lookup.hasSequence(anyString())).thenReturn(false);
         GFF3Feature feature = tRna("t1", 1, 100, PLUS, "(pos:10..12,aa:Glu)");
 
-        assertDoesNotThrow(() -> fix.addSequence(annotation, 1));
+        fix.addSequence(annotation, 1);
 
         assertEquals(List.of("(pos:10..12,aa:Glu)"), anticodon(feature));
     }
 
     @Test
-    void skipsWhenNoProviderRegistered() {
+    void skipsWhenNoProviderRegistered() throws Exception {
         AnticodonAttributeFix noSequenceFix = new AnticodonAttributeFix();
         ValidationRegistry.injectContext(noSequenceFix, new ValidationContext());
         GFF3Feature feature = tRna("t1", 1, 100, PLUS, "(pos:10..12,aa:Glu)");
