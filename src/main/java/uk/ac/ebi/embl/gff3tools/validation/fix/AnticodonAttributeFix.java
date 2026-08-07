@@ -183,8 +183,21 @@ public class AnticodonAttributeFix implements Fix {
             return;
         }
 
-        for (List<GFF3Feature> rows : rowsByFeature(annotation).values()) {
-            addSequenceToFeature(rows, line, sequenceLookup);
+        Map<String, List<GFF3Feature>> rowsByFeature = rowsByFeature(annotation);
+        if (rowsByFeature.isEmpty()) {
+            return;
+        }
+
+        // An annotation covers exactly one sequence, so the accession is the same for every feature in
+        // it and both the lookup and the check happen once here rather than per value.
+        String accession = annotation.getAccession();
+        if (!sequenceLookup.hasSequence(accession)) {
+            log.debug("Skipping {} on '{}' at line {}: no sequence source has it", ANTI_CODON, accession, line);
+            return;
+        }
+
+        for (List<GFF3Feature> rows : rowsByFeature.values()) {
+            addSequenceToFeature(rows, accession, line, sequenceLookup);
         }
     }
 
@@ -213,7 +226,7 @@ public class AnticodonAttributeFix implements Fix {
         return rowsByFeature;
     }
 
-    private void addSequenceToFeature(List<GFF3Feature> rows, int line, SequenceLookup sequenceLookup)
+    private void addSequenceToFeature(List<GFF3Feature> rows, String accession, int line, SequenceLookup sequenceLookup)
             throws Exception {
 
         Set<String> values = new LinkedHashSet<>();
@@ -227,7 +240,7 @@ public class AnticodonAttributeFix implements Fix {
 
         Map<String, String> updatedValues = new LinkedHashMap<>();
         for (String value : values) {
-            String updated = withSequence(value, rows, line, sequenceLookup);
+            String updated = withSequence(value, rows, accession, line, sequenceLookup);
             if (updated != null && !updated.equals(value)) {
                 updatedValues.put(value, updated);
             }
@@ -251,7 +264,8 @@ public class AnticodonAttributeFix implements Fix {
      *
      * @return the updated value, or {@code null} if there was nothing to change
      */
-    private String withSequence(String value, List<GFF3Feature> rows, int line, SequenceLookup sequenceLookup)
+    private String withSequence(
+            String value, List<GFF3Feature> rows, String accession, int line, SequenceLookup sequenceLookup)
             throws Exception {
 
         Matcher matcher = VALUE_PATTERN.matcher(value);
@@ -263,11 +277,6 @@ public class AnticodonAttributeFix implements Fix {
         if (position == null) {
             return null;
         }
-
-        List<GFF3Feature> rowsCoveringPosition = rowsCovering(rows, position);
-        String accession = rowsCoveringPosition.isEmpty()
-                ? rows.get(0).accession()
-                : rowsCoveringPosition.get(0).accession();
 
         // A position covering anything other than three bases is not a codon, so leave it for
         // validation to reject rather than reading a seq: of the wrong length.
@@ -283,18 +292,13 @@ public class AnticodonAttributeFix implements Fix {
             return null;
         }
 
-        if (!sequenceLookup.hasSequence(accession)) {
-            log.debug("Skipping {} seq: on '{}' at line {}: no sequence source has it", ANTI_CODON, accession, line);
-            return null;
-        }
-
         String bases = sequenceLookup.getSequenceSlice(
                 accession, position.start(), position.end(), SequenceRangeOption.WHOLE_SEQUENCE);
         if (bases == null || bases.length() != ANTICODON_LENGTH) {
             return null;
         }
 
-        boolean readBackwards = isReverseStrand(position, rowsCoveringPosition);
+        boolean readBackwards = isReverseStrand(position, rows);
         if (readBackwards) {
             bases = reverseComplement(bases);
             if (bases == null) {
@@ -385,44 +389,32 @@ public class AnticodonAttributeFix implements Fix {
     }
 
     /**
-     * Only the rows whose own start/end span the position get a say on the strand. Checking those
-     * rather than the whole group matters because the rows of one feature may legitimately carry
-     * different strands.
-     */
-    private List<GFF3Feature> rowsCovering(List<GFF3Feature> rows, Position position) {
-
-        List<GFF3Feature> covering = new ArrayList<>();
-        for (GFF3Feature row : rows) {
-            if (position.start() >= row.getStart() && position.end() <= row.getEnd()) {
-                covering.add(row);
-            }
-        }
-        return covering;
-    }
-
-    /**
      * A {@code complement(...)} wrapper around the position is flat-file syntax meaning "read
      * backwards", and it decides on its own whenever it is there.
      *
      * <p>Without a wrapper the strand column decides instead, so a minus-strand feature still gets the
      * bases the way they read on its own strand. Values converted from flat file always carry the
      * wrapper; this fallback is for GFF3 written by other tools, which use plain forward positions.
+     *
+     * <p>Only the rows whose own start/end span the position get a say, because the rows of one feature
+     * may legitimately carry different strands.
      */
-    private boolean isReverseStrand(Position position, List<GFF3Feature> rowsCoveringPosition) {
+    private boolean isReverseStrand(Position position, List<GFF3Feature> rows) {
 
         if (position.complement()) {
             return true;
         }
-        if (rowsCoveringPosition.isEmpty()) {
-            return false;
-        }
 
-        for (GFF3Feature row : rowsCoveringPosition) {
-            if (!row.isComplement()) {
-                return false;
+        boolean anyRowCoversPosition = false;
+        for (GFF3Feature row : rows) {
+            if (position.start() >= row.getStart() && position.end() <= row.getEnd()) {
+                anyRowCoversPosition = true;
+                if (!row.isComplement()) {
+                    return false;
+                }
             }
         }
-        return true;
+        return anyRowCoversPosition;
     }
 
     /** @return the reverse complement, or {@code null} if any base is not one the table knows. */

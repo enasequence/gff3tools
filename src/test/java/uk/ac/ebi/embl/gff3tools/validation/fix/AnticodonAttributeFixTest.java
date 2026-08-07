@@ -17,6 +17,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes.ANTI_CODON;
 
@@ -27,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
@@ -248,6 +251,60 @@ class AnticodonAttributeFixTest {
         tRna("t1", 1, 100, PLUS, "(pos:10..12,aa:Glu)");
 
         assertThrows(IllegalArgumentException.class, () -> fix.addSequence(annotation, 1));
+    }
+
+    @Test
+    void looksUpTheAnnotationSequenceRegionAccession() throws Exception {
+        stubSlice("TTA");
+        GFF3Feature feature = new GFF3Feature(
+                Optional.of("t1"),
+                Optional.empty(),
+                SEQ_ID,
+                Optional.of(2),
+                ".",
+                OntologyTerm.TRNA.name(),
+                1,
+                100,
+                ".",
+                PLUS,
+                "");
+        feature.addAttributes(ANTI_CODON, List.of("(pos:10..12,aa:Glu)"));
+        annotation.addFeature(feature);
+        annotation.setSequenceRegion(new GFF3SequenceRegion(SEQ_ID, Optional.of(2), 1, 5000));
+
+        fix.addSequence(annotation, 1);
+
+        verify(lookup).hasSequence(SEQ_ID + ".2");
+        verify(lookup).getSequenceSlice(SEQ_ID + ".2", 10L, 12L, SequenceRangeOption.WHOLE_SEQUENCE);
+    }
+
+    @Test
+    void looksUpFeatureAccessionWhenAnnotationHasNoSequenceRegion() throws Exception {
+        stubSlice("TTA");
+        tRna("t1", 1, 100, PLUS, "(pos:10..12,aa:Glu)");
+
+        fix.addSequence(annotation, 1);
+
+        verify(lookup).hasSequence(SEQ_ID);
+        verify(lookup).getSequenceSlice(SEQ_ID, 10L, 12L, SequenceRangeOption.WHOLE_SEQUENCE);
+    }
+
+    @Test
+    void checksTheSequenceOnceForAllFeaturesInTheAnnotation() throws Exception {
+        stubSlice("TTA");
+        tRna("t1", 1, 100, PLUS, "(pos:10..12,aa:Glu)");
+        tRna("t2", 200, 300, PLUS, "(pos:210..212,aa:Lys)");
+        tRna("t3", 400, 500, PLUS, "(pos:410..412,aa:Phe)");
+
+        fix.addSequence(annotation, 1);
+
+        verify(lookup, times(1)).hasSequence(SEQ_ID);
+    }
+
+    @Test
+    void skipsAnnotationWithNoAnticodonFeatures() {
+        assertDoesNotThrow(() -> fix.addSequence(new GFF3Annotation(), 1));
+        assertDoesNotThrow(() -> fix.addSequence(annotation, 1));
     }
 
     @Test
