@@ -108,6 +108,14 @@ public class CompositeSequenceProvider implements ContextProvider<SequenceLookup
                 }
 
                 @Override
+                public boolean hasSequence(String seqId) {
+                    for (SequenceSource source : sources) {
+                        if (source.hasSequence(seqId)) return true;
+                    }
+                    return false;
+                }
+
+                @Override
                 public Reader getSequenceSliceReader(
                         String seqId, long fromBase, long toBase, SequenceRangeOption option) throws Exception {
                     return sourceFor(seqId).getSequenceSliceReader(seqId, fromBase, toBase, option);
