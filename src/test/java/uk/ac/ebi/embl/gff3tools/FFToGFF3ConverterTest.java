@@ -26,8 +26,6 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.metadata.EmblEntryMetadataSource;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.validation.*;
-import uk.ac.ebi.embl.gff3tools.validation.builtin.SubmitterSeqIdValidation;
-import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 class FFToGFF3ConverterTest {
 
@@ -90,10 +88,6 @@ class FFToGFF3ConverterTest {
 
     private void testConvert(Path inputFile, Path expectedFile, Path masterFile) {
         ValidationEngineBuilder engineBuilder = new ValidationEngineBuilder();
-        // These fixtures are archive records, so their ID line is a real ENA accession. The
-        // submitter sequence identifier rule that FFToGff3Converter switches on would reject them.
-        engineBuilder.overrideMethodRules(
-                Map.of(SubmitterSeqIdValidation.SUBMITTER_SEQ_ID_NOT_ACCESSION_RULE, RuleSeverity.OFF));
         MasterMetadataProvider metadataProvider = buildMetadataProvider(masterFile);
         if (metadataProvider != null) {
             engineBuilder.withProvider(metadataProvider);

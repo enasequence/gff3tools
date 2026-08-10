@@ -11,11 +11,15 @@
 package uk.ac.ebi.embl.gff3tools.cli;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import uk.ac.ebi.embl.gff3tools.exception.CLIException;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 @Command(
         name = "gff3tools",
@@ -58,5 +62,32 @@ public class Main {
 
     public static void exit(int status) {
         System.exit(status);
+    }
+}
+
+record CliRulesOption(Map<String, RuleSeverity> rules) {}
+
+class RuleConverter implements CommandLine.ITypeConverter<CliRulesOption> {
+    CliRulesOption map = new CliRulesOption(new HashMap<>());
+
+    @Override
+    public CliRulesOption convert(String args) throws Exception {
+        String[] entries = args.split(",");
+
+        for (String entry : entries) {
+            String[] pairs = entry.trim().split(":");
+            if (pairs.length != 2) {
+                throw new CLIException("Invalid rule: '" + entry + "' There must be 2 values separated by ':' ");
+            }
+            String key = pairs[0].toUpperCase();
+            RuleSeverity value;
+            try {
+                value = RuleSeverity.valueOf(pairs[1].toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new CLIException("The rule severity: \"" + pairs[1] + "\" is invalid");
+            }
+            this.map.rules().put(key, value);
+        }
+        return this.map;
     }
 }
