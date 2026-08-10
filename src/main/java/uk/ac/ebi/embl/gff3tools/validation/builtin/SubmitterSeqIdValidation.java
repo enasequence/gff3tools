@@ -25,45 +25,25 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
 
-/**
- * Checks the submitter's sequence identifier (the GFF3 seqId / submitter_seqid) against the INSDC
- * submitter_seqid recommendation.
- *
- * <p>Both rules are declared {@code OFF}, so they are inert for every validation engine. The flat
- * file to GFF3 conversion is the only caller that turns them on (see {@code FFToGff3Converter}),
- * because that is the path where the identifier is supplied by the submitter rather than by ENA.
- *
- * @see <a href="https://www.insdc.org/submitting-standards/submitterseqid-qualifier-recommendation-document/">
- *      INSDC submitter_seqid qualifier recommendation</a>
- */
 @Gff3Validation(name = "SUBMITTER_SEQ_ID")
 public class SubmitterSeqIdValidation implements Validation {
     public static final String SUBMITTER_SEQ_ID_FORMAT_RULE = "SUBMITTER_SEQ_ID_FORMAT";
     public static final String SUBMITTER_SEQ_ID_NOT_ACCESSION_RULE = "SUBMITTER_SEQ_ID_NOT_ACCESSION";
 
-    /** INSDC: the submitter_seqid must be "fewer than 51 characters". */
     static final int MAX_LENGTH = 50;
 
-    // INSDC states the illegal characters rather than a whitelist: spaces, greater than, left or
-    // right square brackets, vertical bar and double quotation marks. Any whitespace is treated as
-    // a space here - a tab would in any case break the GFF3 seqId column.
     private static final Pattern ILLEGAL_CHARACTER = Pattern.compile("[\\s>\\[\\]|\"]");
 
-    // Accession formats ENA uses for sequences, from
-    // https://ena-docs.readthedocs.io/en/latest/submit/general-guide/accessions.html
-    // The version suffix is optional so that both AB123456 and AB123456.1 are recognised. Matching
-    // is case-insensitive so lower case look-alikes are caught too. Project, study, sample, run and
-    // assembly (GCA_) accessions are deliberately not covered - this rule is about sequences.
     private static final Pattern ENA_SEQUENCE_ACCESSION = Pattern.compile(
             String.join(
                     "|",
-                    "[A-Z][0-9]{5}(\\.[0-9]+)?", // assembled/annotated sequence, e.g. A12345.1
-                    "[A-Z]{2}[0-9]{6}(\\.[0-9]+)?", // assembled/annotated sequence, e.g. AB123456.1
-                    "[A-Z]{2}[0-9]{8}(\\.[0-9]+)?", // assembled/annotated sequence, e.g. AB12345678
-                    "[A-Z]{4}[0-9]{2}S?[0-9]{6,8}(\\.[0-9]+)?", // WGS/TSA sequence, e.g. ABCD01123456
-                    "[A-Z]{6}[0-9]{2}S?[0-9]{7,9}(\\.[0-9]+)?", // WGS/TSA sequence, e.g. ABCDEF011234567
-                    "[A-Z]{3}[0-9]{5}(\\.[0-9]+)?", // protein coding sequence, e.g. ABC12345.1
-                    "[A-Z]{3}[0-9]{7}(\\.[0-9]+)?"), // protein coding sequence, e.g. ABC1234567.1
+                    "[A-Z][0-9]{5}(\\.[0-9]+)?",
+                    "[A-Z]{2}[0-9]{6}(\\.[0-9]+)?",
+                    "[A-Z]{2}[0-9]{8}(\\.[0-9]+)?",
+                    "[A-Z]{4}[0-9]{2}S?[0-9]{6,8}(\\.[0-9]+)?",
+                    "[A-Z]{6}[0-9]{2}S?[0-9]{7,9}(\\.[0-9]+)?",
+                    "[A-Z]{3}[0-9]{5}(\\.[0-9]+)?",
+                    "[A-Z]{3}[0-9]{7}(\\.[0-9]+)?"),
             Pattern.CASE_INSENSITIVE);
 
     @ValidationMethod(
@@ -108,7 +88,7 @@ public class SubmitterSeqIdValidation implements Validation {
     public void validateSubmitterSeqIdIsNotAccession(GFF3Annotation annotation, int line) throws ValidationException {
         String seqId = submitterSeqId(annotation);
         if (seqId == null || seqId.isEmpty()) {
-            return; // Reported by the format rule.
+            return;
         }
 
         if (ENA_SEQUENCE_ACCESSION.matcher(seqId).matches()) {
@@ -120,17 +100,11 @@ public class SubmitterSeqIdValidation implements Validation {
         }
     }
 
-    /**
-     * The identifier the submitter chose, without the sequence version. The seqId written to GFF3
-     * carries a ".version" suffix that ENA appends, so validating the raw seqId would charge the
-     * submitter for characters they did not supply.
-     */
     private static String submitterSeqId(GFF3Annotation annotation) {
         GFF3SequenceRegion sequenceRegion = annotation.getSequenceRegion();
         return sequenceRegion != null ? sequenceRegion.accessionId() : annotation.getAccession();
     }
 
-    /** Returns the distinct illegal characters found, in the order they occur, for reporting. */
     private static Set<String> findIllegalCharacters(String seqId) {
         Set<String> illegalCharacters = new LinkedHashSet<>();
         Matcher matcher = ILLEGAL_CHARACTER.matcher(seqId);

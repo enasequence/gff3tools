@@ -21,8 +21,6 @@ import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
-import uk.ac.ebi.embl.gff3tools.validation.builtin.SubmitterSeqIdValidation;
-import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 public class FFToGff3Converter implements Converter {
 
@@ -30,12 +28,6 @@ public class FFToGff3Converter implements Converter {
 
     public FFToGff3Converter(ValidationEngine validationEngine) {
         this.validationEngine = validationEngine;
-        // The submitter sequence identifier rules are declared OFF so they stay inert everywhere
-        // else. This is the only conversion where the sequence name comes from the submitter, so it
-        // is the only one that switches them on. An explicit --rules entry still wins.
-        validationEngine.enableRuleIfUnset(SubmitterSeqIdValidation.SUBMITTER_SEQ_ID_FORMAT_RULE, RuleSeverity.ERROR);
-        validationEngine.enableRuleIfUnset(
-                SubmitterSeqIdValidation.SUBMITTER_SEQ_ID_NOT_ACCESSION_RULE, RuleSeverity.ERROR);
     }
 
     public void convert(BufferedReader reader, BufferedWriter writer)
