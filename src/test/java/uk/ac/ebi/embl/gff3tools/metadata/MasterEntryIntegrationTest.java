@@ -21,7 +21,9 @@ import java.nio.file.Paths;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
+import uk.ac.ebi.embl.gff3tools.cli.CliRulesOption;
 import uk.ac.ebi.embl.gff3tools.cli.Main;
+import uk.ac.ebi.embl.gff3tools.cli.RuleConverter;
 
 class MasterEntryIntegrationTest {
 
@@ -38,7 +40,7 @@ class MasterEntryIntegrationTest {
     private int executeCommand(String... args) {
         StringWriter err = new StringWriter();
         StringWriter out = new StringWriter();
-        CommandLine command = new CommandLine(new Main());
+        CommandLine command = new CommandLine(new Main()).registerConverter(CliRulesOption.class, new RuleConverter());
         command.setErr(new PrintWriter(err));
         command.setOut(new PrintWriter(out));
         return command.execute(args);
@@ -102,8 +104,16 @@ class MasterEntryIntegrationTest {
         Path masterJson = getResourcePath("metadata/master_entry.json");
         Path outFile = tempDir.resolve("output.gff3");
 
+        // scaffold-reduced.embl is an archive record, so its ID line is a real ENA accession. The
+        // submitter sequence identifier rule that EMBL->GFF3 switches on would reject it.
         int exitCode = executeCommand(
-                "conversion", "--master-entry", masterJson.toString(), emblInput.toString(), outFile.toString());
+                "conversion",
+                "--rules",
+                "SUBMITTER_SEQ_ID_NOT_ACCESSION:OFF",
+                "--master-entry",
+                masterJson.toString(),
+                emblInput.toString(),
+                outFile.toString());
 
         assertEquals(0, exitCode, "EMBL->GFF3 conversion with --master-entry JSON should succeed");
         assertTrue(Files.exists(outFile), "Output file should be created");
@@ -123,8 +133,16 @@ class MasterEntryIntegrationTest {
         Path expectedPath = getResourcePath("fftogff3_rules/reduced/scaffold-reduced-expected.gff3");
         Path outFile = tempDir.resolve("output.gff3");
 
-        int exitCode =
-                executeCommand("conversion", "-m", masterPath.toString(), scaffoldPath.toString(), outFile.toString());
+        // scaffold-reduced.embl is an archive record, so its ID line is a real ENA accession. The
+        // submitter sequence identifier rule that EMBL->GFF3 switches on would reject it.
+        int exitCode = executeCommand(
+                "conversion",
+                "--rules",
+                "SUBMITTER_SEQ_ID_NOT_ACCESSION:OFF",
+                "-m",
+                masterPath.toString(),
+                scaffoldPath.toString(),
+                outFile.toString());
 
         assertEquals(0, exitCode, "Backward-compatible -m EMBL conversion should succeed");
         assertTrue(Files.exists(outFile), "Output file should be created");

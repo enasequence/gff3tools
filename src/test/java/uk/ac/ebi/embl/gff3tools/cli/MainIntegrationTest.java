@@ -675,9 +675,20 @@ public class MainIntegrationTest {
         Path inputFile = Path.of("src/test/resources/fftogff3_rules/reduced/contig-reduced.embl");
         Path outputGff3 = Files.createTempFile("output", ".gff3");
 
-        // No --output-sequence option provided
-        String[] args =
-                new String[] {"conversion", "-f", "embl", "-t", "gff3", inputFile.toString(), outputGff3.toString()};
+        // No --output-sequence option provided. contig-reduced.embl is an archive record, so its ID
+        // line is a real ENA accession; the submitter sequence identifier rule that EMBL->GFF3
+        // switches on would reject it.
+        String[] args = new String[] {
+            "conversion",
+            "--rules",
+            "SUBMITTER_SEQ_ID_NOT_ACCESSION:OFF",
+            "-f",
+            "embl",
+            "-t",
+            "gff3",
+            inputFile.toString(),
+            outputGff3.toString()
+        };
 
         PrintStream originalErr = System.err;
         ByteArrayOutputStream errContent = new ByteArrayOutputStream();
