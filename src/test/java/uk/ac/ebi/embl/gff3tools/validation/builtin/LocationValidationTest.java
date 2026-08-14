@@ -128,20 +128,6 @@ public class LocationValidationTest {
                     assertThrows(ValidationException.class, () -> locationValidation.validateLocationRange(feature, 1));
             assertTrue(exception.getMessage().contains("Invalid start/end for accession"));
         }
-
-        @Test
-        void endBelowStartWithCircularRnaAttributeSuccess() {
-            feature = TestUtils.createGFF3Feature(
-                    OntologyTerm.CDS_REGION.name(), 4800L, 200L, Map.of(GFF3Attributes.CIRCULAR_RNA, List.of("true")));
-            Assertions.assertDoesNotThrow(() -> locationValidation.validateLocationRange(feature, 1));
-        }
-
-        @Test
-        void endAboveStartWithCircularRnaAttributeSuccess() {
-            feature = TestUtils.createGFF3Feature(
-                    OntologyTerm.CDS_REGION.name(), 10L, 100L, Map.of(GFF3Attributes.CIRCULAR_RNA, List.of("true")));
-            Assertions.assertDoesNotThrow(() -> locationValidation.validateLocationRange(feature, 1));
-        }
     }
 
     @Nested

@@ -60,7 +60,7 @@ public class LocationValidation implements Validation {
         long start = feature.getStart();
         long end = feature.getEnd();
 
-        if (!hasCircularAttribute(feature) && end < start) {
+        if (end < start) {
             throw new ValidationException(
                     line, INVALID_START_END_MESSAGE.formatted(feature.accession(), location(feature)));
         }
