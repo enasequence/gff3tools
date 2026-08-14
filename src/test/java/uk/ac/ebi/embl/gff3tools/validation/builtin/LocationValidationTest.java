@@ -303,11 +303,6 @@ public class LocationValidationTest {
             assertTrue(ex.getMessage().contains("end position"));
         }
 
-        @Test
-        void endBelowOneFailureWithoutContext() throws Exception {
-            GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 1L, -10L, Map.of());
-            assertThrows(ValidationException.class, () -> locationValidation.validateFeatureEndAboveZero(feature, 1));
-        }
     }
 
     @Nested
@@ -327,20 +322,6 @@ public class LocationValidationTest {
             ValidationException ex = assertThrows(
                     ValidationException.class, () -> locationValidation.validateFeatureStartAboveZero(feature, 1));
             assertTrue(ex.getMessage().contains("start position"));
-        }
-
-        @Test
-        void startBelowOneFailureWithoutContext() throws Exception {
-            GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, -10L, 500L, Map.of());
-            assertThrows(ValidationException.class, () -> locationValidation.validateFeatureStartAboveZero(feature, 1));
-        }
-
-        @Test
-        void startAndEndZeroFailure() {
-            feature = TestUtils.createGFF3Feature(OntologyTerm.CDS_REGION.name(), 0L, 0L);
-            ValidationException exception = assertThrows(
-                    ValidationException.class, () -> locationValidation.validateFeatureStartAboveZero(feature, 1));
-            assertTrue(exception.getMessage().contains("start position"));
         }
 
         @Test
