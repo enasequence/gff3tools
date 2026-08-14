@@ -17,13 +17,13 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 public class ValidationUtils {
 
-    /***
-     * Resolved sequence length from sequence length cache and sequenceLookup as the fallback
+    /**
+     * Resolves sequence length from sequence length cache and sequenceLookup as the fallback
      *
      * @param seqId id of the sequence
      * @param sequenceLengthCache the cache for sequence lengths, keyed by sequence id
      * @param context validation context
-     * @return sequence length as Long, and null if there is no {@link SequenceLookup} implementation defined
+     * @return sequence length as {@link Long}, and null if there is no {@link SequenceLookup} implementation defined
      * @throws IllegalStateException if the SequenceLookup is defined but the sequence length cannot be fetched due to upstream error
      */
     public static Long resolveSequenceLength(
