@@ -11,7 +11,6 @@
 package uk.ac.ebi.embl.gff3tools.utils;
 
 import java.util.Map;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
@@ -26,7 +25,7 @@ public class ValidationUtils {
             SequenceLookup lookup = context.get(SequenceLookup.class);
             if (lookup != null) {
                 try {
-                    Long length = lookup.getSequenceLength(seqId, SequenceRangeOption.WHOLE_SEQUENCE);
+                    Long length = lookup.getSequenceLength(seqId);
                     sequenceLengthCache.put(seqId, length);
                     return length;
                 } catch (Exception ex) {
