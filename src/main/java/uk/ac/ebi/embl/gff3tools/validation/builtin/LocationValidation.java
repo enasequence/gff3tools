@@ -26,7 +26,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 @Gff3Validation(
         name = "LOCATION",
-        description = "Validates that features and sequence-region coordinates are within the sequence bounds")
+        description = "Validates that features coordinates are within expected values and the sequence bounds")
 public class LocationValidation implements Validation {
 
     private static final String RULE_FEATURE_LOCATION_RANGE = "LOCATION_RANGE";
@@ -60,7 +60,7 @@ public class LocationValidation implements Validation {
         long start = feature.getStart();
         long end = feature.getEnd();
 
-        if (!isCircularRNA(feature) && end < start) {
+        if (!hasCircularAttribute(feature) && end < start) {
             throw new ValidationException(
                     line, INVALID_START_END_MESSAGE.formatted(feature.accession(), location(feature)));
         }
@@ -78,7 +78,8 @@ public class LocationValidation implements Validation {
 
         // Circular molecules may carry origin-spanning features whose end is expressed as
         // "physical end + sequence length", so the end legitimately exceeds the sequence length.
-        if (!isCircularSequence(feature.accession()) && feature.getEnd() > lastBaseIndex) {
+        boolean isCircular = hasCircularAttribute(feature) || isCircularSequence(feature.accession());
+        if (!isCircular && feature.getEnd() > lastBaseIndex) {
             throw new ValidationException(
                     RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH,
                     line,
@@ -184,7 +185,7 @@ public class LocationValidation implements Validation {
         return feature.getStart() + ".." + feature.getEnd();
     }
 
-    private static boolean isCircularRNA(GFF3Feature feature) {
+    private static boolean hasCircularAttribute(GFF3Feature feature) {
         return Boolean.TRUE
                 .toString()
                 .equalsIgnoreCase(

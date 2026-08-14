@@ -251,6 +251,15 @@ public class LocationValidationTest {
         }
 
         @Test
+        void endExceedsSequenceLengthWithCircularAttributeSuccess() throws Exception {
+            long seqLen = 1000L;
+            injectLookupReturning(SEQ_ID, seqLen);
+            GFF3Feature feature = TestUtils.createGFF3Feature(
+                    "gene", SEQ_ID, 900L, seqLen + 100, Map.of(GFF3Attributes.CIRCULAR_RNA, List.of("true")));
+            assertDoesNotThrow(() -> locationValidation.validateFeatureEndWithinSequence(feature, 1));
+        }
+
+        @Test
         void endExceedsSequenceLengthOnUnrecognisedTopologyFailure() throws Exception {
             long seqLen = 1000L;
             injectLookupReturning(SEQ_ID, seqLen, "spherical");
@@ -302,7 +311,6 @@ public class LocationValidationTest {
                     ValidationException.class, () -> locationValidation.validateFeatureEndAboveZero(feature, 1));
             assertTrue(ex.getMessage().contains("end position"));
         }
-
     }
 
     @Nested
