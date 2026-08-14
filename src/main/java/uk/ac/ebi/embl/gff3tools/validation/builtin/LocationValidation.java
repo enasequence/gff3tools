@@ -60,9 +60,7 @@ public class LocationValidation implements Validation {
         long start = feature.getStart();
         long end = feature.getEnd();
 
-        boolean isCircularRNA = isCircularRNA(feature);
-
-        if (!isCircularRNA && end < start) {
+        if (!isCircularRNA(feature) && end < start) {
             throw new ValidationException(
                     line, INVALID_START_END_MESSAGE.formatted(feature.accession(), location(feature)));
         }
