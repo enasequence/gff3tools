@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -36,10 +37,19 @@ public class LengthValidation implements Validation {
     private static final long INTRON_FEATURE_MIN_LENGTH = 10;
     private static final long EXON_FEATURE_MIN_LENGTH = 15;
 
+    /** INSDC Annotation Minimum Specification b.v.1: complete coding regions must be at least 30 aa long. */
+    private static final long COMPLETE_CDS_MIN_AMINO_ACIDS = 30;
+
+    /** 30 amino acids of coding sequence plus the terminal stop codon, which INSDC includes in the CDS. */
+    private static final long COMPLETE_CDS_MIN_LENGTH = (COMPLETE_CDS_MIN_AMINO_ACIDS + 1) * 3;
+
     private static final String INVALID_PROPEPTIDE_LENGTH_MESSAGE =
             "Propeptide feature length must be a multiple of 3 for accession \"%s\"";
     private static final String INVALID_INTRON_LENGTH_MESSAGE = "Intron feature length is invalid for accession \"%s\"";
     private static final String INVALID_EXON_LENGTH_MESSAGE = "Exon feature length is invalid for accession \"%s\"";
+
+    private static final String INVALID_CDS_LENGTH_MESSAGE =
+            "Complete coding regions must be at least %d amino acids long for accession \"%s\". Provide /experiment or /inference evidence for the coding region, or mark the feature as 5' or 3' partial.";
 
     private static final String INVALID_CDS_INTRON_LENGTH_MESSAGE =
             "Intron usually expected to be at least 10 nt long. Please check accuracy and Use one of the following options for annotation: \n /artificial_location=\"heterogeneous population sequenced\" \n OR \n /artificial_location=\"low-quality sequence region\". \n Alternatively, use where appropriate: \n /pseudo, /pseudogene, /trans_splicing, /ribosomal_slippage";
@@ -114,6 +124,83 @@ public class LengthValidation implements Validation {
             }
         }
         cdsList.clear();
+    }
+
+    @ValidationMethod(rule = "CDS_LENGTH", type = ValidationType.ANNOTATION)
+    public void validateCdsLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
+        Map<String, List<GFF3Feature>> cdsListById = new LinkedHashMap<>();
+        List<List<GFF3Feature>> cdsWithoutId = new ArrayList<>();
+
+        for (GFF3Feature feature : gff3Annotation.getFeatures()) {
+
+            if (feature == null) continue;
+
+            Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
+            if (soIdOpt.isEmpty()) continue;
+
+            boolean isCds = OntologyTerm.CDS.ID.equals(soIdOpt.get())
+                    || ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.CDS.ID);
+
+            if (!isCds) continue;
+
+            String cdsId = feature.getAttribute(GFF3Attributes.ATTRIBUTE_ID).orElse(null);
+
+            // Segments of a spliced coding region share an ID. A CDS without one is measured on its
+            // own so that unrelated coding regions are never summed into a single length.
+            if (cdsId == null) {
+                cdsWithoutId.add(List.of(feature));
+            } else {
+                cdsListById.computeIfAbsent(cdsId, k -> new ArrayList<>()).add(feature);
+            }
+        }
+
+        for (List<GFF3Feature> cdsGroup : cdsListById.values()) {
+            validateCdsLength(cdsGroup, line);
+        }
+        for (List<GFF3Feature> cdsGroup : cdsWithoutId) {
+            validateCdsLength(cdsGroup, line);
+        }
+    }
+
+    private void validateCdsLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
+
+        if (cdsList.isEmpty()) {
+            return;
+        }
+
+        List<GFF3Feature> sortedCdsList = new ArrayList<>(cdsList);
+        sortedCdsList.sort(Comparator.comparingLong(GFF3Feature::getStart));
+
+        GFF3Feature first = sortedCdsList.get(0);
+        GFF3Feature last = sortedCdsList.get(sortedCdsList.size() - 1);
+
+        // Join-level partiality is determined from the boundary segments. On complement joins,
+        // either boundary can carry the effective 5'/3' partial flag.
+        if (first.isFivePrimePartial()
+                || last.isFivePrimePartial()
+                || first.isThreePrimePartial()
+                || last.isThreePrimePartial()) {
+            return;
+        }
+
+        long length = 0;
+        for (GFF3Feature cds : sortedCdsList) {
+            if (isPseudo(cds) || hasEvidence(cds)) {
+                return;
+            }
+            length += cds.getLength();
+        }
+
+        if (length < COMPLETE_CDS_MIN_LENGTH) {
+            throw new ValidationException(
+                    line, INVALID_CDS_LENGTH_MESSAGE.formatted(COMPLETE_CDS_MIN_AMINO_ACIDS, first.accession()));
+        }
+    }
+
+    /** INSDC Annotation Minimum Specification, table 2: the b.v.1 exception for short coding regions. */
+    private boolean hasEvidence(GFF3Feature feature) {
+        return feature.hasAttribute(GFF3Attributes.EXPERIMENT) || feature.hasAttribute(GFF3Attributes.INFERENCE);
     }
 
     @ValidationMethod(rule = "EXON_LENGTH", type = ValidationType.FEATURE, severity = RuleSeverity.WARN)
