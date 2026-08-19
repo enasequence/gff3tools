@@ -18,5 +18,6 @@ public enum AnalysisType {
     SEQUENCE_ASSEMBLY,
     /*** This is the default AnalysisType for previous Transcriptome pipeline submissions*/
     TRANSCRIPTOME_ASSEMBLY,
+    DECOUPLED_ANNOTATION,
     UNKNOWN
 }

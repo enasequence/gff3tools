@@ -21,11 +21,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.*;
-import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
-import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
-import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
-import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
-import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
+import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 @Gff3Validation(name = "LOCATION")
 public class LocationValidation implements Validation {
@@ -38,7 +34,7 @@ public class LocationValidation implements Validation {
     @InjectContext
     private ValidationContext context;
 
-    @ValidationMethod(rule = "LOCATION", type = ValidationType.FEATURE)
+    @ValidationMethod(rule = "LOCATION", type = ValidationType.FEATURE, priority = ValidationPriority.NORMAL)
     public void validateLocation(GFF3Feature feature, int line) throws ValidationException {
         long start = feature.getStart();
         long end = feature.getEnd();

@@ -29,7 +29,9 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 @Gff3Validation(name = "LENGTH")
 public class LengthValidation implements Validation {
@@ -38,7 +40,7 @@ public class LengthValidation implements Validation {
     private static final long EXON_FEATURE_MIN_LENGTH = 15;
 
     /** INSDC Annotation Minimum Specification b.v.1: complete coding regions must be at least 30 aa long. */
-    private static final long COMPLETE_CDS_MIN_AMINO_ACIDS = 30;
+    private static final long COMPLETE_CDS_MIN_AMINO_ACIDS = 25;
 
     /** 30 amino acids of coding sequence plus the terminal stop codon, which INSDC includes in the CDS. */
     private static final long COMPLETE_CDS_MIN_LENGTH = (COMPLETE_CDS_MIN_AMINO_ACIDS + 1) * 3;
@@ -126,7 +128,11 @@ public class LengthValidation implements Validation {
         cdsList.clear();
     }
 
-    @ValidationMethod(rule = "CDS_LENGTH", type = ValidationType.ANNOTATION)
+    /**
+     * Runs at LOW priority so that it executes after the LOW-priority {@link uk.ac.ebi.embl.gff3tools.validation.fix.TranslationFix}, whose
+     * conceptual translations this rule counts and whose partiality fixes it must observe.
+     */
+    @ValidationMethod(rule = "CDS_LENGTH", type = ValidationType.ANNOTATION, priority = ValidationPriority.LOW)
     public void validateCdsLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
         OntologyClient ontologyClient = context.get(OntologyClient.class);
         Map<String, List<GFF3Feature>> cdsListById = new LinkedHashMap<>();
@@ -171,7 +177,6 @@ public class LengthValidation implements Validation {
 
         List<GFF3Feature> sortedCdsList = new ArrayList<>(cdsList);
         sortedCdsList.sort(Comparator.comparingLong(GFF3Feature::getStart));
-
         GFF3Feature first = sortedCdsList.get(0);
         GFF3Feature last = sortedCdsList.get(sortedCdsList.size() - 1);
 
@@ -192,10 +197,50 @@ public class LengthValidation implements Validation {
             length += cds.getLength();
         }
 
+        // Preferred measure: the conceptual translation computed by the TRANSLATION fix, which
+        // excludes the trailing stop codon and so is the amino acid count the specification means.
+        String translation = getComputedTranslation(first);
+        if (translation != null && !translation.isEmpty()) {
+            if (translation.length() < COMPLETE_CDS_MIN_AMINO_ACIDS) {
+                throw new ValidationException(
+                        line, INVALID_CDS_LENGTH_MESSAGE.formatted(COMPLETE_CDS_MIN_AMINO_ACIDS, first.accession()));
+            }
+            return;
+        }
+
+        // No translation available (no sequence supplied, or a coding region without an ID), so fall
+        // back to measuring nucleotides. A "transl_except" may declare a one or two base stop codon at
+        // the 3' end, which leaves a complete coding region short of a multiple of three and makes the
+        // nucleotide measure unreliable, so it is not applied to those features.
+        for (GFF3Feature cds : sortedCdsList) {
+            if (cds.hasAttribute(GFF3Attributes.TRANSL_EXCEPT)) {
+                return;
+            }
+        }
+
         if (length < COMPLETE_CDS_MIN_LENGTH) {
             throw new ValidationException(
                     line, INVALID_CDS_LENGTH_MESSAGE.formatted(COMPLETE_CDS_MIN_AMINO_ACIDS, first.accession()));
         }
+    }
+
+    /**
+     * The translation recorded by the TRANSLATION fix for this coding region, or {@code null} when
+     * none was computed. Keyed exactly as {@code TranslationFix} keys it, from the segment with the
+     * lowest start position.
+     */
+    private String getComputedTranslation(GFF3Feature representative) {
+        if (!context.contains(TranslationState.class)) {
+            return null;
+        }
+        String key = TranslationState.buildKey(
+                representative.accession(), representative.getId().orElse(null));
+        if (key == null) {
+            return null;
+        }
+        TranslationState.TranslationEntry entry =
+                context.get(TranslationState.class).get(key);
+        return entry == null ? null : entry.newTranslation();
     }
 
     /** INSDC Annotation Minimum Specification, table 2: the b.v.1 exception for short coding regions. */
