@@ -148,7 +148,7 @@ public class LengthValidation implements Validation {
             type = ValidationType.ANNOTATION,
             priority = ValidationPriority.LOW)
     public void validateCdsLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
-        // Segments of a spliced coding region share an ID, and are keyed here exactly as
+        // Segments of a spliced CDS's share an ID, and are keyed here exactly as
         // TranslationFix keys them so that the recorded translations can be looked up below.
         Map<String, List<GFF3Feature>> cdsGroups = gff3Annotation.getFeatures().stream()
                 .filter(this::isCds)
@@ -261,7 +261,8 @@ public class LengthValidation implements Validation {
     private void validateCdsLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
         List<GFF3Feature> sortedCdsGroup = new ArrayList<>(cdsList);
         sortedCdsGroup.sort(Comparator.comparingLong(GFF3Feature::getStart));
-        //length does not need to be validated on incomplete CDS or one that has inference/evidence as to why it's short
+        // length does not need to be validated on incomplete CDS or one that has inference/evidence as to why it's
+        // short
         if (sortedCdsGroup.isEmpty()
                 || isPartial(sortedCdsGroup)
                 || sortedCdsGroup.stream().anyMatch(cds -> isPseudo(cds) || hasEvidence(cds))) {
