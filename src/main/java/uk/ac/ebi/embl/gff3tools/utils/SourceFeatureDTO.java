@@ -36,6 +36,10 @@ public class SourceFeatureDTO {
     private boolean transgenic;
     private Map<String, List<String>> qualifiers;
 
+    // BioSample accession resolved when ORGANISM_NAME field in TSV is a sample accession;
+    // null when ORGANISM_NAME was a scientific name or tax id.
+    private String biosampleId;
+
     public SourceFeatureDTO(String id, SourceFeature original) {
         if (original == null) {
             throw new NullPointerException("Original feature is null");
