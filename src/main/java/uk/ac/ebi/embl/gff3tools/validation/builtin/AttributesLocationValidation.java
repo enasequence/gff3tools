@@ -22,11 +22,7 @@ import uk.ac.ebi.embl.gff3tools.translation.TranslationException;
 import uk.ac.ebi.embl.gff3tools.translation.except.AminoAcidExcept;
 import uk.ac.ebi.embl.gff3tools.translation.except.AntiCodonAttribute;
 import uk.ac.ebi.embl.gff3tools.translation.except.TranslExceptAttribute;
-import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
-import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
-import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
-import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
-import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
+import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 @Gff3Validation(name = "ATTRIBUTES_LOCATION")
 public class AttributesLocationValidation implements Validation {
@@ -38,8 +34,6 @@ public class AttributesLocationValidation implements Validation {
     private static final String INVALID_LOCATION_SPAN = "%s location span must be \"%s\" at location %s";
     private static final String COMPLEMENT_STRAND_CONFLICT =
             "%s location is wrapped in complement() but the containing feature is on strand \"%s\": %s";
-    private static final String COMPLEMENT_UNRESOLVED =
-            "%s location is wrapped in complement() but does not fall within any feature fragment: %s";
 
     /** Detects a {@code complement(...)} wrapper that survived {@code TRANSL_EXCEPT_COMPLEMENT}. */
     private static final Pattern POS_COMPLEMENT_PATTERN =
@@ -54,7 +48,10 @@ public class AttributesLocationValidation implements Validation {
         validateCodonAttribute(grouped, ANTI_CODON, line);
     }
 
-    @ValidationMethod(rule = "TRANSL_EXCEPT_LOCATION", type = ValidationType.ANNOTATION)
+    @ValidationMethod(
+            rule = "TRANSL_EXCEPT_LOCATION",
+            type = ValidationType.ANNOTATION,
+            priority = ValidationPriority.HIGH)
     public void validateTranslExcept(GFF3Annotation gff3Annotation, int line) throws ValidationException {
         Map<String, List<GFF3Feature>> grouped = gff3Annotation.getFeatures().stream()
                 .filter(f -> f.hasAttribute(TRANSL_EXCEPT))
@@ -63,62 +60,44 @@ public class AttributesLocationValidation implements Validation {
         validateCodonAttribute(grouped, TRANSL_EXCEPT, line);
     }
 
-    /**
-     * Reports a {@code complement(...)} wrapper in a {@code transl_except} value whose direction the
-     * row's strand column does not confirm. {@code TRANSL_EXCEPT_COMPLEMENT} removes the wrapper
-     * when the two agree; when they disagree one of them is wrong, so this reports it rather than
-     * letting either side silently win.
-     */
     @ValidationMethod(
             rule = "TRANSL_EXCEPT_STRAND_CONFLICT",
-            type = ValidationType.ANNOTATION,
-            severity = RuleSeverity.WARN)
-    public void validateTranslExceptStrandConflict(GFF3Annotation gff3Annotation, int line) throws ValidationException {
+            description =
+                    "Check that a complement(...) wrapper in a transl_except attribute location agrees with the strand",
+            type = ValidationType.FEATURE,
+            severity = RuleSeverity.ERROR)
+    public void validateTranslExceptStrandConflict(GFF3Feature feature, int line) throws ValidationException {
 
-        Map<String, List<GFF3Feature>> grouped = gff3Annotation.getFeatures().stream()
-                .filter(f -> f.hasAttribute(TRANSL_EXCEPT))
-                .collect(Collectors.groupingBy(feature -> feature.getId().orElse(feature.hashCodeString())));
+        /** a "-" strand feature row can have a complement but does not have to,
+         *  normalised in {@link uk.ac.ebi.embl.gff3tools.validation.fix.TranslExceptComplementFix} **/
+        if (feature.isComplement()) {
+            return;
+        }
 
-        for (List<GFF3Feature> fragments : grouped.values()) {
+        for (String value : feature.getAttributeList(TRANSL_EXCEPT).orElse(List.of())) {
 
-            List<String> values = fragments.stream()
-                    .flatMap(f -> f.getAttributeList(TRANSL_EXCEPT).orElse(List.of()).stream())
-                    .distinct()
-                    .toList();
+            if (value == null || !POS_COMPLEMENT_PATTERN.matcher(value).find()) {
+                continue;
+            }
 
-            for (String value : values) {
-                if (value == null || !POS_COMPLEMENT_PATTERN.matcher(value).find()) {
-                    continue;
-                }
+            TranslExceptAttribute attribute;
+            try {
+                attribute = new TranslExceptAttribute(value);
+            } catch (TranslationException e) {
+                // Malformed values are already reported by {@link TRANSL_EXCEPT_LOCATION}.
+                continue;
+            }
 
-                TranslExceptAttribute attribute;
-                try {
-                    attribute = new TranslExceptAttribute(value);
-                } catch (TranslationException e) {
-                    // Malformed values are already reported by TRANSL_EXCEPT_LOCATION.
-                    continue;
-                }
-
-                final long start = attribute.getStartPosition();
-                final long end = attribute.getEndPosition();
-
-                List<GFF3Feature> containing = fragments.stream()
-                        .filter(f -> start >= f.getStart() && end <= f.getEnd())
-                        .toList();
-
-                if (containing.isEmpty()) {
-                    throw new ValidationException(line, COMPLEMENT_UNRESOLVED.formatted(TRANSL_EXCEPT, value));
-                }
-
-                Optional<GFF3Feature> conflicting =
-                        containing.stream().filter(f -> !f.isComplement()).findFirst();
-
-                if (conflicting.isPresent()) {
-                    throw new ValidationException(
-                            line,
-                            COMPLEMENT_STRAND_CONFLICT.formatted(
-                                    TRANSL_EXCEPT, conflicting.get().getStrand(), value));
-                }
+            // A join is written as several rows sharing an ID, and the same attribute value is
+            // copied onto every one of them. Only the row that actually spans the position owns
+            // that value, so without this check a mixed-strand join would be rejected because of a
+            // copy sitting on a row the position has nothing to do with.
+            //
+            // TRANSL_EXCEPT_LOCATION does not cover this: it asks whether *any* row of the group
+            // spans the position, which stays true for all of them.
+            if (attribute.getStartPosition() >= feature.getStart() && attribute.getEndPosition() <= feature.getEnd()) {
+                throw new ValidationException(
+                        line, COMPLEMENT_STRAND_CONFLICT.formatted(TRANSL_EXCEPT, feature.getStrand(), value));
             }
         }
     }

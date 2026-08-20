@@ -23,24 +23,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
-import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
 
-/**
- * Rewrites {@code transl_except} attribute values to drop a {@code complement(...)} wrapper around
- * the position, so {@code (pos:complement(4370..4372),aa:Sec)} becomes {@code (pos:4370..4372,aa:Sec)}.
- * That wrapper is flat-file syntax meaning "read backwards" and survives FF-&gt;GFF3 conversion, but
- * GFF3 already states direction in the strand column, so it is duplicated information — the numbers
- * are identical either way.
- *
- * <p>It is dropped only when the strand column agrees, i.e. holds the literal {@code "-"}.
- * Otherwise the two contradict each other, so the value is left
- * untouched and {@code TRANSL_EXCEPT_STRAND_CONFLICT} reports it rather than this fix silently
- * picking a winner.
- *
- * <p>The lookalike {@code anticodon} attribute is deliberately left alone: it carries an extra
- * {@code seq:} part that other EBI tooling recomputes from that same wrapper, so removing it there
- * would change what the value claims.
- */
 @Slf4j
 @Gff3Fix(
         name = "TRANSL_EXCEPT_COMPLEMENT",
@@ -60,8 +43,7 @@ public class TranslExceptComplementFix implements Fix {
     @FixMethod(
             rule = "TRANSL_EXCEPT_COMPLEMENT",
             description = "Strip complement(...) from transl_except locations on minus-strand features",
-            type = ANNOTATION,
-            priority = ValidationPriority.HIGH)
+            type = ANNOTATION)
     public void fixAnnotation(GFF3Annotation annotation, int line) {
 
         Map<String, List<GFF3Feature>> featuresWithAttribute = annotation.getFeatures().stream()
