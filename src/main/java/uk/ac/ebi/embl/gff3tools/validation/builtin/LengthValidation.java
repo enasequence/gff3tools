@@ -318,6 +318,6 @@ public class LengthValidation implements Validation {
 
     /** INSDC Annotation Minimum Specification, table 2: the b.v.1 exception for short coding regions. */
     private boolean hasEvidence(GFF3Feature feature) {
-        return feature.hasAttribute(GFF3Attributes.EXPERIMENT);
+        return feature.hasAttribute(GFF3Attributes.EXPERIMENT) || feature.hasAttribute(GFF3Attributes.INFERENCE);
     }
 }
