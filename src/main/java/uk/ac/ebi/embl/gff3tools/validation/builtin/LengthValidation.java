@@ -42,6 +42,11 @@ public class LengthValidation implements Validation {
     private static final long COMPLETE_CDS_MIN_AMINO_ACIDS = 25;
     private static final long COMPLETE_CDS_MIN_LENGTH = (COMPLETE_CDS_MIN_AMINO_ACIDS + 1) * 3;
 
+    /** INSDC Annotation Minimum Specification b.v.2: complete tRNA features are 50-150 bp long. */
+    private static final long COMPLETE_TRNA_MIN_LENGTH = 50;
+
+    private static final long COMPLETE_TRNA_MAX_LENGTH = 150;
+
     private static final String INVALID_PROPEPTIDE_LENGTH_MESSAGE =
             "Propeptide feature length must be a multiple of 3 for accession \"%s\"";
     private static final String INVALID_INTRON_LENGTH_MESSAGE = "Intron feature length is invalid for accession \"%s\"";
@@ -50,6 +55,9 @@ public class LengthValidation implements Validation {
             "Complete coding regions must be at least %d amino acids long for accession \"%s\". "
                     + "Provide /experiment or evidence for the coding region, "
                     + "or mark the feature as 5' or 3' partial.";
+    private static final String INVALID_TRNA_LENGTH_MESSAGE =
+            "Complete tRNA features must be between %d and %d bp long, but this one is %d bp, "
+                    + "for accession \"%s\". Mark the feature as 5' or 3' partial if it is incomplete.";
     private static final String INVALID_CDS_INTRON_LENGTH_MESSAGE =
             "Intron usually expected to be at least 10 nt long. "
                     + "Please check accuracy and Use one of the following options for annotation: "
@@ -154,6 +162,25 @@ public class LengthValidation implements Validation {
         }
     }
 
+    @ValidationMethod(
+            rule = "TRNA_LENGTH",
+            description = "Complete tRNA features must be between 50 and 150 bp long, measured across"
+                    + " the segments sharing an ID that make up one spliced tRNA",
+            type = ValidationType.ANNOTATION)
+    public void validateTrnaLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
+        // Features without an ID are keyed individually, so unrelated tRNAs are never summed as one.
+        Map<String, List<GFF3Feature>> trnaGroups = gff3Annotation.getFeatures().stream()
+                .filter(this::isTrna)
+                .collect(Collectors.groupingBy(
+                        f -> f.getId().orElse("__no_id_" + f.getStart() + "_" + f.getEnd()),
+                        LinkedHashMap::new,
+                        Collectors.toList()));
+
+        for (List<GFF3Feature> segments : trnaGroups.values()) {
+            validateTrnaLength(segments, line);
+        }
+    }
+
     @ValidationMethod(rule = "EXON_LENGTH", type = ValidationType.FEATURE, severity = RuleSeverity.WARN)
     public void validateExonLength(GFF3Feature feature, int line) throws ValidationException {
         OntologyClient ontologyClient = context.get(OntologyClient.class);
@@ -199,27 +226,55 @@ public class LengthValidation implements Validation {
         return feature != null && OntologyTerm.CDS.name().equals(feature.getName());
     }
 
-    private void validateCdsLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
+    private boolean isTrna(GFF3Feature feature) {
+        if (feature == null) {
+            return false;
+        }
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
+        return ontologyClient
+                .findTermByNameOrSynonym(feature.getName())
+                .map(soId -> ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.TRNA.ID))
+                .orElse(false);
+    }
 
+    private void validateTrnaLength(List<GFF3Feature> trnaList, int line) throws ValidationException {
+        List<GFF3Feature> sortedTrnaGroup = new ArrayList<>(trnaList);
+        sortedTrnaGroup.sort(Comparator.comparingLong(GFF3Feature::getStart));
+        if (sortedTrnaGroup.isEmpty()
+                || isPartial(sortedTrnaGroup)
+                || sortedTrnaGroup.stream().anyMatch(this::isPseudo)) {
+            return;
+        }
+
+        long length = sortedTrnaGroup.stream().mapToLong(GFF3Feature::getLength).sum();
+        if (length < COMPLETE_TRNA_MIN_LENGTH || length > COMPLETE_TRNA_MAX_LENGTH) {
+            throw new ValidationException(
+                    line,
+                    INVALID_TRNA_LENGTH_MESSAGE.formatted(
+                            COMPLETE_TRNA_MIN_LENGTH,
+                            COMPLETE_TRNA_MAX_LENGTH,
+                            length,
+                            sortedTrnaGroup.get(0).accession()));
+        }
+    }
+
+    private void validateCdsLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
         List<GFF3Feature> sortedCdsGroup = new ArrayList<>(cdsList);
         sortedCdsGroup.sort(Comparator.comparingLong(GFF3Feature::getStart));
-
+        //length does not need to be validated on incomplete CDS or one that has inference/evidence as to why it's short
         if (sortedCdsGroup.isEmpty()
                 || isPartial(sortedCdsGroup)
                 || sortedCdsGroup.stream().anyMatch(cds -> isPseudo(cds) || hasEvidence(cds))) {
             return;
         }
 
-        String translation = getRecordedTranslation(sortedCdsGroup);
+        String translation = getCdsTranslation(sortedCdsGroup);
         boolean tooShort;
-
         if (translation != null && !translation.isEmpty()) {
             // Preferred measure: the conceptual translation computed by the TRANSLATION fix
             tooShort = translation.length() < COMPLETE_CDS_MIN_AMINO_ACIDS;
         } else if (sortedCdsGroup.stream().anyMatch(cds -> cds.hasAttribute(GFF3Attributes.TRANSL_EXCEPT))) {
-            // No translation available, and "transl_except" may declare a one or two base stop codon
-            // at the 3' end, which leaves a complete coding region short of a multiple of three and
-            // makes the nucleotide measure below unreliable.
+            // No translation available, and "transl_except" make the nucleotide measure below unreliable.
             return;
         } else {
             // No translation available eg. due to translation turned off, but no transl_except either
@@ -236,10 +291,6 @@ public class LengthValidation implements Validation {
         }
     }
 
-    /**
-     * Join-level partiality is determined from the boundary segments. On complement joins, either
-     * boundary can carry the effective 5'/3' partial flag.
-     */
     private boolean isPartial(List<GFF3Feature> segments) {
         GFF3Feature first = segments.get(0);
         GFF3Feature last = segments.get(segments.size() - 1);
@@ -249,13 +300,7 @@ public class LengthValidation implements Validation {
                 || last.isThreePrimePartial();
     }
 
-    /**
-     * The translation the TRANSLATION fix recorded for this whole coding region, or {@code null} when
-     * none was computed. The fix translates the joined segments once and records a single protein per
-     * coding region, keyed by accession and ID - both shared by every segment - so the key is taken
-     * from the first segment purely as a matter of convention, and no segment is measured on its own.
-     */
-    private String getRecordedTranslation(List<GFF3Feature> segments) {
+    private String getCdsTranslation(List<GFF3Feature> segments) {
         if (!context.contains(TranslationState.class)) {
             return null;
         }
