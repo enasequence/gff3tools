@@ -17,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -38,11 +39,7 @@ public class LengthValidation implements Validation {
 
     private static final long INTRON_FEATURE_MIN_LENGTH = 10;
     private static final long EXON_FEATURE_MIN_LENGTH = 15;
-
-    /** INSDC Annotation Minimum Specification b.v.1: complete coding regions must be at least 30 aa long. */
     private static final long COMPLETE_CDS_MIN_AMINO_ACIDS = 25;
-
-    /** 30 amino acids of coding sequence plus the terminal stop codon, which INSDC includes in the CDS. */
     private static final long COMPLETE_CDS_MIN_LENGTH = (COMPLETE_CDS_MIN_AMINO_ACIDS + 1) * 3;
 
     private static final String INVALID_PROPEPTIDE_LENGTH_MESSAGE =
@@ -129,105 +126,97 @@ public class LengthValidation implements Validation {
     }
 
     /**
-     * Runs at LOW priority so that it executes after the LOW-priority {@link uk.ac.ebi.embl.gff3tools.validation.fix.TranslationFix}, whose
-     * conceptual translations this rule counts and whose partiality fixes it must observe.
+     * Runs at LOW priority so that it executes after the LOW-priority
+     * {@link uk.ac.ebi.embl.gff3tools.validation.fix.TranslationFix}, whose conceptual translations
+     * this rule counts and whose partiality fixes it must observe.
      */
-    @ValidationMethod(rule = "CDS_LENGTH", type = ValidationType.ANNOTATION, priority = ValidationPriority.LOW)
+    @ValidationMethod(
+            rule = "CDS_LENGTH",
+            description = "Complete coding regions must be at least 25 amino acids long, unless evidence is provided",
+            type = ValidationType.ANNOTATION,
+            priority = ValidationPriority.LOW)
     public void validateCdsLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
-        OntologyClient ontologyClient = context.get(OntologyClient.class);
-        Map<String, List<GFF3Feature>> cdsListById = new LinkedHashMap<>();
-        List<List<GFF3Feature>> cdsWithoutId = new ArrayList<>();
+        // Segments of a spliced coding region share an ID, and are keyed here exactly as
+        // TranslationFix keys them so that the recorded translations can be looked up below.
+        Map<String, List<GFF3Feature>> cdsGroups = gff3Annotation.getFeatures().stream()
+                .filter(this::isCds)
+                .collect(Collectors.groupingBy(
+                        f -> f.getId().orElse("__no_id_" + f.getStart() + "_" + f.getEnd()),
+                        LinkedHashMap::new,
+                        Collectors.toList()));
 
-        for (GFF3Feature feature : gff3Annotation.getFeatures()) {
-
-            if (feature == null) continue;
-
-            Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
-            if (soIdOpt.isEmpty()) continue;
-
-            boolean isCds = OntologyTerm.CDS.ID.equals(soIdOpt.get())
-                    || ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.CDS.ID);
-
-            if (!isCds) continue;
-
-            String cdsId = feature.getAttribute(GFF3Attributes.ATTRIBUTE_ID).orElse(null);
-
-            // Segments of a spliced coding region share an ID. A CDS without one is measured on its
-            // own so that unrelated coding regions are never summed into a single length.
-            if (cdsId == null) {
-                cdsWithoutId.add(List.of(feature));
-            } else {
-                cdsListById.computeIfAbsent(cdsId, k -> new ArrayList<>()).add(feature);
-            }
-        }
-
-        for (List<GFF3Feature> cdsGroup : cdsListById.values()) {
-            validateCdsLength(cdsGroup, line);
-        }
-        for (List<GFF3Feature> cdsGroup : cdsWithoutId) {
-            validateCdsLength(cdsGroup, line);
-        }
-    }
-
-    private void validateCdsLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
-
-        if (cdsList.isEmpty()) {
-            return;
-        }
-
-        List<GFF3Feature> sortedCdsList = new ArrayList<>(cdsList);
-        sortedCdsList.sort(Comparator.comparingLong(GFF3Feature::getStart));
-        GFF3Feature first = sortedCdsList.get(0);
-        GFF3Feature last = sortedCdsList.get(sortedCdsList.size() - 1);
-
-        // Join-level partiality is determined from the boundary segments. On complement joins,
-        // either boundary can carry the effective 5'/3' partial flag.
-        if (first.isFivePrimePartial()
-                || last.isFivePrimePartial()
-                || first.isThreePrimePartial()
-                || last.isThreePrimePartial()) {
-            return;
-        }
-
-        long length = 0;
-        for (GFF3Feature cds : sortedCdsList) {
-            if (isPseudo(cds) || hasEvidence(cds)) {
-                return;
-            }
-            length += cds.getLength();
-        }
-
-        // Preferred measure: the conceptual translation computed by the TRANSLATION fix, which
-        // excludes the trailing stop codon and so is the amino acid count the specification means.
-        String translation = getComputedTranslation(first);
-        if (translation != null && !translation.isEmpty()) {
-            if (translation.length() < COMPLETE_CDS_MIN_AMINO_ACIDS) {
-                throw new ValidationException(
-                        line, INVALID_CDS_LENGTH_MESSAGE.formatted(COMPLETE_CDS_MIN_AMINO_ACIDS, first.accession()));
-            }
-            return;
-        }
-
-        // No translation available (no sequence supplied, or a coding region without an ID), so fall
-        // back to measuring nucleotides. A "transl_except" may declare a one or two base stop codon at
-        // the 3' end, which leaves a complete coding region short of a multiple of three and makes the
-        // nucleotide measure unreliable, so it is not applied to those features.
-        for (GFF3Feature cds : sortedCdsList) {
-            if (cds.hasAttribute(GFF3Attributes.TRANSL_EXCEPT)) {
-                return;
-            }
-        }
-
-        if (length < COMPLETE_CDS_MIN_LENGTH) {
-            throw new ValidationException(
-                    line, INVALID_CDS_LENGTH_MESSAGE.formatted(COMPLETE_CDS_MIN_AMINO_ACIDS, first.accession()));
+        for (List<GFF3Feature> segments : cdsGroups.values()) {
+            validateCdsLength(segments, line);
         }
     }
 
     /**
+     * Matches CDS itself rather than its descendants: the CDS_extension terms below SO:0000316
+     * describe a readthrough elongation of a coding region, not a coding region that can be measured
+     * on its own. Peptide features are not descendants of CDS at all - they sit under CDS_region - so
+     * they are already out of scope, as they should be: they are regions of the translated protein and
+     * carry their own length rules.
+     */
+    private boolean isCds(GFF3Feature feature) {
+        return feature != null
+                && context.get(OntologyClient.class)
+                        .findTermByNameOrSynonym(feature.getName())
+                        .filter(OntologyTerm.CDS.ID::equals)
+                        .isPresent();
+    }
+
+    private void validateCdsLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
+
+        List<GFF3Feature> segments = new ArrayList<>(cdsList);
+        segments.sort(Comparator.comparingLong(GFF3Feature::getStart));
+
+        if (segments.isEmpty()
+                || isPartial(segments)
+                || segments.stream().anyMatch(cds -> isPseudo(cds) || hasEvidence(cds))) {
+            return;
+        }
+
+        GFF3Feature representative = segments.get(0);
+        String translation = getComputedTranslation(representative);
+        boolean tooShort;
+
+        if (translation != null && !translation.isEmpty()) {
+            // Preferred measure: the conceptual translation computed by the TRANSLATION fix, which
+            // excludes the trailing stop codon and so is the amino acid count the specification means.
+            tooShort = translation.length() < COMPLETE_CDS_MIN_AMINO_ACIDS;
+        } else if (segments.stream().anyMatch(cds -> cds.hasAttribute(GFF3Attributes.TRANSL_EXCEPT))) {
+            // No translation available, and "transl_except" may declare a one or two base stop codon
+            // at the 3' end, which leaves a complete coding region short of a multiple of three and
+            // makes the nucleotide measure below unreliable.
+            return;
+        } else {
+            // No translation available: no sequence was supplied, or the coding region has no ID.
+            tooShort = segments.stream().mapToLong(GFF3Feature::getLength).sum() < COMPLETE_CDS_MIN_LENGTH;
+        }
+
+        if (tooShort) {
+            throw new ValidationException(
+                    line,
+                    INVALID_CDS_LENGTH_MESSAGE.formatted(COMPLETE_CDS_MIN_AMINO_ACIDS, representative.accession()));
+        }
+    }
+
+    /**
+     * Join-level partiality is determined from the boundary segments. On complement joins, either
+     * boundary can carry the effective 5'/3' partial flag.
+     */
+    private boolean isPartial(List<GFF3Feature> segments) {
+        GFF3Feature first = segments.get(0);
+        GFF3Feature last = segments.get(segments.size() - 1);
+        return first.isFivePrimePartial()
+                || last.isFivePrimePartial()
+                || first.isThreePrimePartial()
+                || last.isThreePrimePartial();
+    }
+
+    /**
      * The translation recorded by the TRANSLATION fix for this coding region, or {@code null} when
-     * none was computed. Keyed exactly as {@code TranslationFix} keys it, from the segment with the
-     * lowest start position.
+     * none was computed.
      */
     private String getComputedTranslation(GFF3Feature representative) {
         if (!context.contains(TranslationState.class)) {
