@@ -389,4 +389,195 @@ public class LengthValidationTest {
             return f;
         }
     }
+
+    @Nested
+    class TrnaLengthValidation {
+
+        private static final String SEQ_ID = "seq1";
+
+        private LengthValidation validation;
+
+        @BeforeEach
+        void setUp() {
+            validation = new LengthValidation();
+            TestUtils.injectContext(validation);
+            gff3Annotation = new GFF3Annotation();
+        }
+
+        @Test
+        void failsWhenCompleteTrnaIsShorterThanTheMinimum() {
+            addFeatures(trna("trna1", 1L, 49L));
+
+            ValidationException exception =
+                    assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+
+            assertTrue(exception.getMessage().contains("Complete tRNA features must be between 50 and 150 bp long"));
+            assertTrue(exception.getMessage().contains(SEQ_ID));
+        }
+
+        @Test
+        void failsWhenCompleteTrnaIsLongerThanTheMaximum() {
+            addFeatures(trna("trna1", 1L, 151L));
+
+            assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void passesAtExactlyTheMinimumLength() {
+            addFeatures(trna("trna1", 1L, 50L));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void passesAtExactlyTheMaximumLength() {
+            addFeatures(trna("trna1", 1L, 150L));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void reportsTheMeasuredLength() {
+            addFeatures(trna("trna1", 1L, 49L));
+
+            ValidationException exception =
+                    assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+
+            assertTrue(exception.getMessage().contains("49 bp"));
+        }
+
+        @Test
+        void sumsSegmentsOfASplicedTrnaRatherThanMeasuringItsSpan() {
+            // The segments span 1-235 but encode a valid 76 base tRNA.
+            addFeatures(trna("trna1", 1L, 40L), trna("trna1", 200L, 235L));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void failsWhenSegmentsOfASplicedTrnaSumBelowTheMinimum() {
+            addFeatures(trna("trna1", 1L, 20L), trna("trna1", 200L, 219L));
+
+            assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsFivePrimePartialTrna() {
+            addFeatures(trna("trna1", 1L, 49L, Map.of(GFF3Attributes.PARTIAL, List.of("start"))));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsThreePrimePartialTrna() {
+            addFeatures(trna("trna1", 1L, 49L, Map.of(GFF3Attributes.PARTIAL, List.of("end"))));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsPartialityDeclaredOnABoundarySegmentOnly() {
+            addFeatures(
+                    trna("trna1", 1L, 20L), trna("trna1", 200L, 219L, Map.of(GFF3Attributes.PARTIAL, List.of("end"))));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsPartialityOnAMinusStrandTrna() {
+            // On the minus strand "end" is the 5' boundary, so this feature is incomplete.
+            addFeatures(feature("tRNA", "trna1", 1L, 49L, Map.of(GFF3Attributes.PARTIAL, List.of("end")), "-"));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void measuresACompleteMinusStrandTrna() {
+            addFeatures(feature("tRNA", "trna1", 1L, 49L, Map.of(), "-"));
+
+            assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsPseudoTrna() {
+            addFeatures(trna("trna1", 1L, 49L, Map.of(GFF3Attributes.PSEUDO, List.of("true"))));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void measuresAminoAcidSpecificTrnaTerms() {
+            // alanyl_tRNA is a descendant of tRNA in the ontology, and is a genuine tRNA.
+            addFeatures(feature("alanyl_tRNA", "trna1", 1L, 49L, Map.of()));
+
+            assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void ignoresPseudogenicTrna() {
+            // pseudogenic_tRNA sits under pseudogenic_transcript, not under tRNA.
+            addFeatures(feature("pseudogenic_tRNA", "trna1", 1L, 49L, Map.of()));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void ignoresFeaturesThatAreNotTrna() {
+            addFeatures(feature("gene", "gene1", 1L, 49L, Map.of()));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void measuresEachTrnaSeparately() {
+            addFeatures(trna("trna1", 1L, 76L), trna("trna2", 200L, 229L));
+
+            assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void doesNotSumUnrelatedTrnaFeaturesThatHaveNoId() {
+            // Two 30 base features would pass the minimum if wrongly grouped together.
+            addFeatures(feature("tRNA", null, 1L, 30L, Map.of()), feature("tRNA", null, 200L, 229L, Map.of()));
+
+            assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        private void addFeatures(GFF3Feature... features) {
+            for (GFF3Feature f : features) {
+                gff3Annotation.addFeature(f);
+            }
+        }
+
+        private GFF3Feature trna(String id, long start, long end) {
+            return trna(id, start, end, Map.of());
+        }
+
+        private GFF3Feature trna(String id, long start, long end, Map<String, List<String>> attributes) {
+            return feature("tRNA", id, start, end, attributes);
+        }
+
+        private GFF3Feature feature(
+                String name, String id, long start, long end, Map<String, List<String>> attributes) {
+            return feature(name, id, start, end, attributes, "+");
+        }
+
+        private GFF3Feature feature(
+                String name, String id, long start, long end, Map<String, List<String>> attributes, String strand) {
+            GFF3Feature f = new GFF3Feature(
+                    Optional.ofNullable(id),
+                    Optional.empty(),
+                    SEQ_ID,
+                    Optional.empty(),
+                    ".",
+                    name,
+                    start,
+                    end,
+                    ".",
+                    strand,
+                    "0");
+            f.addAttributes(attributes);
+            return f;
+        }
+    }
 }
