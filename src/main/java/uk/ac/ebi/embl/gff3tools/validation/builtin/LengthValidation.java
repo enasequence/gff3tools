@@ -40,10 +40,7 @@ public class LengthValidation implements Validation {
     private static final long EXON_FEATURE_MIN_LENGTH = 15;
     private static final long COMPLETE_CDS_MIN_AMINO_ACIDS = 25;
     private static final long COMPLETE_CDS_MIN_LENGTH = (COMPLETE_CDS_MIN_AMINO_ACIDS + 1) * 3;
-
-    /** INSDC Annotation Minimum Specification b.v.2: complete tRNA features are 50-150 bp long. */
     private static final long COMPLETE_TRNA_MIN_LENGTH = 50;
-
     private static final long COMPLETE_TRNA_MAX_LENGTH = 150;
 
     private static final String INVALID_PROPEPTIDE_LENGTH_MESSAGE =
