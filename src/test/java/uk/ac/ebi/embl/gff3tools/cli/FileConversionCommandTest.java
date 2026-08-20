@@ -178,7 +178,7 @@ class FileConversionCommandTest {
         Files.writeString(
                 fasta,
                 ">seq1 | {\"description\":\"test\", \"molecule_type\":\"genomic DNA\", \"topology\":\"linear\"}\n"
-                        + "ATGAAATAAGGGCCCAAATTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n");
+                        + "ATGTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAATTTTTTT\n");
 
         Path inputFile = tempDir.resolve("valid.gff3");
         Files.writeString(
@@ -187,7 +187,7 @@ class FileConversionCommandTest {
                 ##gff-version 3
                 ##sequence-region seq1 1 100
                 seq1\t.\tgene\t1\t21\t.\t+\t.\tID=gene1
-                seq1\t.\tCDS\t1\t9\t.\t+\t0\tID=cds1;Parent=gene1
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1;Parent=gene1
                 """);
 
         Path outputFile = tempDir.resolve("output.embl");

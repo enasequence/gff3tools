@@ -46,12 +46,17 @@ public class LengthValidation implements Validation {
             "Propeptide feature length must be a multiple of 3 for accession \"%s\"";
     private static final String INVALID_INTRON_LENGTH_MESSAGE = "Intron feature length is invalid for accession \"%s\"";
     private static final String INVALID_EXON_LENGTH_MESSAGE = "Exon feature length is invalid for accession \"%s\"";
-
     private static final String INVALID_CDS_LENGTH_MESSAGE =
-            "Complete coding regions must be at least %d amino acids long for accession \"%s\". Provide /experiment or /inference evidence for the coding region, or mark the feature as 5' or 3' partial.";
-
+            "Complete coding regions must be at least %d amino acids long for accession \"%s\". "
+                    + "Provide /experiment or /inference evidence for the coding region, "
+                    + "or mark the feature as 5' or 3' partial.";
     private static final String INVALID_CDS_INTRON_LENGTH_MESSAGE =
-            "Intron usually expected to be at least 10 nt long. Please check accuracy and Use one of the following options for annotation: \n /artificial_location=\"heterogeneous population sequenced\" \n OR \n /artificial_location=\"low-quality sequence region\". \n Alternatively, use where appropriate: \n /pseudo, /pseudogene, /trans_splicing, /ribosomal_slippage";
+            "Intron usually expected to be at least 10 nt long. "
+                    + "Please check accuracy and Use one of the following options for annotation: "
+                    + "\n /artificial_location=\"heterogeneous population sequenced\" \n "
+                    + "OR \n /artificial_location=\"low-quality sequence region\". "
+                    + "\n Alternatively, use where appropriate: "
+                    + "\n /pseudo, /pseudogene, /trans_splicing, /ribosomal_slippage";
 
     @InjectContext
     private ValidationContext context;
@@ -149,93 +154,6 @@ public class LengthValidation implements Validation {
         }
     }
 
-    /**
-     * Matches the CDS feature name exactly, as TranslationFix does, so that the two always agree on
-     * which features are coding regions. A feature named with an SO synonym of CDS is deliberately out
-     * of scope: it is not translated either, and measuring one without the translation the rule
-     * depends on would reject coding regions that the same annotation spelled "CDS" accepts.
-     *
-     * <p>The CDS_extension terms below SO:0000316 are out of scope for the same reason and on their
-     * own merits - they describe a readthrough elongation of a coding region, not a coding region that
-     * can be measured by itself. Peptide features are regions of the translated protein and carry
-     * their own length rules.
-     */
-    private boolean isCds(GFF3Feature feature) {
-        return feature != null && OntologyTerm.CDS.name().equals(feature.getName());
-    }
-
-    private void validateCdsLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
-
-        List<GFF3Feature> segments = new ArrayList<>(cdsList);
-        segments.sort(Comparator.comparingLong(GFF3Feature::getStart));
-
-        if (segments.isEmpty()
-                || isPartial(segments)
-                || segments.stream().anyMatch(cds -> isPseudo(cds) || hasEvidence(cds))) {
-            return;
-        }
-
-        GFF3Feature representative = segments.get(0);
-        String translation = getComputedTranslation(representative);
-        boolean tooShort;
-
-        if (translation != null && !translation.isEmpty()) {
-            // Preferred measure: the conceptual translation computed by the TRANSLATION fix, which
-            // excludes the trailing stop codon and so is the amino acid count the specification means.
-            tooShort = translation.length() < COMPLETE_CDS_MIN_AMINO_ACIDS;
-        } else if (segments.stream().anyMatch(cds -> cds.hasAttribute(GFF3Attributes.TRANSL_EXCEPT))) {
-            // No translation available, and "transl_except" may declare a one or two base stop codon
-            // at the 3' end, which leaves a complete coding region short of a multiple of three and
-            // makes the nucleotide measure below unreliable.
-            return;
-        } else {
-            // No translation available: no sequence was supplied, or the coding region has no ID.
-            tooShort = segments.stream().mapToLong(GFF3Feature::getLength).sum() < COMPLETE_CDS_MIN_LENGTH;
-        }
-
-        if (tooShort) {
-            throw new ValidationException(
-                    line,
-                    INVALID_CDS_LENGTH_MESSAGE.formatted(COMPLETE_CDS_MIN_AMINO_ACIDS, representative.accession()));
-        }
-    }
-
-    /**
-     * Join-level partiality is determined from the boundary segments. On complement joins, either
-     * boundary can carry the effective 5'/3' partial flag.
-     */
-    private boolean isPartial(List<GFF3Feature> segments) {
-        GFF3Feature first = segments.get(0);
-        GFF3Feature last = segments.get(segments.size() - 1);
-        return first.isFivePrimePartial()
-                || last.isFivePrimePartial()
-                || first.isThreePrimePartial()
-                || last.isThreePrimePartial();
-    }
-
-    /**
-     * The translation recorded by the TRANSLATION fix for this coding region, or {@code null} when
-     * none was computed.
-     */
-    private String getComputedTranslation(GFF3Feature representative) {
-        if (!context.contains(TranslationState.class)) {
-            return null;
-        }
-        String key = TranslationState.buildKey(
-                representative.accession(), representative.getId().orElse(null));
-        if (key == null) {
-            return null;
-        }
-        TranslationState.TranslationEntry entry =
-                context.get(TranslationState.class).get(key);
-        return entry == null ? null : entry.newTranslation();
-    }
-
-    /** INSDC Annotation Minimum Specification, table 2: the b.v.1 exception for short coding regions. */
-    private boolean hasEvidence(GFF3Feature feature) {
-        return feature.hasAttribute(GFF3Attributes.EXPERIMENT) || feature.hasAttribute(GFF3Attributes.INFERENCE);
-    }
-
     @ValidationMethod(rule = "EXON_LENGTH", type = ValidationType.FEATURE, severity = RuleSeverity.WARN)
     public void validateExonLength(GFF3Feature feature, int line) throws ValidationException {
         OntologyClient ontologyClient = context.get(OntologyClient.class);
@@ -275,5 +193,85 @@ public class LengthValidation implements Validation {
             return true;
         }
         return feature.hasAttribute(GFF3Attributes.PSEUDO) || feature.hasAttribute(GFF3Attributes.PSEUDOGENE);
+    }
+
+    private boolean isCds(GFF3Feature feature) {
+        return feature != null && OntologyTerm.CDS.name().equals(feature.getName());
+    }
+
+    private void validateCdsLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
+
+        List<GFF3Feature> sortedCdsGroup = new ArrayList<>(cdsList);
+        sortedCdsGroup.sort(Comparator.comparingLong(GFF3Feature::getStart));
+
+        if (sortedCdsGroup.isEmpty()
+                || isPartial(sortedCdsGroup)
+                || sortedCdsGroup.stream().anyMatch(cds -> isPseudo(cds) || hasEvidence(cds))) {
+            return;
+        }
+
+        String translation = getRecordedTranslation(sortedCdsGroup);
+        boolean tooShort;
+
+        if (translation != null && !translation.isEmpty()) {
+            // Preferred measure: the conceptual translation computed by the TRANSLATION fix
+            tooShort = translation.length() < COMPLETE_CDS_MIN_AMINO_ACIDS;
+        } else if (sortedCdsGroup.stream().anyMatch(cds -> cds.hasAttribute(GFF3Attributes.TRANSL_EXCEPT))) {
+            // No translation available, and "transl_except" may declare a one or two base stop codon
+            // at the 3' end, which leaves a complete coding region short of a multiple of three and
+            // makes the nucleotide measure below unreliable.
+            return;
+        } else {
+            // No translation available eg. due to translation turned off, but no transl_except either
+            long lengthInNucleotides =
+                    sortedCdsGroup.stream().mapToLong(GFF3Feature::getLength).sum();
+            tooShort = lengthInNucleotides < COMPLETE_CDS_MIN_LENGTH;
+        }
+
+        if (tooShort) {
+            throw new ValidationException(
+                    line,
+                    INVALID_CDS_LENGTH_MESSAGE.formatted(
+                            COMPLETE_CDS_MIN_AMINO_ACIDS, sortedCdsGroup.get(0).accession()));
+        }
+    }
+
+    /**
+     * Join-level partiality is determined from the boundary segments. On complement joins, either
+     * boundary can carry the effective 5'/3' partial flag.
+     */
+    private boolean isPartial(List<GFF3Feature> segments) {
+        GFF3Feature first = segments.get(0);
+        GFF3Feature last = segments.get(segments.size() - 1);
+        return first.isFivePrimePartial()
+                || last.isFivePrimePartial()
+                || first.isThreePrimePartial()
+                || last.isThreePrimePartial();
+    }
+
+    /**
+     * The translation the TRANSLATION fix recorded for this whole coding region, or {@code null} when
+     * none was computed. The fix translates the joined segments once and records a single protein per
+     * coding region, keyed by accession and ID - both shared by every segment - so the key is taken
+     * from the first segment purely as a matter of convention, and no segment is measured on its own.
+     */
+    private String getRecordedTranslation(List<GFF3Feature> segments) {
+        if (!context.contains(TranslationState.class)) {
+            return null;
+        }
+        GFF3Feature keySource = segments.get(0);
+        String key = TranslationState.buildKey(
+                keySource.accession(), keySource.getId().orElse(null));
+        if (key == null) {
+            return null;
+        }
+        TranslationState.TranslationEntry entry =
+                context.get(TranslationState.class).get(key);
+        return entry == null ? null : entry.newTranslation();
+    }
+
+    /** INSDC Annotation Minimum Specification, table 2: the b.v.1 exception for short coding regions. */
+    private boolean hasEvidence(GFF3Feature feature) {
+        return feature.hasAttribute(GFF3Attributes.EXPERIMENT);
     }
 }

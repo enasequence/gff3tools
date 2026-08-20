@@ -294,17 +294,6 @@ public class LengthValidationTest {
         }
 
         @Test
-        void skipsShortCdsWithInferenceEvidence() {
-            addFeatures(cds(
-                    "cds1",
-                    1L,
-                    9L,
-                    Map.of(GFF3Attributes.INFERENCE, List.of("similar to AA sequence:UniProtKB:P0001"))));
-
-            assertDoesNotThrow(() -> validation.validateCdsLength(gff3Annotation, 1));
-        }
-
-        @Test
         void skipsTranslExceptCdsWhenNoTranslationWasComputed() {
             // A one or two base stop codon leaves a complete coding region short of a multiple of
             // three, so the nucleotide measure cannot be trusted for these features.

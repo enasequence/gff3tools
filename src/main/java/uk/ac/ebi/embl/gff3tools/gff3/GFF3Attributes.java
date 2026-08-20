@@ -72,6 +72,7 @@ public class GFF3Attributes {
     public static final String UNKNOWN = "unknown";
     public static final String EXCEPTION = "exception";
     public static final String EXPERIMENT = "experiment";
+    public static final String INFERENCE = "inference";
     public static final String PARTIAL = "partial";
     public static final String TRANSLATION = "translation";
     public static final String CODON_START = "codon_start";
