@@ -74,8 +74,8 @@ public class ValidationEngineTest {
         ValidationException ex =
                 Assertions.assertThrows(ValidationException.class, () -> validationEngine.validate(invalidFeature, 1));
 
-        Assertions.assertAll(
-                () -> Assertions.assertTrue(ex.getMessage().contains("Violation of rule LOCATION on line 1")));
+        Assertions.assertAll(() ->
+                Assertions.assertTrue(ex.getMessage().contains("Violation of rule FEATURE_START_BELOW_ONE on line 1")));
     }
 
     @Test
@@ -96,7 +96,7 @@ public class ValidationEngineTest {
         assertTrue(validationEngine.getCollectedErrors().size() >= 1);
         // At least one error should be about LOCATION
         assertTrue(validationEngine.getCollectedErrors().stream()
-                .anyMatch(e -> e.getMessage().contains("Violation of rule LOCATION")));
+                .anyMatch(e -> e.getMessage().contains("Violation of rule FEATURE_START_BELOW_ONE")));
     }
 
     // ------------------------------------------------------------

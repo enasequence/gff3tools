@@ -10,52 +10,111 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.*;
-import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
-import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
-import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
-import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
-import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
+import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
-@Gff3Validation(name = "LOCATION")
+@Gff3Validation(
+        name = "LOCATION",
+        description = "Validates that features coordinates are within expected values and the sequence bounds")
 public class LocationValidation implements Validation {
 
-    private static final String INVALID_START_END_MESSAGE = "Invalid start/end for accession \"%s\"";
+    private static final String RULE_FEATURE_LOCATION_RANGE = "LOCATION_RANGE";
+    private static final String INVALID_START_END_MESSAGE =
+            "Invalid start/end for accession \"%s\" at location \"%s\".";
+
+    private static final String RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH = "FEATURE_END_EXCEEDS_SEQUENCE_LENGTH";
+    private static final String FEATURE_END_EXCEEDS_SEQUENCE_LENGTH =
+            "The end position of the location \"%s\" for accession \"%s\" is greater than the length of the sequence (\"%d\").";
+
+    private static final String RULE_FEATURE_END_BELOW_ONE = "FEATURE_END_BELOW_ONE";
+    private static final String FEATURE_END_BELOW_ONE =
+            "The end position of the location \"%s\" for accession \"%s\" is less than 1.";
+
+    private static final String RULE_FEATURE_START_BELOW_ONE = "FEATURE_START_BELOW_ONE";
+    private static final String FEATURE_START_BELOW_ONE =
+            "The start position of the location \"%s\" for accession \"%s\" is less than 1.";
+
+    private static final String RULE_CDS_LOCATION_BOUNDARIES = "CDS_LOCATION_BOUNDARIES";
     private static final String INVALID_PROPEPTIDE_CDS_LOCATION_MESSAGE = "Propeptide [%d %d] not inside any CDS";
     private static final String INVALID_PROPEPTIDE_PEPTIDE_LOCATION_MESSAGE =
             "Propeptide [%d %d] overlaps with peptide features";
 
+    private final Map<String, Long> sequenceLengthCache = new HashMap<>();
+
     @InjectContext
     private ValidationContext context;
 
-    @ValidationMethod(rule = "LOCATION", type = ValidationType.FEATURE)
-    public void validateLocation(GFF3Feature feature, int line) throws ValidationException {
+    @ValidationMethod(rule = RULE_FEATURE_LOCATION_RANGE, type = ValidationType.FEATURE)
+    public void validateLocationRange(GFF3Feature feature, int line) throws ValidationException {
         long start = feature.getStart();
         long end = feature.getEnd();
 
-        if (start <= 0 || end <= 0) {
-            throw new ValidationException(line, INVALID_START_END_MESSAGE.formatted(feature.accession()));
-        }
-        boolean isCircular = Boolean.TRUE
-                .toString()
-                .equalsIgnoreCase(
-                        feature.getAttribute(GFF3Attributes.CIRCULAR_RNA).orElse("false"));
-        if (!isCircular && end < start) {
-            throw new ValidationException(line, INVALID_START_END_MESSAGE.formatted(feature.accession()));
+        if (end < start) {
+            throw new ValidationException(
+                    line, INVALID_START_END_MESSAGE.formatted(feature.accession(), location(feature)));
         }
     }
 
-    @ValidationMethod(rule = "CDS_LOCATION_BOUNDARIES", type = ValidationType.ANNOTATION)
+    @ValidationMethod(
+            rule = RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH,
+            description = "Feature end position must not exceed the sequence length",
+            type = ValidationType.FEATURE)
+    public void validateFeatureEndWithinSequence(GFF3Feature feature, int line) throws ValidationException {
+        Long lastBaseIndex = ValidationUtils.resolveSequenceLength(feature.accession(), sequenceLengthCache, context);
+        if (lastBaseIndex == null) {
+            return;
+        }
+
+        // Circular molecules may carry origin-spanning features whose end is expressed as
+        // "physical end + sequence length", so the end legitimately exceeds the sequence length.
+        boolean isCircular = hasCircularAttribute(feature) || isCircularSequence(feature.accession());
+        if (!isCircular && feature.getEnd() > lastBaseIndex) {
+            throw new ValidationException(
+                    RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH,
+                    line,
+                    FEATURE_END_EXCEEDS_SEQUENCE_LENGTH.formatted(
+                            location(feature), feature.accession(), lastBaseIndex));
+        }
+    }
+
+    @ValidationMethod(
+            rule = RULE_FEATURE_END_BELOW_ONE,
+            description = "Feature end position must be at least 1",
+            type = ValidationType.FEATURE)
+    public void validateFeatureEndAboveZero(GFF3Feature feature, int line) throws ValidationException {
+        if (feature.getEnd() < 1) {
+            throw new ValidationException(
+                    RULE_FEATURE_END_BELOW_ONE,
+                    line,
+                    FEATURE_END_BELOW_ONE.formatted(location(feature), feature.accession()));
+        }
+    }
+
+    @ValidationMethod(
+            rule = RULE_FEATURE_START_BELOW_ONE,
+            description = "Feature start position must be at least 1",
+            type = ValidationType.FEATURE)
+    public void validateFeatureStartAboveZero(GFF3Feature feature, int line) throws ValidationException {
+        if (feature.getStart() < 1) {
+            throw new ValidationException(
+                    RULE_FEATURE_START_BELOW_ONE,
+                    line,
+                    FEATURE_START_BELOW_ONE.formatted(location(feature), feature.accession()));
+        }
+    }
+
+    @ValidationMethod(rule = RULE_CDS_LOCATION_BOUNDARIES, type = ValidationType.ANNOTATION)
     public void validateCdsLocation(GFF3Annotation annotation, int line) throws ValidationException {
         OntologyClient ontologyClient = context.get(OntologyClient.class);
         List<GFF3Feature> propFeatures = new ArrayList<>();
@@ -115,5 +174,42 @@ public class LocationValidation implements Validation {
                 }
             }
         }
+    }
+
+    @ExitMethod
+    public void clear() {
+        sequenceLengthCache.clear();
+    }
+
+    private static String location(GFF3Feature feature) {
+        return feature.getStart() + ".." + feature.getEnd();
+    }
+
+    private static boolean hasCircularAttribute(GFF3Feature feature) {
+        return Boolean.TRUE
+                .toString()
+                .equalsIgnoreCase(
+                        feature.getAttribute(GFF3Attributes.CIRCULAR_RNA).orElse("false"));
+    }
+
+    /**
+     * Topology is only known when a FASTA header source is registered for the run. An absent or
+     * unrecognised topology is treated as non-circular: circular is always explicitly declared, and
+     * a missing mandatory topology is reported by {@link FastaHeaderFormatValidation}.
+     */
+    private boolean isCircularSequence(String accession) {
+        if (!context.contains(FastaHeaderProvider.class)) {
+            return false;
+        }
+        return context.get(FastaHeaderProvider.class)
+                .getHeader(accession)
+                .map(FastaHeader::getTopology)
+                // Canonicalise rather than matching the raw value: FastaHeaderNormalisationFix is
+                // annotation-scoped and runs only after this annotation's features are validated.
+                .flatMap(topology ->
+                        ControlledVocabularyUtils.canonicalise(ControlledVocabularyUtils.Topology.class, topology))
+                .flatMap(ControlledVocabularyUtils.Topology::fromValue)
+                .map(ControlledVocabularyUtils.Topology.CIRCULAR::equals)
+                .orElse(false);
     }
 }
