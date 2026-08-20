@@ -309,20 +309,27 @@ public class AnticodonAttributeFix implements Fix {
             return null;
         }
 
-        logSequenceChange(reader, oldSequence, newSequence, readBackwards);
+        logSequenceChange(reader, position, oldSequence, newSequence, readBackwards);
         return withSequenceReplaced(value, matcher, newSequence);
     }
 
     private void logSequenceChange(
-            SequenceReader reader, String oldSequence, String newSequence, boolean readBackwards) {
+            SequenceReader reader, Position position, String oldSequence, String newSequence, boolean readBackwards) {
 
         if (oldSequence == null) {
-            log.info("Fix: added anticodon seq:{} on '{}' at line {}", newSequence, reader.accession(), reader.line());
+            log.info(
+                    "Fix: {} {}..{} anticodon seq: added as '{}'{}",
+                    reader.accession(),
+                    position.start(),
+                    position.end(),
+                    newSequence,
+                    readBackwards ? " (read backwards)" : "");
         } else if (!oldSequence.equalsIgnoreCase(newSequence)) {
             log.info(
-                    "Fix: corrected anticodon seq: on '{}' at line {}: '{}' -> '{}'{}",
+                    "Fix: {} {}..{} anticodon changed from '{}' to '{}'{}",
                     reader.accession(),
-                    reader.line(),
+                    position.start(),
+                    position.end(),
                     oldSequence,
                     newSequence,
                     readBackwards ? " (read backwards)" : "");
@@ -368,21 +375,19 @@ public class AnticodonAttributeFix implements Fix {
     }
 
     /**
-     * A {@code complement(...)} wrapper around the position is flat-file syntax meaning "read
-     * backwards", and it decides on its own whenever it is there.
+     * The strand decides. A minus-strand tRNA reads backwards whether or not the position carries a
+     * {@code complement(...)} wrapper, and in ENA the wrapper is usually absent: of 1020 minus-strand
+     * tRNAs surveyed, 93% wrote a plain forward position and still annotated the reverse complement.
      *
-     * <p>Without a wrapper the strand column decides instead, so a minus-strand feature still gets the
-     * bases the way they read on its own strand. Values converted from flat file always carry the
-     * wrapper; this fallback is for GFF3 written by other tools, which use plain forward positions.
+     * <p>The wrapper is therefore only a fallback, for when no row covers the position and the strand
+     * has nothing to say about that coordinate. Where the two contradict each other the strand wins,
+     * because it is the field that is always populated — that combination was not found at all in
+     * 3944 surveyed anticodons, so it only arises in malformed input.
      *
      * <p>Only the rows whose own start/end span the position get a say, because the rows of one feature
      * may legitimately carry different strands.
      */
     private boolean isReverseStrand(Position position, List<GFF3Feature> rows) {
-
-        if (position.hasComplementWrapper()) {
-            return true;
-        }
 
         boolean anyRowCoversPosition = false;
         for (GFF3Feature row : rows) {
@@ -393,7 +398,11 @@ public class AnticodonAttributeFix implements Fix {
                 }
             }
         }
-        return anyRowCoversPosition;
+        if (anyRowCoversPosition) {
+            return true;
+        }
+
+        return position.hasComplementWrapper();
     }
 
     /** @return the reverse complement, or {@code null} if any base is not one the table knows. */

@@ -187,11 +187,31 @@ class AnticodonAttributeFixTest {
     @Test
     void reverseComplementsWhenPositionCarriesComplement() throws Exception {
         stubSlice("CAA");
-        GFF3Feature feature = tRna("t1", 1, 100, PLUS, "(pos:complement(10..12),aa:Gln)");
+        GFF3Feature feature = tRna("t1", 1, 100, MINUS, "(pos:complement(10..12),aa:Gln)");
 
         fix.addSequence(annotation, 1);
 
         assertEquals(List.of("(pos:complement(10..12),aa:Gln,seq:ttg)"), anticodon(feature));
+    }
+
+    @Test
+    void strandWinsWhenItContradictsTheComplementWrapper() throws Exception {
+        stubSlice("CAA");
+        GFF3Feature feature = tRna("t1", 1, 100, PLUS, "(pos:complement(10..12),aa:Gln)");
+
+        fix.addSequence(annotation, 1);
+
+        assertEquals(List.of("(pos:complement(10..12),aa:Gln,seq:caa)"), anticodon(feature));
+    }
+
+    @Test
+    void fallsBackToComplementWrapperWhenNoRowCoversThePosition() throws Exception {
+        stubSlice("CAA");
+        GFF3Feature feature = tRna("t1", 1, 100, PLUS, "(pos:complement(500..502),aa:Gln)");
+
+        fix.addSequence(annotation, 1);
+
+        assertEquals(List.of("(pos:complement(500..502),aa:Gln,seq:ttg)"), anticodon(feature));
     }
 
     @Test
