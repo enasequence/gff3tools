@@ -48,7 +48,7 @@ public class LengthValidation implements Validation {
     private static final String INVALID_EXON_LENGTH_MESSAGE = "Exon feature length is invalid for accession \"%s\"";
     private static final String INVALID_CDS_LENGTH_MESSAGE =
             "Complete coding regions must be at least %d amino acids long for accession \"%s\". "
-                    + "Provide /experiment or /inference evidence for the coding region, "
+                    + "Provide /experiment or evidence for the coding region, "
                     + "or mark the feature as 5' or 3' partial.";
     private static final String INVALID_CDS_INTRON_LENGTH_MESSAGE =
             "Intron usually expected to be at least 10 nt long. "
