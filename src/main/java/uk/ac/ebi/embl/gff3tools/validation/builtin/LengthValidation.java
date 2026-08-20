@@ -127,12 +127,11 @@ public class LengthValidation implements Validation {
 
     /**
      * Runs at LOW priority so that it executes after the LOW-priority
-     * {@link uk.ac.ebi.embl.gff3tools.validation.fix.TranslationFix}, whose conceptual translations
-     * this rule counts and whose partiality fixes it must observe.
+     * {@link uk.ac.ebi.embl.gff3tools.validation.fix.TranslationFix}
      */
     @ValidationMethod(
             rule = "CDS_LENGTH",
-            description = "Complete coding regions must be at least 25 amino acids long, unless evidence is provided",
+            description = "Complete coding regions must be at least 25 amino acids long",
             type = ValidationType.ANNOTATION,
             priority = ValidationPriority.LOW)
     public void validateCdsLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
@@ -151,18 +150,18 @@ public class LengthValidation implements Validation {
     }
 
     /**
-     * Matches CDS itself rather than its descendants: the CDS_extension terms below SO:0000316
-     * describe a readthrough elongation of a coding region, not a coding region that can be measured
-     * on its own. Peptide features are not descendants of CDS at all - they sit under CDS_region - so
-     * they are already out of scope, as they should be: they are regions of the translated protein and
-     * carry their own length rules.
+     * Matches the CDS feature name exactly, as TranslationFix does, so that the two always agree on
+     * which features are coding regions. A feature named with an SO synonym of CDS is deliberately out
+     * of scope: it is not translated either, and measuring one without the translation the rule
+     * depends on would reject coding regions that the same annotation spelled "CDS" accepts.
+     *
+     * <p>The CDS_extension terms below SO:0000316 are out of scope for the same reason and on their
+     * own merits - they describe a readthrough elongation of a coding region, not a coding region that
+     * can be measured by itself. Peptide features are regions of the translated protein and carry
+     * their own length rules.
      */
     private boolean isCds(GFF3Feature feature) {
-        return feature != null
-                && context.get(OntologyClient.class)
-                        .findTermByNameOrSynonym(feature.getName())
-                        .filter(OntologyTerm.CDS.ID::equals)
-                        .isPresent();
+        return feature != null && OntologyTerm.CDS.name().equals(feature.getName());
     }
 
     private void validateCdsLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
