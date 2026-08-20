@@ -13,17 +13,16 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
@@ -139,8 +138,13 @@ public class LengthValidation implements Validation {
     }
 
     /**
-     * Runs at LOW priority so that it executes after the LOW-priority
-     * {@link uk.ac.ebi.embl.gff3tools.validation.fix.TranslationFix}
+     * Validates the length of every complete coding region in the annotation.
+     *
+     * <p>Runs at LOW priority so that it executes after the LOW-priority
+     * {@link uk.ac.ebi.embl.gff3tools.validation.fix.TranslationFix}, whose translations this rule
+     * counts and whose partiality fixes it must observe. Segments of a spliced CDS share an ID and
+     * are grouped exactly as that fix groups them, so the translation it recorded for a group can be
+     * found again here.
      */
     @ValidationMethod(
             rule = "CDS_LENGTH",
@@ -148,14 +152,7 @@ public class LengthValidation implements Validation {
             type = ValidationType.ANNOTATION,
             priority = ValidationPriority.LOW)
     public void validateCdsLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
-        // Segments of a spliced CDS's share an ID, and are keyed here exactly as
-        // TranslationFix keys them so that the recorded translations can be looked up below.
-        Map<String, List<GFF3Feature>> cdsGroups = gff3Annotation.getFeatures().stream()
-                .filter(this::isCds)
-                .collect(Collectors.groupingBy(
-                        f -> f.getId().orElse("__no_id_" + f.getStart() + "_" + f.getEnd()),
-                        LinkedHashMap::new,
-                        Collectors.toList()));
+        Map<String, List<GFF3Feature>> cdsGroups = ValidationUtils.groupFeaturesById(gff3Annotation, this::isCds);
 
         for (List<GFF3Feature> segments : cdsGroups.values()) {
             validateCdsLength(segments, line);
@@ -169,12 +166,7 @@ public class LengthValidation implements Validation {
             type = ValidationType.ANNOTATION)
     public void validateTrnaLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
         // Features without an ID are keyed individually, so unrelated tRNAs are never summed as one.
-        Map<String, List<GFF3Feature>> trnaGroups = gff3Annotation.getFeatures().stream()
-                .filter(this::isTrna)
-                .collect(Collectors.groupingBy(
-                        f -> f.getId().orElse("__no_id_" + f.getStart() + "_" + f.getEnd()),
-                        LinkedHashMap::new,
-                        Collectors.toList()));
+        Map<String, List<GFF3Feature>> trnaGroups = ValidationUtils.groupFeaturesById(gff3Annotation, this::isTrna);
 
         for (List<GFF3Feature> segments : trnaGroups.values()) {
             validateTrnaLength(segments, line);
@@ -258,11 +250,26 @@ public class LengthValidation implements Validation {
         }
     }
 
+    /**
+     * Measures one coding region - all the segments sharing an ID - and reports it when it is shorter
+     * than the minimum.
+     *
+     * <p>Length is not validated on a coding region that is incomplete, or that already accounts for
+     * its own brevity: a group is skipped when it is 5' or 3' partial, when it is pseudo, or when it
+     * carries the evidence the specification accepts in place of the minimum length.
+     *
+     * <p>Amino acids are counted from the translation the {@link uk.ac.ebi.embl.gff3tools.validation.fix.TranslationFix}.
+     * Where no translation exists - translation was turned off, no sequence was supplied, or the
+     * coding region has no ID - nucleotides are counted instead.
+     *
+     * T<p> hat fallback is abandoned for a group carrying {@code Gff3Attributes.TRANSL_EXCEPT} attribute,
+     * which may declare a one or two base stop codon at the 3' end
+     * and so leave a complete coding region short of a multiple of three.
+     */
     private void validateCdsLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
         List<GFF3Feature> sortedCdsGroup = new ArrayList<>(cdsList);
         sortedCdsGroup.sort(Comparator.comparingLong(GFF3Feature::getStart));
-        // length does not need to be validated on incomplete CDS or one that has inference/evidence as to why it's
-        // short
+
         if (sortedCdsGroup.isEmpty()
                 || isPartial(sortedCdsGroup)
                 || sortedCdsGroup.stream().anyMatch(cds -> isPseudo(cds) || hasEvidence(cds))) {
@@ -272,13 +279,10 @@ public class LengthValidation implements Validation {
         String translation = getCdsTranslation(sortedCdsGroup);
         boolean tooShort;
         if (translation != null && !translation.isEmpty()) {
-            // Preferred measure: the conceptual translation computed by the TRANSLATION fix
             tooShort = translation.length() < COMPLETE_CDS_MIN_AMINO_ACIDS;
         } else if (sortedCdsGroup.stream().anyMatch(cds -> cds.hasAttribute(GFF3Attributes.TRANSL_EXCEPT))) {
-            // No translation available, and "transl_except" make the nucleotide measure below unreliable.
             return;
         } else {
-            // No translation available eg. due to translation turned off, but no transl_except either
             long lengthInNucleotides =
                     sortedCdsGroup.stream().mapToLong(GFF3Feature::getLength).sum();
             tooShort = lengthInNucleotides < COMPLETE_CDS_MIN_LENGTH;
@@ -305,7 +309,7 @@ public class LengthValidation implements Validation {
         if (!context.contains(TranslationState.class)) {
             return null;
         }
-        GFF3Feature keySource = segments.get(0);
+        GFF3Feature keySource = ValidationUtils.representativeOfFeatureGroup(segments);
         String key = TranslationState.buildKey(
                 keySource.accession(), keySource.getId().orElse(null));
         if (key == null) {
