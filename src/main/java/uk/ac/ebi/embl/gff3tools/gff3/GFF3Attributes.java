@@ -77,4 +77,5 @@ public class GFF3Attributes {
     public static final String TRANSLATION = "translation";
     public static final String CODON_START = "codon_start";
     public static final String TRANSL_TABLE = "transl_table";
+    public static final String TRANSCRIPT_ID = "transcript_id";
 }
