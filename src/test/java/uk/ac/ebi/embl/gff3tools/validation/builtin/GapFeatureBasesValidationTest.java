@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -39,8 +38,7 @@ class GapFeatureBasesValidationTest {
 
     private void injectWithGapRegions(String seqId, long start, long end, List<GapRegion> regions) throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getGapRegions(seqId, start, end, SequenceRangeOption.WHOLE_SEQUENCE))
-                .thenReturn(regions);
+        when(mockLookup.getGapRegions(seqId, start, end)).thenReturn(regions);
 
         ValidationContext context = TestUtils.createTestContext();
         context.register(SequenceLookup.class, new ContextProvider<>() {
@@ -96,8 +94,7 @@ class GapFeatureBasesValidationTest {
     @Test
     public void testValidateGapBasesLookupFailureThrows() throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getGapRegions(SEQ_ID, 1L, 5L, SequenceRangeOption.WHOLE_SEQUENCE))
-                .thenThrow(new RuntimeException("boom"));
+        when(mockLookup.getGapRegions(SEQ_ID, 1L, 5L)).thenThrow(new RuntimeException("boom"));
 
         ValidationContext context = TestUtils.createTestContext();
         context.register(SequenceLookup.class, new ContextProvider<>() {
