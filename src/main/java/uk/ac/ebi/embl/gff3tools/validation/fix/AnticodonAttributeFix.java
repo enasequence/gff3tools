@@ -408,9 +408,11 @@ public class AnticodonAttributeFix implements Fix {
     /** @return the reverse complement, or {@code null} if any base is not one the table knows. */
     private String reverseComplement(String bases) {
 
-        // Anything outside ASCII becomes '?' here, which the table maps to zero like any other
-        // unknown base, so the loop below catches it.
-        byte[] complemented = Translator.reverseComplement(bases.getBytes(StandardCharsets.US_ASCII));
+        // Uppercase first: the complement table has no lowercase entries, so lowercase bases would
+        // silently come back as zeroes. Anything outside ASCII becomes '?', which the table also maps
+        // to zero, so the loop below catches both.
+        byte[] complemented =
+                Translator.reverseComplement(bases.toUpperCase(Locale.ROOT).getBytes(StandardCharsets.US_ASCII));
         for (byte base : complemented) {
             if (base == 0) {
                 return null;

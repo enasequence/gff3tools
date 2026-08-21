@@ -64,7 +64,7 @@ public interface SequenceLookup {
             throws Exception;
 
     /**
-     * Whether any of the underlying sources can supply this sequence.=
+     * Whether any of the underlying sources can supply this sequence.
      *
      * @param seqId the sequence id
      */

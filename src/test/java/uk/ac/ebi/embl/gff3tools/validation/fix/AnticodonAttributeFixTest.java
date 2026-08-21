@@ -195,6 +195,36 @@ class AnticodonAttributeFixTest {
     }
 
     @Test
+    void reverseComplementsLowercaseBases() throws Exception {
+        stubSlice("caa");
+        GFF3Feature feature = tRna("t1", 1, 100, MINUS, "(pos:10..12,aa:Gln)");
+
+        fix.addSequence(annotation, 1);
+
+        assertEquals(List.of("(pos:10..12,aa:Gln,seq:ttg)"), anticodon(feature));
+    }
+
+    @Test
+    void reverseComplementsMixedCaseBases() throws Exception {
+        stubSlice("cAa");
+        GFF3Feature feature = tRna("t1", 1, 100, MINUS, "(pos:10..12,aa:Gln)");
+
+        fix.addSequence(annotation, 1);
+
+        assertEquals(List.of("(pos:10..12,aa:Gln,seq:ttg)"), anticodon(feature));
+    }
+
+    @Test
+    void addsLowercaseBasesOnPlusStrand() throws Exception {
+        stubSlice("tta");
+        GFF3Feature feature = tRna("t1", 1, 100, PLUS, "(pos:10..12,aa:Glu)");
+
+        fix.addSequence(annotation, 1);
+
+        assertEquals(List.of("(pos:10..12,aa:Glu,seq:tta)"), anticodon(feature));
+    }
+
+    @Test
     void strandWinsWhenItContradictsTheComplementWrapper() throws Exception {
         stubSlice("CAA");
         GFF3Feature feature = tRna("t1", 1, 100, PLUS, "(pos:complement(10..12),aa:Gln)");
