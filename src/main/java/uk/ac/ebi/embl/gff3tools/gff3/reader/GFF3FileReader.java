@@ -51,7 +51,7 @@ public class GFF3FileReader implements AutoCloseable {
     public GFF3Species gff3Species;
     private final Set<String> processedAccessions;
 
-    private Map<String, OffsetRange> translationMap;
+    private Map<String, Long> translationMap;
     private final GFF3TranslationReader translationReader;
 
     // Used by GFF3 conversion process
@@ -317,21 +317,21 @@ public class GFF3FileReader implements AutoCloseable {
         return null;
     }
 
-    public Map<String, OffsetRange> getTranslationOffsetForAnnotation(GFF3Annotation annotation) {
+    public Map<String, Long> getTranslationOffsetForAnnotation(GFF3Annotation annotation) throws ReadException {
         return getTranslationOffsetMap().entrySet().stream()
                 .filter(e -> e.getKey().startsWith(annotation.getAccession()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
-    public Map<String, OffsetRange> getTranslationOffsetMap() {
+    public Map<String, Long> getTranslationOffsetMap() throws ReadException {
         if (translationMap == null) {
             translationMap = Collections.unmodifiableMap(translationReader.readTranslationOffset());
         }
         return translationMap;
     }
 
-    public String getTranslation(OffsetRange offsetRange) {
-        return translationReader.readTranslation(offsetRange);
+    public String getTranslation(Long id) throws ReadException {
+        return translationReader.readTranslation(id);
     }
 
     public GFF3Species getSpecies() {
@@ -350,5 +350,6 @@ public class GFF3FileReader implements AutoCloseable {
     @Override
     public void close() throws IOException {
         bufferedReader.close();
+        translationReader.close();
     }
 }

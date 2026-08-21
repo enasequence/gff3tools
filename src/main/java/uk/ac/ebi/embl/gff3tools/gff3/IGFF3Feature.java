@@ -11,8 +11,9 @@
 package uk.ac.ebi.embl.gff3tools.gff3;
 
 import java.io.Writer;
+import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.WriteException;
 
 public interface IGFF3Feature {
-    void writeGFF3String(Writer writer) throws WriteException;
+    void writeGFF3String(Writer writer) throws WriteException, ReadException;
 }

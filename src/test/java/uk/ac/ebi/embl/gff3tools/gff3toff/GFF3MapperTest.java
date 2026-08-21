@@ -25,6 +25,7 @@ import uk.ac.ebi.embl.api.entry.qualifier.Qualifier;
 import uk.ac.ebi.embl.api.entry.reference.Person;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.flatfile.writer.embl.EmblEntryWriter;
+import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
@@ -38,7 +39,7 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 class GFF3MapperTest {
 
-    private GFF3FileReader mockReader() {
+    private GFF3FileReader mockReader() throws ReadException {
         GFF3FileReader reader = mock(GFF3FileReader.class);
         when(reader.getTranslationOffsetMap()).thenReturn(Map.of());
         return reader;
