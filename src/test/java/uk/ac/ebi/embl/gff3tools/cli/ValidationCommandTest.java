@@ -83,7 +83,7 @@ public class ValidationCommandTest {
         Files.writeString(
                 fasta,
                 ">seq1 | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
-                        + "ATGAAATAATTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n");
+                        + "ATGTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAATTTTTTT\n");
 
         Path gff3 = tempDir.resolve("input.gff3");
         Files.writeString(
@@ -91,7 +91,7 @@ public class ValidationCommandTest {
                 """
                 ##gff-version 3
                 ##sequence-region seq1 1 100
-                seq1\t.\tCDS\t1\t9\t.\t+\t0\tID=cds1
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1
                 """);
 
         int exitCode = executeValidation("validation", "--sequence", fasta.toString(), gff3.toString());
@@ -105,8 +105,8 @@ public class ValidationCommandTest {
                 gff3,
                 """
                 ##gff-version 3
-                ##sequence-region seq1 1 9
-                seq1\t.\tCDS\t1\t9\t.\t+\t0\tID=cds1
+                ##sequence-region seq1 1 93
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1
                 """);
 
         // Without --sequence, validation should still work (translation is skipped)

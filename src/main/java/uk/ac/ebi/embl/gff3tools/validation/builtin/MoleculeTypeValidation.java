@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 @Gff3Validation(name = "MOLECULE_TYPE_FEATURE")
 public class MoleculeTypeValidation implements Validation {
     public static final String REQUIRED_FEATURE_RULE = "MOLECULE_TYPE_REQUIRED_FEATURE";
+    public static final String FORBIDDEN_FEATURE_RULE = "MOLECULE_TYPE_FORBIDDEN_FEATURE";
     public static final String MRNA_CDS_COMPLEMENT_RULE = "MRNA_CDS_COMPLEMENT";
 
     private static final Map<ControlledVocabularyUtils.MolType, OntologyTerm> REQUIRED_FEATURE_BY_MOLECULE_TYPE =
@@ -38,6 +40,13 @@ public class MoleculeTypeValidation implements Validation {
                     OntologyTerm.RRNA,
                     ControlledVocabularyUtils.MolType.TRNA,
                     OntologyTerm.TRNA);
+
+    private static final Map<ControlledVocabularyUtils.MolType, List<OntologyTerm>>
+            FORBIDDEN_FEATURES_BY_MOLECULE_TYPE = Map.of(
+                    ControlledVocabularyUtils.MolType.MRNA,
+                    List.of(OntologyTerm.MRNA, OntologyTerm.TRNA),
+                    ControlledVocabularyUtils.MolType.RRNA,
+                    List.of(OntologyTerm.TRNA, OntologyTerm.CDS));
 
     @InjectContext
     private ValidationContext context;
@@ -73,6 +82,39 @@ public class MoleculeTypeValidation implements Validation {
                 line,
                 "Feature %s is required when molecule type is %s."
                         .formatted(requiredFeatureParent, moleculeType.get()));
+    }
+
+    @ValidationMethod(
+            rule = FORBIDDEN_FEATURE_RULE,
+            description = "Check that molecule types do not contain features that are not permitted for them",
+            type = ANNOTATION,
+            priority = ValidationPriority.CRITICAL)
+    public void validateForbiddenFeature(GFF3Annotation annotation, int line) throws ValidationException {
+        Optional<ControlledVocabularyUtils.MolType> moleculeType = getMoleculeType(annotation.getAccession());
+        if (moleculeType.isEmpty()) {
+            return;
+        }
+
+        List<OntologyTerm> forbiddenFeatureParents = FORBIDDEN_FEATURES_BY_MOLECULE_TYPE.get(moleculeType.get());
+        if (forbiddenFeatureParents == null) {
+            return;
+        }
+
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
+        for (final GFF3Feature feature : annotation.getFeatures()) {
+            Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
+            if (soIdOpt.isEmpty()) continue;
+            String soId = soIdOpt.get();
+            for (final OntologyTerm forbiddenFeatureParent : forbiddenFeatureParents) {
+                if (ontologyClient.isSelfOrDescendantOf(soId, forbiddenFeatureParent.ID)) {
+                    throw new ValidationException(
+                            FORBIDDEN_FEATURE_RULE,
+                            line,
+                            "Feature %s is not permitted when molecule type is %s."
+                                    .formatted(feature.getName(), moleculeType.get()));
+                }
+            }
+        }
     }
 
     @ValidationMethod(

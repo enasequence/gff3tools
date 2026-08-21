@@ -27,6 +27,7 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -140,6 +141,106 @@ class MoleculeTypeValidationTest {
     }
 
     @Nested
+    class ValidateForbiddenFeature {
+
+        @Test
+        void doesNothingWhenMoleculeTypeHasNoForbiddenFeatures() {
+            GFF3Feature feature = feature("CDS");
+            when(annotation.getFeatures()).thenReturn(List.of(feature));
+            when(fastaHeaderProvider.getHeader(ACCESSION))
+                    .thenReturn(Optional.of(headerWithMoleculeType("genomic DNA")));
+
+            assertDoesNotThrow(() -> validation.validateForbiddenFeature(annotation, LINE));
+        }
+
+        @Test
+        void doesNothingWhenFeatureIsPermittedForTheMoleculeType() {
+            GFF3Feature feature = feature("CDS");
+            when(annotation.getFeatures()).thenReturn(List.of(feature));
+            when(fastaHeaderProvider.getHeader(ACCESSION)).thenReturn(Optional.of(headerWithMoleculeType("mRNA")));
+            when(ontologyClient.findTermByNameOrSynonym("CDS")).thenReturn(Optional.of(OntologyTerm.CDS.ID));
+
+            assertDoesNotThrow(() -> validation.validateForbiddenFeature(annotation, LINE));
+        }
+
+        @Test
+        void doesNothingWhenRrnaFeatureIsOnRrnaMoleculeType() {
+            GFF3Feature feature = feature("rRNA");
+            when(annotation.getFeatures()).thenReturn(List.of(feature));
+            when(fastaHeaderProvider.getHeader(ACCESSION)).thenReturn(Optional.of(headerWithMoleculeType("rRNA")));
+            when(ontologyClient.findTermByNameOrSynonym("rRNA")).thenReturn(Optional.of(OntologyTerm.RRNA.ID));
+
+            assertDoesNotThrow(() -> validation.validateForbiddenFeature(annotation, LINE));
+        }
+
+        @Test
+        void doesNothingWhenGeneFeatureIsOnMrnaMoleculeType() {
+            GFF3Feature feature = feature("gene");
+            when(annotation.getFeatures()).thenReturn(List.of(feature));
+            when(fastaHeaderProvider.getHeader(ACCESSION)).thenReturn(Optional.of(headerWithMoleculeType("mRNA")));
+            when(ontologyClient.findTermByNameOrSynonym("gene")).thenReturn(Optional.of(OntologyTerm.GENE.ID));
+
+            assertDoesNotThrow(() -> validation.validateForbiddenFeature(annotation, LINE));
+        }
+
+        @Test
+        void doesNothingWhenFeatureNameIsNotFoundInTheOntology() {
+            GFF3Feature feature = feature("not_a_so_term");
+            when(annotation.getFeatures()).thenReturn(List.of(feature));
+            when(fastaHeaderProvider.getHeader(ACCESSION)).thenReturn(Optional.of(headerWithMoleculeType("rRNA")));
+            when(ontologyClient.findTermByNameOrSynonym("not_a_so_term")).thenReturn(Optional.empty());
+
+            assertDoesNotThrow(() -> validation.validateForbiddenFeature(annotation, LINE));
+        }
+
+        @Test
+        void throwsValidationExceptionWhenMrnaFeatureIsOnMrnaMoleculeType() {
+            assertForbidden("mRNA", "mRNA", OntologyTerm.MRNA, OntologyTerm.MRNA);
+        }
+
+        @Test
+        void throwsValidationExceptionWhenTrnaFeatureIsOnMrnaMoleculeType() {
+            assertForbidden("mRNA", "tRNA", OntologyTerm.TRNA, OntologyTerm.TRNA);
+        }
+
+        @Test
+        void throwsValidationExceptionWhenTrnaFeatureIsOnRrnaMoleculeType() {
+            assertForbidden("rRNA", "tRNA", OntologyTerm.TRNA, OntologyTerm.TRNA);
+        }
+
+        @Test
+        void throwsValidationExceptionWhenCdsFeatureIsOnRrnaMoleculeType() {
+            assertForbidden("rRNA", "CDS", OntologyTerm.CDS, OntologyTerm.CDS);
+        }
+
+        @Test
+        void throwsValidationExceptionWhenFeatureIsADescendantOfAForbiddenFeature() {
+            assertForbidden("rRNA", "pseudogenic_CDS", OntologyTerm.PSEUDOGENIC_CDS, OntologyTerm.CDS);
+        }
+
+        // Asserts that a feature resolving to featureTerm is rejected on the given molecule type
+        // because featureTerm is (or descends from) the forbidden forbiddenParent.
+        private void assertForbidden(
+                String moleculeType, String featureName, OntologyTerm featureTerm, OntologyTerm forbiddenParent) {
+            GFF3Feature gff3Feature = feature(featureName);
+            when(annotation.getFeatures()).thenReturn(List.of(gff3Feature));
+            when(fastaHeaderProvider.getHeader(ACCESSION))
+                    .thenReturn(Optional.of(headerWithMoleculeType(moleculeType)));
+            when(ontologyClient.findTermByNameOrSynonym(featureName)).thenReturn(Optional.of(featureTerm.ID));
+            when(ontologyClient.isSelfOrDescendantOf(featureTerm.ID, forbiddenParent.ID))
+                    .thenReturn(true);
+
+            ValidationException exception = assertThrows(
+                    ValidationException.class, () -> validation.validateForbiddenFeature(annotation, LINE));
+
+            String message = exception.getMessage();
+            assertTrue(message.contains(MoleculeTypeValidation.FORBIDDEN_FEATURE_RULE));
+            assertTrue(message.contains("Feature %s is not permitted when molecule type is %s."
+                    .formatted(featureName, moleculeTypeName(moleculeType))));
+        }
+    }
+
+    @Nested
     class NoFastaHeaderProvider {
 
         // When no FastaHeaderProvider is registered (e.g. a header-less conversion), the molecule
@@ -155,9 +256,20 @@ class MoleculeTypeValidationTest {
         }
 
         @Test
+        void validateForbiddenFeatureDoesNotThrow() {
+            assertDoesNotThrow(() -> validation.validateForbiddenFeature(annotation, LINE));
+        }
+
+        @Test
         void validateMrnaCdsComplementDoesNotThrow() {
             assertDoesNotThrow(() -> validation.validateMrnaCdsComplement(annotation, LINE));
         }
+    }
+
+    private static String moleculeTypeName(String moleculeType) {
+        return ControlledVocabularyUtils.MolType.fromValue(moleculeType)
+                .orElseThrow()
+                .name();
     }
 
     private static GFF3Feature feature(String name) {

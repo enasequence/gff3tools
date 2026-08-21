@@ -18,7 +18,6 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
@@ -94,8 +93,7 @@ public class AnticodonAttributeFix implements Fix {
     private record SequenceReader(SequenceLookup lookup, String accession, int line) {
 
         String read(Position position) throws Exception {
-            return lookup.getSequenceSlice(
-                    accession, position.start(), position.end(), SequenceRangeOption.WHOLE_SEQUENCE);
+            return lookup.getSequenceSlice(accession, position.start(), position.end());
         }
     }
 

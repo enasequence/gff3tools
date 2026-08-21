@@ -13,7 +13,6 @@ package uk.ac.ebi.embl.gff3tools.validation.fix;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -26,7 +25,6 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
@@ -296,7 +294,7 @@ class AnticodonAttributeFixTest {
 
     @Test
     void propagatesSequenceLookupFailure() throws Exception {
-        when(lookup.getSequenceSlice(anyString(), anyLong(), anyLong(), any()))
+        when(lookup.getSequenceSlice(anyString(), anyLong(), anyLong()))
                 .thenThrow(new IllegalArgumentException("bad base range: 10..12"));
         tRna("t1", 1, 100, PLUS, "(pos:10..12,aa:Glu)");
 
@@ -325,7 +323,7 @@ class AnticodonAttributeFixTest {
         fix.addSequence(annotation, 1);
 
         verify(lookup).hasSequence(SEQ_ID + ".2");
-        verify(lookup).getSequenceSlice(SEQ_ID + ".2", 10L, 12L, SequenceRangeOption.WHOLE_SEQUENCE);
+        verify(lookup).getSequenceSlice(SEQ_ID + ".2", 10L, 12L);
     }
 
     @Test
@@ -336,7 +334,7 @@ class AnticodonAttributeFixTest {
         fix.addSequence(annotation, 1);
 
         verify(lookup).hasSequence(SEQ_ID);
-        verify(lookup).getSequenceSlice(SEQ_ID, 10L, 12L, SequenceRangeOption.WHOLE_SEQUENCE);
+        verify(lookup).getSequenceSlice(SEQ_ID, 10L, 12L);
     }
 
     @Test
@@ -437,8 +435,7 @@ class AnticodonAttributeFixTest {
     }
 
     private void stubSlice(String bases) throws Exception {
-        when(lookup.getSequenceSlice(anyString(), anyLong(), anyLong(), any(SequenceRangeOption.class)))
-                .thenReturn(bases);
+        when(lookup.getSequenceSlice(anyString(), anyLong(), anyLong())).thenReturn(bases);
     }
 
     private GFF3Feature tRna(String id, long start, long end, String strand, String... anticodons) {

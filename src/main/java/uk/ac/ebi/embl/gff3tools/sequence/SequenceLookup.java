@@ -13,7 +13,6 @@ package uk.ac.ebi.embl.gff3tools.sequence;
 import java.io.Reader;
 import java.util.List;
 import java.util.Set;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.fastareader.SequenceStats;
 import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 
@@ -28,40 +27,42 @@ public interface SequenceLookup {
     /**
      * Returns a nucleotide subsequence for the given GFF3 sequence ID.
      *
-     * @param seqId the GFF3 seqId
+     * @param seqId the id of the sequence
      * @param fromBase 1-based start position (inclusive)
      * @param toBase 1-based end position (inclusive)
-     * @param option controls which portion of the sequence is considered
      * @return the nucleotide string
      */
-    String getSequenceSlice(String seqId, long fromBase, long toBase, SequenceRangeOption option) throws Exception;
+    String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception;
 
     /**
      * Total length of the sequence in bases.
      * The last base index should therefore be sequenceLength, as the bases are indexed 1...sequenceLength.
      *
-     * @param option controls which portion of the sequence is considered
+     * @param seqId the id of the sequence
      */
-    long getSequenceLength(String seqId, SequenceRangeOption option) throws Exception;
+    long getSequenceLength(String seqId) throws Exception;
 
-    /** Full stats for the sequence (base counts, N-counts, edge Ns). */
+    /**
+     * Full stats for the sequence (base counts, N-counts, edge Ns).
+     *
+     * @param seqId the id of the sequence
+     * */
     SequenceStats getSequenceStats(String seqId) throws Exception;
 
     /**
      * All contiguous N-runs in the whole sequence.
      *
-     * @param option controls which portion of the sequence is considered
+     * @param seqId id of the sequence
      */
-    List<GapRegion> getGapRegions(String seqId, SequenceRangeOption option) throws Exception;
+    List<GapRegion> getGapRegions(String seqId) throws Exception;
 
     /**
      * N-runs overlapping [fromBase, toBase] (1-based inclusive).
      * Returned regions are not clipped to the range.
      *
-     * @param option controls which portion of the sequence is considered
+     * @param seqId id of the sequence
      */
-    List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase, SequenceRangeOption option)
-            throws Exception;
+    List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase) throws Exception;
 
     /**
      * Whether any of the underlying sources can supply this sequence.
@@ -76,8 +77,7 @@ public interface SequenceLookup {
     /**
      * Streaming reader over a sequence slice. Caller must close the returned Reader.
      *
-     * @param option controls which portion of the sequence is considered
+     * @param seqId id of the sequence
      */
-    Reader getSequenceSliceReader(String seqId, long fromBase, long toBase, SequenceRangeOption option)
-            throws Exception;
+    Reader getSequenceSliceReader(String seqId, long fromBase, long toBase) throws Exception;
 }
