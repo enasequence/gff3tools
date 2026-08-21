@@ -259,7 +259,7 @@ public class LengthValidation implements Validation {
      * Where no translation exists - translation was turned off, no sequence was supplied, or the
      * coding region has no ID - nucleotides are counted instead.
      *
-     * T<p> hat fallback is abandoned for a group carrying {@code Gff3Attributes.TRANSL_EXCEPT} attribute,
+     * <p> That fallback is abandoned for a group carrying {@code Gff3Attributes.TRANSL_EXCEPT} attribute,
      * which may declare a one or two base stop codon at the 3' end
      * and so leave a complete coding region short of a multiple of three.
      */
