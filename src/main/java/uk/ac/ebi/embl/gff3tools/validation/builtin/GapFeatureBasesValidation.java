@@ -12,7 +12,6 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import java.util.List;
 import java.util.Optional;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
@@ -57,7 +56,7 @@ public class GapFeatureBasesValidation implements Validation {
         long end = feature.getEnd();
         List<GapRegion> gapRegions;
         try {
-            gapRegions = lookup.getGapRegions(feature.accession(), start, end, SequenceRangeOption.WHOLE_SEQUENCE);
+            gapRegions = lookup.getGapRegions(feature.accession(), start, end);
         } catch (Exception e) {
             throw new IllegalStateException(
                     "Unable to retrieve gap regions for locations %d-%d: %s".formatted(start, end, e.getMessage()), e);

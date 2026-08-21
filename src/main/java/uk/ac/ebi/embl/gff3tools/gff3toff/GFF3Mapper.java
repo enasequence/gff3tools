@@ -35,7 +35,6 @@ import uk.ac.ebi.embl.api.entry.qualifier.QualifierFactory;
 import uk.ac.ebi.embl.api.entry.reference.*;
 import uk.ac.ebi.embl.api.entry.sequence.Sequence;
 import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -331,10 +330,7 @@ public class GFF3Mapper {
         }
         try {
             String nucleotides = sequenceLookup.getSequenceSlice(
-                    sequenceRegion.accessionId(),
-                    sequenceRegion.start(),
-                    sequenceRegion.end(),
-                    SequenceRangeOption.WHOLE_SEQUENCE);
+                    sequenceRegion.accessionId(), sequenceRegion.start(), sequenceRegion.end());
             if (nucleotides == null || nucleotides.isEmpty()) {
                 throw new ReadException("No sequence data returned for '" + sequenceRegion.accessionId() + "'");
             }
