@@ -235,6 +235,26 @@ class CdsMrnaLocationValidationTest {
     }
 
     @Test
+    void cdsDescendantTermIsNotTreatedAsCds() {
+        mrna("mrna1", 100, 300);
+        mrna("mrna1", 500, 800);
+        typed("edited_CDS", "cds1", 150, 280, "mrna1");
+        typed("edited_CDS", "cds1", 500, 700, "mrna1");
+
+        assertDoesNotThrow(() -> validation.validateCdsMrnaLocation(annotation, 1));
+    }
+
+    @Test
+    void mrnaDescendantTermIsNotTreatedAsMrna() {
+        typed("polyadenylated_mRNA", "mrna1", 100, 300);
+        typed("polyadenylated_mRNA", "mrna1", 500, 800);
+        cds("cds1", 150, 280, "mrna1");
+        cds("cds1", 500, 700, "mrna1");
+
+        assertDoesNotThrow(() -> validation.validateCdsMrnaLocation(annotation, 1));
+    }
+
+    @Test
     void everyIncompatibleCdsIsReportedTogether() {
         mrna("mrnaA", 100, 800);
         cds("cdsA", 150, 900, "mrnaA");
@@ -261,6 +281,10 @@ class CdsMrnaLocationValidationTest {
 
     private GFF3Feature cdsOnStrand(String id, long start, long end, String strand, String... parents) {
         return add(withParents(build(CDS_FEATURE, id, ACCESSION, start, end, strand), parents));
+    }
+
+    private GFF3Feature typed(String featureName, String id, long start, long end, String... parents) {
+        return add(withParents(build(featureName, id, ACCESSION, start, end, PLUS), parents));
     }
 
     private GFF3Feature cdsOnAccession(String id, String seqId, long start, long end, String... parents) {

@@ -34,12 +34,10 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 
 /**
- * A CDS paired with an mRNA - by a {@code Parent} reference or a shared {@code transcript_id} -
- * must lie inside the joined mRNA location and share every internal boundary with it, though it may
- * begin and end part-way into the outermost segments where the untranslated regions sit.
- *
- * <p>The mRNA's own location is the whole of the comparison, so an unjoined one denotes no internal
- * boundary and only containment is measured against it.
+ * A CDS and an mRNA are each stored as a list of intervals - one GFF3 line per interval, all lines
+ * sharing an ID. Where a CDS is linked to an mRNA by {@code Parent} or {@code transcript_id}, its
+ * intervals must line up against consecutive mRNA intervals with every shared edge matching
+ * exactly, and only its outermost start and end may sit inside the mRNA's.
  */
 @Gff3Validation(name = "CDS_MRNA_LOCATION", description = "Paired CDS and mRNA features must have compatible locations")
 public class CdsMrnaLocationValidation implements Validation {
@@ -241,21 +239,25 @@ public class CdsMrnaLocationValidation implements Validation {
     }
 
     private boolean isCds(GFF3Feature feature) {
-        return isSelfOrDescendantOf(feature, OntologyTerm.CDS.ID);
+        return isSoTerm(feature, OntologyTerm.CDS.ID);
     }
 
     private boolean isMrna(GFF3Feature feature) {
-        return isSelfOrDescendantOf(feature, OntologyTerm.MRNA.ID);
+        return isSoTerm(feature, OntologyTerm.MRNA.ID);
     }
 
-    private boolean isSelfOrDescendantOf(GFF3Feature feature, String ontologyId) {
+    /**
+     * Whether the feature is typed as exactly this SO term. Descendants are not accepted because
+     * none of those of CDS or mRNA map to an INSDC feature, so admitting them would only widen the
+     * rule onto types the conversion cannot represent.
+     */
+    private boolean isSoTerm(GFF3Feature feature, String ontologyId) {
         if (feature == null) {
             return false;
         }
-        OntologyClient ontologyClient = context.get(OntologyClient.class);
-        return ontologyClient
+        return context.get(OntologyClient.class)
                 .findTermByNameOrSynonym(feature.getName())
-                .map(soId -> ontologyId.equals(soId) || ontologyClient.isSelfOrDescendantOf(soId, ontologyId))
-                .orElse(false);
+                .filter(ontologyId::equals)
+                .isPresent();
     }
 }
