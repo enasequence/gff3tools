@@ -14,7 +14,9 @@ import java.io.*;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.*;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
@@ -273,6 +275,37 @@ public class TestUtils {
 
     public static void injectContext(Object target, ValidationContext context) {
         ValidationRegistry.injectContext(target, context);
+    }
+
+    /**
+     * Registers a fixed value on the context under {@code type}, replacing the anonymous
+     * {@link ContextProvider} subclass that tests would otherwise hand-roll for every stub.
+     */
+    public static <T> void registerProvider(ValidationContext context, Class<T> type, T value) {
+        context.register(type, new ContextProvider<>() {
+            @Override
+            public T get(ValidationContext ctx) {
+                return value;
+            }
+
+            @Override
+            public Class<T> type() {
+                return type;
+            }
+        });
+    }
+
+    /**
+     * A {@link GFF3Annotation} with its {@code ##sequence-region} directive set, so
+     * {@link GFF3Annotation#getAccession()} resolves without needing any features.
+     */
+    public static GFF3Annotation createGFF3Annotation(String accession, long start, long end, GFF3Feature... features) {
+        GFF3Annotation annotation = new GFF3Annotation();
+        annotation.setSequenceRegion(new GFF3SequenceRegion(accession, Optional.empty(), start, end));
+        for (GFF3Feature feature : features) {
+            annotation.addFeature(feature);
+        }
+        return annotation;
     }
 
     public static String defaultAccession() {

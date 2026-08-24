@@ -15,21 +15,15 @@ import java.util.Set;
 import uk.ac.ebi.embl.gff3tools.validation.builtin.AssemblyGapValidation;
 
 /**
- * Validity rules for the gap-generation options ({@code gap_type} / {@code linkage_evidence}).
- *
- * <p>Gap features created by {@code GapGenerationFix} are added after the engine's FEATURE-level
- * rules have run, so {@code AssemblyGapValidation} never sees them. Its {@code gap_type} and
- * {@code linkage_evidence} branches are the only ones a generated gap could fail, and this class
- * is where that check moves to instead: it is applied up front, both by the CLI (for a friendly
- * message) and by the {@code AnalysisContext} constructor (so programmatic callers cannot slip
- * past it).
- *
- * <p>The gap-type vocabulary is not duplicated here — {@link AssemblyGapValidation#validGapTypes()}
- * remains the single source of truth.
+ * INSDC validity rules for the gap-generation options ({@code gap_type} / {@code linkage_evidence}).
+ * {@code GapGenerationFix} adds its features after the FEATURE-level rules have run, so
+ * {@code AssemblyGapValidation} never sees them and these two attributes — the only ones a generated
+ * gap could fail on — are checked here instead, by the CLI and by {@code AnalysisContext}'s
+ * constructor. The vocabulary itself stays in {@link AssemblyGapValidation#validGapTypes()}.
  */
 public final class GapOptionsValidator {
 
-    /** INSDC gap types for which linkage_evidence is both required and allowed. */
+    /** The gap types for which linkage_evidence is both required and allowed. */
     private static final Set<String> GAP_TYPES_REQUIRING_LINKAGE =
             Set.of("within scaffold", "repeat within scaffold", "contamination");
 
@@ -40,7 +34,7 @@ public final class GapOptionsValidator {
      * @param linkageEvidence the requested linkage_evidence, or null/blank when not supplied
      * @return the first rule violation as a message, or empty when the combination is valid
      */
-    public static Optional<String> check(String gapType, String linkageEvidence) {
+    public static Optional<String> validate(String gapType, String linkageEvidence) {
         boolean hasGapType = gapType != null && !gapType.isBlank();
         boolean hasLinkageEvidence = linkageEvidence != null && !linkageEvidence.isBlank();
 

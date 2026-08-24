@@ -70,7 +70,7 @@ public final class AnalysisContext {
         }
         this.minGapSize = minGapSize;
 
-        GapOptionsValidator.check(gapType, linkageEvidence).ifPresent(message -> {
+        GapOptionsValidator.validate(gapType, linkageEvidence).ifPresent(message -> {
             throw new IllegalArgumentException(message);
         });
 

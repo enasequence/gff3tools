@@ -121,7 +121,6 @@ public class FileConversionCommand extends AbstractCommand {
             // before the engine providers are built.
             fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
             toFileType = validateFileType(toFileType, outputFilePath, "-t");
-
             List<FileSequenceSource> sources = new ArrayList<>(
                     buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat));
 
@@ -129,6 +128,7 @@ public class FileConversionCommand extends AbstractCommand {
             // its sequence/header context (read once) and the same sequence/annotation/fasta-header
             // validations run as in the FASTA+GFF3 case.
             FileSequenceSource inputFastaSource = null;
+            // Resolve whether CLI user inputs make sense for gap creation
             validateGapOptions();
 
             if (fromFileType == ConversionFileFormat.fasta && toFileType == ConversionFileFormat.gff3) {
@@ -149,6 +149,11 @@ public class FileConversionCommand extends AbstractCommand {
             MasterMetadataProvider metadataProvider = Gff3ProviderFactory.buildMetadataProvider(masterFilePath);
             FastaHeaderProvider headerProvider =
                     Gff3ProviderFactory.buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
+            // Registered explicitly so --min-gap-length / --gap-type / --linkage-evidence reach
+            // everything that reads AnalysisContext. Explicit providers take precedence over the
+            // classpath-scanned default instance, which would otherwise supply minGapSize = 10.
+            AnalysisContextProvider analysisContextProvider =
+                    new AnalysisContextProvider(AnalysisType.UNKNOWN, minGapLength, gapType, linkageEvidence);
 
             final FileSequenceSource inputFastaSourceFinal = inputFastaSource;
             // FASTA -> GFF3 reads the sequence exclusively through the shared FileSequenceSource,
@@ -162,11 +167,6 @@ public class FileConversionCommand extends AbstractCommand {
                 // The header provider self-skips when it carries no header source (see
                 // FastaHeaderProvider#isActive), so an empty one never lands on the context and
                 // header-aware rules (e.g. FASTA_HEADER_MAPPING) stay inert.
-                // Registered explicitly so --min-gap-length / --gap-type / --linkage-evidence reach
-                // everything that reads AnalysisContext. Explicit providers take precedence over the
-                // classpath-scanned default instance, which would otherwise supply minGapSize = 10.
-                AnalysisContextProvider analysisContextProvider =
-                        new AnalysisContextProvider(AnalysisType.UNKNOWN, minGapLength, gapType, linkageEvidence);
                 ContextProvider<?>[] providers = {
                     compositeProvider, metadataProvider, headerProvider, analysisContextProvider
                 };
@@ -212,7 +212,7 @@ public class FileConversionCommand extends AbstractCommand {
         if (minGapLength < 1) {
             throw new CLIException("--min-gap-length must be at least 1, but was " + minGapLength);
         }
-        Optional<String> problem = GapOptionsValidator.check(gapType, linkageEvidence);
+        Optional<String> problem = GapOptionsValidator.validate(gapType, linkageEvidence);
         if (problem.isPresent()) {
             throw new CLIException(problem.get() + " (see --gap-type / --linkage-evidence)");
         }

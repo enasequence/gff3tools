@@ -27,11 +27,9 @@ import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
-import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
@@ -59,9 +57,9 @@ class GapGenerationFixTest {
     private GapGenerationFix newFix(AnalysisContext analysisContext) {
         GapGenerationFix fix = new GapGenerationFix();
         ValidationContext context = TestUtils.createTestContext(ontologyClient);
-        register(context, SequenceLookup.class, sequenceLookup);
+        TestUtils.registerProvider(context, SequenceLookup.class, sequenceLookup);
         if (analysisContext != null) {
-            register(context, AnalysisContext.class, analysisContext);
+            TestUtils.registerProvider(context, AnalysisContext.class, analysisContext);
         }
         TestUtils.injectContext(fix, context);
         return fix;
@@ -72,42 +70,12 @@ class GapGenerationFixTest {
         return newFix(new AnalysisContext(AnalysisType.UNKNOWN, 10));
     }
 
-    private static <T> void register(ValidationContext context, Class<T> type, T value) {
-        context.register(type, new ContextProvider<>() {
-            @Override
-            public T get(ValidationContext ctx) {
-                return value;
-            }
-
-            @Override
-            public Class<T> type() {
-                return type;
-            }
-        });
-    }
-
     private static GFF3Annotation annotation(GFF3Feature... features) {
-        GFF3Annotation annotation = new GFF3Annotation();
-        annotation.setSequenceRegion(new GFF3SequenceRegion(ACCESSION, Optional.empty(), 1, 1000));
-        for (GFF3Feature feature : features) {
-            annotation.addFeature(feature);
-        }
-        return annotation;
+        return TestUtils.createGFF3Annotation(ACCESSION, 1, 1000, features);
     }
 
     private static GFF3Feature gapFeature(String name, long start, long end, String id) {
-        return new GFF3Feature(
-                Optional.ofNullable(id),
-                Optional.empty(),
-                ACCESSION,
-                Optional.empty(),
-                ".",
-                name,
-                start,
-                end,
-                ".",
-                "+",
-                ".");
+        return TestUtils.createGFF3Feature(id, null, name, ACCESSION, start, end);
     }
 
     private void runsAre(GapRegion... runs) {
