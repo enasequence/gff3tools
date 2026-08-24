@@ -265,6 +265,23 @@ class GapGenerationFixTest {
         assertEquals(Optional.of("gap_1"), generated(annotation, 1).get(0).getAttribute(GFF3Attributes.ATTRIBUTE_ID));
     }
 
+    @Test
+    void clearResetsTheIdCounterForTheNextFile() {
+        runsAre(new GapRegion(41, 76));
+        GapGenerationFix fix = newFix();
+
+        GFF3Annotation first = annotation();
+        fix.fix(first, 1);
+        assertEquals(Optional.of("gap"), first.getFeatures().get(0).getAttribute(GFF3Attributes.ATTRIBUTE_ID));
+
+        // End of file: the next file's IDs start over, since uniqueness is per file.
+        fix.clear();
+
+        GFF3Annotation nextFile = annotation();
+        fix.fix(nextFile, 1);
+        assertEquals(Optional.of("gap"), nextFile.getFeatures().get(0).getAttribute(GFF3Attributes.ATTRIBUTE_ID));
+    }
+
     // ---------------------------------------------------------- attributes
 
     @Test

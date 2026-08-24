@@ -30,6 +30,7 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ExitMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
@@ -40,11 +41,11 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContextProvider;
 
 /**
  * Adds a {@code gap} feature for every run of N bases at least {@code minGapLength} long that the
- * annotation's existing gap features do not already cover. Coverage is judged against the union of
- * those features, so a run split into adjacent submitter gaps is left alone, while a partly covered
- * run still gets one gap spanning the whole run — an N-run is one gap event, not two. Runs at
- * {@link ValidationPriority#HIGH}, never modifies existing features, and is a no-op when no
- * {@link SequenceLookup} is registered.
+ * annotation's existing gap features do not already cover.
+ *
+ * Coverage is judged against the union of existing gaps, so a run split into adjacent submitter gaps is left alone,
+ * while a partly covered N run still gets one gap spanning the whole run.
+ * This behaviour matches previous {@code sequencetools} behaviour, so flatfile <-> gff3 conversions should be smooth.
  */
 @Slf4j
 @Gff3Fix(
@@ -56,7 +57,7 @@ public class GapGenerationFix implements Fix {
     private ValidationContext context;
 
     /**
-     * Document-wide counter: GFF3 IDs must be unique within a file and one instance serves the whole
+     * Document-wide counter: GFF3 gap IDs must be unique within a file and one instance serves the whole
      * run, so it keeps counting across annotations. Mirrors the counter {@code FastaToGff3Converter}
      * used before generation moved here, so emitted IDs are unchanged.
      */
@@ -280,5 +281,14 @@ public class GapGenerationFix implements Fix {
         } while (usedIds.contains(id));
         usedIds.add(id);
         return id;
+    }
+
+    /**
+     * Resets the per-file state. IDs only have to be unique within one GFF3 file, so a reused engine
+     * must start each file at {@code ID=gap} again rather than carrying the previous file's count.
+     */
+    @ExitMethod
+    public void clear() {
+        gapCounter = 0;
     }
 }
