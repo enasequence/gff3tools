@@ -48,7 +48,11 @@ public class ValidationCommand extends AbstractCommand {
                     buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
             CompositeSequenceProvider compositeProvider = Gff3ProviderFactory.buildCompositeProvider(sources);
 
-            try (ValidationEngine validationEngine = initValidationEngine(ruleOverrides, compositeProvider)) {
+            // this command discards the fixed annotation, so this fix is not needed as no validations require it
+            Map<String, Boolean> fixOverrides = Map.of("GAP_GENERATION", false);
+
+            try (ValidationEngine validationEngine =
+                    initValidationEngine(ruleOverrides, fixOverrides, compositeProvider)) {
 
                 try (BufferedReader inputReader = getPipe(
                                 Files::newBufferedReader,

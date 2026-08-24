@@ -54,9 +54,23 @@ public abstract class AbstractCommand implements Runnable {
 
     protected ValidationEngine initValidationEngine(
             Map<String, RuleSeverity> ruleOverrides, ContextProvider<?>... additionalProviders) {
+        return initValidationEngine(ruleOverrides, Map.of(), additionalProviders);
+    }
 
-        ValidationEngineBuilder builder =
-                new ValidationEngineBuilder().overrideMethodRules(ruleOverrides).failFast(failFast);
+    /**
+     * Builds a {@link ValidationEngine}, additionally toggling individual fixes by their
+     * {@code @FixMethod.rule()}. Use it to keep a fix off a command where its output would be
+     * discarded.
+     */
+    protected ValidationEngine initValidationEngine(
+            Map<String, RuleSeverity> ruleOverrides,
+            Map<String, Boolean> fixOverrides,
+            ContextProvider<?>... additionalProviders) {
+
+        ValidationEngineBuilder builder = new ValidationEngineBuilder()
+                .overrideMethodRules(ruleOverrides)
+                .overrideMethodFixs(fixOverrides)
+                .failFast(failFast);
 
         // Providers gate their own registration via ContextProvider#isActive(). An empty
         // FastaHeaderProvider (no header source supplied) reports inactive and is kept off the
