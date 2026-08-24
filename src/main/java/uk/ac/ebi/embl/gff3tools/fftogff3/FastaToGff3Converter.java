@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.fastareader.api.SequenceFormatReader;
-import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.Converter;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -33,18 +32,16 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 /**
  * Converts a FASTA (or plain) sequence file to a GFF3 file containing only gap features.
  *
- * <p>Each sequence entry is scanned for contiguous runs of {@code N}/{@code n} bases.
- * Every run whose length is at least {@code minGapLength} becomes a {@code gap} feature with an
- * {@code estimated_length} attribute. Runs shorter than {@code minGapLength} are ignored,
- * mirroring the INSDC assembly behaviour implemented in sequencetools
- * ({@code SequenceToGapFeatureBasesFix}).
+ * <p>This converter builds one empty {@link GFF3Annotation} per sequence entry, with its
+ * {@code ##sequence-region} directive set, and hands it to the validation engine. The registered
+ * {@code GapGenerationFix} reads the sequence's runs of {@code N}/{@code n} bases from the engine's
+ * {@code SequenceLookup} context and populates the gap features; this converter does not scan for
+ * gaps itself. Minimum run length and the optional {@code gap_type} / {@code linkage_evidence} come
+ * from the {@code AnalysisContext} the caller registers on the engine.
  *
- * <p>The biological gap type cannot be inferred from a run of {@code N}s (only its length is
- * known), so no {@code gap_type} or {@code linkage_evidence} attribute is emitted by default and
- * the feature maps to a plain INSDC {@code gap}. A caller that genuinely knows the gap type may
- * supply {@code gapType} (and, where the type requires it, {@code linkageEvidence}); the feature
- * then maps to an INSDC {@code assembly_gap}. Value validity is enforced by the validation engine
- * ({@code AssemblyGapValidation}).
+ * <p>Because the gaps come from a fix, disabling {@code fix.GAP_GENERATION} makes this conversion
+ * emit sequence-region directives and no features at all; the converter logs a warning when it
+ * produced nothing.
  *
  * <p>The converter reads the sequence through a shared {@link FileSequenceSource} that is also
  * registered on the {@link ValidationEngine}. This means the FASTA is opened only once, and the
@@ -55,43 +52,12 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 @Slf4j
 public class FastaToGff3Converter implements Converter {
 
-    /** Default minimum gap length, matching sequencetools {@code Entry.DEFAULT_MIN_GAP_LENGTH}. */
-    public static final int DEFAULT_MIN_GAP_LENGTH = 10;
-
     private final ValidationEngine validationEngine;
     private final FileSequenceSource source;
-    private final int minGapLength;
-    private final String gapType;
-    private final String linkageEvidence;
 
-    public FastaToGff3Converter(ValidationEngine validationEngine, FileSequenceSource source, int minGapLength) {
-        this(validationEngine, source, minGapLength, null, null);
-    }
-
-    public FastaToGff3Converter(
-            ValidationEngine validationEngine,
-            FileSequenceSource source,
-            int minGapLength,
-            String gapType,
-            String linkageEvidence) {
+    public FastaToGff3Converter(ValidationEngine validationEngine, FileSequenceSource source) {
         this.validationEngine = validationEngine;
         this.source = source;
-        // Defensive: a run of N is only ever a gap if it has at least one base.
-        this.minGapLength = Math.max(1, minGapLength);
-        // Blank values are treated as "not supplied" so we emit a plain gap.
-        this.gapType = isBlank(gapType) ? null : gapType.trim();
-        this.linkageEvidence = isBlank(linkageEvidence) ? null : linkageEvidence.trim();
-        // Defensive: linkage_evidence is only meaningful alongside a gap_type (INSDC allows it
-        // only for gap_type "within scaffold", "repeat within scaffold" or "contamination").
-        // Reject the inconsistent combination here so we never emit a plain gap carrying a
-        // linkage_evidence attribute; full value validity is still enforced by AssemblyGapValidation.
-        if (this.linkageEvidence != null && this.gapType == null) {
-            throw new IllegalArgumentException("linkageEvidence requires a gapType to be supplied");
-        }
-    }
-
-    private static boolean isBlank(String value) {
-        return value == null || value.isBlank();
     }
 
     @Override
@@ -110,10 +76,6 @@ public class FastaToGff3Converter implements Converter {
         // Build the ordinal -> seqId lookup once (O(n)) instead of scanning the map per ordinal.
         Map<Long, String> ordinalToSeqId = buildOrdinalToSeqId();
 
-        // Gap IDs are unique across the whole document (GFF3 requires unique IDs within a file),
-        // so the counter spans all sequences rather than resetting per sequence.
-        int gapCounter = 0;
-
         for (long ordinal : formatReader.getOrderedIds()) {
             String seqId = ordinalToSeqId.getOrDefault(ordinal, source.getSequenceKey());
             if (seqId == null) {
@@ -122,10 +84,8 @@ public class FastaToGff3Converter implements Converter {
             }
 
             long length;
-            List<GapRegion> gaps;
             try {
                 length = formatReader.getStats(ordinal).totalBases();
-                gaps = formatReader.getGapRegions(ordinal);
             } catch (Exception e) {
                 throw new ReadException(
                         "Failed to read sequence for ordinal " + ordinal + ": " + e.getMessage(),
@@ -135,45 +95,15 @@ public class FastaToGff3Converter implements Converter {
             GFF3Annotation annotation = new GFF3Annotation();
             annotation.setSequenceRegion(new GFF3SequenceRegion(seqId, Optional.empty(), 1, length));
 
-            for (GapRegion gap : gaps) {
-                // Rule: only runs of N at least minGapLength long are reported as gaps,
-                // matching the INSDC assembly behaviour in sequencetools.
-                if (gap.lengthBases() < minGapLength) {
-                    continue;
-                }
-                String id = gapCounter == 0 ? "gap" : "gap_" + gapCounter;
-                GFF3Feature feature = new GFF3Feature(
-                        Optional.of(id),
-                        Optional.empty(),
-                        seqId,
-                        Optional.empty(),
-                        ".",
-                        "gap",
-                        gap.startBase,
-                        gap.endBase,
-                        ".",
-                        "+",
-                        ".");
-                feature.addAttribute(GFF3Attributes.ATTRIBUTE_ID, id);
-                feature.addAttribute(GFF3Attributes.ESTIMATED_LENGTH, String.valueOf(gap.lengthBases()));
-                // Rule: gap_type/linkage_evidence are not inferable from sequence and are emitted
-                // only when explicitly supplied; otherwise the feature stays a plain INSDC gap.
-                if (gapType != null) {
-                    feature.addAttribute(GFF3Attributes.GAP_TYPE, gapType);
-                }
-                if (linkageEvidence != null) {
-                    feature.addAttribute(GFF3Attributes.LINKAGE_EVIDENCE, linkageEvidence);
-                }
-                // Run feature-level fixes/validations (e.g. AssemblyGapValidation) over the
-                // generated gap, mirroring the FF->GFF3 path. Generated content has no line number.
-                validationEngine.validate(feature, -1);
-                annotation.addFeature(feature);
-                gapCounter++;
-            }
-
-            // Run annotation-level fixes/validations over the generated annotation.
+            // GapGenerationFix populates this annotation's gap features from the sequence; the
+            // other annotation-level fixes and validations run over it here too.
             validationEngine.validate(annotation, -1);
             annotations.add(annotation);
+        }
+
+        if (annotations.stream().allMatch(a -> a.getFeatures().isEmpty())) {
+            log.warn("No gap features were generated for any sequence. If the input does contain runs of N"
+                    + " bases, check that the GAP_GENERATION fix is enabled.");
         }
 
         GFF3File file =

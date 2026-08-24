@@ -20,7 +20,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Optional;
 import java.util.zip.GZIPInputStream;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
@@ -39,10 +39,13 @@ import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToGFF3Converter;
+import uk.ac.ebi.embl.gff3tools.utils.GapOptionsValidator;
 import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContextProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 
@@ -50,11 +53,6 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 @CommandLine.Command(name = "conversion", description = "Performs format conversions to or from gff3")
 @Slf4j
 public class FileConversionCommand extends AbstractCommand {
-
-    // INSDC gap types for which linkage_evidence is both required and allowed. Mirrors
-    // AssemblyGapValidation; kept here only to fail fast with a clear usage message.
-    private static final Set<String> GAP_TYPES_REQUIRING_LINKAGE =
-            Set.of("within scaffold", "repeat within scaffold", "contamination");
 
     @CommandLine.Option(names = "-f", description = "The type of the input file to be converted")
     public ConversionFileFormat fromFileType;
@@ -74,20 +72,20 @@ public class FileConversionCommand extends AbstractCommand {
 
     @CommandLine.Option(
             names = {"--min-gap-length", "-mgl"},
-            description = "Minimum run of N bases reported as a gap feature (FASTA to GFF3 conversion only). "
-                    + "Default: ${DEFAULT-VALUE}.")
-    public int minGapLength = FastaToGff3Converter.DEFAULT_MIN_GAP_LENGTH;
+            description = "Minimum run of N bases reported as a gap feature. Applies wherever gap features are "
+                    + "generated, not only to FASTA to GFF3 conversion. Default: ${DEFAULT-VALUE}.")
+    public int minGapLength = AnalysisContextProvider.DEFAULT_MIN_GAP_SIZE;
 
     @CommandLine.Option(
             names = {"--gap-type", "-gt"},
-            description = "Optional INSDC gap_type for generated gap features (FASTA to GFF3 conversion only). "
-                    + "When set, gaps map to assembly_gap; otherwise a plain gap is emitted.")
+            description = "Optional INSDC gap_type for generated gap features. When set, gaps map to "
+                    + "assembly_gap; otherwise a plain gap is emitted.")
     public String gapType;
 
     @CommandLine.Option(
             names = {"--linkage-evidence", "-le"},
-            description = "Optional INSDC linkage_evidence for generated gap features (FASTA to GFF3 conversion "
-                    + "only). Only valid with a gap_type that requires it (e.g. \"within scaffold\").")
+            description = "Optional INSDC linkage_evidence for generated gap features. Only valid with a "
+                    + "gap_type that requires it (e.g. \"within scaffold\").")
     public String linkageEvidence;
 
     @CommandLine.Parameters(
@@ -131,8 +129,9 @@ public class FileConversionCommand extends AbstractCommand {
             // its sequence/header context (read once) and the same sequence/annotation/fasta-header
             // validations run as in the FASTA+GFF3 case.
             FileSequenceSource inputFastaSource = null;
+            validateGapOptions();
+
             if (fromFileType == ConversionFileFormat.fasta && toFileType == ConversionFileFormat.gff3) {
-                validateGapOptions();
                 SequenceFormat fmt = resolveSequenceFormat(inputFilePath, sequenceOptions.sequenceFormat);
                 // Plain (headerless) sequences carry no submission ID, so there is nothing to put
                 // in the GFF3 seqId column or sequence-region directive. Fail fast with a clear
@@ -163,7 +162,14 @@ public class FileConversionCommand extends AbstractCommand {
                 // The header provider self-skips when it carries no header source (see
                 // FastaHeaderProvider#isActive), so an empty one never lands on the context and
                 // header-aware rules (e.g. FASTA_HEADER_MAPPING) stay inert.
-                ContextProvider<?>[] providers = {compositeProvider, metadataProvider, headerProvider};
+                // Registered explicitly so --min-gap-length / --gap-type / --linkage-evidence reach
+                // everything that reads AnalysisContext. Explicit providers take precedence over the
+                // classpath-scanned default instance, which would otherwise supply minGapSize = 10.
+                AnalysisContextProvider analysisContextProvider =
+                        new AnalysisContextProvider(AnalysisType.UNKNOWN, minGapLength, gapType, linkageEvidence);
+                ContextProvider<?>[] providers = {
+                    compositeProvider, metadataProvider, headerProvider, analysisContextProvider
+                };
                 try (ValidationEngine engine = initValidationEngine(ruleOverrides, providers)) {
                     Converter converter =
                             getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal, sequenceLookup);
@@ -198,26 +204,17 @@ public class FileConversionCommand extends AbstractCommand {
     }
 
     /**
-     * Fails fast with a clear usage message for inconsistent gap options, instead of deferring to
-     * the validation engine (which would report a less obvious VALIDATION_ERROR). Value validity is
-     * still enforced downstream by {@code AssemblyGapValidation}.
+     * Fails fast with a clear usage message for invalid gap options, instead of surfacing the
+     * {@code IllegalArgumentException} that {@code AnalysisContext} would otherwise throw when the
+     * provider is constructed. The same rules are enforced there as a backstop.
      */
     private void validateGapOptions() throws CLIException {
-        boolean hasGapType = gapType != null && !gapType.isBlank();
-        boolean hasLinkageEvidence = linkageEvidence != null && !linkageEvidence.isBlank();
-        if (hasLinkageEvidence && !hasGapType) {
-            throw new CLIException("--linkage-evidence requires --gap-type to be set");
+        if (minGapLength < 1) {
+            throw new CLIException("--min-gap-length must be at least 1, but was " + minGapLength);
         }
-        if (hasGapType) {
-            String normalizedGapType = gapType.trim().toLowerCase();
-            boolean requiresLinkage = GAP_TYPES_REQUIRING_LINKAGE.contains(normalizedGapType);
-            if (requiresLinkage && !hasLinkageEvidence) {
-                throw new CLIException("--gap-type \"" + gapType.trim() + "\" requires --linkage-evidence to be set");
-            }
-            if (!requiresLinkage && hasLinkageEvidence) {
-                throw new CLIException("--linkage-evidence is only valid with --gap-type "
-                        + "\"within scaffold\", \"repeat within scaffold\" or \"contamination\"");
-            }
+        Optional<String> problem = GapOptionsValidator.check(gapType, linkageEvidence);
+        if (problem.isPresent()) {
+            throw new CLIException(problem.get() + " (see --gap-type / --linkage-evidence)");
         }
     }
 
@@ -268,7 +265,7 @@ public class FileConversionCommand extends AbstractCommand {
             return new TSVToGFF3Converter(engine, fastaOutputPath);
         } else if (inputFileType == ConversionFileFormat.fasta && outputFileType == ConversionFileFormat.gff3) {
             // inputFastaSource is the same source registered on the engine, so the FASTA is read once.
-            return new FastaToGff3Converter(engine, inputFastaSource, minGapLength, gapType, linkageEvidence);
+            return new FastaToGff3Converter(engine, inputFastaSource);
         } else {
             throw new FormatSupportException(fromFileType, toFileType);
         }
