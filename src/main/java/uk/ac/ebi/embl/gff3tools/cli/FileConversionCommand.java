@@ -72,20 +72,20 @@ public class FileConversionCommand extends AbstractCommand {
 
     @CommandLine.Option(
             names = {"--min-gap-length", "-mgl"},
-            description = "Minimum run of N bases reported as a gap feature. Applies wherever gap features are "
-                    + "generated, not only to FASTA to GFF3 conversion. Default: ${DEFAULT-VALUE}.")
+            description = "Minimum run of N bases reported as a gap feature (FASTA to GFF3 conversion only). "
+                    + "Default: ${DEFAULT-VALUE}.")
     public int minGapLength = AnalysisContextProvider.DEFAULT_MIN_GAP_SIZE;
 
     @CommandLine.Option(
             names = {"--gap-type", "-gt"},
-            description = "Optional INSDC gap_type for generated gap features. When set, gaps map to "
-                    + "assembly_gap; otherwise a plain gap is emitted.")
+            description = "Optional INSDC gap_type for generated gap features (FASTA to GFF3 conversion only). "
+                    + "When set, gaps map to assembly_gap; otherwise a plain gap is emitted.")
     public String gapType;
 
     @CommandLine.Option(
             names = {"--linkage-evidence", "-le"},
-            description = "Optional INSDC linkage_evidence for generated gap features. Only valid with a "
-                    + "gap_type that requires it (e.g. \"within scaffold\").")
+            description = "Optional INSDC linkage_evidence for generated gap features (FASTA to GFF3 conversion "
+                    + "only). Only valid with a gap_type that requires it (e.g. \"within scaffold\").")
     public String linkageEvidence;
 
     @CommandLine.Parameters(
@@ -128,10 +128,12 @@ public class FileConversionCommand extends AbstractCommand {
             // its sequence/header context (read once) and the same sequence/annotation/fasta-header
             // validations run as in the FASTA+GFF3 case.
             FileSequenceSource inputFastaSource = null;
-            // Resolve whether CLI user inputs make sense for gap creation
-            validateGapOptions();
+            boolean fastaToGff3 = fromFileType == ConversionFileFormat.fasta && toFileType == ConversionFileFormat.gff3;
 
-            if (fromFileType == ConversionFileFormat.fasta && toFileType == ConversionFileFormat.gff3) {
+            if (fastaToGff3) {
+                // Only this direction generates gaps, so this is the only direction whose gap
+                // options mean anything.
+                validateGapOptions();
                 SequenceFormat fmt = resolveSequenceFormat(inputFilePath, sequenceOptions.sequenceFormat);
                 // Plain (headerless) sequences carry no submission ID, so there is nothing to put
                 // in the GFF3 seqId column or sequence-region directive. Fail fast with a clear
@@ -150,10 +152,12 @@ public class FileConversionCommand extends AbstractCommand {
             FastaHeaderProvider headerProvider =
                     Gff3ProviderFactory.buildHeaderProvider(sources, sequenceOptions.fastaHeaderPath);
             // Registered explicitly so --min-gap-length / --gap-type / --linkage-evidence reach
-            // everything that reads AnalysisContext. Explicit providers take precedence over the
-            // classpath-scanned default instance, which would otherwise supply minGapSize = 10.
-            AnalysisContextProvider analysisContextProvider =
-                    new AnalysisContextProvider(AnalysisType.UNKNOWN, minGapLength, gapType, linkageEvidence);
+            // GapGenerationFix, overriding the classpath-scanned default instance. Only for
+            // FASTA -> GFF3: elsewhere the options are inert and unvalidated, so they must not reach
+            // AnalysisContext's constructor.
+            AnalysisContextProvider analysisContextProvider = fastaToGff3
+                    ? new AnalysisContextProvider(AnalysisType.UNKNOWN, minGapLength, gapType, linkageEvidence)
+                    : null;
 
             final FileSequenceSource inputFastaSourceFinal = inputFastaSource;
             // FASTA -> GFF3 reads the sequence exclusively through the shared FileSequenceSource,
@@ -167,10 +171,16 @@ public class FileConversionCommand extends AbstractCommand {
                 // The header provider self-skips when it carries no header source (see
                 // FastaHeaderProvider#isActive), so an empty one never lands on the context and
                 // header-aware rules (e.g. FASTA_HEADER_MAPPING) stay inert.
-                ContextProvider<?>[] providers = {
-                    compositeProvider, metadataProvider, headerProvider, analysisContextProvider
-                };
-                try (ValidationEngine engine = initValidationEngine(ruleOverrides, providers)) {
+                ContextProvider<?>[] providers = analysisContextProvider != null
+                        ? new ContextProvider<?>[] {
+                            compositeProvider, metadataProvider, headerProvider, analysisContextProvider
+                        }
+                        : new ContextProvider<?>[] {compositeProvider, metadataProvider, headerProvider};
+                // Gap generation belongs to FASTA -> GFF3, where the gap features are the entire
+                // output. Every other direction is converting annotation the submitter already
+                // wrote, so synthesising extra features into it is not this command's job.
+                Map<String, Boolean> fixOverrides = fastaToGff3 ? Map.of() : Map.of("GAP_GENERATION", false);
+                try (ValidationEngine engine = initValidationEngine(ruleOverrides, fixOverrides, providers)) {
                     Converter converter =
                             getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal, sequenceLookup);
                     converter.convert(inputReader, outputWriter);
