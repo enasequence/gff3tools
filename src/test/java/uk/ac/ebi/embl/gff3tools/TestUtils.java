@@ -14,6 +14,7 @@ import java.io.*;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.*;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -82,7 +83,7 @@ public class TestUtils {
                 "+",
                 "");
         feature.addAttribute("ID", id);
-        feature.addAttribute("Parent", parent);
+        feature.addAttribute(GFF3Attributes.ATTRIBUTE_PARENT, parent);
         feature.addAttribute("gene", "geneX");
         return feature;
     }

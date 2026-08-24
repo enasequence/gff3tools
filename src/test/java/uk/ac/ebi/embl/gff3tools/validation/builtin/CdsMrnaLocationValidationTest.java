@@ -103,11 +103,21 @@ class CdsMrnaLocationValidationTest {
     }
 
     @Test
-    void multiValuedParentNamingGeneBeforeMrnaIsPaired() {
+    void multiValuedParentNamingGeneBeforeMrnaIsNotPaired() {
         mrna("mrna1", 100, 300);
         mrna("mrna1", 500, 800);
         cds("cds1", 150, 280, "gene1", "mrna1");
         cds("cds1", 500, 700, "gene1", "mrna1");
+
+        assertDoesNotThrow(() -> validation.validateCdsMrnaLocation(annotation, 1));
+    }
+
+    @Test
+    void singleParentNamingTheMrnaIsPaired() {
+        mrna("mrna1", 100, 300);
+        mrna("mrna1", 500, 800);
+        cds("cds1", 150, 280, "mrna1");
+        cds("cds1", 500, 700, "mrna1");
 
         ValidationException exception =
                 assertThrows(ValidationException.class, () -> validation.validateCdsMrnaLocation(annotation, 1));
@@ -299,6 +309,9 @@ class CdsMrnaLocationValidationTest {
     private static GFF3Feature withParents(GFF3Feature feature, String... parents) {
         for (String parent : parents) {
             feature.addAttribute(GFF3Attributes.ATTRIBUTE_PARENT, parent);
+        }
+        if (parents.length > 0) {
+            feature.setParentId(Optional.of(parents[0]));
         }
         return feature;
     }

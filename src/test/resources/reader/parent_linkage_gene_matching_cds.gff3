@@ -1,0 +1,4 @@
+##gff-version 3
+##sequence-region ACC123 1 1000
+ACC123	test	gene	100	800	.	+	.	ID=gene1;gene=TEST
+ACC123	test	CDS	100	800	.	+	0	ID=cds1;Parent=gene1

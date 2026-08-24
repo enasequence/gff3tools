@@ -104,15 +104,15 @@ public class CdsMrnaLocationValidation implements Validation {
      * The mRNA a CDS is explicitly paired with, by {@code Parent} where that names one and by
      * {@code transcript_id} otherwise, or null where it is paired with none.
      *
-     * <p>Parent is read from the attribute rather than {@code getParentId()}, which keeps only the
-     * first of the several values GFF3 allows and would hide an mRNA named after a gene.
+     * <p>Only the parent {@code getParentId()} holds is considered.
      */
     private List<GFF3Feature> findPairedMrna(
             List<GFF3Feature> cdsSegments,
             Map<String, List<GFF3Feature>> mrnaById,
             Map<String, List<GFF3Feature>> mrnaByTranscriptId) {
         List<GFF3Feature> paired = cdsSegments.stream()
-                .flatMap(cds -> cds.getAttributeList(GFF3Attributes.ATTRIBUTE_PARENT).orElseGet(List::of).stream())
+                .map(cds -> cds.getParentId().orElse(null))
+                .filter(Objects::nonNull)
                 .map(mrnaById::get)
                 .filter(Objects::nonNull)
                 .findFirst()
