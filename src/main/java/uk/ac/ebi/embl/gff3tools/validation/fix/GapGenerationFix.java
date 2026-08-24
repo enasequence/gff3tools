@@ -109,9 +109,8 @@ public class GapGenerationFix implements Fix {
             // ordinary runs, matching GapFeatureBasesValidation and sequencetools.
             runs = lookup.getGapRegions(accession);
         } catch (Exception e) {
-            // A missing or unreadable sequence is not this fix's to report - SEQUENCE_LENGTH and
-            // GAP_BASES_PERCENTAGE already cover it - and a RuntimeException from a fix aborts the
-            // whole run.
+            // A missing or unreadable sequence is to be raised as a validation issue beforehand by {@link
+            // SequenceMappingValidation}
             log.warn("Unable to read gap regions for accession {}: {}", accession, e.getMessage());
             return;
         }
@@ -169,6 +168,9 @@ public class GapGenerationFix implements Fix {
                     Optional<String> soId = ontologyClient.findTermByNameOrSynonym(feature.getName());
                     return soId.isPresent() && OntologyTerm.GAP.ID.equals(soId.get());
                 })
+                // A feature with end < start covers nothing, and GapRegion's constructor rejects
+                // such a range outright - drop it here rather than letting it abort the run.
+                .filter(feature -> feature.getEnd() >= feature.getStart())
                 .map(feature -> new GapRegion(feature.getStart(), feature.getEnd()))
                 .sorted(Comparator.comparingLong(interval -> interval.startBase))
                 .collect(Collectors.toList());
@@ -197,7 +199,9 @@ public class GapGenerationFix implements Fix {
         List<GapRegion> out = new ArrayList<>();
         long cursor = run.startBase;
         for (GapRegion interval : covered) {
-            if (interval.endBase < interval.startBase) continue; // malformed feature: covers nothing
+            // Defensive: GapRegion's constructor rejects end < start, but its fields are public and
+            // mutable, so an inverted interval can still reach here. It covers nothing.
+            if (interval.endBase < interval.startBase) continue;
             if (interval.endBase < run.startBase) continue; // entirely before the run
             if (interval.startBase > run.endBase) break; // entirely after; so is everything left
             long start = Math.max(interval.startBase, run.startBase); // clip to the run
