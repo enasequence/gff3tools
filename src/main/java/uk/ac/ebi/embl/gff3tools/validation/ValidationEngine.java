@@ -49,6 +49,18 @@ public class ValidationEngine implements AutoCloseable {
     }
 
     /**
+     * Switches on a rule that is declared {@code OFF}, for callers that only apply it on their own
+     * code path. A severity the caller already configured (e.g. via {@code --rules}) wins, so this
+     * never overrides an explicit choice.
+     *
+     * @param rule     the {@code @ValidationMethod.rule()} to enable
+     * @param severity the severity to run it at
+     */
+    public void enableRuleIfUnset(String rule, RuleSeverity severity) {
+        validationConfig.getRuleOverrides().putIfAbsent(rule, severity);
+    }
+
+    /**
      * Executes fixes and validations interleaved by priority tier.
      * For each tier (CRITICAL → HIGH → NORMAL → LOW), fixes run first, then validations.
      * In fail-fast mode, an error at a given tier prevents lower-priority tiers from executing.
