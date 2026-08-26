@@ -17,7 +17,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -338,17 +337,6 @@ class FeatureOverlapValidationTest {
     }
 
     private GFF3Feature feature(String name, String id, String seqId, long start, long end) {
-        return new GFF3Feature(
-                id == null ? Optional.empty() : Optional.of(id),
-                Optional.empty(),
-                seqId,
-                Optional.empty(),
-                ".",
-                name,
-                start,
-                end,
-                ".",
-                "+",
-                "0");
+        return TestUtils.createGFF3Feature(id, null, name, seqId, start, end);
     }
 }
