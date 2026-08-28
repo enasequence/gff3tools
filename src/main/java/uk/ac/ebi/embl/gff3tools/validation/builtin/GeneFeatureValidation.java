@@ -49,6 +49,12 @@ public class GeneFeatureValidation implements Validation {
     private static final String DIFFERENT_GENE_SYNONYM_VALUES_MESSAGE =
             "Features sharing locus_tag \"%s\" are associated with \"gene_synonym\" qualifiers with different sets of values. They should all share the same values.";
 
+    public static final String GENE_ASSOCIATION_RULE = "GENE_ASSOCIATION";
+
+    public static final String GENE_LOCUS_TAG_ASSOCIATION_RULE = "GENE_LOCUS_TAG_ASSOCIATION";
+
+    public static final String LOCUS_TAG_ASSOCIATION_RULE = "LOCUS_TAG_ASSOCIATION";
+
     public static final String LOCUS_TAG_EXISTS_RULE = "LOCUS_TAG_EXISTS";
 
     private static final String LOCUS_TAG_EXISTS_MESSAGE =
@@ -71,7 +77,7 @@ public class GeneFeatureValidation implements Validation {
     private final Map<String, Map<String, List<String>>> annotationLocusTagToSynonyms = new HashMap<>();
 
     @ValidationMethod(
-            rule = "GENE_ASSOCIATION",
+            rule = GENE_ASSOCIATION_RULE,
             description =
                     "Check that features sharing a gene name are associated with the same locus_tag and pseudogene values",
             type = ValidationType.ANNOTATION,
@@ -119,7 +125,7 @@ public class GeneFeatureValidation implements Validation {
     }
 
     @ValidationMethod(
-            rule = "GENE_LOCUS_TAG_ASSOCIATION",
+            rule = GENE_LOCUS_TAG_ASSOCIATION_RULE,
             description = "Check that different gene features do not share the same locus_tag",
             type = ValidationType.ANNOTATION)
     public void validateGeneLocusTagAssociation(GFF3Annotation gff3Annotation, int line) throws ValidationException {
@@ -157,7 +163,7 @@ public class GeneFeatureValidation implements Validation {
     }
 
     @ValidationMethod(
-            rule = "LOCUS_TAG_ASSOCIATION",
+            rule = LOCUS_TAG_ASSOCIATION_RULE,
             description =
                     "Check that features sharing a locus_tag are associated with the same gene and gene_synonym values",
             type = ValidationType.ANNOTATION)
