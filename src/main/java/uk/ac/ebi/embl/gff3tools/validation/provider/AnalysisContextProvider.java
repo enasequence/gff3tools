@@ -41,6 +41,15 @@ public class AnalysisContextProvider implements ContextProvider<AnalysisContext>
         this(new AnalysisContext(analysisType, minGapSize));
     }
 
+    /**
+     * @param analysisType the analysis type (must not be {@code null})
+     * @param minGapSize   the minimum gap size (must be greater than zero)
+     * @param assemblyType the assembly type, or {@code null} when the caller does not supply one
+     */
+    public AnalysisContextProvider(AnalysisType analysisType, int minGapSize, String assemblyType) {
+        this(new AnalysisContext(analysisType, minGapSize, assemblyType));
+    }
+
     public AnalysisContextProvider(AnalysisContext analysisContext) {
         Objects.requireNonNull(analysisContext, "analysisContext must not be null");
         this.analysisContext = analysisContext;

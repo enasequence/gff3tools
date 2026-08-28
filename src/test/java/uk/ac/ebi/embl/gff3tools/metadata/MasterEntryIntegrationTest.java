@@ -52,9 +52,10 @@ class MasterEntryIntegrationTest {
                 """
                 ##gff-version 3
                 ##sequence-region seq1 1 1000
-                seq1\t.\tgene\t1\t100\t.\t+\t.\tID=gene1
+                seq1\t.\tgene\t1\t100\t.\t+\t.\tID=gene1;locus_tag=LOCUS_0001
                 """);
 
+        // The master entry declares dataClass STD, so LOCUS_TAG_EXISTS applies to this annotation.
         Path masterJson = getResourcePath("metadata/master_entry.json");
         Path outFile = tempDir.resolve("output.embl");
 

@@ -93,4 +93,23 @@ public class MasterMetadata {
 
     // ── Search fields (source feature qualifiers from MasterEntry JSON) ──
     private Map<String, String> searchFields;
+
+    /**
+     * Whether this metadata describes a contig of a WGS set rather than the set itself.
+     */
+    public boolean isWgsContig() {
+        return "WGS".equalsIgnoreCase(contigDataclass);
+    }
+
+    /**
+     * The data class to assign to the entry being processed. A WGS set master entry has
+     * {@code dataClass} "SET" — that describes the containing set, not the contig — so the contig
+     * data class wins whenever there is one. Callers reading {@code dataClass} directly would see
+     * "SET" for every contig of a WGS assembly.
+     *
+     * @return the effective data class, or {@code null} when none is known
+     */
+    public String getEffectiveDataClass() {
+        return isWgsContig() ? contigDataclass : dataClass;
+    }
 }
