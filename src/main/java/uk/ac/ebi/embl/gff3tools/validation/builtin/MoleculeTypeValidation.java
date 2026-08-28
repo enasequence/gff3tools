@@ -19,11 +19,10 @@ import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
@@ -158,19 +157,7 @@ public class MoleculeTypeValidation implements Validation {
     }
 
     private Optional<ControlledVocabularyUtils.MolType> getMoleculeType(String accession) {
-        FastaHeaderProvider fastaHeaderProvider =
-                context.contains(FastaHeaderProvider.class) ? context.get(FastaHeaderProvider.class) : null;
-        if (fastaHeaderProvider == null) {
-            return Optional.empty();
-        }
-
         log.debug("Validating molecule type from FASTA header for accession {}", accession);
-        Optional<FastaHeader> header = fastaHeaderProvider.getHeader(accession);
-        if (header.isEmpty()) {
-            log.warn("No FASTA header found for accession {}", accession);
-            return Optional.empty();
-        }
-
-        return ControlledVocabularyUtils.normaliseMolType(header.get());
+        return ValidationUtils.getMoleculeType(accession, context);
     }
 }
