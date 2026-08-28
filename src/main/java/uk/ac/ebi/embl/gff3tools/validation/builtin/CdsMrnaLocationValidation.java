@@ -111,12 +111,11 @@ public class CdsMrnaLocationValidation implements Validation {
             List<GFF3Feature> cdsSegments,
             Map<String, List<GFF3Feature>> mrnaById,
             Map<String, List<GFF3Feature>> mrnaByTranscriptId) {
-        List<GFF3Feature> paired = cdsSegments.stream()
-                .map(cds -> cds.getParentId().orElse(null))
-                .filter(Objects::nonNull)
+        GFF3Feature firstCdsSegment = cdsSegments.get(0);
+
+        List<GFF3Feature> paired = firstCdsSegment
+                .getParentId()
                 .map(mrnaById::get)
-                .filter(Objects::nonNull)
-                .findFirst()
                 .orElseGet(() -> findTranscriptId(cdsSegments)
                         .map(mrnaByTranscriptId::get)
                         .orElse(null));
@@ -124,11 +123,13 @@ public class CdsMrnaLocationValidation implements Validation {
         if (paired == null || paired.isEmpty()) {
             return null;
         }
+
         // An ID shared across sequences pairs features that were never on the same location, so
         // there is nothing to compare.
-        if (!Objects.equals(paired.get(0).accession(), cdsSegments.get(0).accession())) {
+        if (!Objects.equals(paired.get(0).accession(), firstCdsSegment.accession())) {
             return null;
         }
+
         return paired;
     }
 
