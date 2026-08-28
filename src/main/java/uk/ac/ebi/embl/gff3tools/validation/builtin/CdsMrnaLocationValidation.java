@@ -74,7 +74,8 @@ public class CdsMrnaLocationValidation implements Validation {
             ValidationUtils.representativeOfFeatureGroup(segments)
                     .getId()
                     .ifPresent(id -> mrnaById.putIfAbsent(id, segments));
-            transcriptId(segments).ifPresent(transcriptId -> mrnaByTranscriptId.putIfAbsent(transcriptId, segments));
+            findTranscriptId(segments)
+                    .ifPresent(transcriptId -> mrnaByTranscriptId.putIfAbsent(transcriptId, segments));
         }
 
         List<String> violations = new ArrayList<>();
@@ -116,8 +117,9 @@ public class CdsMrnaLocationValidation implements Validation {
                 .map(mrnaById::get)
                 .filter(Objects::nonNull)
                 .findFirst()
-                .orElseGet(() ->
-                        transcriptId(cdsSegments).map(mrnaByTranscriptId::get).orElse(null));
+                .orElseGet(() -> findTranscriptId(cdsSegments)
+                        .map(mrnaByTranscriptId::get)
+                        .orElse(null));
 
         if (paired == null || paired.isEmpty()) {
             return null;
@@ -211,7 +213,13 @@ public class CdsMrnaLocationValidation implements Validation {
                         || segment.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION));
     }
 
-    private Optional<String> transcriptId(List<GFF3Feature> segments) {
+    /**
+     * Finds the first transcript id in a list of Gff3 features that should share the same transcript id attribute
+     *
+     * @param segments list of Gff3 features
+     * @return {@code String} representing the transcript id
+     */
+    private Optional<String> findTranscriptId(List<GFF3Feature> segments) {
         return segments.stream()
                 .map(segment ->
                         segment.getAttribute(GFF3Attributes.TRANSCRIPT_ID).orElse(null))
