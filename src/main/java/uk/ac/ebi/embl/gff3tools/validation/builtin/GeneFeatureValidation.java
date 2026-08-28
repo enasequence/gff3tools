@@ -48,13 +48,18 @@ public class GeneFeatureValidation implements Validation {
     private final Map<String, Map<String, String>> annotationLocusTagToGene = new HashMap<>();
     private final Map<String, Map<String, List<String>>> annotationLocusTagToSynonyms = new HashMap<>();
 
-    @ValidationMethod(rule = "GENE_ASSOCIATION", type = ValidationType.ANNOTATION, severity = RuleSeverity.WARN)
+    @ValidationMethod(
+            rule = "GENE_ASSOCIATION",
+            description =
+                    "Check that features sharing a gene name are associated with the same locus_tag and pseudogene values",
+            type = ValidationType.ANNOTATION,
+            severity = RuleSeverity.WARN)
     public void validateGeneAssociation(GFF3Annotation gff3Annotation, int line) throws ValidationException {
         OntologyClient ontologyClient = context.get(OntologyClient.class);
         Map<String, String> geneToLocusTag = new HashMap<>();
         Map<String, String> geneToPseudoGene = new HashMap<>();
         for (GFF3Feature feature : gff3Annotation.getFeatures()) {
-            if (feature == null || !feature.hasAttribute(GFF3Attributes.GENE)) return;
+            if (feature == null || !feature.hasAttribute(GFF3Attributes.GENE)) continue;
 
             String geneName = feature.getAttribute(GFF3Attributes.GENE).orElse(null);
             String locusTag = feature.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
@@ -91,7 +96,10 @@ public class GeneFeatureValidation implements Validation {
         }
     }
 
-    @ValidationMethod(rule = "GENE_LOCUS_TAG_ASSOCIATION", type = ValidationType.ANNOTATION)
+    @ValidationMethod(
+            rule = "GENE_LOCUS_TAG_ASSOCIATION",
+            description = "Check that different gene features do not share the same locus_tag",
+            type = ValidationType.ANNOTATION)
     public void validateGeneLocusTagAssociation(GFF3Annotation gff3Annotation, int line) throws ValidationException {
         OntologyClient ontologyClient = context.get(OntologyClient.class);
         Map<String, GFF3Feature> locusTagToGeneFeature = new HashMap<>();
@@ -110,12 +118,12 @@ public class GeneFeatureValidation implements Validation {
                     || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.UNITARY_PSEUDOGENE.ID);
 
             if (!isGene) {
-                return;
+                continue;
             }
 
             String locusTag = feature.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
             if (locusTag == null || locusTag.isBlank()) {
-                return;
+                continue;
             }
 
             GFF3Feature existing = locusTagToGeneFeature.putIfAbsent(locusTag, feature);
@@ -126,18 +134,22 @@ public class GeneFeatureValidation implements Validation {
         }
     }
 
-    @ValidationMethod(rule = "LOCUS_TAG_ASSOCIATION", type = ValidationType.ANNOTATION)
+    @ValidationMethod(
+            rule = "LOCUS_TAG_ASSOCIATION",
+            description =
+                    "Check that features sharing a locus_tag are associated with the same gene and gene_synonym values",
+            type = ValidationType.ANNOTATION)
     public void validateLocusTagAssociation(GFF3Annotation gff3Annotation, int line) throws ValidationException {
         Map<String, String> locusTagToGene = new HashMap<>();
         Map<String, List<String>> locusTagToSynonyms = new HashMap<>();
         for (GFF3Feature feature : gff3Annotation.getFeatures()) {
             if (feature == null || !feature.hasAttribute(GFF3Attributes.LOCUS_TAG)) {
-                return;
+                continue;
             }
 
             String locusTag = feature.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null);
             if (locusTag == null || locusTag.isBlank()) {
-                return;
+                continue;
             }
 
             if (isGeneOrCds(feature)) {
