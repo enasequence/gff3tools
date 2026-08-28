@@ -310,6 +310,21 @@ class GapGenerationFixTest {
     }
 
     @Test
+    void emitsGapTypeInTheCaseTheInsdcVocabularyUses() {
+        // "Within Scaffold" passes validation because the check lower-cases; the value stamped onto
+        // the feature must be lower-cased too, or it is not an INSDC gap_type at all.
+        runsAre(new GapRegion(41, 76));
+        GFF3Annotation annotation = annotation();
+
+        newFix(new AnalysisContext(AnalysisType.UNKNOWN, 10, "Within Scaffold", "  paired-ends  "))
+                .fix(annotation, 1);
+
+        GFF3Feature gap = annotation.getFeatures().get(0);
+        assertEquals(Optional.of("within scaffold"), gap.getAttribute(GFF3Attributes.GAP_TYPE));
+        assertEquals(Optional.of("paired-ends"), gap.getAttribute(GFF3Attributes.LINKAGE_EVIDENCE));
+    }
+
+    @Test
     void generatedFeatureIsAppendedAndCarriesTheAnnotationSeqId() {
         runsAre(new GapRegion(41, 76));
         GFF3Feature gene = gapFeature("gene", 1, 10, "gene1");

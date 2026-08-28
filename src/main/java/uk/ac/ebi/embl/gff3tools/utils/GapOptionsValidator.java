@@ -30,13 +30,36 @@ public final class GapOptionsValidator {
     private GapOptionsValidator() {}
 
     /**
+     * The form a validated {@code gap_type} must be stored and emitted in: trimmed and lower-cased,
+     * or {@code null} when not supplied. {@link #validate} compares against the INSDC vocabulary in
+     * this form, so anything that keeps the caller's original casing would emit a value the
+     * vocabulary does not contain.
+     */
+    public static String normaliseGapType(String gapType) {
+        return isBlank(gapType) ? null : gapType.trim().toLowerCase();
+    }
+
+    /**
+     * The form a {@code linkage_evidence} is stored and emitted in: trimmed, or {@code null} when
+     * not supplied. Case is left alone - unlike gap_type, this value is not checked against a
+     * vocabulary, so there is nothing to keep it consistent with.
+     */
+    public static String normaliseLinkageEvidence(String linkageEvidence) {
+        return isBlank(linkageEvidence) ? null : linkageEvidence.trim();
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    /**
      * @param gapType         the requested gap_type, or null/blank when not supplied
      * @param linkageEvidence the requested linkage_evidence, or null/blank when not supplied
      * @return the first rule violation as a message, or empty when the combination is valid
      */
     public static Optional<String> validate(String gapType, String linkageEvidence) {
-        boolean hasGapType = gapType != null && !gapType.isBlank();
-        boolean hasLinkageEvidence = linkageEvidence != null && !linkageEvidence.isBlank();
+        boolean hasGapType = !isBlank(gapType);
+        boolean hasLinkageEvidence = !isBlank(linkageEvidence);
 
         if (hasLinkageEvidence && !hasGapType) {
             return Optional.of("linkage_evidence requires a gap_type to be supplied");
@@ -45,7 +68,7 @@ public final class GapOptionsValidator {
             return Optional.empty();
         }
 
-        String normalised = gapType.trim().toLowerCase();
+        String normalised = normaliseGapType(gapType);
         if (!AssemblyGapValidation.validGapTypes().contains(normalised)) {
             return Optional.of("gap_type \"" + gapType.trim() + "\" is not a valid INSDC gap_type");
         }

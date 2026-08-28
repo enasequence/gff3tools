@@ -101,7 +101,8 @@ public class FastaToGff3Converter implements Converter {
             annotations.add(annotation);
         }
 
-        if (annotations.stream().allMatch(a -> a.getFeatures().isEmpty())) {
+        if (annotations.isEmpty()
+                || annotations.stream().allMatch(a -> a.getFeatures().isEmpty())) {
             log.warn("No gap features were generated for any sequence. If the input does contain runs of N"
                     + " bases, check that the GAP_GENERATION fix is enabled.");
         }

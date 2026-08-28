@@ -74,12 +74,10 @@ public final class AnalysisContext {
             throw new IllegalArgumentException(message);
         });
 
-        // Blank is normalised to null so downstream code has a single "not supplied" representation.
-        this.gapType = isBlank(gapType) ? null : gapType.trim();
-        this.linkageEvidence = isBlank(linkageEvidence) ? null : linkageEvidence.trim();
-    }
-
-    private static boolean isBlank(String value) {
-        return value == null || value.isBlank();
+        // Stored in exactly the form GapOptionsValidator just checked: blank becomes null, and
+        // gap_type is lower-cased, so a "Within Scaffold" that passed validation cannot be stamped
+        // onto a feature as an INSDC value that does not exist.
+        this.gapType = GapOptionsValidator.normaliseGapType(gapType);
+        this.linkageEvidence = GapOptionsValidator.normaliseLinkageEvidence(linkageEvidence);
     }
 }
