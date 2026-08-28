@@ -128,13 +128,7 @@ public class GapGenerationFix implements Fix {
      * still matching any accession.
      */
     private List<GapRegion> resolveGapRegions(String accession) {
-        if (!context.contains(SequenceLookup.class)) {
-            return List.of();
-        }
         SequenceLookup lookup = context.get(SequenceLookup.class);
-        if (lookup == null) {
-            return List.of();
-        }
         try {
             // Whole sequence, so leading and trailing N-runs count like any other.
             List<GapRegion> runs = lookup.getGapRegions(accession);
