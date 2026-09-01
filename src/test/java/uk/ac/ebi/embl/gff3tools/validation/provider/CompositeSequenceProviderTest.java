@@ -54,7 +54,7 @@ class CompositeSequenceProviderTest {
         provider.addSource(stubSource("seq1", "ATGAAA"));
 
         SequenceLookup lookup = provider.get(new ValidationContext());
-        assertEquals("ATGAAA", lookup.getSequenceSlice("seq1", 1L, 6L, SequenceRangeOption.WHOLE_SEQUENCE));
+        assertEquals("ATGAAA", lookup.getSequenceSlice("seq1", 1L, 6L));
     }
 
     @Test
@@ -64,7 +64,7 @@ class CompositeSequenceProviderTest {
         provider.addSource(stubSource("seq2", "TTT"));
 
         SequenceLookup lookup = provider.get(new ValidationContext());
-        assertEquals("TTT", lookup.getSequenceSlice("seq2", 1L, 3L, SequenceRangeOption.WHOLE_SEQUENCE));
+        assertEquals("TTT", lookup.getSequenceSlice("seq2", 1L, 3L));
     }
 
     @Test
@@ -73,9 +73,7 @@ class CompositeSequenceProviderTest {
         provider.addSource(stubSource("seq1", "AAA"));
 
         SequenceLookup lookup = provider.get(new ValidationContext());
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> lookup.getSequenceSlice("unknown", 1L, 3L, SequenceRangeOption.WHOLE_SEQUENCE));
+        assertThrows(IllegalArgumentException.class, () -> lookup.getSequenceSlice("unknown", 1L, 3L));
     }
 
     @Test
@@ -133,9 +131,7 @@ class CompositeSequenceProviderTest {
             }
         });
 
-        assertEquals(
-                300L,
-                provider.get(new ValidationContext()).getSequenceLength("seq1", SequenceRangeOption.WHOLE_SEQUENCE));
+        assertEquals(300L, provider.get(new ValidationContext()).getSequenceLength("seq1"));
     }
 
     @Test
@@ -163,8 +159,7 @@ class CompositeSequenceProviderTest {
             }
         });
 
-        assertEquals(
-                gaps, provider.get(new ValidationContext()).getGapRegions("seq1", SequenceRangeOption.WHOLE_SEQUENCE));
+        assertEquals(gaps, provider.get(new ValidationContext()).getGapRegions("seq1"));
     }
 
     @Test
@@ -178,10 +173,7 @@ class CompositeSequenceProviderTest {
             }
         });
 
-        assertEquals(
-                gaps,
-                provider.get(new ValidationContext())
-                        .getGapRegions("seq1", 1L, 20L, SequenceRangeOption.WHOLE_SEQUENCE));
+        assertEquals(gaps, provider.get(new ValidationContext()).getGapRegions("seq1", 1L, 20L));
     }
 
     @Test
@@ -215,10 +207,7 @@ class CompositeSequenceProviderTest {
             }
         });
 
-        assertSame(
-                expected,
-                provider.get(new ValidationContext())
-                        .getSequenceSliceReader("seq1", 1L, 6L, SequenceRangeOption.WHOLE_SEQUENCE));
+        assertSame(expected, provider.get(new ValidationContext()).getSequenceSliceReader("seq1", 1L, 6L));
     }
 
     // --- unknown seqId tests ---
@@ -229,108 +218,11 @@ class CompositeSequenceProviderTest {
         provider.addSource(stubSource("seq1", "AAA"));
 
         SequenceLookup lookup = provider.get(new ValidationContext());
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> lookup.getSequenceLength("unknown", SequenceRangeOption.WHOLE_SEQUENCE));
+        assertThrows(IllegalArgumentException.class, () -> lookup.getSequenceLength("unknown"));
         assertThrows(IllegalArgumentException.class, () -> lookup.getSequenceStats("unknown"));
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> lookup.getGapRegions("unknown", SequenceRangeOption.WHOLE_SEQUENCE));
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> lookup.getGapRegions("unknown", 1L, 20L, SequenceRangeOption.WHOLE_SEQUENCE));
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> lookup.getSequenceSliceReader("unknown", 1L, 6L, SequenceRangeOption.WHOLE_SEQUENCE));
-    }
-
-    // --- option forwarding tests ---
-
-    @Test
-    void getSequenceSliceForwardsOptionToSource() throws Exception {
-        SequenceRangeOption[] captured = {null};
-        CompositeSequenceProvider provider = new CompositeSequenceProvider();
-        provider.addSource(new StubSource("seq1") {
-            @Override
-            public String getSequenceSlice(String id, long f, long t, SequenceRangeOption option) {
-                captured[0] = option;
-                return "";
-            }
-        });
-
-        provider.get(new ValidationContext())
-                .getSequenceSlice("seq1", 1L, 5L, SequenceRangeOption.WITHOUT_EDGE_N_BASES);
-
-        assertEquals(SequenceRangeOption.WITHOUT_EDGE_N_BASES, captured[0]);
-    }
-
-    @Test
-    void getSequenceLengthForwardsOptionToSource() throws Exception {
-        SequenceRangeOption[] captured = {null};
-        CompositeSequenceProvider provider = new CompositeSequenceProvider();
-        provider.addSource(new StubSource("seq1") {
-            @Override
-            public long getSequenceLength(String id, SequenceRangeOption option) {
-                captured[0] = option;
-                return 0L;
-            }
-        });
-
-        provider.get(new ValidationContext()).getSequenceLength("seq1", SequenceRangeOption.WITHOUT_EDGE_N_BASES);
-
-        assertEquals(SequenceRangeOption.WITHOUT_EDGE_N_BASES, captured[0]);
-    }
-
-    @Test
-    void getGapRegionsForwardsOptionToSource() throws Exception {
-        SequenceRangeOption[] captured = {null};
-        CompositeSequenceProvider provider = new CompositeSequenceProvider();
-        provider.addSource(new StubSource("seq1") {
-            @Override
-            public List<GapRegion> getGapRegions(String id, SequenceRangeOption option) {
-                captured[0] = option;
-                return List.of();
-            }
-        });
-
-        provider.get(new ValidationContext()).getGapRegions("seq1", SequenceRangeOption.WITHOUT_EDGE_N_BASES);
-
-        assertEquals(SequenceRangeOption.WITHOUT_EDGE_N_BASES, captured[0]);
-    }
-
-    @Test
-    void getGapRegionsRangeForwardsOptionToSource() throws Exception {
-        SequenceRangeOption[] captured = {null};
-        CompositeSequenceProvider provider = new CompositeSequenceProvider();
-        provider.addSource(new StubSource("seq1") {
-            @Override
-            public List<GapRegion> getGapRegions(String id, long f, long t, SequenceRangeOption option) {
-                captured[0] = option;
-                return List.of();
-            }
-        });
-
-        provider.get(new ValidationContext()).getGapRegions("seq1", 1L, 20L, SequenceRangeOption.WITHOUT_EDGE_N_BASES);
-
-        assertEquals(SequenceRangeOption.WITHOUT_EDGE_N_BASES, captured[0]);
-    }
-
-    @Test
-    void getSequenceSliceReaderForwardsOptionToSource() throws Exception {
-        SequenceRangeOption[] captured = {null};
-        CompositeSequenceProvider provider = new CompositeSequenceProvider();
-        provider.addSource(new StubSource("seq1") {
-            @Override
-            public Reader getSequenceSliceReader(String id, long f, long t, SequenceRangeOption option) {
-                captured[0] = option;
-                return new StringReader("");
-            }
-        });
-
-        provider.get(new ValidationContext())
-                .getSequenceSliceReader("seq1", 1L, 6L, SequenceRangeOption.WITHOUT_EDGE_N_BASES);
-
-        assertEquals(SequenceRangeOption.WITHOUT_EDGE_N_BASES, captured[0]);
+        assertThrows(IllegalArgumentException.class, () -> lookup.getGapRegions("unknown"));
+        assertThrows(IllegalArgumentException.class, () -> lookup.getGapRegions("unknown", 1L, 20L));
+        assertThrows(IllegalArgumentException.class, () -> lookup.getSequenceSliceReader("unknown", 1L, 6L));
     }
 
     // --- helpers ---

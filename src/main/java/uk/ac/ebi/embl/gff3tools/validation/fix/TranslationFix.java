@@ -14,9 +14,7 @@ import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 
 import java.util.*;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -25,6 +23,7 @@ import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.translation.TranslationResult;
 import uk.ac.ebi.embl.gff3tools.translation.Translator;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
@@ -88,12 +87,8 @@ public class TranslationFix {
         }
 
         // Group CDS features by ID (features with the same ID form a join)
-        Map<String, List<GFF3Feature>> cdsGroups = annotation.getFeatures().stream()
-                .filter(f -> OntologyTerm.CDS.name().equals(f.getName()))
-                .collect(Collectors.groupingBy(
-                        f -> f.getId().orElse("__no_id_" + f.getStart() + "_" + f.getEnd()),
-                        LinkedHashMap::new,
-                        Collectors.toList()));
+        Map<String, List<GFF3Feature>> cdsGroups = ValidationUtils.groupFeaturesById(
+                annotation, f -> OntologyTerm.CDS.name().equals(f.getName()));
 
         for (List<GFF3Feature> segments : cdsGroups.values()) {
             translateCdsGroup(segments, sequenceLookup, line);
@@ -139,8 +134,8 @@ public class TranslationFix {
             // For uniform-strand joins, concatenate raw and let the Translator apply overall RC.
             StringBuilder concatenated = new StringBuilder();
             for (GFF3Feature segment : sortedFeatures) {
-                String slice = sequenceLookup.getSequenceSlice(
-                        segment.accession(), segment.getStart(), segment.getEnd(), SequenceRangeOption.WHOLE_SEQUENCE);
+                String slice =
+                        sequenceLookup.getSequenceSlice(segment.accession(), segment.getStart(), segment.getEnd());
                 if (hasMixedStrands && segment.isComplement()) {
                     slice = new String(Translator.reverseComplement(slice.getBytes()));
                 }

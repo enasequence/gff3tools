@@ -13,10 +13,7 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -24,6 +21,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
@@ -54,11 +52,13 @@ public class CdsTranslationPresenceValidation {
         TranslationState state = context.get(TranslationState.class);
 
         List<String> missing = new ArrayList<>();
-        for (List<GFF3Feature> segments : groupCdsById(annotation).values()) {
+        for (List<GFF3Feature> segments : ValidationUtils.groupFeaturesById(
+                        annotation, f -> OntologyTerm.CDS.name().equals(f.getName()))
+                .values()) {
             if (isExempt(segments)) {
                 continue;
             }
-            GFF3Feature representative = representativeOf(segments);
+            GFF3Feature representative = ValidationUtils.representativeOfFeatureGroup(segments);
 
             String key = TranslationState.buildKey(
                     representative.accession(), representative.getId().orElse(null));
@@ -86,18 +86,6 @@ public class CdsTranslationPresenceValidation {
         return context.contains(SequenceLookup.class)
                 && context.get(SequenceLookup.class) != null
                 && context.contains(TranslationState.class);
-    }
-
-    private Map<String, List<GFF3Feature>> groupCdsById(GFF3Annotation annotation) {
-        return annotation.getFeatures().stream()
-                .filter(f -> OntologyTerm.CDS.name().equals(f.getName()))
-                .collect(Collectors.groupingBy(f -> f.getId().orElse("__no_id_" + f.getStart() + "_" + f.getEnd())));
-    }
-
-    private GFF3Feature representativeOf(List<GFF3Feature> segments) {
-        return segments.stream()
-                .min(Comparator.comparingLong(GFF3Feature::getStart))
-                .orElseThrow();
     }
 
     private boolean hasGeneratedTranslation(TranslationState.TranslationEntry entry) {

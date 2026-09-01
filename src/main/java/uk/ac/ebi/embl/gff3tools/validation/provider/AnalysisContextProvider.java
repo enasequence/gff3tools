@@ -17,9 +17,12 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 /**
  * Provider that supplies the user-supplied {@link AnalysisContext}.
  *
- * <p>The {@link AnalysisType} and minimum gap size are external input, so this provider
- * must be registered explicitly (e.g. via
- * {@code ValidationEngineBuilder.withProvider(...)}) rather than auto-discovered.
+ * <p>This class has a public no-arg constructor and does not override {@code isActive()}, so the
+ * classpath scan in {@code ValidationRegistry} <em>does</em> pick it up and register it with the
+ * defaults below. Callers that have real values — the CLI, which knows {@code --min-gap-length},
+ * {@code --gap-type} and {@code --linkage-evidence} — must register an instance explicitly via
+ * {@code ValidationEngineBuilder.withProvider(...)}; explicit providers take precedence over
+ * classpath-scanned ones, so that registration replaces the default instance.
  */
 public class AnalysisContextProvider implements ContextProvider<AnalysisContext> {
 
@@ -39,6 +42,16 @@ public class AnalysisContextProvider implements ContextProvider<AnalysisContext>
      */
     public AnalysisContextProvider(AnalysisType analysisType, int minGapSize) {
         this(new AnalysisContext(analysisType, minGapSize));
+    }
+
+    /**
+     * @param analysisType    the analysis type (must not be {@code null})
+     * @param minGapSize      the minimum gap size (must be greater than zero)
+     * @param gapType         optional gap_type for generated gap features
+     * @param linkageEvidence optional linkage_evidence for generated gap features
+     */
+    public AnalysisContextProvider(AnalysisType analysisType, int minGapSize, String gapType, String linkageEvidence) {
+        this(new AnalysisContext(analysisType, minGapSize, gapType, linkageEvidence));
     }
 
     public AnalysisContextProvider(AnalysisContext analysisContext) {

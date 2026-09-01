@@ -16,8 +16,8 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
@@ -26,6 +26,9 @@ import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContextProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 
@@ -34,15 +37,38 @@ class FastaToGff3ConverterTest {
     private static final Path SINGLE_SEQUENCE = Path.of("src/test/resources/fasta_to_gff3/single_sequence.fasta");
 
     /**
-     * Builds an engine wired with the input FASTA's headers, mirroring the conversion command
-     * (and {@link #feedsSequenceLookupAndFastaHeaderContextFromInputFasta()}). Without a populated
-     * {@link FastaHeaderProvider}, the header-aware fixes have no header to resolve for the
-     * annotation's accession.
+     * These tests use deliberately tiny synthetic sequences to keep gap coordinates readable. Now
+     * that the engine carries a SequenceLookup (required by GapGenerationFix), the sequence-policy
+     * rules apply to those fixtures and would reject them for being short or N-heavy. They are
+     * orthogonal to gap generation, so they are switched off here rather than padding every
+     * fixture to 100+ bases.
      */
-    private static ValidationEngine engineWithHeaders(FileSequenceSource source) {
+    private static final Map<String, RuleSeverity> SHORT_FIXTURE_RULES =
+            Map.of("SEQUENCE_TOO_SHORT", RuleSeverity.OFF, "GAP_BASES_PERCENTAGE", RuleSeverity.OFF);
+
+    /**
+     * Builds an engine wired with the input FASTA's sequence and headers, mirroring the conversion
+     * command (and {@link #feedsSequenceLookupAndFastaHeaderContextFromInputFasta()}). The sequence
+     * provider is required: gap features are produced by {@code GapGenerationFix}, which reads the
+     * N-runs from the {@link SequenceLookup} on the context and is a no-op without one. The
+     * {@link FastaHeaderProvider} gives the header-aware fixes a header for the accession.
+     */
+    private static ValidationEngine engineWithHeaders(FileSequenceSource source, int minGapLength) {
+        return engineWithHeaders(source, minGapLength, null, null);
+    }
+
+    private static ValidationEngine engineWithHeaders(
+            FileSequenceSource source, int minGapLength, String gapType, String linkageEvidence) {
+        CompositeSequenceProvider sequenceProvider = new CompositeSequenceProvider();
+        sequenceProvider.addSource(source);
         FastaHeaderProvider headerProvider = new FastaHeaderProvider();
         headerProvider.addSource(new FileFastaHeaderSource(source.getSeqIdToHeader()));
-        return new ValidationEngineBuilder().withProvider(headerProvider).build();
+        return new ValidationEngineBuilder()
+                .overrideMethodRules(SHORT_FIXTURE_RULES)
+                .withProvider(sequenceProvider)
+                .withProvider(headerProvider)
+                .withProvider(new AnalysisContextProvider(AnalysisType.UNKNOWN, minGapLength, gapType, linkageEvidence))
+                .build();
     }
 
     /** Runs the converter and returns the GFF3 output as a string. */
@@ -60,9 +86,9 @@ class FastaToGff3ConverterTest {
         Path expected = Path.of("src/test/resources/fasta_to_gff3/single_sequence_expected.gff3");
 
         FileSequenceSource source = new FileSequenceSource(SINGLE_SEQUENCE, SequenceFormat.fasta, null);
-        ValidationEngine engine = engineWithHeaders(source);
         // minGapLength=1 reports every run of N, so both gaps in the fixture are emitted.
-        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 1);
+        ValidationEngine engine = engineWithHeaders(source, 1);
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source);
 
         String actual = runConversion(converter);
         source.close();
@@ -78,8 +104,8 @@ class FastaToGff3ConverterTest {
     @Test
     void emitsGapTypeAndLinkageEvidenceWhenSupplied() throws Exception {
         FileSequenceSource source = new FileSequenceSource(SINGLE_SEQUENCE, SequenceFormat.fasta, null);
-        ValidationEngine engine = engineWithHeaders(source);
-        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 1, "within scaffold", "unspecified");
+        ValidationEngine engine = engineWithHeaders(source, 1, "within scaffold", "unspecified");
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source);
 
         String actual = runConversion(converter);
         source.close();
@@ -92,8 +118,8 @@ class FastaToGff3ConverterTest {
     void minGapLengthFiltersShortGaps() throws Exception {
         // Fixture has a 10bp gap (45..54) and a 4bp gap (99..102).
         FileSequenceSource source = new FileSequenceSource(SINGLE_SEQUENCE, SequenceFormat.fasta, null);
-        ValidationEngine engine = engineWithHeaders(source);
-        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 10);
+        ValidationEngine engine = engineWithHeaders(source, 10);
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source);
 
         String actual = runConversion(converter);
         source.close();
@@ -113,9 +139,8 @@ class FastaToGff3ConverterTest {
                 ">EMPTY | {\"description\":\"No gaps\", \"molecule_type\":\"GENOMIC DNA\", \"topology\":\"linear\"}\nATGCATGCATGC\n");
 
         FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
-        ValidationEngine engine = engineWithHeaders(source);
-        FastaToGff3Converter converter =
-                new FastaToGff3Converter(engine, source, FastaToGff3Converter.DEFAULT_MIN_GAP_LENGTH);
+        ValidationEngine engine = engineWithHeaders(source, AnalysisContextProvider.DEFAULT_MIN_GAP_SIZE);
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source);
 
         String actual = runConversion(converter);
         source.close();
@@ -136,8 +161,8 @@ class FastaToGff3ConverterTest {
                 ">TEST01 | {\"description\":\"No dot in id\", \"molecule_type\":\"GENOMIC DNA\", \"topology\":\"linear\"}\nATGCATGCNNNNNNNNNNATGCATGC\n");
 
         FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
-        ValidationEngine engine = engineWithHeaders(source);
-        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 1);
+        ValidationEngine engine = engineWithHeaders(source, 1);
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source);
 
         String actual = runConversion(converter);
         // Submission ID is extracted with no "." present.
@@ -151,11 +176,11 @@ class FastaToGff3ConverterTest {
 
     @Test
     void rejectsLinkageEvidenceWithoutGapType() {
-        // linkage_evidence is meaningless without a gap_type; reject the inconsistent combination.
-        ValidationEngine engine = new ValidationEngineBuilder().build();
-        FileSequenceSource source = new FileSequenceSource(SINGLE_SEQUENCE, SequenceFormat.fasta, null);
+        // linkage_evidence is meaningless without a gap_type; the gap options now live on
+        // AnalysisContext, which is where the inconsistent combination is rejected.
         assertThrows(
-                IllegalArgumentException.class, () -> new FastaToGff3Converter(engine, source, 1, null, "unspecified"));
+                IllegalArgumentException.class,
+                () -> new AnalysisContextProvider(AnalysisType.UNKNOWN, 1, null, "unspecified"));
     }
 
     @Test
@@ -169,8 +194,8 @@ class FastaToGff3ConverterTest {
                         + ">SEQ2.1 | {\"description\":\"second\", \"molecule_type\":\"GENOMIC DNA\", \"topology\":\"linear\"}\nGGGGNNNNNNNNNNGGGG\n");
 
         FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
-        ValidationEngine engine = engineWithHeaders(source);
-        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 1);
+        ValidationEngine engine = engineWithHeaders(source, 1);
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source);
 
         String actual = runConversion(converter);
         source.close();
@@ -199,8 +224,9 @@ class FastaToGff3ConverterTest {
         ValidationEngine engine = new ValidationEngineBuilder()
                 .withProvider(sequenceProvider)
                 .withProvider(headerProvider)
+                .withProvider(new AnalysisContextProvider(AnalysisType.UNKNOWN, 1))
                 .build();
-        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source, 1);
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source);
 
         runConversion(converter);
 
@@ -212,7 +238,7 @@ class FastaToGff3ConverterTest {
         // SequenceLookup resolves a slice for the submission ID (sequence info reachable).
         SequenceLookup lookup = context.get(SequenceLookup.class);
         assertNotNull(lookup);
-        assertEquals("ATGC", lookup.getSequenceSlice("TEST01.1", 1, 4, SequenceRangeOption.WHOLE_SEQUENCE));
+        assertEquals("ATGC", lookup.getSequenceSlice("TEST01.1", 1, 4));
 
         // FASTA header reachable from the context for the same submission ID.
         FastaHeaderProvider providerFromContext = context.get(FastaHeaderProvider.class);
