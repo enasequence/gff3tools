@@ -56,7 +56,8 @@ public class MoleculeTypeValidation implements Validation {
             type = ANNOTATION,
             priority = ValidationPriority.CRITICAL)
     public void validateRequiredFeature(GFF3Annotation annotation, int line) throws ValidationException {
-        Optional<ControlledVocabularyUtils.MolType> moleculeType = ValidationUtils.getMoleculeType(annotation.getAccession(), context);
+        Optional<ControlledVocabularyUtils.MolType> moleculeType =
+                ValidationUtils.getMoleculeType(annotation.getAccession(), context);
         if (moleculeType.isEmpty()) {
             return;
         }
@@ -89,7 +90,8 @@ public class MoleculeTypeValidation implements Validation {
             type = ANNOTATION,
             priority = ValidationPriority.CRITICAL)
     public void validateForbiddenFeature(GFF3Annotation annotation, int line) throws ValidationException {
-        Optional<ControlledVocabularyUtils.MolType> moleculeType = ValidationUtils.getMoleculeType(annotation.getAccession(), context);
+        Optional<ControlledVocabularyUtils.MolType> moleculeType =
+                ValidationUtils.getMoleculeType(annotation.getAccession(), context);
         if (moleculeType.isEmpty()) {
             return;
         }
