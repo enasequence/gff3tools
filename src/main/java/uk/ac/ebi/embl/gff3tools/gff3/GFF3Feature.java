@@ -47,7 +47,19 @@ public class GFF3Feature {
     private Map<String, List<String>> attributes = new HashMap<>();
 
     // Mutable members
+
+    /**
+     * The child features of this one, linked only by {@code GFF3AnnotationFactory} on the flat file
+     * to GFF3 path. Reading a GFF3 file leaves this empty, so code on that path cannot walk down the
+     * feature graph and must group features by their {@code Parent} attribute instead.
+     */
     List<GFF3Feature> children = new ArrayList<>();
+
+    /**
+     * The parent feature of this one, linked only by {@code GFF3AnnotationFactory} on the flat file
+     * to GFF3 path. Reading a GFF3 file leaves this null, so code on that path must use
+     * {@code getParentId()} rather than walking up the feature graph.
+     */
     GFF3Feature parent;
 
     // Methods

@@ -227,7 +227,7 @@ public class GFF3FileReader implements AutoCloseable {
         Optional<String> id = Optional.ofNullable(attributesMap.get("ID"))
                 .filter((l) -> !l.isEmpty())
                 .map((l) -> l.get(0));
-        Optional<String> parentId = Optional.ofNullable(attributesMap.get("Parent"))
+        Optional<String> parentId = Optional.ofNullable(attributesMap.get(GFF3Attributes.ATTRIBUTE_PARENT))
                 .filter((l) -> !l.isEmpty())
                 .map((l) -> l.get(0));
 

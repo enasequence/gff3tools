@@ -21,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 
 public class FeatureAttributeRequiredValidationTest {
@@ -45,7 +46,7 @@ public class FeatureAttributeRequiredValidationTest {
         GFF3Feature feature = TestUtils.createGFF3Feature(featureName, ".", new HashMap<>() {
             {
                 put("ID", List.of("O1"));
-                put("Parent", List.of("mom"));
+                put(GFF3Attributes.ATTRIBUTE_PARENT, List.of("mom"));
                 put("attributeKey", List.of("attributeValue"));
             }
         });
@@ -72,7 +73,7 @@ public class FeatureAttributeRequiredValidationTest {
         GFF3Feature feature = TestUtils.createGFF3Feature(featureName, new HashMap<>() {
             {
                 put("ID", List.of("O1"));
-                put("Parent", List.of("mom"));
+                put(GFF3Attributes.ATTRIBUTE_PARENT, List.of("mom"));
             }
         });
 
