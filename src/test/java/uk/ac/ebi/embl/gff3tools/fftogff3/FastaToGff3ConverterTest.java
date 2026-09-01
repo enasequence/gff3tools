@@ -180,7 +180,7 @@ class FastaToGff3ConverterTest {
         // AnalysisContext, which is where the inconsistent combination is rejected.
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new AnalysisContextProvider(AnalysisType.UNKNOWN, 1, null, "unspecified", null));
+                () -> new AnalysisContextProvider(AnalysisType.UNKNOWN, 1, null, "unspecified"));
     }
 
     @Test
