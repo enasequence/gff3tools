@@ -56,7 +56,7 @@ public class MoleculeTypeValidation implements Validation {
             type = ANNOTATION,
             priority = ValidationPriority.CRITICAL)
     public void validateRequiredFeature(GFF3Annotation annotation, int line) throws ValidationException {
-        Optional<ControlledVocabularyUtils.MolType> moleculeType = getMoleculeType(annotation.getAccession());
+        Optional<ControlledVocabularyUtils.MolType> moleculeType = ValidationUtils.getMoleculeType(annotation.getAccession(), context);
         if (moleculeType.isEmpty()) {
             return;
         }
@@ -89,7 +89,7 @@ public class MoleculeTypeValidation implements Validation {
             type = ANNOTATION,
             priority = ValidationPriority.CRITICAL)
     public void validateForbiddenFeature(GFF3Annotation annotation, int line) throws ValidationException {
-        Optional<ControlledVocabularyUtils.MolType> moleculeType = getMoleculeType(annotation.getAccession());
+        Optional<ControlledVocabularyUtils.MolType> moleculeType = ValidationUtils.getMoleculeType(annotation.getAccession(), context);
         if (moleculeType.isEmpty()) {
             return;
         }
@@ -150,14 +150,9 @@ public class MoleculeTypeValidation implements Validation {
     }
 
     private boolean isMRNA(String accession) {
-        Optional<ControlledVocabularyUtils.MolType> molTypeOpt = getMoleculeType(accession);
+        Optional<ControlledVocabularyUtils.MolType> molTypeOpt = ValidationUtils.getMoleculeType(accession, context);
         return molTypeOpt
                 .filter(molType -> molType == ControlledVocabularyUtils.MolType.MRNA)
                 .isPresent();
-    }
-
-    private Optional<ControlledVocabularyUtils.MolType> getMoleculeType(String accession) {
-        log.debug("Validating molecule type from FASTA header for accession {}", accession);
-        return ValidationUtils.getMoleculeType(accession, context);
     }
 }
