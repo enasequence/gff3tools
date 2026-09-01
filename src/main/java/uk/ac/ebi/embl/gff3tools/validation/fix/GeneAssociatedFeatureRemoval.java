@@ -14,6 +14,7 @@ import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION
 
 import java.util.*;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -83,7 +84,7 @@ public class GeneAssociatedFeatureRemoval implements Fix {
             for (GFF3Feature feature : gff3Annotation.getFeatures()) {
                 feature.getParentId().filter(removedGeneIds::contains).ifPresent(ignored -> {
                     feature.setParentId(Optional.empty());
-                    feature.removeAttributeList("Parent");
+                    feature.removeAttributeList(GFF3Attributes.ATTRIBUTE_PARENT);
                 });
             }
         }

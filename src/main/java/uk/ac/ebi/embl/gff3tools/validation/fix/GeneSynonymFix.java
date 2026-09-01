@@ -57,6 +57,13 @@ public class GeneSynonymFix implements Fix {
 
         List<GFF3Feature> features = annotation.getFeatures();
 
+        // Ancestors are resolved from the Parent reference, the only link a GFF3 file carries.
+        // Segments of a spliced feature share an ID, so the first of them stands in for the group.
+        Map<String, GFF3Feature> byIdAttribute = new HashMap<>();
+        for (GFF3Feature f : features) {
+            f.getId().ifPresent(id -> byIdAttribute.putIfAbsent(id, f));
+        }
+
         Map<String, GFF3Feature> featuresById = new LinkedHashMap<>();
         for (GFF3Feature f : features) {
             featuresById.put(getFeatureKey(f), f);
@@ -67,18 +74,18 @@ public class GeneSynonymFix implements Fix {
             if (f.hasAttribute(GENE_SYNONYM)
                     && !GENE_FEATURES.contains(currentId)
                     && !GENE_FEATURES.contains(f.getName())) {
-                var parent = findGeneAncestor(f);
+                var parent = findGeneAncestor(f, byIdAttribute);
 
                 if (parent == null) {
                     if (!GENELIKE_FEATURES.contains(currentId) && !GENELIKE_FEATURES.contains(f.getName())) {
-                        parent = findLikeGeneAncestor(f);
+                        parent = findLikeGeneAncestor(f, byIdAttribute);
                     } else {
                         // no gene parent feature but is an RNA or CDS type feature -> leave it alone
                         continue;
                     }
                 }
 
-                if (parent == null) parent = findOldestAncestorWithSameLocation(f);
+                if (parent == null) parent = findOldestAncestorWithSameLocation(f, byIdAttribute);
 
                 if (!getFeatureKey(f).equals(getFeatureKey(parent))) {
                     if (!parent.hasAttribute(GENE_SYNONYM)) {
@@ -100,10 +107,14 @@ public class GeneSynonymFix implements Fix {
         return id.map(s -> s + "_" + name).orElse(name);
     }
 
-    public GFF3Feature findGeneAncestor(GFF3Feature feature) {
+    public GFF3Feature findGeneAncestor(GFF3Feature feature, Map<String, GFF3Feature> byIdAttribute) {
         GFF3Feature current = feature;
-        while (current.getParent() != null) {
-            current = current.getParent();
+        Set<GFF3Feature> seen = new HashSet<>();
+        seen.add(current);
+
+        GFF3Feature parent;
+        while ((parent = parentOf(current, byIdAttribute)) != null && seen.add(parent)) {
+            current = parent;
 
             var currentId = current.getId().isPresent() ? current.getId().get() : "";
             if (GENE_FEATURES.contains(current.getName()) || GENE_FEATURES.contains(currentId)) break;
@@ -113,10 +124,14 @@ public class GeneSynonymFix implements Fix {
         return null;
     }
 
-    public GFF3Feature findLikeGeneAncestor(GFF3Feature feature) {
+    public GFF3Feature findLikeGeneAncestor(GFF3Feature feature, Map<String, GFF3Feature> byIdAttribute) {
         GFF3Feature current = feature;
-        while (current.getParent() != null) {
-            current = current.getParent();
+        Set<GFF3Feature> seen = new HashSet<>();
+        seen.add(current);
+
+        GFF3Feature parent;
+        while ((parent = parentOf(current, byIdAttribute)) != null && seen.add(parent)) {
+            current = parent;
 
             var currentId = current.getId().isPresent() ? current.getId().get() : "";
             if (GENELIKE_FEATURES.contains(current.getName()) || GENELIKE_FEATURES.contains(currentId)) break;
@@ -126,13 +141,26 @@ public class GeneSynonymFix implements Fix {
         return null;
     }
 
-    public GFF3Feature findOldestAncestorWithSameLocation(GFF3Feature feature) {
+    public GFF3Feature findOldestAncestorWithSameLocation(GFF3Feature feature, Map<String, GFF3Feature> byIdAttribute) {
         GFF3Feature current = feature;
-        while (current.getParent() != null
-                && current.getParent().getStart() == current.getStart()
-                && current.getParent().getEnd() == current.getEnd()) {
-            current = current.getParent();
+        Set<GFF3Feature> seen = new HashSet<>();
+        seen.add(current);
+
+        GFF3Feature parent;
+        while ((parent = parentOf(current, byIdAttribute)) != null
+                && parent.getStart() == current.getStart()
+                && parent.getEnd() == current.getEnd()
+                && seen.add(parent)) {
+            current = parent;
         }
         return current;
+    }
+
+    /**
+     * The parent of a feature, resolved from its {@code Parent} reference. The linked parent object
+     * is not consulted because only the flat file to GFF3 path ever sets it.
+     */
+    private GFF3Feature parentOf(GFF3Feature feature, Map<String, GFF3Feature> byIdAttribute) {
+        return feature.getParentId().map(byIdAttribute::get).orElse(null);
     }
 }

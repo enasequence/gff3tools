@@ -101,20 +101,27 @@ public class LocusTagExistsValidation implements Validation {
                 ? context.get(AnalysisContext.class).getAnalysisType()
                 : AnalysisType.UNKNOWN;
         switch (analysisType) {
-            case TRANSCRIPTOME_ASSEMBLY, SEQUENCE_FLATFILE ->  {
-                if (hasNonAssemblyMoleculeType(accession)) {return false;}
+            case TRANSCRIPTOME_ASSEMBLY, SEQUENCE_FLATFILE -> {
+                if (hasNonAssemblyMoleculeType(accession)) {
+                    return false;
+                }
                 return false;
             }
-            case SEQUENCE_ASSEMBLY ->   {
-                if (hasNonAssemblyMoleculeType(accession)) {return false;}
+            case SEQUENCE_ASSEMBLY -> {
+                if (hasNonAssemblyMoleculeType(accession)) {
+                    return false;
+                }
                 return true;
             }
-            case UNKNOWN ->   {
+            case UNKNOWN -> {
                 return ValidationUtils.getMasterMetadata(accession, context)
-                    .map(MasterMetadata::getEffectiveDataClass)
-                    .map(dataClass -> GENOME_DATA_CLASSES.contains(dataClass.toUpperCase(Locale.ROOT)))
-                    .orElse(false);}
-            default ->  {throw new IllegalStateException("Unexpected value: " + analysisType);}
+                        .map(MasterMetadata::getEffectiveDataClass)
+                        .map(dataClass -> GENOME_DATA_CLASSES.contains(dataClass.toUpperCase(Locale.ROOT)))
+                        .orElse(false);
+            }
+            default -> {
+                throw new IllegalStateException("Unexpected value: " + analysisType);
+            }
         }
     }
 
