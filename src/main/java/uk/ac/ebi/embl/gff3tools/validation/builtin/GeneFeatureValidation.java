@@ -43,12 +43,6 @@ public class GeneFeatureValidation implements Validation {
     public static final String GENE_LOCUS_TAG_ASSOCIATION_RULE = "GENE_LOCUS_TAG_ASSOCIATION";
     public static final String LOCUS_TAG_ASSOCIATION_RULE = "LOCUS_TAG_ASSOCIATION";
 
-    private final Map<String, Map<String, String>> annotationGeneToLocusTag = new HashMap<>();
-    private final Map<String, Map<String, String>> annotationGeneToPseudoGene = new HashMap<>();
-    private final Map<String, Map<String, GFF3Feature>> annotationLocusTagToGeneFeature = new HashMap<>();
-    private final Map<String, Map<String, String>> annotationLocusTagToGene = new HashMap<>();
-    private final Map<String, Map<String, List<String>>> annotationLocusTagToSynonyms = new HashMap<>();
-
     @ValidationMethod(
             rule = GENE_ASSOCIATION_RULE,
             description =
