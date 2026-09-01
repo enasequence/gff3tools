@@ -48,7 +48,7 @@ public class GFF3Annotation implements IGFF3Feature {
                 .sorted(
                         Comparator.comparingInt((String key) -> {
                                     if (key.equals("ID")) return -2; // Highest priority
-                                    if (key.equals("Parent")) return -1; // Next
+                                    if (key.equals(GFF3Attributes.ATTRIBUTE_PARENT)) return -1; // Next
                                     return 0; // Others
                                 })
                                 .thenComparing(Comparator.naturalOrder()) // Sort others by key
