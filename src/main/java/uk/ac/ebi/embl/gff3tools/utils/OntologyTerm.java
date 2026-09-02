@@ -43,7 +43,6 @@ public enum OntologyTerm {
     LNCRNA("SO:0001877"),
     MICROSATELLITE("SO:0000289"),
     REPEAT_REGION("SO:0000657"),
-    // Together with FEATURE (sequence_feature), the SO terms that map to the INSDC misc_feature.
     BIOLOGICAL_REGION("SO:0001411"),
     SEQUENCE_COMPARISON("SO:0002072");
 

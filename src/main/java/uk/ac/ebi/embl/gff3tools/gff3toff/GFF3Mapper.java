@@ -442,7 +442,7 @@ public class GFF3Mapper {
         // When converting one of those per-contig entries we must materialise contig-
         // level fields (dataClass=WGS, per-contig length, RP, SET cross-references)
         // instead of inheriting the SET-level master fields verbatim.
-        boolean isWgsContig = m.isWgsContig();
+        boolean isWgsContig = "WGS".equalsIgnoreCase(m.getContigDataclass());
         long contigLength = isWgsContig ? sequenceRegion.end() - sequenceRegion.start() + 1 : 0L;
 
         // DE line: description (title as fallback)
@@ -483,7 +483,7 @@ public class GFF3Mapper {
         // Data class: ID line data class field. For WGS contig entries the master's
         // dataClass is "SET" (it describes the containing set), so prefer the contig
         // dataClass when present.
-        String effectiveDataClass = m.getEffectiveDataClass();
+        String effectiveDataClass = isWgsContig ? m.getContigDataclass() : m.getDataClass();
         if (effectiveDataClass != null) {
             entry.setDataClass(effectiveDataClass);
         }
