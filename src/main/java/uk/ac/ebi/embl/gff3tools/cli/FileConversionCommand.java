@@ -156,7 +156,7 @@ public class FileConversionCommand extends AbstractCommand {
             // FASTA -> GFF3: elsewhere the options are inert and unvalidated, so they must not reach
             // AnalysisContext's constructor.
             AnalysisContextProvider analysisContextProvider = fastaToGff3
-                    ? new AnalysisContextProvider(AnalysisType.UNKNOWN, minGapLength, gapType, linkageEvidence, null)
+                    ? new AnalysisContextProvider(AnalysisType.UNKNOWN, minGapLength, gapType, linkageEvidence)
                     : null;
 
             final FileSequenceSource inputFastaSourceFinal = inputFastaSource;
