@@ -42,17 +42,7 @@ public class LocusTagExistsValidation implements Validation {
     private static final String LOCUS_TAG_EXISTS_MESSAGE =
             "/locus_tag must exist for annotated contigs/scaffolds/chromosomes.";
 
-    /**
-     * The molecule types a genome sequence is submitted under, per the INSDC Assembly Minimum
-     * Specification v1.0: genomic DNA for most assemblies, genomic RNA for RNA-virus genomes, viral
-     * cRNA for certain viral submissions, and other DNA / other RNA. A transcript-level molecule
-     * type - mRNA, rRNA, tRNA and the rest - means the entry is not a genome, whatever else the
-     * caller said.
-     *
-     * <p>Wider than the three values ENA's genome manifest accepts for {@code MOLECULETYPE},
-     * deliberately: this set decides what is <em>ruled out</em>, so a molecule type INSDC allows on
-     * an assembly must not veto the rule.
-     */
+    /** Molecule types valid on a genome sequence. Any other declared value rules the entry out. */
     private static final Set<MolType> ASSEMBLY_MOLECULE_TYPES =
             Set.of(MolType.GENOMIC_DNA, MolType.GENOMIC_RNA, MolType.VIRAL_CRNA, MolType.OTHER_DNA, MolType.OTHER_RNA);
 
@@ -82,30 +72,9 @@ public class LocusTagExistsValidation implements Validation {
     }
 
     /**
-     * A genome submission is identified from the analysis type the caller supplied, never from the
-     * GFF3 file itself, which carries no such marker. {@link AnalysisType#SEQUENCE_ASSEMBLY} is the
-     * analysis type of an ENA assembly object, and that is exactly the scope INSDC gives the
-     * requirement: the Annotation Minimum Specification v1.0 applies to "genome annotation on
-     * sequences in scope for an assembly object and assigned a GCA accession" (section a.i), and
-     * section b.ix.1 requires locus tags within it.
-     *
-     * <p>{@link AnalysisContext} is auto-registered by the classpath scan but holds
-     * {@link AnalysisType#UNKNOWN} until a caller supplies a real one, so a plain
-     * {@code gff3tools validation <file>} resolves to no signal and the rule does not apply. That
-     * is the intended outcome rather than a gap: firing there would reject single-sequence
-     * submissions that never needed a locus_tag, and INSDC excludes those by object type — an
-     * assembly is "not single genes or regions" (Assembly Minimum Specification v1.0).
-     *
-     * <p>The entry data class is deliberately not consulted. ENA's {@code LocustagExistsCheck}
-     * gates on {@code dataClass ∈ {WGS, STD}}, but only downstream of
-     * {@code @GroupIncludeScope(ASSEMBLY)} and over a data class it derives from the assembly level
-     * itself. Read off a master entry the same two tokens carry the archive's much broader meaning:
-     * STD is the data class of COI barcodes and partial rRNA records as well as of finished
-     * chromosomes, so it cannot stand in for the scope test.
-     *
-     * <p>The molecule type is a veto rather than a signal of its own: it cannot tell a genome from a
-     * single annotated gene, both of which are genomic DNA, but a declared transcript-level molecule
-     * type rules a genome out. It is only consulted when a FASTA header supplies one.
+     * Only the caller can tell us this is an assembly submission - nothing in a GFF3 marks one.
+     * {@link AnalysisContext} is classpath-scanned and defaults to {@link AnalysisType#UNKNOWN}, so
+     * the rule stays inert unless a caller registers a real analysis type.
      */
     private boolean isGenomeSubmission(String accession) {
         AnalysisType analysisType = context.contains(AnalysisContext.class)
@@ -122,13 +91,8 @@ public class LocusTagExistsValidation implements Validation {
     }
 
     /**
-     * Whether the entry carries a feature that exempts it from the requirement. ENA drops the whole
-     * entry from the check when a GFF3 equivalent of repeat_region or misc_feature is present.
-     *
-     * <p>Equates the {@code excludeFeatureCheckList} early return in {@code sequencetools}'
-     * {@code LocustagExistsCheck}, which exempts an entry holding a {@code repeat_region} or
-     * {@code misc_feature}. INSDC gives the same carve-out for repeat_region: "Repeat_regions do not
-     * have locus_tag qualifiers" (Proper Use of /locus_tag in Genome Submissions).
+     * One repeat_region or misc_feature exempts the whole entry, not just that feature - matching
+     * the {@code excludeFeatureCheckList} early return in {@code sequencetools}.
      */
     private boolean hasLocusTagExemptFeature(GFF3Annotation gff3Annotation) {
         OntologyClient ontologyClient = context.get(OntologyClient.class);
@@ -141,9 +105,8 @@ public class LocusTagExistsValidation implements Validation {
                 continue;
             }
             String soId = soIdOpt.get();
-            if ( // features that replace repeat_region, descendants included
-            ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.REPEAT_REGION.ID)
-                    // features that replace misc_feature in gff3, which is another
+            // repeat_region and its descendants, plus the SO terms that stand in for misc_feature
+            if (ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.REPEAT_REGION.ID)
                     || OntologyTerm.FEATURE.ID.equals(soId)
                     || OntologyTerm.BIOLOGICAL_REGION.ID.equals(soId)
                     || OntologyTerm.SEQUENCE_COMPARISON.ID.equals(soId)) {
@@ -154,15 +117,9 @@ public class LocusTagExistsValidation implements Validation {
     }
 
     /**
-     * Viruses are exempt. INSDC scopes the requirement to "eukaryote and prokaryote genome
-     * submissions" (Annotation Minimum Specification v1.0, b.ix.1), and a virus is neither; ENA
-     * implements the same carve-out by asking its taxonomy client whether the organism is a child
-     * of "Viruses". The lineage on the master entry answers that question without a lookup, and
-     * {@link TaxonProvider} covers callers that supply taxonomy but no master entry.
-     *
-     * <p>An organism that cannot be resolved is not treated as a virus: ENA's check falls through
-     * to the locus_tag test when it has no source feature either, and guessing the other way would
-     * silently exempt every entry a caller supplies no taxonomy for.
+     * Viruses are out of scope. Prefers the master entry's lineage and falls back to
+     * {@link TaxonProvider} when one is registered; core ships no implementation. An unresolved
+     * organism is not treated as a virus, so missing taxonomy never silently exempts an entry.
      */
     private boolean isVirus(String accession) {
         Optional<String> lineage =
@@ -179,10 +136,7 @@ public class LocusTagExistsValidation implements Validation {
         return VIRUS_LINEAGE_DOMAIN.equalsIgnoreCase(lineage.split(";", 2)[0].trim());
     }
 
-    /**
-     * Mirrors {@code SequenceEntryUtils.hasAnnotation}: an unannotated contig has nothing to tag.
-     * Gaps do not count, nor does the whole-sequence {@code region} line.
-     */
+    /** An unannotated entry has nothing to tag: gaps and the whole-sequence region line do not count. */
     private boolean hasNonGapFeatures(GFF3Annotation gff3Annotation) {
         OntologyClient ontologyClient = context.get(OntologyClient.class);
         return gff3Annotation.getFeatures().stream().filter(Objects::nonNull).anyMatch(feature -> ontologyClient
