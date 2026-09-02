@@ -10,7 +10,6 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -43,17 +42,19 @@ public class LocusTagExistsValidation implements Validation {
     private static final String LOCUS_TAG_EXISTS_MESSAGE =
             "/locus_tag must exist for annotated contigs/scaffolds/chromosomes.";
 
-    /** Entry data classes that identify a genome submission.*/
-    private static final Set<String> GENOME_DATA_CLASSES = Set.of("WGS", "STD");
-
     /**
-     * The molecule types an assembly is submitted under: genomic DNA for most of them, genomic RNA
-     * for RNA-virus genomes, viral cRNA for certain viral submissions. A transcript-level molecule
-     * type - mRNA, rRNA, tRNA and the rest - means the entry is not a genome, whatever data class it
-     * carries.
+     * The molecule types a genome sequence is submitted under, per the INSDC Assembly Minimum
+     * Specification v1.0: genomic DNA for most assemblies, genomic RNA for RNA-virus genomes, viral
+     * cRNA for certain viral submissions, and other DNA / other RNA. A transcript-level molecule
+     * type - mRNA, rRNA, tRNA and the rest - means the entry is not a genome, whatever else the
+     * caller said.
+     *
+     * <p>Wider than the three values ENA's genome manifest accepts for {@code MOLECULETYPE},
+     * deliberately: this set decides what is <em>ruled out</em>, so a molecule type INSDC allows on
+     * an assembly must not veto the rule.
      */
     private static final Set<MolType> ASSEMBLY_MOLECULE_TYPES =
-            Set.of(MolType.GENOMIC_DNA, MolType.GENOMIC_RNA, MolType.VIRAL_CRNA);
+            Set.of(MolType.GENOMIC_DNA, MolType.GENOMIC_RNA, MolType.VIRAL_CRNA, MolType.OTHER_DNA, MolType.OTHER_RNA);
 
     /** The domain that opens a viral lineage, e.g. "Viruses; Riboviria; ...". */
     private static final String VIRUS_LINEAGE_DOMAIN = "Viruses";
@@ -77,20 +78,30 @@ public class LocusTagExistsValidation implements Validation {
             return;
         }
 
-        throw new ValidationException(line, LOCUS_TAG_EXISTS_MESSAGE);
+        throw new ValidationException(LOCUS_TAG_EXISTS_RULE, line, LOCUS_TAG_EXISTS_MESSAGE);
     }
 
     /**
-     * A genome submission is identified from caller-supplied context, never from the GFF3 file
-     * itself, which carries no such marker. Either signal is enough: the analysis type when the
-     * caller registered an {@link AnalysisContext}, or the entry data class when a master entry is
-     * available. A caller may supply one without the other.
+     * A genome submission is identified from the analysis type the caller supplied, never from the
+     * GFF3 file itself, which carries no such marker. {@link AnalysisType#SEQUENCE_ASSEMBLY} is the
+     * analysis type of an ENA assembly object, and that is exactly the scope INSDC gives the
+     * requirement: the Annotation Minimum Specification v1.0 applies to "genome annotation on
+     * sequences in scope for an assembly object and assigned a GCA accession" (section a.i), and
+     * section b.ix.1 requires locus tags within it.
      *
-     * <p>Both providers are auto-registered by the classpath scan, but with nothing in them unless
-     * a caller supplies it: the analysis type defaults to {@link AnalysisType#UNKNOWN} and the
-     * metadata provider has no sources until {@code --master-entry} is given. So a plain
-     * {@code gff3tools validation <file>} resolves to neither signal and the rule does not apply —
-     * firing there would reject single-sequence submissions that never needed a locus_tag.
+     * <p>{@link AnalysisContext} is auto-registered by the classpath scan but holds
+     * {@link AnalysisType#UNKNOWN} until a caller supplies a real one, so a plain
+     * {@code gff3tools validation <file>} resolves to no signal and the rule does not apply. That
+     * is the intended outcome rather than a gap: firing there would reject single-sequence
+     * submissions that never needed a locus_tag, and INSDC excludes those by object type — an
+     * assembly is "not single genes or regions" (Assembly Minimum Specification v1.0).
+     *
+     * <p>The entry data class is deliberately not consulted. ENA's {@code LocustagExistsCheck}
+     * gates on {@code dataClass ∈ {WGS, STD}}, but only downstream of
+     * {@code @GroupIncludeScope(ASSEMBLY)} and over a data class it derives from the assembly level
+     * itself. Read off a master entry the same two tokens carry the archive's much broader meaning:
+     * STD is the data class of COI barcodes and partial rRNA records as well as of finished
+     * chromosomes, so it cannot stand in for the scope test.
      *
      * <p>The molecule type is a veto rather than a signal of its own: it cannot tell a genome from a
      * single annotated gene, both of which are genomic DNA, but a declared transcript-level molecule
@@ -100,29 +111,7 @@ public class LocusTagExistsValidation implements Validation {
         AnalysisType analysisType = context.contains(AnalysisContext.class)
                 ? context.get(AnalysisContext.class).getAnalysisType()
                 : AnalysisType.UNKNOWN;
-        switch (analysisType) {
-            case TRANSCRIPTOME_ASSEMBLY, SEQUENCE_FLATFILE -> {
-                if (hasNonAssemblyMoleculeType(accession)) {
-                    return false;
-                }
-                return false;
-            }
-            case SEQUENCE_ASSEMBLY -> {
-                if (hasNonAssemblyMoleculeType(accession)) {
-                    return false;
-                }
-                return true;
-            }
-            case UNKNOWN -> {
-                return ValidationUtils.getMasterMetadata(accession, context)
-                        .map(MasterMetadata::getEffectiveDataClass)
-                        .map(dataClass -> GENOME_DATA_CLASSES.contains(dataClass.toUpperCase(Locale.ROOT)))
-                        .orElse(false);
-            }
-            default -> {
-                throw new IllegalStateException("Unexpected value: " + analysisType);
-            }
-        }
+        return analysisType == AnalysisType.SEQUENCE_ASSEMBLY && !hasNonAssemblyMoleculeType(accession);
     }
 
     /** Whether a molecule type is declared and is one an assembly is never submitted under. */
@@ -136,7 +125,10 @@ public class LocusTagExistsValidation implements Validation {
      * Whether the entry carries a feature that exempts it from the requirement. ENA drops the whole
      * entry from the check when a GFF3 equivalent of repeat_region or misc_feature is present.
      *
-     * Equates behaviour in {@code sequencetools} for {}
+     * <p>Equates the {@code excludeFeatureCheckList} early return in {@code sequencetools}'
+     * {@code LocustagExistsCheck}, which exempts an entry holding a {@code repeat_region} or
+     * {@code misc_feature}. INSDC gives the same carve-out for repeat_region: "Repeat_regions do not
+     * have locus_tag qualifiers" (Proper Use of /locus_tag in Genome Submissions).
      */
     private boolean hasLocusTagExemptFeature(GFF3Annotation gff3Annotation) {
         OntologyClient ontologyClient = context.get(OntologyClient.class);
@@ -162,8 +154,10 @@ public class LocusTagExistsValidation implements Validation {
     }
 
     /**
-     * Viruses are exempt. ENA asks its taxonomy client whether the organism is a child of
-     * "Viruses"; the lineage on the master entry answers the same question without a lookup, and
+     * Viruses are exempt. INSDC scopes the requirement to "eukaryote and prokaryote genome
+     * submissions" (Annotation Minimum Specification v1.0, b.ix.1), and a virus is neither; ENA
+     * implements the same carve-out by asking its taxonomy client whether the organism is a child
+     * of "Viruses". The lineage on the master entry answers that question without a lookup, and
      * {@link TaxonProvider} covers callers that supply taxonomy but no master entry.
      *
      * <p>An organism that cannot be resolved is not treated as a virus: ENA's check falls through
