@@ -17,7 +17,6 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils.MolType;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -116,35 +115,9 @@ public class LocusTagExistsValidation implements Validation {
         return false;
     }
 
-    /**
-     * Viruses are out of scope. The organism is resolved through {@link TaxonProvider} first - the
-     * downstream implementation resolves a taxId or scientific name against the ENA taxonomy API and
-     * caches per organism, so a whole assembly costs one lookup - and only falls back to the master
-     * entry's lineage, which most submissions do not carry. Core ships no {@link TaxonProvider}
-     * implementation, so both may be absent.
-     *
-     * <p>A resolved taxon is asked with {@link Taxon#isChildOf}, which matches any element of the
-     * lineage - the same call ENA's own check reaches through
-     * {@code TaxonomyClient.isChildOf(name, "Viruses")}, and it does not assume the taxonomy API
-     * returns a domain-first lineage the way the master entry's EMBL OC line does. Going through the
-     * already-resolved taxon also keeps the provider's cache and avoids the client's unchecked
-     * TaxonomyException.
-     *
-     * <p>Either source saying virus is enough: a taxon that resolves without a lineage answers
-     * nothing, and should not cost an exemption the master entry can still justify. An organism
-     * neither source can place is not treated as a virus, so missing taxonomy never silently exempts
-     * an entry.
-     */
     private boolean isVirus(String accession) {
-        if (resolveTaxon(accession)
+        return resolveTaxon(accession)
                 .filter(taxon -> taxon.isChildOf(VIRUS_LINEAGE_DOMAIN))
-                .isPresent()) {
-            return true;
-        }
-
-        return ValidationUtils.getMasterMetadata(accession, context)
-                .map(MasterMetadata::getLineage)
-                .filter(LocusTagExistsValidation::isVirusLineage)
                 .isPresent();
     }
 
@@ -152,10 +125,6 @@ public class LocusTagExistsValidation implements Validation {
         return context.contains(TaxonProvider.class)
                 ? context.get(TaxonProvider.class).resolve(accession)
                 : Optional.empty();
-    }
-
-    private static boolean isVirusLineage(String lineage) {
-        return VIRUS_LINEAGE_DOMAIN.equalsIgnoreCase(lineage.split(";", 2)[0].trim());
     }
 
     /** An unannotated entry has nothing to tag: gaps and the whole-sequence region line do not count. */

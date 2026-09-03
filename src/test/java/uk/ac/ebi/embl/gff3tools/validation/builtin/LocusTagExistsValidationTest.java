@@ -204,17 +204,17 @@ class LocusTagExistsValidationTest {
 
     @Test
     void testVirusSucceeds() {
-        Assertions.assertDoesNotThrow(validation(ASSEMBLY, VIRUS_LINEAGE, gene()));
+        Assertions.assertDoesNotThrow(validation(ASSEMBLY, null, null, null, taxon(VIRUS_LINEAGE), gene()));
     }
 
     @Test
     void testEukaryoteFails() {
-        assertViolation(validation(ASSEMBLY, EUKARYOTE_LINEAGE, gene()));
+        assertViolation(validation(ASSEMBLY, null, null, null, taxon(EUKARYOTE_LINEAGE), gene()));
     }
 
     @Test
     void testProkaryoteFails() {
-        assertViolation(validation(ASSEMBLY, PROKARYOTE_LINEAGE, gene()));
+        assertViolation(validation(ASSEMBLY, null, null, null, taxon(PROKARYOTE_LINEAGE), gene()));
     }
 
     @Test
@@ -276,33 +276,9 @@ class LocusTagExistsValidationTest {
                 validation(ASSEMBLY, null, null, null, taxon("cellular organisms; Viruses; Riboviria."), gene()));
     }
 
+    /** A taxon that resolves without a lineage places the organism nowhere, so the rule still fires. */
     @Test
-    void testTaxonProviderNonVirusFails() {
-        assertViolation(validation(ASSEMBLY, null, null, null, taxon(EUKARYOTE_LINEAGE), gene()));
-    }
-
-    /** The taxon is consulted first, so it can exempt an entry whose master entry disagrees. */
-    @Test
-    void testTaxonProviderVirusSucceedsDespiteNonVirusMasterLineage() {
-        Assertions.assertDoesNotThrow(
-                validation(ASSEMBLY, EUKARYOTE_LINEAGE, null, null, taxon(VIRUS_LINEAGE), gene()));
-    }
-
-    /** A taxon that places the organism elsewhere does not veto an exemption the master entry justifies. */
-    @Test
-    void testMasterLineageVirusSucceedsDespiteNonVirusTaxon() {
-        Assertions.assertDoesNotThrow(
-                validation(ASSEMBLY, VIRUS_LINEAGE, null, null, taxon(EUKARYOTE_LINEAGE), gene()));
-    }
-
-    /** A resolved taxon carrying no lineage answers nothing, so the master entry still decides. */
-    @Test
-    void testMasterLineageVirusSucceedsWhenTaxonHasNoLineage() {
-        Assertions.assertDoesNotThrow(validation(ASSEMBLY, VIRUS_LINEAGE, null, null, taxon(null), gene()));
-    }
-
-    @Test
-    void testTaxonWithNoLineageAndNoMasterLineageFails() {
-        assertViolation(validation(ASSEMBLY, null, null, null, taxon(null), gene()));
+    void testTaxonWithNoLineageFails() {
+        assertViolation(validation(ASSEMBLY, VIRUS_LINEAGE, null, null, taxon(null), gene()));
     }
 }
