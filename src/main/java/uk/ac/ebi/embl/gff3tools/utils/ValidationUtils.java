@@ -14,11 +14,17 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
+import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils.MolType;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 public class ValidationUtils {
@@ -41,6 +47,32 @@ public class ValidationUtils {
             }
         }
         return null;
+    }
+
+    /**
+     * The master metadata for an accession, or empty when none is available. The provider is
+     * auto-registered by the classpath scan but holds no sources until a caller supplies a master
+     * entry, so an empty result is the normal case rather than a failure.
+     */
+    public static Optional<MasterMetadata> getMasterMetadata(String accession, ValidationContext context) {
+        if (!context.contains(MasterMetadataProvider.class)) {
+            return Optional.empty();
+        }
+        return context.get(MasterMetadataProvider.class).getMetadata(accession);
+    }
+
+    /**
+     * The molecule type declared for an accession in its FASTA header, or empty when no header is
+     * available. This is where a submission's {@code MOLECULETYPE} reaches gff3tools; nothing in the
+     * GFF3 file itself carries it.
+     */
+    public static Optional<MolType> getMoleculeType(String accession, ValidationContext context) {
+        if (!context.contains(FastaHeaderProvider.class)) {
+            return Optional.empty();
+        }
+        return context.get(FastaHeaderProvider.class)
+                .getHeader(accession)
+                .flatMap(ControlledVocabularyUtils::normaliseMolType);
     }
 
     /**
