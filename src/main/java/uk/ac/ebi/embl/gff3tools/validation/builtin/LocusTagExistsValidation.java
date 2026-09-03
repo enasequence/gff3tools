@@ -61,9 +61,9 @@ public class LocusTagExistsValidation implements Validation {
         String accession = gff3Annotation.getAccession();
 
         if (!isGenomeSubmission(accession)
+                || !hasNonGapFeatures(gff3Annotation) // excludes FASTA submissions by default
                 || hasLocusTagExemptFeature(gff3Annotation)
-                || isVirus(accession)
-                || !hasNonGapFeatures(gff3Annotation)
+                || isVirus(accession) // for seqIds in GFF3, we can check taxId
                 || hasLocusTag(gff3Annotation)) {
             return;
         }
@@ -117,19 +117,41 @@ public class LocusTagExistsValidation implements Validation {
     }
 
     /**
-     * Viruses are out of scope. Prefers the master entry's lineage and falls back to
-     * {@link TaxonProvider} when one is registered; core ships no implementation. An unresolved
-     * organism is not treated as a virus, so missing taxonomy never silently exempts an entry.
+     * Viruses are out of scope. The organism is resolved through {@link TaxonProvider} first - the
+     * downstream implementation resolves a taxId or scientific name against the ENA taxonomy API and
+     * caches per organism, so a whole assembly costs one lookup - and only falls back to the master
+     * entry's lineage, which most submissions do not carry. Core ships no {@link TaxonProvider}
+     * implementation, so both may be absent.
+     *
+     * <p>A resolved taxon is asked with {@link Taxon#isChildOf}, which matches any element of the
+     * lineage - the same call ENA's own check reaches through
+     * {@code TaxonomyClient.isChildOf(name, "Viruses")}, and it does not assume the taxonomy API
+     * returns a domain-first lineage the way the master entry's EMBL OC line does. Going through the
+     * already-resolved taxon also keeps the provider's cache and avoids the client's unchecked
+     * TaxonomyException.
+     *
+     * <p>Either source saying virus is enough: a taxon that resolves without a lineage answers
+     * nothing, and should not cost an exemption the master entry can still justify. An organism
+     * neither source can place is not treated as a virus, so missing taxonomy never silently exempts
+     * an entry.
      */
     private boolean isVirus(String accession) {
-        Optional<String> lineage =
-                ValidationUtils.getMasterMetadata(accession, context).map(MasterMetadata::getLineage);
-
-        if (lineage.isEmpty() && context.contains(TaxonProvider.class)) {
-            lineage = context.get(TaxonProvider.class).resolve(accession).map(Taxon::getLineage);
+        if (resolveTaxon(accession)
+                .filter(taxon -> taxon.isChildOf(VIRUS_LINEAGE_DOMAIN))
+                .isPresent()) {
+            return true;
         }
 
-        return lineage.filter(LocusTagExistsValidation::isVirusLineage).isPresent();
+        return ValidationUtils.getMasterMetadata(accession, context)
+                .map(MasterMetadata::getLineage)
+                .filter(LocusTagExistsValidation::isVirusLineage)
+                .isPresent();
+    }
+
+    private Optional<Taxon> resolveTaxon(String accession) {
+        return context.contains(TaxonProvider.class)
+                ? context.get(TaxonProvider.class).resolve(accession)
+                : Optional.empty();
     }
 
     private static boolean isVirusLineage(String lineage) {

@@ -34,6 +34,9 @@ import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonProvider;
+import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
+import uk.ac.ebi.ena.taxonomy.taxon.TaxonFactory;
 
 class LocusTagExistsValidationTest {
 
@@ -75,7 +78,36 @@ class LocusTagExistsValidationTest {
 
     private Executable validation(
             AnalysisType analysisType, String lineage, String moleculeType, String dataClass, GFF3Feature... features) {
+        return validation(analysisType, lineage, moleculeType, dataClass, null, features);
+    }
+
+    /**
+     * Registers a {@link TaxonProvider} returning a real {@link Taxon} rather than a mock, so the
+     * SDK's own {@code isChildOf} matching is exercised instead of stubbed. A non-null taxon with a
+     * null lineage stands for an organism that resolves but places nowhere.
+     */
+    private Executable validation(
+            AnalysisType analysisType,
+            String lineage,
+            String moleculeType,
+            String dataClass,
+            Taxon taxon,
+            GFF3Feature... features) {
         ValidationContext context = TestUtils.createTestContext();
+
+        if (taxon != null) {
+            context.register(TaxonProvider.class, new TaxonProvider() {
+                @Override
+                public Optional<Taxon> resolve(String accession) {
+                    return Optional.of(taxon);
+                }
+
+                @Override
+                public TaxonProvider get(ValidationContext ctx) {
+                    return this;
+                }
+            });
+        }
 
         if (analysisType != null) {
             context.register(
@@ -221,5 +253,56 @@ class LocusTagExistsValidationTest {
     @Test
     void testAbsentMoleculeTypeLeavesRuleUnchanged() {
         assertViolation(validation(ASSEMBLY, null, (String) null, gene()));
+    }
+
+    private Taxon taxon(String lineage) {
+        Taxon taxon = new TaxonFactory().createTaxon();
+        taxon.setLineage(lineage);
+        return taxon;
+    }
+
+    @Test
+    void testTaxonProviderVirusSucceeds() {
+        Assertions.assertDoesNotThrow(validation(ASSEMBLY, null, null, null, taxon(VIRUS_LINEAGE), gene()));
+    }
+
+    /**
+     * {@code Taxon.isChildOf} matches any element of the lineage, not just the first. Nothing in
+     * either repo records a real taxonomy-REST lineage, so the rule must not assume the domain leads.
+     */
+    @Test
+    void testTaxonProviderVirusSucceedsWhenDomainDoesNotLeadTheLineage() {
+        Assertions.assertDoesNotThrow(
+                validation(ASSEMBLY, null, null, null, taxon("cellular organisms; Viruses; Riboviria."), gene()));
+    }
+
+    @Test
+    void testTaxonProviderNonVirusFails() {
+        assertViolation(validation(ASSEMBLY, null, null, null, taxon(EUKARYOTE_LINEAGE), gene()));
+    }
+
+    /** The taxon is consulted first, so it can exempt an entry whose master entry disagrees. */
+    @Test
+    void testTaxonProviderVirusSucceedsDespiteNonVirusMasterLineage() {
+        Assertions.assertDoesNotThrow(
+                validation(ASSEMBLY, EUKARYOTE_LINEAGE, null, null, taxon(VIRUS_LINEAGE), gene()));
+    }
+
+    /** A taxon that places the organism elsewhere does not veto an exemption the master entry justifies. */
+    @Test
+    void testMasterLineageVirusSucceedsDespiteNonVirusTaxon() {
+        Assertions.assertDoesNotThrow(
+                validation(ASSEMBLY, VIRUS_LINEAGE, null, null, taxon(EUKARYOTE_LINEAGE), gene()));
+    }
+
+    /** A resolved taxon carrying no lineage answers nothing, so the master entry still decides. */
+    @Test
+    void testMasterLineageVirusSucceedsWhenTaxonHasNoLineage() {
+        Assertions.assertDoesNotThrow(validation(ASSEMBLY, VIRUS_LINEAGE, null, null, taxon(null), gene()));
+    }
+
+    @Test
+    void testTaxonWithNoLineageAndNoMasterLineageFails() {
+        assertViolation(validation(ASSEMBLY, null, null, null, taxon(null), gene()));
     }
 }
