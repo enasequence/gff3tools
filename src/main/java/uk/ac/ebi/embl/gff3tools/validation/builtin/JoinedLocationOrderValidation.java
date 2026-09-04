@@ -30,13 +30,9 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 
 /**
- * A joined feature is stored as one GFF3 line per interval, all lines sharing an ID, and the flat
- * file {@code join()} is built by appending those intervals in the order the lines appear. The
- * intervals must therefore already be listed in ascending coordinate order, or the conversion
- * writes a {@code join()} that steps backwards.
- *
- * <p>Only the order of the intervals is judged here. Whether they overlap, and whether they line up
- * against the transcript they belong to, are separate rules.
+ * {@code GFF3Mapper} builds the flat file {@code join()} by appending same-ID segments in the order
+ * their lines appear, so segments listed out of coordinate order produce a backwards {@code join()}.
+ * Overlap and transcript alignment are separate rules.
  */
 @Gff3Validation(
         name = "JOINED_LOCATION_ORDER",
@@ -79,12 +75,8 @@ public class JoinedLocationOrderValidation implements Validation {
     }
 
     /**
-     * The first segment that starts before the one listed ahead of it, or null where the feature is
-     * in order.
-     *
-     * <p>The segments are walked as the file lists them rather than sorted, because it is that order
-     * the {@code join()} is built from. A feature crossing the origin of a circular sequence steps
-     * back exactly once and legitimately, so on a circular sequence the first step back is allowed.
+     * The first segment starting before its predecessor in file order, or null where the feature is
+     * in order. A circular sequence allows one step back, which is the feature crossing the origin.
      */
     private String describeDisorder(List<GFF3Feature> segments) {
         int allowance = isCircularSequence(segments.get(0).accession()) ? 1 : 0;
@@ -106,26 +98,19 @@ public class JoinedLocationOrderValidation implements Validation {
         return null;
     }
 
-    /**
-     * A trans-spliced feature is assembled from intervals that need not follow the coordinate order
-     * of the sequence, so the order it lists them in carries meaning and is left alone.
-     */
+    /** A trans-spliced feature orders its segments by biology, not by coordinate. */
     private boolean isExempt(List<GFF3Feature> segments) {
         return segments.stream().anyMatch(segment -> segment.hasAttribute(GFF3Attributes.TRANS_SPLICING));
     }
 
-    /**
-     * Segments sharing an ID across sequences were never on one coordinate system, so there is no
-     * order to judge them against.
-     */
+    /** Segments sharing an ID across sequences share no coordinate system, so no order to judge. */
     private boolean spansMultipleAccessions(List<GFF3Feature> segments) {
         return segments.stream().map(GFF3Feature::accession).distinct().count() > 1;
     }
 
     /**
-     * Topology is only known when a FASTA header source is registered for the run. An absent or
-     * unrecognised topology is treated as non-circular: circular is always explicitly declared, and
-     * a missing mandatory topology is reported by {@link FastaHeaderFormatValidation}.
+     * Topology needs a registered FASTA header source; absent or unrecognised counts as non-circular,
+     * since circular is always declared explicitly.
      */
     private boolean isCircularSequence(String accession) {
         if (!context.contains(FastaHeaderProvider.class)) {
@@ -134,8 +119,7 @@ public class JoinedLocationOrderValidation implements Validation {
         return context.get(FastaHeaderProvider.class)
                 .getHeader(accession)
                 .map(FastaHeader::getTopology)
-                // Canonicalise rather than matching the raw value: FastaHeaderNormalisationFix is
-                // annotation-scoped and runs only after this annotation's features are validated.
+                // Canonicalise: FastaHeaderNormalisationFix runs after this annotation is validated.
                 .flatMap(topology ->
                         ControlledVocabularyUtils.canonicalise(ControlledVocabularyUtils.Topology.class, topology))
                 .flatMap(ControlledVocabularyUtils.Topology::fromValue)
@@ -143,7 +127,7 @@ public class JoinedLocationOrderValidation implements Validation {
                 .orElse(false);
     }
 
-    /** How the feature as a whole is named in a message: its ID, or its first segment's location. */
+    /** Names the feature in a message by ID, falling back to its first segment's location. */
     private String identify(List<GFF3Feature> segments) {
         GFF3Feature representative = ValidationUtils.representativeOfFeatureGroup(segments);
         return representative.getId().map("\"%s\""::formatted).orElseGet(() -> location(representative));
