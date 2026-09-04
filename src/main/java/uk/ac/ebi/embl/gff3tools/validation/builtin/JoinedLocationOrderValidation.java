@@ -14,6 +14,7 @@ import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -58,12 +59,17 @@ public class JoinedLocationOrderValidation implements Validation {
     public void validateJoinedLocationOrder(GFF3Annotation annotation, int line) throws ValidationException {
         List<String> violations = new ArrayList<>();
 
-        for (List<GFF3Feature> segments :
-                ValidationUtils.groupFeaturesById(annotation, feature -> true).values()) {
-            if (segments.size() < 2 || isExempt(segments)) {
-                continue;
-            }
-            String violation = describeDisorder(segments);
+        Map<String, List<GFF3Feature>> joinedFeaturesById = ValidationUtils.groupFeaturesById(
+                annotation,
+                feature -> feature.getId().isPresent(),
+                joinedFeature -> joinedFeature.size() > 1 && !isExempt(joinedFeature));
+        if (joinedFeaturesById.isEmpty()) {
+            return;
+        }
+
+        boolean circular = isCircularSequence(annotation.getAccession());
+        for (List<GFF3Feature> joinedFeature : joinedFeaturesById.values()) {
+            String violation = detectRuleViolation(joinedFeature, circular);
             if (violation != null) {
                 violations.add(violation);
             }
@@ -78,12 +84,12 @@ public class JoinedLocationOrderValidation implements Validation {
      * The first segment starting before its predecessor in file order, or null where the feature is
      * in order. A circular sequence allows one step back, which is the feature crossing the origin.
      */
-    private String describeDisorder(List<GFF3Feature> segments) {
-        int allowance = isCircularSequence(segments.get(0).accession()) ? 1 : 0;
+    private String detectRuleViolation(List<GFF3Feature> joinedFeature, boolean circular) {
+        int allowance = circular ? 1 : 0;
 
-        for (int i = 1; i < segments.size(); i++) {
-            GFF3Feature previous = segments.get(i - 1);
-            GFF3Feature current = segments.get(i);
+        for (int i = 1; i < joinedFeature.size(); i++) {
+            GFF3Feature previous = joinedFeature.get(i - 1);
+            GFF3Feature current = joinedFeature.get(i);
 
             if (current.getStart() >= previous.getStart()) {
                 continue;
@@ -93,14 +99,26 @@ public class JoinedLocationOrderValidation implements Validation {
                 continue;
             }
             return VIOLATION_MESSAGE.formatted(
-                    current.getName(), identify(segments), current.accession(), location(current), location(previous));
+                    current.getName(),
+                    identify(joinedFeature),
+                    current.accession(),
+                    location(current),
+                    location(previous));
         }
         return null;
     }
 
-    /** A trans-spliced feature orders its segments by biology, not by coordinate. */
+    /**
+     * A trans-spliced feature orders its segments by biology, not by coordinate. One marked segment
+     * exempts the whole feature, since the attribute need not be repeated on every segment.
+     */
     private boolean isExempt(List<GFF3Feature> segments) {
-        return segments.stream().anyMatch(segment -> segment.hasAttribute(GFF3Attributes.TRANS_SPLICING));
+        for (GFF3Feature segment : segments) {
+            if (segment.hasAttribute(GFF3Attributes.TRANS_SPLICING)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

@@ -56,10 +56,25 @@ public class ValidationUtils {
      */
     public static Map<String, List<GFF3Feature>> groupFeaturesById(
             GFF3Annotation annotation, Predicate<GFF3Feature> selector) {
-        return annotation.getFeatures().stream()
+        return groupFeaturesById(annotation, selector, group -> true);
+    }
+
+    /**
+     * Groups as above, keeping only the whole features {@code groupSelector} accepts. A group is only
+     * complete once every feature has been placed, so the groups a rule cannot use are dropped after
+     * the grouping rather than during it.
+     *
+     * @param selector chooses the features to group, by name or through the ontology
+     * @param groupSelector chooses the whole features to keep, by a property of the group itself
+     */
+    public static Map<String, List<GFF3Feature>> groupFeaturesById(
+            GFF3Annotation annotation, Predicate<GFF3Feature> selector, Predicate<List<GFF3Feature>> groupSelector) {
+        Map<String, List<GFF3Feature>> groups = annotation.getFeatures().stream()
                 .filter(feature -> feature != null && selector.test(feature))
                 .collect(Collectors.groupingBy(
                         ValidationUtils::featureGroupKey, LinkedHashMap::new, Collectors.toList()));
+        groups.values().removeIf(group -> !groupSelector.test(group));
+        return groups;
     }
 
     /**
