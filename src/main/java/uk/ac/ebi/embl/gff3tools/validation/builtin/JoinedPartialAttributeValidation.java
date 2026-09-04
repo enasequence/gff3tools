@@ -86,7 +86,9 @@ public class JoinedPartialAttributeValidation implements Validation {
 
     /** Names the feature by ID, falling back to its first segment's location. */
     private String identify(List<GFF3Feature> segments) {
-        GFF3Feature representative = ValidationUtils.representativeOfFeatureGroup(segments);
+        // Every segment answers for the group: they share the ID they were grouped under, and a
+        // group without one was keyed on coordinates every member repeats.
+        GFF3Feature representative = segments.get(0);
         return representative.getId().map("\"%s\""::formatted).orElseGet(() -> location(representative));
     }
 
