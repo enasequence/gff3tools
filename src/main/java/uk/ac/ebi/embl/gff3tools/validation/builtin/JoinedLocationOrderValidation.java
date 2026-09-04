@@ -60,7 +60,7 @@ public class JoinedLocationOrderValidation implements Validation {
 
         for (List<GFF3Feature> segments :
                 ValidationUtils.groupFeaturesById(annotation, feature -> true).values()) {
-            if (segments.size() < 2 || isExempt(segments) || spansMultipleAccessions(segments)) {
+            if (segments.size() < 2 || isExempt(segments)) {
                 continue;
             }
             String violation = describeDisorder(segments);
@@ -101,11 +101,6 @@ public class JoinedLocationOrderValidation implements Validation {
     /** A trans-spliced feature orders its segments by biology, not by coordinate. */
     private boolean isExempt(List<GFF3Feature> segments) {
         return segments.stream().anyMatch(segment -> segment.hasAttribute(GFF3Attributes.TRANS_SPLICING));
-    }
-
-    /** Segments sharing an ID across sequences share no coordinate system, so no order to judge. */
-    private boolean spansMultipleAccessions(List<GFF3Feature> segments) {
-        return segments.stream().map(GFF3Feature::accession).distinct().count() > 1;
     }
 
     /**

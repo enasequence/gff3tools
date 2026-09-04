@@ -30,7 +30,6 @@ class JoinedLocationOrderValidationTest {
 
     private static final String GENE_FEATURE = "gene";
     private static final String ACCESSION = "ACC123";
-    private static final String OTHER_ACCESSION = "ACC999";
     private static final String PLUS = "+";
     private static final String MINUS = "-";
 
@@ -155,14 +154,6 @@ class JoinedLocationOrderValidationTest {
         segment("gene1", 600, 700).addAttribute(GFF3Attributes.RIBOSOMAL_SLIPPAGE, "true");
 
         assertThrows(ValidationException.class, () -> validation.validateJoinedLocationOrder(annotation, 1));
-    }
-
-    @Test
-    void segmentsSpanningAccessionsAreSkipped() {
-        segment("gene1", 800, 822);
-        add(build(GENE_FEATURE, "gene1", OTHER_ACCESSION, 600, 700, PLUS));
-
-        assertDoesNotThrow(() -> validation.validateJoinedLocationOrder(annotation, 1));
     }
 
     @Test
