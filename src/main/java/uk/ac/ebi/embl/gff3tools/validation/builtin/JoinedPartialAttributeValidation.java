@@ -14,6 +14,7 @@ import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -50,14 +51,14 @@ public class JoinedPartialAttributeValidation implements Validation {
             severity = RuleSeverity.ERROR)
     public void validateJoinedPartialAttribute(GFF3Annotation annotation, int line) throws ValidationException {
         List<String> violations = new ArrayList<>();
+        Map<String, List<GFF3Feature>> joinedFeaturesById = ValidationUtils.groupFeaturesById(
+                annotation,
+                feature -> feature.getId().isPresent(),
+                // Both segments of a two-segment join are terminal, so an interior starts at three.
+                joinedFeature -> joinedFeature.size() > 2);
 
-        for (List<GFF3Feature> segments :
-                ValidationUtils.groupFeaturesById(annotation, feature -> true).values()) {
-            // Both segments of a two-segment join are terminal, so an interior starts at three.
-            if (segments.size() < 3) {
-                continue;
-            }
-            violations.addAll(describeMisplacedPartials(segments));
+        for (List<GFF3Feature> joinedFeature : joinedFeaturesById.values()) {
+            violations.addAll(describeMisplacedPartials(joinedFeature));
         }
 
         if (!violations.isEmpty()) {
@@ -66,29 +67,29 @@ public class JoinedPartialAttributeValidation implements Validation {
     }
 
     /** Reports every segment between the first and the last that is marked partial. */
-    private List<String> describeMisplacedPartials(List<GFF3Feature> segments) {
+    private List<String> describeMisplacedPartials(List<GFF3Feature> joinedFeature) {
         List<String> violations = new ArrayList<>();
 
-        for (int i = 1; i < segments.size() - 1; i++) {
-            GFF3Feature segment = segments.get(i);
+        for (int i = 1; i < joinedFeature.size() - 1; i++) {
+            GFF3Feature segment = joinedFeature.get(i);
             if (segment.hasAttribute(GFF3Attributes.PARTIAL)) {
                 violations.add(VIOLATION_MESSAGE.formatted(
                         segment.getName(),
-                        identify(segments),
+                        identify(joinedFeature),
                         segment.accession(),
                         location(segment),
-                        location(segments.get(0)),
-                        location(segments.get(segments.size() - 1))));
+                        location(joinedFeature.get(0)),
+                        location(joinedFeature.get(joinedFeature.size() - 1))));
             }
         }
         return violations;
     }
 
     /** Names the feature by ID, falling back to its first segment's location. */
-    private String identify(List<GFF3Feature> segments) {
+    private String identify(List<GFF3Feature> joinedFeature) {
         // Every segment answers for the group: they share the ID they were grouped under, and a
         // group without one was keyed on coordinates every member repeats.
-        GFF3Feature representative = segments.get(0);
+        GFF3Feature representative = joinedFeature.get(0);
         return representative.getId().map("\"%s\""::formatted).orElseGet(() -> location(representative));
     }
 
