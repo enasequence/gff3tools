@@ -19,6 +19,7 @@ import java.util.Locale;
 import java.util.Set;
 import uk.ac.ebi.embl.gff3tools.exception.DuplicateParameterException;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 
 /**
@@ -93,6 +94,12 @@ public final class ParameterDescriptors {
             }
         }
 
+        FixMethod fixMethod = method.getAnnotation(FixMethod.class);
+        boolean isFix = fixMethod != null;
+        ValidationMethod validationMethod = method.getAnnotation(ValidationMethod.class);
+        RuleSeverity defaultSeverity = validationMethod != null ? validationMethod.severity() : RuleSeverity.ERROR;
+        boolean defaultFixEnabled = isFix && fixMethod.enabled();
+
         return new ParameterDescriptor(
                 key,
                 rule,
@@ -100,6 +107,10 @@ public final class ParameterDescriptors {
                 parameter.type(),
                 parameter.description(),
                 parameter.mandatory(),
-                parameter.defaultValue());
+                parameter.defaultValue(),
+                clazz,
+                isFix,
+                defaultSeverity,
+                defaultFixEnabled);
     }
 }

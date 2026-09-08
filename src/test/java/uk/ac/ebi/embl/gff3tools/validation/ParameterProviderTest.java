@@ -13,10 +13,11 @@ package uk.ac.ebi.embl.gff3tools.validation;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 class ParameterProviderTest {
 
@@ -43,7 +44,11 @@ class ParameterProviderTest {
                 ParameterType.STRING,
                 "desc",
                 true,
-                "some-default");
+                "some-default",
+                ParameterProviderTest.class,
+                false,
+                RuleSeverity.ERROR,
+                true);
         ParameterProvider provider = new ParameterProvider(() -> List.of(mandatoryWithDefault));
         ResolvedParameters resolved = provider.get(null);
 
@@ -68,9 +73,13 @@ class ParameterProviderTest {
         void badDefault() {}
     }
 
+    private static ValidationConfig defaultConfig() {
+        return new ValidationConfig(new HashMap<>(), new HashMap<>(), new HashMap<>());
+    }
+
     @Test
     void rawMapConstructorMissingMandatoryFailsFast() {
-        assertThrows(ParameterResolutionException.class, () -> new ParameterProvider(Map.of(), Set.of()));
+        assertThrows(ParameterResolutionException.class, () -> new ParameterProvider(Map.of(), defaultConfig()));
     }
 
     @Test
@@ -78,7 +87,7 @@ class ParameterProviderTest {
         Map<String, String> raw = Map.of(
                 "PARAM_FIXTURE_MANDATORY.MANDATORY_LABEL", "value",
                 "NOT_A_REAL_RULE.NOT_A_REAL_PARAM", "x");
-        assertThrows(ParameterResolutionException.class, () -> new ParameterProvider(raw, Set.of()));
+        assertThrows(ParameterResolutionException.class, () -> new ParameterProvider(raw, defaultConfig()));
     }
 
     @Test
@@ -86,7 +95,7 @@ class ParameterProviderTest {
         Map<String, String> raw = Map.of(
                 "PARAM_FIXTURE_MANDATORY.MANDATORY_LABEL", "value",
                 "PARAM_FIXTURE_LONG.MIN_AMINO_ACIDS", "not-a-number");
-        assertThrows(ParameterResolutionException.class, () -> new ParameterProvider(raw, Set.of()));
+        assertThrows(ParameterResolutionException.class, () -> new ParameterProvider(raw, defaultConfig()));
     }
 
     @Test
@@ -94,14 +103,15 @@ class ParameterProviderTest {
         Map<String, String> raw = Map.of(
                 "PARAM_FIXTURE_MANDATORY.MANDATORY_LABEL", "value",
                 "PARAM_FIXTURE_LONG.MIN_AMINO_ACIDS", "30");
-        Set<String> offKeys = Set.of("PARAM_FIXTURE_LONG.MIN_AMINO_ACIDS");
-        assertThrows(ParameterResolutionException.class, () -> new ParameterProvider(raw, offKeys));
+        ValidationConfig config = new ValidationConfig(
+                new HashMap<>(Map.of("PARAM_FIXTURE_LONG", RuleSeverity.OFF)), new HashMap<>(), new HashMap<>());
+        assertThrows(ParameterResolutionException.class, () -> new ParameterProvider(raw, config));
     }
 
     @Test
     void rawMapConstructorOptionalFallsBackToDefault() throws ParameterResolutionException {
         Map<String, String> raw = Map.of("PARAM_FIXTURE_MANDATORY.MANDATORY_LABEL", "value");
-        ParameterProvider provider = new ParameterProvider(raw, Set.of());
+        ParameterProvider provider = new ParameterProvider(raw, defaultConfig());
         ResolvedParameters resolved = provider.get(null);
 
         assertEquals(25L, resolved.getLong("PARAM_FIXTURE_LONG.MIN_AMINO_ACIDS"));
@@ -114,10 +124,20 @@ class ParameterProviderTest {
         Map<String, String> raw = Map.of(
                 "param_fixture_mandatory.mandatory_label", "MixedCaseValue",
                 "PARAM_FIXTURE_STRING.LABEL", "a:b:c");
-        ParameterProvider provider = new ParameterProvider(raw, Set.of());
+        ParameterProvider provider = new ParameterProvider(raw, defaultConfig());
         ResolvedParameters resolved = provider.get(null);
 
         assertEquals("MixedCaseValue", resolved.getString("PARAM_FIXTURE_MANDATORY.MANDATORY_LABEL"));
         assertEquals("a:b:c", resolved.getString("PARAM_FIXTURE_STRING.LABEL"));
+    }
+
+    @Test
+    void rawMapConstructorTreatsMandatoryParamOnOffRuleAsNotRequired() throws ParameterResolutionException {
+        ValidationConfig config = new ValidationConfig(
+                new HashMap<>(Map.of("PARAM_FIXTURE_MANDATORY", RuleSeverity.OFF)), new HashMap<>(), new HashMap<>());
+        ParameterProvider provider = new ParameterProvider(Map.of(), config);
+        ResolvedParameters resolved = provider.get(null);
+
+        assertEquals(25L, resolved.getLong("PARAM_FIXTURE_LONG.MIN_AMINO_ACIDS"));
     }
 }

@@ -79,19 +79,27 @@ public class ParameterProvider implements ContextProvider<ResolvedParameters> {
      * fail-fast checks: unknown key, key for an OFF-toggled rule/fix, missing mandatory, bad
      * type, and optional-unsupplied-uses-default.
      *
+     * <p>OFF-toggled rule/fix detection uses the real, three-mechanism effective state (class-level
+     * {@code @Gff3Validation}/{@code @Gff3Fix} enablement, method-severity {@code OFF}, and
+     * fix-enable), computed from {@code effectiveConfig} via {@link EffectiveRuleState}.
+     * {@code effectiveConfig} must already reflect the caller's {@code --rules}/fix overrides
+     * merged over the properties-file defaults (see {@link EffectiveRuleState#mergedConfig}),
+     * not just the loaded defaults alone.
+     *
      * @param rawParams the raw {@code key:value} map (upper-cased on comparison, values passed
      *     through verbatim); pass an empty map when {@code --params} was not supplied
-     * @param offRuleKeys the set of {@code RULE.PARAM} keys whose owning rule/fix is effectively
-     *     OFF; a minimal, explicit stand-in for phase 1 — phase 2 replaces the caller-supplied
-     *     set with a real effective-config computation without changing the checks below
+     * @param effectiveConfig the effective {@link ValidationConfig}, reflecting the caller's
+     *     {@code --rules}/fix overrides merged over the properties-file defaults
      */
-    public ParameterProvider(Map<String, String> rawParams, Set<String> offRuleKeys)
+    public ParameterProvider(Map<String, String> rawParams, ValidationConfig effectiveConfig)
             throws ParameterResolutionException {
         List<ParameterDescriptor> descriptors = ParameterDescriptors.scan();
         Map<String, ParameterDescriptor> byKey = new HashMap<>();
         for (ParameterDescriptor descriptor : descriptors) {
             byKey.put(descriptor.key(), descriptor);
         }
+
+        Set<String> offRuleKeys = EffectiveRuleState.computeOffKeys(effectiveConfig, descriptors);
 
         Map<String, String> normalizedRaw = new HashMap<>();
         for (Map.Entry<String, String> entry : rawParams.entrySet()) {

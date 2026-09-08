@@ -10,6 +10,8 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation;
 
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+
 /**
  * A single declared parameter, scanned from a {@link Parameter} annotation on a
  * {@code @ValidationMethod}/{@code @FixMethod}-annotated method.
@@ -19,6 +21,18 @@ package uk.ac.ebi.embl.gff3tools.validation;
  * @param rule the owning rule/fix name, taken from the method's own {@code @ValidationMethod}/
  *     {@code @FixMethod} annotation
  * @param name the parameter's own name, as declared on {@link Parameter}
+ * @param owningClass the class declaring the method the parameter is attached to, carrying the
+ *     class-level {@code @Gff3Validation}/{@code @Gff3Fix} annotation used for effective-OFF
+ *     detection
+ * @param fix whether the owning method is a {@code @FixMethod} (as opposed to a
+ *     {@code @ValidationMethod}) — determines whether effective state is resolved via {@code
+ *     ValidationConfig.getFix} or {@code ValidationConfig.getSeverity}
+ * @param defaultSeverity the owning {@code @ValidationMethod}'s own declared severity, used as the
+ *     default fed to {@code ValidationConfig.getSeverity}; meaningless when {@code fix} is {@code
+ *     true}
+ * @param defaultFixEnabled the owning {@code @FixMethod}'s own declared {@code enabled}, used as
+ *     the default fed to {@code ValidationConfig.getFix}; meaningless when {@code fix} is {@code
+ *     false}
  */
 public record ParameterDescriptor(
         String key,
@@ -27,4 +41,8 @@ public record ParameterDescriptor(
         ParameterType type,
         String description,
         boolean mandatory,
-        String defaultValue) {}
+        String defaultValue,
+        Class<?> owningClass,
+        boolean fix,
+        RuleSeverity defaultSeverity,
+        boolean defaultFixEnabled) {}

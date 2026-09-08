@@ -10,9 +10,13 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 import lombok.Getter;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
@@ -37,6 +41,47 @@ public class ValidationConfig {
 
     public boolean getFix(String rule, boolean defaultEnabled) {
         return fixOverrides.getOrDefault(rule, defaultEnabled);
+    }
+
+    /**
+     * Loads the default {@link ValidationConfig} from {@code default-rule-severities.properties} on
+     * the classpath. Keys are routed by prefix: {@code rule.*} to severities, {@code fix.*} to fix
+     * toggles, and {@code class.*} to validator-class toggles.
+     *
+     * @return the default validation configuration
+     */
+    public static ValidationConfig loadDefault() {
+        Map<String, RuleSeverity> severityOverrides = new HashMap<>();
+        Map<String, Boolean> validatorOverrides = new HashMap<>();
+        Map<String, Boolean> fixOverrides = new HashMap<>();
+        try (InputStream input =
+                ValidationConfig.class.getClassLoader().getResourceAsStream("default-rule-severities.properties")) {
+
+            Properties prop = new Properties();
+            prop.load(input);
+
+            prop.forEach((key, value) -> {
+                String k = (String) key;
+                String v = (String) value;
+
+                if (k.startsWith("rule")) {
+                    String rule = k.replace("rule.", "");
+                    RuleSeverity severity = RuleSeverity.valueOf(v);
+                    severityOverrides.put(rule, severity);
+                } else if (k.startsWith("fix")) {
+                    String rule = k.replace("fix.", "");
+                    boolean fix = v.equalsIgnoreCase("ON");
+                    fixOverrides.put(rule, fix);
+                } else if (k.startsWith("class")) {
+                    String validationClass = k.replace("class.", "");
+                    boolean validationOn = v.equalsIgnoreCase("on");
+                    validatorOverrides.put(validationClass, validationOn);
+                }
+            });
+            return new ValidationConfig(severityOverrides, validatorOverrides, fixOverrides);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     /**

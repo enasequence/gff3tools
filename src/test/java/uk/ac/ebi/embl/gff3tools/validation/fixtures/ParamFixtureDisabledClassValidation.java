@@ -1,0 +1,37 @@
+/*
+ * Copyright 2025 EMBL - European Bioinformatics Institute
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+package uk.ac.ebi.embl.gff3tools.validation.fixtures;
+
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
+import uk.ac.ebi.embl.gff3tools.validation.Parameter;
+import uk.ac.ebi.embl.gff3tools.validation.ParameterType;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
+
+/**
+ * Top-level, real-scan test fixture exercising class-level disablement via {@code enabled =
+ * false} on {@link Gff3Validation}, with no {@code --rules}/class override involved. Must be
+ * top-level (not nested) to be picked up by {@code ValidationRegistry.ScanHolder}'s classpath
+ * scan.
+ */
+@Gff3Validation(name = "PARAM_FIXTURE_DISABLED_CLASS", enabled = false)
+public class ParamFixtureDisabledClassValidation implements Validation {
+
+    @Parameter(name = "THRESHOLD", type = ParameterType.LONG, description = "unused", defaultValue = "1")
+    @ValidationMethod(
+            rule = "PARAM_FIXTURE_DISABLED_CLASS_RULE",
+            type = ValidationType.ANNOTATION,
+            severity = RuleSeverity.ERROR)
+    public void validate(GFF3Annotation annotation, int line) {}
+}
