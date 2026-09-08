@@ -157,24 +157,6 @@ public class GFF3File implements IGFF3Feature {
     }
 
     /**
-     * Translation offsets belonging to this file's annotations, gathered in annotation order.
-     *
-     * <p>Scoping to {@code annotations} rather than taking the reader's whole map is what lets a
-     * file hold a subset of a submission's annotations and carry exactly that subset's
-     * translations.
-     */
-    private Map<String, OffsetRange> translationOffsetsForAnnotations() {
-        Map<String, OffsetRange> offsets = new LinkedHashMap<>();
-        if (gff3Reader == null) {
-            return offsets;
-        }
-        for (GFF3Annotation ann : annotations) {
-            offsets.putAll(gff3Reader.getTranslationOffsetForAnnotation(ann));
-        }
-        return offsets;
-    }
-
-    /**
      * Writes this file's translations, from the first source that actually yields any.
      *
      * <p>Selection is by content, not by presence: {@code TranslationState} is supplied by an
@@ -192,6 +174,24 @@ public class GFF3File implements IGFF3Feature {
             return;
         }
         writeFastaFromOffsets(writer, translationOffsetsForAnnotations());
+    }
+
+    /**
+     * Translation offsets belonging to this file's annotations, gathered in annotation order.
+     *
+     * <p>Scoping to {@code annotations} rather than taking the reader's whole map is what lets a
+     * file hold a subset of a submission's annotations and carry exactly that subset's
+     * translations.
+     */
+    private Map<String, OffsetRange> translationOffsetsForAnnotations() {
+        Map<String, OffsetRange> offsets = new LinkedHashMap<>();
+        if (gff3Reader == null) {
+            return offsets;
+        }
+        for (GFF3Annotation ann : annotations) {
+            offsets.putAll(gff3Reader.getTranslationOffsetForAnnotation(ann));
+        }
+        return offsets;
     }
 
     /** True when a translation key belongs to one of this file's annotations. */
