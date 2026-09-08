@@ -26,13 +26,17 @@ import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonAccessionRegistry;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonomyIdentifier;
 
 public class GFF3FileReader implements AutoCloseable {
 
     static Pattern VERSION_DIRECTIVE = Pattern.compile(
             "^##gff-version (?<version>(?<major>[0-9]+)(\\.(?<minor>[0-9]+)(:?\\.(?<patch>[0-9]+))?)?)\\s*$");
     static Pattern SPECIES_DIRECTIVE = Pattern.compile("^##species (?<species>.*)$");
+    static Pattern SPECIES_TAX_ID_PATTERN = Pattern.compile("(?:^|[?&])id=(?<taxId>[0-9]+)(?:&.*)?$");
     static Pattern SEQUENCE_REGION_DIRECTIVE = Pattern.compile(
             "^##sequence-region\\s+(?<accession>(?<accessionId>[^.]+)(?:\\.(?<accessionVersion>\\d+))?)\\s+(?<start>[0-9]+)\\s+(?<end>[0-9]+)$");
     static Pattern RESOLUTION_DIRECTIVE = Pattern.compile("^###$");
@@ -49,6 +53,7 @@ public class GFF3FileReader implements AutoCloseable {
     ValidationEngine validationEngine;
 
     public GFF3Species gff3Species;
+    private Long speciesTaxId;
     private final Set<String> processedAccessions;
 
     private Map<String, OffsetRange> translationMap;
@@ -86,10 +91,15 @@ public class GFF3FileReader implements AutoCloseable {
                 // Create species
                 String species = m.group("species");
                 gff3Species = new GFF3Species(species);
+                Long taxId = extractTaxId(species);
+                if (taxId != null) {
+                    speciesTaxId = taxId;
+                }
             } else if ((m = SEQUENCE_REGION_DIRECTIVE.matcher(line)).matches()) {
                 // Create directive
                 GFF3SequenceRegion sequenceRegion = readSequenceRegion(m);
                 accessionSequenceRegionMap.put(sequenceRegion.accession(), sequenceRegion);
+                registerTaxon(sequenceRegion.accession());
             } else if (RESOLUTION_DIRECTIVE.matcher(line).matches()) {
                 if (!currentAnnotation.getFeatures().isEmpty() || currentAnnotation.getSequenceRegion() != null) {
                     GFF3Annotation previousAnnotation = currentAnnotation;
@@ -103,6 +113,7 @@ public class GFF3FileReader implements AutoCloseable {
                     // In case of different accession create a new GFF3Annotation and return the
                     // previous one.
                     currentAccession = feature.accession();
+                    registerTaxon(currentAccession);
                     GFF3Annotation previousAnnotation = currentAnnotation;
                     currentAnnotation = new GFF3Annotation();
                     currentAnnotation.addFeature(feature);
@@ -193,6 +204,42 @@ public class GFF3FileReader implements AutoCloseable {
 
     private boolean isSameAnnotation(GFF3Annotation previousAnnotation, GFF3Annotation currentAnnotation) {
         return previousAnnotation != null && currentAnnotation.getAccession().equals(previousAnnotation.getAccession());
+    }
+
+    /**
+     * Extracts a numeric NCBI taxon ID from a {@code ##species} directive value, e.g.
+     * {@code https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=9662} or a bare numeric
+     * ID. Returns {@code null} when the value isn't a recognisable NCBI taxon reference, so
+     * parsing never fails on an unsupported species value.
+     */
+    private static Long extractTaxId(String species) {
+        if (species == null) {
+            return null;
+        }
+        String trimmed = species.trim();
+        try {
+            if (trimmed.matches("[0-9]+")) {
+                return Long.parseLong(trimmed);
+            }
+            Matcher m = SPECIES_TAX_ID_PATTERN.matcher(trimmed);
+            if (m.find()) {
+                return Long.parseLong(m.group("taxId"));
+            }
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        return null;
+    }
+
+    private void registerTaxon(String accession) {
+        if (accession == null || speciesTaxId == null) {
+            return;
+        }
+        ValidationContext context = validationEngine.getContext();
+        if (!context.contains(TaxonAccessionRegistry.class)) {
+            context.register(TaxonAccessionRegistry.class, new TaxonAccessionRegistry());
+        }
+        context.get(TaxonAccessionRegistry.class).record(accession, new TaxonomyIdentifier.ByTaxId(speciesTaxId));
     }
 
     private GFF3SequenceRegion readSequenceRegion(Matcher m) {
