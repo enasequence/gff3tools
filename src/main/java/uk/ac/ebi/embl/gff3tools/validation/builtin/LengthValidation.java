@@ -127,7 +127,7 @@ public class LengthValidation implements Validation {
                         || curr.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION);
 
                 if (!artificial && !isPseudo(curr)) {
-                    throw new ValidationException(line, INVALID_CDS_INTRON_LENGTH_MESSAGE);
+                    throw new ValidationException(reportedLine(curr, line), INVALID_CDS_INTRON_LENGTH_MESSAGE);
                 }
             }
         }
@@ -238,13 +238,24 @@ public class LengthValidation implements Validation {
         long length = sortedTrnaGroup.stream().mapToLong(GFF3Feature::getLength).sum();
         if (length < COMPLETE_TRNA_MIN_LENGTH || length > COMPLETE_TRNA_MAX_LENGTH) {
             throw new ValidationException(
-                    line,
+                    reportedLine(sortedTrnaGroup.get(0), line),
                     INVALID_TRNA_LENGTH_MESSAGE.formatted(
                             COMPLETE_TRNA_MIN_LENGTH,
                             COMPLETE_TRNA_MAX_LENGTH,
                             length,
                             sortedTrnaGroup.get(0).accession()));
         }
+    }
+
+    /**
+     * feature.getLine() is the line the offending segment was actually read from; the
+     * annotation-level {@code fallbackLine} is only the line the reader had reached when it flushed
+     * this whole annotation (e.g. the next accession's first feature), which points nowhere near the
+     * violation. Falls back when the feature's own line was never set, e.g. on the flat file to GFF3
+     * conversion path, which has no source GFF3 line to report.
+     */
+    private int reportedLine(GFF3Feature feature, int fallbackLine) {
+        return feature.getLine() >= 0 ? feature.getLine() : fallbackLine;
     }
 
     /**
@@ -287,7 +298,7 @@ public class LengthValidation implements Validation {
 
         if (tooShort) {
             throw new ValidationException(
-                    line,
+                    reportedLine(sortedCdsGroup.get(0), line),
                     INVALID_CDS_LENGTH_MESSAGE.formatted(
                             COMPLETE_CDS_MIN_AMINO_ACIDS, sortedCdsGroup.get(0).accession()));
         }
