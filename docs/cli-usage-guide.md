@@ -269,9 +269,9 @@ direction except FASTA → GFF3 (the only direction that should synthesize new f
 structural overrides always take precedence over `--fixes`.
 
 `--fixes` is method-level only, mirroring `--rules`: `FIX_NAME:ON` or `FIX_NAME:OFF` only ever
-toggles that one fix method, never a whole class or an unrelated validation rule that happens to
-share the same name (e.g. `ATTRIBUTES_VALUE` and `CHROMOSOME_NAME` are also validation rule
-names). `PROTEIN_ID_REMOVE` and `TRANSFORM_EXCLUSIVE_ATTRIBUTE_TO_NOTE` are disabled at the class
+toggles that one fix method, never a whole class or an unrelated validation class that happens
+to share the same name (e.g. `ATTRIBUTES_VALUE` and `CHROMOSOME_NAME` are also `@Gff3Validation`
+class names). `PROTEIN_ID_REMOVE` and `TRANSFORM_EXCLUSIVE_ATTRIBUTE_TO_NOTE` are disabled at the class
 level by default, so `--fixes` cannot turn them on; toggling those requires
 `default-rule-severities.properties` or the Java builder API.
 
