@@ -21,6 +21,8 @@ import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
+import uk.ac.ebi.embl.gff3tools.validation.ParameterProvider;
+import uk.ac.ebi.embl.gff3tools.validation.ResolvedParameters;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationRegistry;
 
@@ -271,6 +273,7 @@ public class TestUtils {
                 return OntologyClient.class;
             }
         });
+        context.register(ResolvedParameters.class, new ParameterProvider());
         return context;
     }
 

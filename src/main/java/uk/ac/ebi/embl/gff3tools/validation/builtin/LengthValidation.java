@@ -23,6 +23,9 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
+import uk.ac.ebi.embl.gff3tools.validation.Parameter;
+import uk.ac.ebi.embl.gff3tools.validation.ParameterType;
+import uk.ac.ebi.embl.gff3tools.validation.ResolvedParameters;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
@@ -35,13 +38,6 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 @Gff3Validation(name = "LENGTH")
 public class LengthValidation implements Validation {
-
-    private static final long INTRON_FEATURE_MIN_LENGTH = 10;
-    private static final long EXON_FEATURE_MIN_LENGTH = 15;
-    private static final long COMPLETE_CDS_MIN_AMINO_ACIDS = 25;
-    private static final long COMPLETE_CDS_MIN_LENGTH = (COMPLETE_CDS_MIN_AMINO_ACIDS + 1) * 3;
-    private static final long COMPLETE_TRNA_MIN_LENGTH = 50;
-    private static final long COMPLETE_TRNA_MAX_LENGTH = 150;
 
     private static final String INVALID_PROPEPTIDE_LENGTH_MESSAGE =
             "Propeptide feature length must be a multiple of 3 for accession \"%s\"";
@@ -65,22 +61,33 @@ public class LengthValidation implements Validation {
     @InjectContext
     private ValidationContext context;
 
+    @Parameter(
+            name = "MIN_LENGTH",
+            type = ParameterType.LONG,
+            description = "Minimum length in bp for an intron feature",
+            defaultValue = "10")
     @ValidationMethod(rule = "INTRON_LENGTH", type = ValidationType.FEATURE)
     public void validateIntronLength(GFF3Feature feature, int line) throws ValidationException {
         OntologyClient ontologyClient = context.get(OntologyClient.class);
+        long minLength = context.get(ResolvedParameters.class).getLong("INTRON_LENGTH.MIN_LENGTH");
         long length = feature.getLength();
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
         if (soIdOpt.isEmpty()) return;
 
-        if (ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.INTRON.ID)
-                && length < INTRON_FEATURE_MIN_LENGTH) {
+        if (ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.INTRON.ID) && length < minLength) {
             throw new ValidationException(line, INVALID_INTRON_LENGTH_MESSAGE.formatted(feature.accession()));
         }
     }
 
+    @Parameter(
+            name = "MIN_LENGTH",
+            type = ParameterType.LONG,
+            description = "Minimum length in bp expected for an intron between adjacent CDS segments",
+            defaultValue = "10")
     @ValidationMethod(rule = "CDS_INTRON_LENGTH", type = ValidationType.ANNOTATION)
     public void validateCdsIntronLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
         OntologyClient ontologyClient = context.get(OntologyClient.class);
+        long minLength = context.get(ResolvedParameters.class).getLong("CDS_INTRON_LENGTH.MIN_LENGTH");
         Map<String, List<GFF3Feature>> cdsListById = new HashMap<>();
 
         for (GFF3Feature feature : gff3Annotation.getFeatures()) {
@@ -107,11 +114,12 @@ public class LengthValidation implements Validation {
         }
 
         for (List<GFF3Feature> cdsGroup : cdsListById.values()) {
-            validateCdsIntronLength(cdsGroup, line);
+            validateCdsIntronLength(cdsGroup, line, minLength);
         }
     }
 
-    private void validateCdsIntronLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
+    private void validateCdsIntronLength(List<GFF3Feature> cdsList, int line, long minLength)
+            throws ValidationException {
 
         if (cdsList.size() <= 1) {
             return;
@@ -122,7 +130,7 @@ public class LengthValidation implements Validation {
             GFF3Feature prev = cdsList.get(i - 1);
             GFF3Feature curr = cdsList.get(i);
             long intronLen = curr.getStart() - prev.getEnd();
-            if (intronLen >= 0 && intronLen < 10) {
+            if (intronLen >= 0 && intronLen < minLength) {
                 boolean artificial = prev.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION)
                         || curr.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION);
 
@@ -143,42 +151,66 @@ public class LengthValidation implements Validation {
      * are grouped exactly as that fix groups them, so the translation it recorded for a group can be
      * found again here.
      */
+    @Parameter(
+            name = "MIN_AMINO_ACIDS",
+            type = ParameterType.LONG,
+            description = "Minimum amino acids for a complete CDS",
+            defaultValue = "25")
     @ValidationMethod(
             rule = "CDS_LENGTH",
             description = "Complete coding regions must be at least 25 amino acids long",
             type = ValidationType.ANNOTATION,
             priority = ValidationPriority.LOW)
     public void validateCdsLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
+        long minAminoAcids = context.get(ResolvedParameters.class).getLong("CDS_LENGTH.MIN_AMINO_ACIDS");
         Map<String, List<GFF3Feature>> cdsGroups = ValidationUtils.groupFeaturesById(gff3Annotation, this::isCds);
 
         for (List<GFF3Feature> segments : cdsGroups.values()) {
-            validateCdsLength(segments, line);
+            validateCdsLength(segments, line, minAminoAcids);
         }
     }
 
+    @Parameter(
+            name = "MIN_LENGTH",
+            type = ParameterType.LONG,
+            description = "Minimum length in bp for a complete tRNA",
+            defaultValue = "50")
+    @Parameter(
+            name = "MAX_LENGTH",
+            type = ParameterType.LONG,
+            description = "Maximum length in bp for a complete tRNA",
+            defaultValue = "150")
     @ValidationMethod(
             rule = "TRNA_LENGTH",
             description = "Complete tRNA features must be between 50 and 150 bp long, measured across"
                     + " the segments sharing an ID that make up one spliced tRNA",
             type = ValidationType.ANNOTATION)
     public void validateTrnaLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
+        ResolvedParameters parameters = context.get(ResolvedParameters.class);
+        long minLength = parameters.getLong("TRNA_LENGTH.MIN_LENGTH");
+        long maxLength = parameters.getLong("TRNA_LENGTH.MAX_LENGTH");
         // Features without an ID are keyed individually, so unrelated tRNAs are never summed as one.
         Map<String, List<GFF3Feature>> trnaGroups = ValidationUtils.groupFeaturesById(gff3Annotation, this::isTrna);
 
         for (List<GFF3Feature> segments : trnaGroups.values()) {
-            validateTrnaLength(segments, line);
+            validateTrnaLength(segments, line, minLength, maxLength);
         }
     }
 
+    @Parameter(
+            name = "MIN_LENGTH",
+            type = ParameterType.LONG,
+            description = "Minimum length in bp for an exon feature",
+            defaultValue = "15")
     @ValidationMethod(rule = "EXON_LENGTH", type = ValidationType.FEATURE, severity = RuleSeverity.WARN)
     public void validateExonLength(GFF3Feature feature, int line) throws ValidationException {
         OntologyClient ontologyClient = context.get(OntologyClient.class);
+        long minLength = context.get(ResolvedParameters.class).getLong("EXON_LENGTH.MIN_LENGTH");
         long length = feature.getLength();
         Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
         if (soIdOpt.isEmpty()) return;
 
-        if (ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.EXON.ID)
-                && length < EXON_FEATURE_MIN_LENGTH) {
+        if (ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.EXON.ID) && length < minLength) {
             throw new ValidationException(line, INVALID_EXON_LENGTH_MESSAGE.formatted(feature.accession()));
         }
     }
@@ -226,7 +258,8 @@ public class LengthValidation implements Validation {
                 .orElse(false);
     }
 
-    private void validateTrnaLength(List<GFF3Feature> trnaList, int line) throws ValidationException {
+    private void validateTrnaLength(List<GFF3Feature> trnaList, int line, long minLength, long maxLength)
+            throws ValidationException {
         List<GFF3Feature> sortedTrnaGroup = new ArrayList<>(trnaList);
         sortedTrnaGroup.sort(Comparator.comparingLong(GFF3Feature::getStart));
         if (sortedTrnaGroup.isEmpty()
@@ -236,14 +269,11 @@ public class LengthValidation implements Validation {
         }
 
         long length = sortedTrnaGroup.stream().mapToLong(GFF3Feature::getLength).sum();
-        if (length < COMPLETE_TRNA_MIN_LENGTH || length > COMPLETE_TRNA_MAX_LENGTH) {
+        if (length < minLength || length > maxLength) {
             throw new ValidationException(
                     reportedLine(sortedTrnaGroup.get(0), line),
                     INVALID_TRNA_LENGTH_MESSAGE.formatted(
-                            COMPLETE_TRNA_MIN_LENGTH,
-                            COMPLETE_TRNA_MAX_LENGTH,
-                            length,
-                            sortedTrnaGroup.get(0).accession()));
+                            minLength, maxLength, length, sortedTrnaGroup.get(0).accession()));
         }
     }
 
@@ -274,7 +304,7 @@ public class LengthValidation implements Validation {
      * which may declare a one or two base stop codon at the 3' end
      * and so leave a complete coding region short of a multiple of three.
      */
-    private void validateCdsLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
+    private void validateCdsLength(List<GFF3Feature> cdsList, int line, long minAminoAcids) throws ValidationException {
         List<GFF3Feature> sortedCdsGroup = new ArrayList<>(cdsList);
         sortedCdsGroup.sort(Comparator.comparingLong(GFF3Feature::getStart));
 
@@ -284,23 +314,26 @@ public class LengthValidation implements Validation {
             return;
         }
 
+        // Amino acid count plus the terminal stop codon that INSDC includes in the coding region.
+        long minNucleotideLength = (minAminoAcids + 1) * 3;
+
         String translation = getCdsTranslation(sortedCdsGroup);
         boolean tooShort;
         if (translation != null && !translation.isEmpty()) {
-            tooShort = translation.length() < COMPLETE_CDS_MIN_AMINO_ACIDS;
+            tooShort = translation.length() < minAminoAcids;
         } else if (sortedCdsGroup.stream().anyMatch(cds -> cds.hasAttribute(GFF3Attributes.TRANSL_EXCEPT))) {
             return;
         } else {
             long lengthInNucleotides =
                     sortedCdsGroup.stream().mapToLong(GFF3Feature::getLength).sum();
-            tooShort = lengthInNucleotides < COMPLETE_CDS_MIN_LENGTH;
+            tooShort = lengthInNucleotides < minNucleotideLength;
         }
 
         if (tooShort) {
             throw new ValidationException(
                     reportedLine(sortedCdsGroup.get(0), line),
                     INVALID_CDS_LENGTH_MESSAGE.formatted(
-                            COMPLETE_CDS_MIN_AMINO_ACIDS, sortedCdsGroup.get(0).accession()));
+                            minAminoAcids, sortedCdsGroup.get(0).accession()));
         }
     }
 
