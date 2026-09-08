@@ -62,18 +62,6 @@ public abstract class AbstractCommand implements Runnable {
         return Optional.ofNullable(fixes).map((f) -> f.fixes()).orElse(new HashMap<>());
     }
 
-    /**
-     * Fix classes that are {@code @Gff3Fix(enabled = false)} by default. These are the only fix
-     * classes for which {@code --fixes NAME:ON} needs to reach {@code overrideClassRules}: they are
-     * never built into a descriptor at all unless the class itself is re-enabled, so a method-level
-     * {@code fixOverrides} entry alone cannot revive them. Both are single-method classes whose
-     * {@code @Gff3Fix.name()} matches their {@code @FixMethod.rule()}, and neither name collides
-     * with a {@code @Gff3Validation.name()}, so re-enabling the class here cannot affect anything
-     * else.
-     */
-    private static final Set<String> CLASS_DISABLED_FIX_NAMES =
-            Set.of("PROTEIN_ID_REMOVE", "TRANSFORM_EXCLUSIVE_ATTRIBUTE_TO_NOTE");
-
     protected ValidationEngine initValidationEngine(
             Map<String, RuleSeverity> ruleOverrides, ContextProvider<?>... additionalProviders) {
         return initValidationEngine(ruleOverrides, Map.of(), additionalProviders);
@@ -88,35 +76,23 @@ public abstract class AbstractCommand implements Runnable {
      * applied on top, so a command's own structural overrides (e.g. a fix disabled because this
      * command discards the annotation it would fix) always win over a user-supplied toggle.
      *
-     * <p>Separately, a CLI {@code key:ON} entry is also forwarded to {@link
-     * ValidationEngineBuilder#overrideClassRules} when {@code key} is one of {@link
-     * #CLASS_DISABLED_FIX_NAMES}, so it can re-enable a fix whose class is {@code @Gff3Fix(enabled =
-     * false)} by default: a class-disabled fix is never built into a descriptor at all, so a
-     * method-level {@code fixOverrides} entry alone cannot revive it. No other key is forwarded:
-     * {@code overrideClassRules} shares its namespace with {@code @Gff3Validation.name()}, and
-     * disables every method of a multi-method class, so forwarding an arbitrary CLI key risks
-     * disabling an unrelated validation or a sibling fix method that happens to share a class name.
+     * <p>{@code --fixes} is method-level only, mirroring {@code --rules}: it cannot re-enable a fix
+     * whose class is {@code @Gff3Fix(enabled = false)} by default (e.g. {@code PROTEIN_ID_REMOVE}),
+     * since such a class is never built into a descriptor at all. Toggling those requires
+     * {@code default-rule-severities.properties} or the {@link ValidationEngineBuilder} API
+     * directly.
      */
     protected ValidationEngine initValidationEngine(
             Map<String, RuleSeverity> ruleOverrides,
             Map<String, Boolean> fixOverrides,
             ContextProvider<?>... additionalProviders) {
 
-        Map<String, Boolean> cliFixOverrides = getFixOverrides();
-        Map<String, Boolean> mergedFixOverrides = new HashMap<>(cliFixOverrides);
+        Map<String, Boolean> mergedFixOverrides = new HashMap<>(getFixOverrides());
         mergedFixOverrides.putAll(fixOverrides);
-
-        Map<String, Boolean> classDisabledFixReenables = new HashMap<>();
-        cliFixOverrides.forEach((key, value) -> {
-            if (value && CLASS_DISABLED_FIX_NAMES.contains(key)) {
-                classDisabledFixReenables.put(key, true);
-            }
-        });
 
         ValidationEngineBuilder builder = new ValidationEngineBuilder()
                 .overrideMethodRules(ruleOverrides)
                 .overrideMethodFixs(mergedFixOverrides)
-                .overrideClassRules(classDisabledFixReenables)
                 .failFast(failFast);
 
         // Providers gate their own registration via ContextProvider#isActive(). An empty

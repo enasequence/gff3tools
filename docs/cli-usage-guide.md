@@ -268,12 +268,12 @@ is always off for `validation` (which discards its output) and for `conversion` 
 direction except FASTA → GFF3 (the only direction that should synthesize new features). Those
 structural overrides always take precedence over `--fixes`.
 
-`FIX_NAME:OFF` only ever disables that one fix method, never a whole class or an unrelated
-validation rule that happens to share the same name (e.g. `ATTRIBUTES_VALUE` and
-`CHROMOSOME_NAME` are also validation rule names). Class-level re-enabling via `FIX_NAME:ON` is
-only needed for, and only applies to, the two fixes that are disabled by default:
-`PROTEIN_ID_REMOVE` and `TRANSFORM_EXCLUSIVE_ATTRIBUTE_TO_NOTE`. Every other fix is already
-enabled by default, so toggling it on or off only ever affects that specific fix method.
+`--fixes` is method-level only, mirroring `--rules`: `FIX_NAME:ON` or `FIX_NAME:OFF` only ever
+toggles that one fix method, never a whole class or an unrelated validation rule that happens to
+share the same name (e.g. `ATTRIBUTES_VALUE` and `CHROMOSOME_NAME` are also validation rule
+names). `PROTEIN_ID_REMOVE` and `TRANSFORM_EXCLUSIVE_ATTRIBUTE_TO_NOTE` are disabled at the class
+level by default, so `--fixes` cannot turn them on; toggling those requires
+`default-rule-severities.properties` or the Java builder API.
 
 Available fixes:
 
@@ -301,15 +301,15 @@ Available fixes:
 | `TRANSLATION` | `ON` | Translate CDS features and set the translation attribute |
 
 ```bash
-# Strip protein_id from every feature during conversion (off by default)
-$GFF3TOOLS conversion \
-  --fixes PROTEIN_ID_REMOVE:ON \
-  OZ026791.embl OZ026791.gff3
-
 # Disable locus_tag upper-casing while iterating on a submission
 $GFF3TOOLS conversion \
   --fixes LOCUS_TAG_TO_UPPERCASE:OFF \
   OZ026791.embl OZ026791.gff3
+
+# Skip EC_NUMBER cleanup during validation
+$GFF3TOOLS validation \
+  --fixes EC_NUMBER:OFF \
+  annotation.gff3
 ```
 
 ---

@@ -168,10 +168,10 @@ public class ValidationCommandTest {
     }
 
     @Test
-    void fixesOverride_cliOnReenablesClassDisabledFix() throws Exception {
+    void fixesOverride_cannotReenableClassDisabledFix() throws Exception {
         // PROTEIN_ID_REMOVE is @Gff3Fix(enabled = false): a class-disabled fix is filtered out
-        // entirely at registration, so only "--fixes PROTEIN_ID_REMOVE:ON" re-enabling the class
-        // (not just the method-level fixOverrides map) makes it run at all.
+        // entirely at registration. --fixes is method-level only (mirroring --rules), so
+        // "--fixes PROTEIN_ID_REMOVE:ON" cannot revive it.
         validationCommand.fixes = new CliFixesOption(Map.of("PROTEIN_ID_REMOVE", true));
 
         try (ValidationEngine engine = validationCommand.initValidationEngine(Map.of(), Map.of())) {
@@ -179,20 +179,8 @@ public class ValidationCommandTest {
             List<ValidatorDescriptor> fixes = (List<ValidatorDescriptor>)
                     registry.getClass().getMethod("getFixs").invoke(registry);
             assertTrue(
-                    fixes.stream().anyMatch(d -> d.clazz().equals(ProteinIdRemoval.class)),
-                    "ProteinIdRemoval must be registered once --fixes PROTEIN_ID_REMOVE:ON is set");
-        }
-    }
-
-    @Test
-    void fixesOverride_classDisabledFixNotRegisteredByDefault() throws Exception {
-        try (ValidationEngine engine = validationCommand.initValidationEngine(Map.of(), Map.of())) {
-            Object registry = getPrivateField(engine, "validationRegistry");
-            List<ValidatorDescriptor> fixes = (List<ValidatorDescriptor>)
-                    registry.getClass().getMethod("getFixs").invoke(registry);
-            assertTrue(
                     fixes.stream().noneMatch(d -> d.clazz().equals(ProteinIdRemoval.class)),
-                    "ProteinIdRemoval is class-disabled by default and must not be registered without --fixes");
+                    "ProteinIdRemoval is class-disabled by default and --fixes ON must not register it");
         }
     }
 
