@@ -39,6 +39,7 @@ public class Main {
         try {
             exitCode = new CommandLine(new Main())
                     .registerConverter(CliRulesOption.class, new RuleConverter())
+                    .registerConverter(CliFixesOption.class, new FixesConverter())
                     .setExecutionExceptionHandler(new ExecutionExceptionHandler())
                     .execute(args);
         } catch (OutOfMemoryError e) {
@@ -87,6 +88,36 @@ class RuleConverter implements CommandLine.ITypeConverter<CliRulesOption> {
                 throw new CLIException("The rule severity: \"" + pairs[1] + "\" is invalid");
             }
             this.map.rules().put(key, value);
+        }
+        return this.map;
+    }
+}
+
+record CliFixesOption(Map<String, Boolean> fixes) {}
+
+class FixesConverter implements CommandLine.ITypeConverter<CliFixesOption> {
+    CliFixesOption map = new CliFixesOption(new HashMap<>());
+
+    @Override
+    public CliFixesOption convert(String args) throws Exception {
+        String[] entries = args.split(",");
+
+        for (String entry : entries) {
+            String[] pairs = entry.trim().split(":");
+            if (pairs.length != 2) {
+                throw new CLIException("Invalid fix: '" + entry + "' There must be 2 values separated by ':' ");
+            }
+            String key = pairs[0].toUpperCase();
+            String rawValue = pairs[1].toUpperCase();
+            boolean value;
+            if (rawValue.equals("ON")) {
+                value = true;
+            } else if (rawValue.equals("OFF")) {
+                value = false;
+            } else {
+                throw new CLIException("The fix state: \"" + pairs[1] + "\" is invalid, expected ON or OFF");
+            }
+            this.map.fixes().put(key, value);
         }
         return this.map;
     }

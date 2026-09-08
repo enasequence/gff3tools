@@ -42,6 +42,12 @@ public abstract class AbstractCommand implements Runnable {
             description = "Specify rules in the format key:value")
     public CliRulesOption rules;
 
+    @CommandLine.Option(
+            names = "--fixes",
+            paramLabel = "<key:ON|OFF,key:ON|OFF>",
+            description = "Toggle auto-fixes by @FixMethod.rule() in the format key:ON or key:OFF")
+    public CliFixesOption fixes;
+
     @CommandLine.Parameters(
             paramLabel = "[input-file]",
             defaultValue = "",
@@ -50,6 +56,10 @@ public abstract class AbstractCommand implements Runnable {
 
     protected Map<String, RuleSeverity> getRuleOverrides() {
         return Optional.ofNullable(rules).map((r) -> r.rules()).orElse(new HashMap<>());
+    }
+
+    protected Map<String, Boolean> getFixOverrides() {
+        return Optional.ofNullable(fixes).map((f) -> f.fixes()).orElse(new HashMap<>());
     }
 
     protected ValidationEngine initValidationEngine(
@@ -61,15 +71,22 @@ public abstract class AbstractCommand implements Runnable {
      * Builds a {@link ValidationEngine}, additionally toggling individual fixes by their
      * {@code @FixMethod.rule()}. Use it to keep a fix off a command where its output would be
      * discarded.
+     *
+     * <p>{@code --fixes} overrides from the CLI are merged in first, with {@code fixOverrides}
+     * applied on top, so a command's own structural overrides (e.g. a fix disabled because this
+     * command discards the annotation it would fix) always win over a user-supplied toggle.
      */
     protected ValidationEngine initValidationEngine(
             Map<String, RuleSeverity> ruleOverrides,
             Map<String, Boolean> fixOverrides,
             ContextProvider<?>... additionalProviders) {
 
+        Map<String, Boolean> mergedFixOverrides = new HashMap<>(getFixOverrides());
+        mergedFixOverrides.putAll(fixOverrides);
+
         ValidationEngineBuilder builder = new ValidationEngineBuilder()
                 .overrideMethodRules(ruleOverrides)
-                .overrideMethodFixs(fixOverrides)
+                .overrideMethodFixs(mergedFixOverrides)
                 .failFast(failFast);
 
         // Providers gate their own registration via ContextProvider#isActive(). An empty
