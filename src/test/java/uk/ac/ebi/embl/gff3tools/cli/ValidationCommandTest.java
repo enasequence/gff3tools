@@ -372,6 +372,46 @@ public class ValidationCommandTest {
                         + "##FASTA section, not silently discarded: " + content);
     }
 
+    @Test
+    void validation_mergesTranslationStateWithRawFastaPassthrough_perFeature() throws Exception {
+        // cds1 has BOTH an inline translation attribute (captured into TranslationState by
+        // REMOVE_TRANSLATION_ATTRIBUTE, which runs unconditionally, without --sequence) AND a raw
+        // ##FASTA entry with a different sequence, to prove TranslationState wins on collision.
+        // cds2 has no inline attribute, only a raw ##FASTA entry, to prove that a feature
+        // TranslationState never touched still gets its translation preserved from the
+        // passthrough instead of being dropped just because cds1 populated TranslationState.
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 100
+                ##sequence-region seq2 1 100
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1;translation=MFAKE
+                seq2\t.\tCDS\t1\t93\t.\t+\t0\tID=cds2
+                ##FASTA
+                >seq1|cds1
+                MOLD
+                >seq2|cds2
+                MREAL
+                """);
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode = executeValidation("validation", gff3.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "Validation with output should succeed");
+        String content = Files.readString(outputFile);
+        assertTrue(
+                content.contains(">seq1|cds1") && content.contains("MFAKE") && !content.contains("MOLD"),
+                "cds1's TranslationState entry (from the inline attribute) must win over its raw "
+                        + "##FASTA passthrough entry: " + content);
+        assertTrue(
+                content.contains(">seq2|cds2") && content.contains("MREAL"),
+                "cds2's raw ##FASTA passthrough translation must survive even though cds1 "
+                        + "populated TranslationState — this is the regression: a per-key merge, not "
+                        + "a whole-file switch between the two sources: " + content);
+    }
+
     private int executeValidation(String... args) {
         StringWriter err = new StringWriter();
         StringWriter out = new StringWriter();

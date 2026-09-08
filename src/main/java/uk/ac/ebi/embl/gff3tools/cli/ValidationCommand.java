@@ -201,16 +201,11 @@ public class ValidationCommand extends AbstractCommand {
                         // TranslationFix captures pre-existing translations and computes new ones
                         // into TranslationState during validation; without wiring it through here,
                         // fixed output would silently lose them instead of writing a ##FASTA section.
-                        // Only used when it actually holds something: an empty state (e.g. no
-                        // --sequence given, so TranslationFix never ran) must not pre-empt the
-                        // raw-offset fallback that re-reads an input file's own ##FASTA section.
-                        TranslationState contextTranslationState =
+                        // GFF3File merges this with the raw ##FASTA passthrough itself, so an empty
+                        // state here is harmless — no emptiness check needed at this layer.
+                        TranslationState translationState =
                                 validationEngine.getContext().contains(TranslationState.class)
                                         ? validationEngine.getContext().get(TranslationState.class)
-                                        : null;
-                        TranslationState translationState =
-                                contextTranslationState != null && contextTranslationState.hasResolvedTranslations()
-                                        ? contextTranslationState
                                         : null;
                         GFF3File gff3File = new GFF3File(
                                 header,

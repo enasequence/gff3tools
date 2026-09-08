@@ -16,6 +16,7 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.Builder;
@@ -42,9 +43,12 @@ public class GFF3File implements IGFF3Feature {
     TranslationState translationState;
 
     /**
-     * @param translationState when non-null, the FASTA section is written from this state;
-     *                         mutually exclusive with {@code fastaFilePath} — if both are set,
-     *                         {@code translationState} takes priority.
+     * @param translationState per-feature translations captured/computed during validation.
+     *                         Merged with {@code gff3FileReader}'s raw {@code ##FASTA}
+     *                         passthrough (see {@link #writeTranslationSection}): entries here
+     *                         take priority on key collision, but do not suppress passthrough
+     *                         entries for features this state never touched. {@code fastaFilePath}
+     *                         is only used as a last-resort fallback when the merge is empty.
      */
     public GFF3File(
             GFF3Header header,
@@ -96,31 +100,48 @@ public class GFF3File implements IGFF3Feature {
         }
     }
 
+    /**
+     * Builds one {@code ##FASTA} section from two sources keyed identically (both use
+     * {@link uk.ac.ebi.embl.gff3tools.gff3.TranslationKey}'s {@code accession|urlEncodedFeatureId}
+     * format): {@code gff3Reader}'s raw byte-offset passthrough of the input file's own
+     * {@code ##FASTA} section, and {@code translationState}'s per-feature captured/computed
+     * translations. This must be a per-key merge, not a switch between the two sources — a
+     * feature this validation run never touched (so it has no {@code translationState} entry)
+     * still needs its original translation preserved from the passthrough, even when other
+     * features in the same file do have a {@code translationState} entry. Falls back to
+     * {@code fastaFilePath} only when neither source produced anything.
+     */
     private void writeTranslationSection(Writer writer) throws IOException {
+        Map<String, String> merged = new LinkedHashMap<>();
+
+        if (gff3Reader != null) {
+            Map<String, OffsetRange> offsets = gff3Reader.getTranslationOffsetMap();
+            if (offsets != null) {
+                for (Map.Entry<String, OffsetRange> entry : offsets.entrySet()) {
+                    merged.put(entry.getKey(), gff3Reader.getTranslation(entry.getValue()));
+                }
+            }
+        }
+
         if (translationState != null) {
-            writeFastaFromTranslationState(writer);
+            // Overlay last so a captured/computed entry wins on key collision, without
+            // discarding passthrough entries for keys it does not have.
+            translationState.forEachResolved(merged::put);
+        }
+
+        if (!merged.isEmpty()) {
+            writeFastaFromMap(writer, merged);
         } else if (fastaFilePath != null) {
             writeFastaFromExistingFile(writer);
-        } else if (gff3Reader != null
-                && gff3Reader.getTranslationOffsetMap() != null
-                && !gff3Reader.getTranslationOffsetMap().isEmpty()) {
-            writeFastaFromOffsets(writer, gff3Reader.getTranslationOffsetMap());
         }
     }
 
-    private void writeFastaFromTranslationState(Writer writer) throws IOException {
-        List<Map.Entry<String, String>> toWrite = new java.util.ArrayList<>();
-        translationState.forEachResolved((key, translation) -> toWrite.add(Map.entry(key, translation)));
-
-        if (toWrite.isEmpty()) {
-            return;
-        }
-
+    private void writeFastaFromMap(Writer writer, Map<String, String> translations) throws IOException {
         writer.write("##FASTA\n");
-        for (Map.Entry<String, String> e : toWrite) {
-            TranslationWriter.writeTranslation(writer, e.getKey(), e.getValue());
+        for (Map.Entry<String, String> entry : translations.entrySet()) {
+            TranslationWriter.writeTranslation(writer, entry.getKey(), entry.getValue());
         }
-        log.info("Written {} translation sequences from TranslationState", toWrite.size());
+        log.info("Written {} translation sequences", translations.size());
         writer.write("\n");
     }
 
