@@ -87,8 +87,9 @@ $GFF3TOOLS conversion --output-sequence sequences.fasta annotation.tsv annotatio
 
 ### Pipes (stdin / stdout)
 
-When no output file is given, gff3tools writes converted data to stdout. Informational
-log messages are suppressed to keep stdout clean; warnings and errors still go to stderr.
+When no output file is given, gff3tools writes converted data to stdout; `-` is also
+accepted as an explicit stdout token. Informational log messages are suppressed to keep
+stdout clean; warnings and errors still go to stderr.
 
 ```bash
 # GFF3 → EMBL via pipe
@@ -96,6 +97,9 @@ cat OZ026791.gff3 | $GFF3TOOLS conversion -f gff3 -t embl > OZ026791.embl
 
 # EMBL → GFF3 in a pipeline
 $GFF3TOOLS conversion -f embl -t gff3 OZ026791.embl | gzip > OZ026791.gff3.gz
+
+# Explicit '-' for stdout (equivalent to omitting the output argument)
+$GFF3TOOLS conversion -f gff3 -t embl OZ026791.gff3 -
 ```
 
 ### Gzip-compressed input
@@ -197,21 +201,6 @@ $GFF3TOOLS translate \
   --sequence sequences.fasta \
   -o proteins.fasta \
   annotation.gff3
-```
-
----
-
-## `process` — process GFF3 and FASTA files
-
-Validates and processes a GFF3 file together with a FASTA sequence file for a set of
-accessions. All three inputs are required.
-
-```bash
-$GFF3TOOLS process \
-  -accessions ACC001,ACC002,ACC003 \
-  -gff3 annotation.gff3 \
-  -fasta sequences.fasta \
-  -o processed.gff3
 ```
 
 ---
