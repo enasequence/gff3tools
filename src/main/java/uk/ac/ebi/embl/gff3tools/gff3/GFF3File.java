@@ -16,6 +16,7 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.Builder;
@@ -80,20 +81,33 @@ public class GFF3File implements IGFF3Feature {
 
             for (GFF3Annotation ann : annotations) {
                 ann.writeGFF3String(writer);
-
-                if (writeAnnotationFasta) {
-                    Map<String, OffsetRange> annOffserMap = gff3Reader.getTranslationOffsetForAnnotation(ann);
-                    // Write translation by annnotation offset map
-                    writeFastaFromOffsets(writer, annOffserMap);
-                }
             }
 
-            if (!writeAnnotationFasta) {
+            // ##FASTA terminates the feature section, so it is written once, after every
+            // annotation — never interleaved between them.
+            if (writeAnnotationFasta) {
+                writeFastaFromOffsets(writer, translationOffsetsForAnnotations());
+            } else {
                 writeTranslationSection(writer);
             }
         } catch (IOException e) {
             throw new WriteException(e);
         }
+    }
+
+    /**
+     * Translation offsets belonging to this file's annotations, gathered in annotation order.
+     *
+     * <p>Scoping to {@code annotations} rather than taking the reader's whole map is what lets a
+     * file hold a subset of a submission's annotations and carry exactly that subset's
+     * translations.
+     */
+    private Map<String, OffsetRange> translationOffsetsForAnnotations() {
+        Map<String, OffsetRange> offsets = new LinkedHashMap<>();
+        for (GFF3Annotation ann : annotations) {
+            offsets.putAll(gff3Reader.getTranslationOffsetForAnnotation(ann));
+        }
+        return offsets;
     }
 
     private void writeTranslationSection(Writer writer) throws IOException {
