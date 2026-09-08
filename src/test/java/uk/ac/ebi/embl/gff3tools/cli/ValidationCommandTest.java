@@ -341,6 +341,37 @@ public class ValidationCommandTest {
         assertTrue(gapLine.contains("gap_type=telomere"), "--gap-type should reach the generated gap: " + gapLine);
     }
 
+    @Test
+    void validation_withSequence_writesComputedTranslationToFastaSection() throws Exception {
+        Path fasta = tempDir.resolve("cds.fasta");
+        Files.writeString(
+                fasta,
+                ">seq1 | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
+                        + "ATGTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAATTTTTTT\n");
+
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 100
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1
+                """);
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode =
+                executeValidation("validation", "--sequence", fasta.toString(), gff3.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "Validation with output and --sequence should succeed");
+        String content = Files.readString(outputFile);
+        assertTrue(
+                content.contains("##FASTA")
+                        && content.contains(">seq1|cds1")
+                        && content.contains("MFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
+                "The CDS translation computed by TranslationFix must be written to the output's "
+                        + "##FASTA section, not silently discarded: " + content);
+    }
+
     private int executeValidation(String... args) {
         StringWriter err = new StringWriter();
         StringWriter out = new StringWriter();

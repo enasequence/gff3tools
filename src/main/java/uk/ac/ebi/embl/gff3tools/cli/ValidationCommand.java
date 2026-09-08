@@ -37,6 +37,7 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 // Using pandoc CLI interface conventions
 @CommandLine.Command(name = "validation", description = "Performs validations on gff3 files")
@@ -197,6 +198,20 @@ public class ValidationCommand extends AbstractCommand {
                     }
 
                     if (outputRequested) {
+                        // TranslationFix captures pre-existing translations and computes new ones
+                        // into TranslationState during validation; without wiring it through here,
+                        // fixed output would silently lose them instead of writing a ##FASTA section.
+                        // Only used when it actually holds something: an empty state (e.g. no
+                        // --sequence given, so TranslationFix never ran) must not pre-empt the
+                        // raw-offset fallback that re-reads an input file's own ##FASTA section.
+                        TranslationState contextTranslationState =
+                                validationEngine.getContext().contains(TranslationState.class)
+                                        ? validationEngine.getContext().get(TranslationState.class)
+                                        : null;
+                        TranslationState translationState =
+                                contextTranslationState != null && contextTranslationState.hasResolvedTranslations()
+                                        ? contextTranslationState
+                                        : null;
                         GFF3File gff3File = new GFF3File(
                                 header,
                                 gff3Reader.gff3Species,
@@ -205,7 +220,7 @@ public class ValidationCommand extends AbstractCommand {
                                 null,
                                 false,
                                 null,
-                                null);
+                                translationState);
                         gff3File.writeGFF3String(outputWriter);
                     }
                 }

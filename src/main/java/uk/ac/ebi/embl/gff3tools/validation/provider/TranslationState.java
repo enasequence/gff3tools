@@ -63,13 +63,31 @@ public class TranslationState {
      */
     public void forEachResolved(BiConsumer<String, String> action) {
         entries.forEach((key, entry) -> {
-            String translation = entry.newTranslation();
-            if (translation == null || translation.isEmpty()) {
-                translation = entry.oldTranslation();
-            }
+            String translation = resolve(entry);
             if (translation != null && !translation.isEmpty()) {
                 action.accept(key, translation);
             }
         });
+    }
+
+    /**
+     * Whether any entry resolves to a non-empty translation, i.e. {@link #forEachResolved}
+     * would act at least once. Callers that only have an alternative FASTA source when this
+     * state carries nothing (e.g. re-reading an input file's own {@code ##FASTA} section) use
+     * this to decide whether to prefer this state or fall back to that other source.
+     */
+    public boolean hasResolvedTranslations() {
+        return entries.values().stream().anyMatch(entry -> {
+            String translation = resolve(entry);
+            return translation != null && !translation.isEmpty();
+        });
+    }
+
+    private static String resolve(TranslationEntry entry) {
+        String translation = entry.newTranslation();
+        if (translation == null || translation.isEmpty()) {
+            translation = entry.oldTranslation();
+        }
+        return translation;
     }
 }
