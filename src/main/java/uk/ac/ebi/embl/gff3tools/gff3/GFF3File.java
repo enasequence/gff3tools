@@ -49,6 +49,9 @@ public class GFF3File implements IGFF3Feature {
      *                         take priority on key collision, but do not suppress passthrough
      *                         entries for features this state never touched. {@code fastaFilePath}
      *                         is only used as a last-resort fallback when the merge is empty.
+     *                         Ignored entirely when {@code writeAnnotationFasta} is {@code true}:
+     *                         that mode writes one {@code ##FASTA} block per annotation directly
+     *                         from {@code gff3FileReader}'s offsets instead.
      */
     public GFF3File(
             GFF3Header header,
