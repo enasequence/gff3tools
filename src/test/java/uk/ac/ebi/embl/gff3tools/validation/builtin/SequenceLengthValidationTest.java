@@ -18,6 +18,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import uk.ac.ebi.embl.api.entry.genomeassembly.AssemblyType;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -62,6 +65,11 @@ class SequenceLengthValidationTest {
     }
 
     private void injectLookupReturning(String seqId, long len, AnalysisType analysisType) throws Exception {
+        injectLookupReturning(seqId, len, analysisType, null);
+    }
+
+    private void injectLookupReturning(String seqId, long len, AnalysisType analysisType, AssemblyType assemblyType)
+            throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
         when(mockLookup.getSequenceLength(seqId)).thenReturn(len);
         ValidationContext context = TestUtils.createTestContext();
@@ -79,7 +87,8 @@ class SequenceLengthValidationTest {
         context.register(AnalysisContext.class, new ContextProvider<>() {
             @Override
             public AnalysisContext get(ValidationContext ctx) {
-                return new AnalysisContext(analysisType, 10);
+                return new AnalysisContext(
+                        analysisType, 10, null, null, assemblyType == null ? null : assemblyType.getValue());
             }
 
             @Override
@@ -218,19 +227,56 @@ class SequenceLengthValidationTest {
     @Nested
     class ValidateAssemblyMinimumLength {
 
-        @Test
-        void assemblyLengthAbove1000Success() throws Exception {
-            injectLookupReturning(SEQ_ID, 1500L, AnalysisType.SEQUENCE_ASSEMBLY);
+        @ParameterizedTest
+        @EnumSource(
+                value = AssemblyType.class,
+                names = {
+                    "CLONEORISOLATE",
+                    "METAGENOME_ASSEMBLEDGENOME",
+                    "ENVIRONMENTALSINGLE_CELLAMPLIFIEDGENOME",
+                    "COVID_19_OUTBREAK"
+                })
+        void wgsAssemblyLengthAbove1000Success(AssemblyType assemblyType) throws Exception {
+            injectLookupReturning(SEQ_ID, 1500L, AnalysisType.SEQUENCE_ASSEMBLY, assemblyType);
             assertDoesNotThrow(() -> check.validateWGSMinimumLength(annotationWithSequenceRegion(1L, 1500L), 1));
         }
 
-        @Test
-        void assemblyLengthBelow1000Failure() throws Exception {
-            injectLookupReturning(SEQ_ID, 500L, AnalysisType.SEQUENCE_ASSEMBLY);
+        @ParameterizedTest
+        @EnumSource(
+                value = AssemblyType.class,
+                names = {
+                    "CLONEORISOLATE",
+                    "METAGENOME_ASSEMBLEDGENOME",
+                    "ENVIRONMENTALSINGLE_CELLAMPLIFIEDGENOME",
+                    "COVID_19_OUTBREAK"
+                })
+        void wgsAssemblyLengthBelow1000Failure(AssemblyType assemblyType) throws Exception {
+            injectLookupReturning(SEQ_ID, 500L, AnalysisType.SEQUENCE_ASSEMBLY, assemblyType);
             ValidationException ex = assertThrows(
                     ValidationException.class,
                     () -> check.validateWGSMinimumLength(annotationWithSequenceRegion(1L, 500L), 1));
             assertTrue(ex.getMessage().contains("ASSEMBLY_SEQUENCE_TOO_SHORT"));
+        }
+
+        @ParameterizedTest
+        @EnumSource(
+                value = AssemblyType.class,
+                mode = EnumSource.Mode.EXCLUDE,
+                names = {
+                    "CLONEORISOLATE",
+                    "METAGENOME_ASSEMBLEDGENOME",
+                    "ENVIRONMENTALSINGLE_CELLAMPLIFIEDGENOME",
+                    "COVID_19_OUTBREAK"
+                })
+        void nonWgsAssemblyLengthBelow1000Skipped(AssemblyType assemblyType) throws Exception {
+            injectLookupReturning(SEQ_ID, 500L, AnalysisType.SEQUENCE_ASSEMBLY, assemblyType);
+            assertDoesNotThrow(() -> check.validateWGSMinimumLength(annotationWithSequenceRegion(1L, 500L), 1));
+        }
+
+        @Test
+        void noAssemblyTypeLengthBelow1000Skipped() throws Exception {
+            injectLookupReturning(SEQ_ID, 500L, AnalysisType.SEQUENCE_ASSEMBLY);
+            assertDoesNotThrow(() -> check.validateWGSMinimumLength(annotationWithSequenceRegion(1L, 500L), 1));
         }
 
         @Test

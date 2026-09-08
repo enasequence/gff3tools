@@ -23,6 +23,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
@@ -32,6 +35,8 @@ import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
 
 class MoleculeTypeValidationTest {
 
@@ -241,6 +246,89 @@ class MoleculeTypeValidationTest {
     }
 
     @Nested
+    class ValidateMoleculeTypeAgainstAnalysisType {
+
+        @Test
+        void doesNothingWhenNoAnalysisTypeIsRegistered() {
+            withMoleculeType("mRNA");
+
+            assertDoesNotThrow(() -> validation.validateMoleculeTypeAgainstAnalysisType(annotation, LINE));
+        }
+
+        @ParameterizedTest
+        @EnumSource(
+                value = AnalysisType.class,
+                names = {"SEQUENCE_FLATFILE", "UNKNOWN"})
+        void doesNothingWhenAnalysisTypeConstrainsNoMoleculeType(AnalysisType analysisType) {
+            withAnalysisType(analysisType);
+            withMoleculeType("mRNA");
+
+            assertDoesNotThrow(() -> validation.validateMoleculeTypeAgainstAnalysisType(annotation, LINE));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"genomic DNA", "genomic RNA", "viral cRNA", "other DNA", "rRNA"})
+        void doesNothingWhenSequenceAssemblyMoleculeTypeIsPermitted(String moleculeType) {
+            withAnalysisType(AnalysisType.SEQUENCE_ASSEMBLY);
+            withMoleculeType(moleculeType);
+
+            assertDoesNotThrow(() -> validation.validateMoleculeTypeAgainstAnalysisType(annotation, LINE));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"mRNA", "genomic RNA", "viral cRNA", "transcribed RNA", "unassigned RNA"})
+        void doesNothingWhenTranscriptomeAssemblyMoleculeTypeIsPermitted(String moleculeType) {
+            withAnalysisType(AnalysisType.TRANSCRIPTOME_ASSEMBLY);
+            withMoleculeType(moleculeType);
+
+            assertDoesNotThrow(() -> validation.validateMoleculeTypeAgainstAnalysisType(annotation, LINE));
+        }
+
+        @Test
+        void doesNothingWhenMoleculeTypeIsNotDeclared() {
+            withAnalysisType(AnalysisType.TRANSCRIPTOME_ASSEMBLY);
+            when(fastaHeaderProvider.getHeader(ACCESSION)).thenReturn(Optional.of(new FastaHeader()));
+
+            assertDoesNotThrow(() -> validation.validateMoleculeTypeAgainstAnalysisType(annotation, LINE));
+        }
+
+        @Test
+        void throwsValidationExceptionWhenSequenceAssemblyIsMrna() {
+            assertRejected(AnalysisType.SEQUENCE_ASSEMBLY, "mRNA");
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"genomic DNA", "other DNA", "unassigned DNA"})
+        void throwsValidationExceptionWhenTranscriptomeAssemblyIsDna(String moleculeType) {
+            assertRejected(AnalysisType.TRANSCRIPTOME_ASSEMBLY, moleculeType);
+        }
+
+        private void assertRejected(AnalysisType analysisType, String moleculeType) {
+            withAnalysisType(analysisType);
+            withMoleculeType(moleculeType);
+
+            ValidationException exception = assertThrows(
+                    ValidationException.class,
+                    () -> validation.validateMoleculeTypeAgainstAnalysisType(annotation, LINE));
+
+            String message = exception.getMessage();
+            assertTrue(message.contains(MoleculeTypeValidation.ANALYSIS_TYPE_RULE));
+            assertTrue(message.contains(
+                    "Molecule type %s is not permitted for a %s submission.".formatted(moleculeType, analysisType)));
+        }
+
+        private void withAnalysisType(AnalysisType analysisType) {
+            when(context.contains(AnalysisContext.class)).thenReturn(true);
+            when(context.get(AnalysisContext.class)).thenReturn(new AnalysisContext(analysisType, 10));
+        }
+
+        private void withMoleculeType(String moleculeType) {
+            when(fastaHeaderProvider.getHeader(ACCESSION))
+                    .thenReturn(Optional.of(headerWithMoleculeType(moleculeType)));
+        }
+    }
+
+    @Nested
     class NoFastaHeaderProvider {
 
         // When no FastaHeaderProvider is registered (e.g. a header-less conversion), the molecule
@@ -263,6 +351,15 @@ class MoleculeTypeValidationTest {
         @Test
         void validateMrnaCdsComplementDoesNotThrow() {
             assertDoesNotThrow(() -> validation.validateMrnaCdsComplement(annotation, LINE));
+        }
+
+        @Test
+        void validateMoleculeTypeAgainstAnalysisTypeDoesNotThrow() {
+            when(context.contains(AnalysisContext.class)).thenReturn(true);
+            when(context.get(AnalysisContext.class))
+                    .thenReturn(new AnalysisContext(AnalysisType.TRANSCRIPTOME_ASSEMBLY, 10));
+
+            assertDoesNotThrow(() -> validation.validateMoleculeTypeAgainstAnalysisType(annotation, LINE));
         }
     }
 
