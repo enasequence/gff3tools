@@ -172,8 +172,9 @@ $GFF3TOOLS validation --fail-fast annotation.gff3
 
 By default `validation` is report-only: it never writes a gff3 file, matching the
 behaviour above. Passing an output argument switches it into fix-and-write mode: fixes
-(including gap generation, off by default) are applied and the resulting gff3 is written
-out, atomically for a file destination.
+are applied and the resulting gff3 is written out, atomically for a file destination.
+Gap generation, which is off in report-only mode, always runs when an output argument is
+given (there is no flag to disable it, matching `conversion`'s FASTA → GFF3 behaviour).
 
 | Output argument | Behaviour |
 |------|------|
@@ -188,9 +189,11 @@ $GFF3TOOLS validation annotation.gff3 annotation.fixed.gff3
 # Write the fixed gff3 to stdout
 $GFF3TOOLS validation annotation.gff3 - > annotation.fixed.gff3
 
-# Custom gap-generation options (only meaningful when an output argument is given)
-$GFF3TOOLS validation --min-gap-length 50 annotation.gff3 annotation.fixed.gff3
-$GFF3TOOLS validation \
+# Custom gap-generation options (only meaningful when an output argument is given, and
+# only take effect when --sequence is also provided, same as for `conversion`)
+$GFF3TOOLS validation --sequence sequences.fasta --min-gap-length 50 \
+  annotation.gff3 annotation.fixed.gff3
+$GFF3TOOLS validation --sequence sequences.fasta \
   --gap-type "within scaffold" \
   --linkage-evidence "paired-ends" \
   annotation.gff3 annotation.fixed.gff3
