@@ -573,6 +573,99 @@ supplied value or the descriptor's default.
   first pass; worth a follow-up to make these messages read the resolved value
   rather than a literal.
 
+# Delivery Plan
+
+Gap-fix migration is explicitly out of scope (see First adopters) — the plan
+covers the mechanism itself plus its one first adopter, `LengthValidation`.
+
+1. **Core annotation + descriptor infrastructure.** `@Parameter`/`@Parameters`,
+   `ParameterType` (`STRING`, `LONG`), the `ScanHolder.validationList` public
+   accessor, a `ParameterDescriptors` static scan utility, `ResolvedParameters`,
+   and the dual-mode `ParameterProvider` (no-arg auto-scanned instance; explicit
+   instance built from a raw map running the five fail-fast checks). No caller
+   wiring yet — unit-testable in isolation against hand-built descriptors and
+   raw maps.
+2. **Effective-config exposure for OFF-detection.** Expose
+   `ValidationEngineBuilder`'s properties-file loader publicly (e.g.
+   `ValidationConfig.loadDefault()`) and confirm `getSeverity`/
+   `isValidatorEnabled`/`getFix` are reachable for caller-side use. Wire this
+   into the explicit `ParameterProvider`'s construction step so checks 2
+   ("key for an OFF rule/fix") and 3 ("missing mandatory, unless OFF") use the
+   real three-mechanism effective state, not just a raw `--rules` map.
+3. **CLI wiring.** `--params` option (`CliParamsOption` + a converter mirroring
+   `RuleConverter`) on `AbstractCommand`/`Main`; `AbstractCommand` always
+   constructs the explicit `ParameterProvider` (raw map or empty) after
+   `ruleOverrides`/`fixOverrides` are assembled, registers it via
+   `additionalProviders`, and wraps a thrown fail-fast exception the same way
+   `ValidationCommand` already wraps other invalid-argument failures so it
+   surfaces as `USAGE` (2); help-listing renderer driven by the descriptor scan
+   from phase 1, filtered by the effective-OFF check from phase 2.
+4. **First adopter: migrate `LengthValidation`.** Replace the `private static
+   final` threshold constants with `@Parameter`-declared, provider-read values
+   (see First adopters for the key list); `COMPLETE_CDS_MIN_LENGTH`'s
+   derivation must read the resolved `COMPLETE_CDS_MIN_AMINO_ACIDS`, not a
+   frozen constant. Depends on phases 1–3 being wired end-to-end.
+
+Each phase should leave `./gradlew spotlessCheck test` green; phase 4 also
+needs the specific `LengthValidation` override tests from Testing Strategy
+below to pass, not just the pre-existing suite.
+
+## Phases (JSON)
+
+```json
+{
+  "phases": [
+    {
+      "number": 1,
+      "title": "Core annotation and descriptor infrastructure",
+      "difficulty": "standard",
+      "scope": "@Parameter/@Parameters annotations, ParameterType enum, ScanHolder.validationList public accessor, ParameterDescriptors static scan, ResolvedParameters value type, dual-mode ParameterProvider (auto-scanned no-arg instance + explicit raw-map instance with the five fail-fast checks)",
+      "files": [
+        "src/main/java/uk/ac/ebi/embl/gff3tools/validation/Parameter.java",
+        "src/main/java/uk/ac/ebi/embl/gff3tools/validation/Parameters.java",
+        "src/main/java/uk/ac/ebi/embl/gff3tools/validation/ParameterType.java",
+        "src/main/java/uk/ac/ebi/embl/gff3tools/validation/ParameterDescriptor.java",
+        "src/main/java/uk/ac/ebi/embl/gff3tools/validation/ParameterDescriptors.java",
+        "src/main/java/uk/ac/ebi/embl/gff3tools/validation/ResolvedParameters.java",
+        "src/main/java/uk/ac/ebi/embl/gff3tools/validation/ParameterProvider.java",
+        "src/main/java/uk/ac/ebi/embl/gff3tools/validation/ValidationRegistry.java"
+      ]
+    },
+    {
+      "number": 2,
+      "title": "Effective-config exposure for OFF-detection",
+      "difficulty": "standard",
+      "scope": "Expose ValidationEngineBuilder's properties-file loader publicly (ValidationConfig.loadDefault()); wire the real three-mechanism effective severity/enablement state into ParameterProvider's explicit-instance construction (checks 2 and 3)",
+      "files": [
+        "src/main/java/uk/ac/ebi/embl/gff3tools/validation/ValidationConfig.java",
+        "src/main/java/uk/ac/ebi/embl/gff3tools/validation/ValidationEngineBuilder.java",
+        "src/main/java/uk/ac/ebi/embl/gff3tools/validation/ParameterProvider.java"
+      ]
+    },
+    {
+      "number": 3,
+      "title": "CLI wiring and help listing",
+      "difficulty": "standard",
+      "scope": "--params CLI option (CliParamsOption + converter mirroring RuleConverter); AbstractCommand always builds the explicit ParameterProvider (raw map or empty) after ruleOverrides/fixOverrides are assembled and registers it via additionalProviders; fail-fast exception wrapped to surface as USAGE (2) via the existing ExecutionExceptionHandler path; help-listing renderer driven by the descriptor scan",
+      "files": [
+        "src/main/java/uk/ac/ebi/embl/gff3tools/cli/AbstractCommand.java",
+        "src/main/java/uk/ac/ebi/embl/gff3tools/cli/Main.java",
+        "src/main/java/uk/ac/ebi/embl/gff3tools/cli/ValidationCommand.java"
+      ]
+    },
+    {
+      "number": 4,
+      "title": "First adopter: migrate LengthValidation",
+      "difficulty": "standard",
+      "scope": "Replace LengthValidation's private static final threshold constants with @Parameter-declared, provider-read values (INTRON_LENGTH.MIN_LENGTH, EXON_LENGTH.MIN_LENGTH, CDS_LENGTH.MIN_AMINO_ACIDS, TRNA_LENGTH.MIN_LENGTH, TRNA_LENGTH.MAX_LENGTH, CDS_INTRON_LENGTH.MIN_LENGTH); COMPLETE_CDS_MIN_LENGTH derives from the resolved COMPLETE_CDS_MIN_AMINO_ACIDS, not a frozen constant",
+      "files": [
+        "src/main/java/uk/ac/ebi/embl/gff3tools/validation/builtin/LengthValidation.java"
+      ]
+    }
+  ]
+}
+```
+
 # Testing Strategy
 
 - **Unit**: parameter provider resolution — defaulting of optionals, coercion of
