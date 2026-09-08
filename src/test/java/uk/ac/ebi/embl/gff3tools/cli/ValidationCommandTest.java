@@ -26,6 +26,8 @@ import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationConfig;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.builtin.AttributesValueValidation;
+import uk.ac.ebi.embl.gff3tools.validation.fix.EcNumberValueFix;
 import uk.ac.ebi.embl.gff3tools.validation.fix.ProteinIdRemoval;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidatorDescriptor;
 
@@ -191,6 +193,49 @@ public class ValidationCommandTest {
             assertTrue(
                     fixes.stream().noneMatch(d -> d.clazz().equals(ProteinIdRemoval.class)),
                     "ProteinIdRemoval is class-disabled by default and must not be registered without --fixes");
+        }
+    }
+
+    @Test
+    void fixesOverride_doesNotDisableSameNamedValidation() throws Exception {
+        // ATTRIBUTES_VALUE is both a fix class name (AttributeValueFix) and a validation class name
+        // (AttributesValueValidation). "--fixes ATTRIBUTES_VALUE:OFF" must not reach
+        // overrideClassRules and disable the unrelated validation class.
+        validationCommand.fixes = new CliFixesOption(Map.of("ATTRIBUTES_VALUE", false));
+
+        try (ValidationEngine engine = validationCommand.initValidationEngine(Map.of(), Map.of())) {
+            Object registry = getPrivateField(engine, "validationRegistry");
+            List<ValidatorDescriptor> validations = (List<ValidatorDescriptor>)
+                    registry.getClass().getMethod("getValidations").invoke(registry);
+            assertTrue(
+                    validations.stream().anyMatch(d -> d.clazz().equals(AttributesValueValidation.class)),
+                    "AttributesValueValidation must remain registered; --fixes must not bleed into the validation namespace");
+        }
+    }
+
+    @Test
+    void fixesOverride_doesNotDisableSiblingFixMethodInSameClass() throws Exception {
+        // EcNumberValueFix (class name EC_NUMBER) declares two @FixMethod rules: EC_NUMBER and
+        // PRODUCT_WITH_EC_NUMBER. "--fixes EC_NUMBER:OFF" must only toggle the EC_NUMBER method
+        // (via method-level fixOverrides), not disable the whole class and take
+        // PRODUCT_WITH_EC_NUMBER down with it.
+        validationCommand.fixes = new CliFixesOption(Map.of("EC_NUMBER", false));
+
+        try (ValidationEngine engine = validationCommand.initValidationEngine(Map.of(), Map.of())) {
+            Object registry = getPrivateField(engine, "validationRegistry");
+            List<ValidatorDescriptor> fixes = (List<ValidatorDescriptor>)
+                    registry.getClass().getMethod("getFixs").invoke(registry);
+            assertTrue(
+                    fixes.stream().anyMatch(d -> d.clazz().equals(EcNumberValueFix.class)),
+                    "EcNumberValueFix must remain registered; --fixes EC_NUMBER:OFF must not disable the whole class");
+
+            ValidationConfig config = getPrivateField(engine, "validationConfig");
+            assertFalse(
+                    config.getFix("EC_NUMBER", true),
+                    "EC_NUMBER method itself should still be toggled off via method-level fixOverrides");
+            assertTrue(
+                    config.getFix("PRODUCT_WITH_EC_NUMBER", true),
+                    "Sibling method PRODUCT_WITH_EC_NUMBER must not be affected by the EC_NUMBER class-name collision");
         }
     }
 }

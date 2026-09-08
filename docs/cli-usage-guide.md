@@ -268,6 +268,13 @@ is always off for `validation` (which discards its output) and for `conversion` 
 direction except FASTA → GFF3 (the only direction that should synthesize new features). Those
 structural overrides always take precedence over `--fixes`.
 
+`FIX_NAME:OFF` only ever disables that one fix method, never a whole class or an unrelated
+validation rule that happens to share the same name (e.g. `ATTRIBUTES_VALUE` and
+`CHROMOSOME_NAME` are also validation rule names). Class-level re-enabling via `FIX_NAME:ON` is
+only needed for, and only applies to, the two fixes that are disabled by default:
+`PROTEIN_ID_REMOVE` and `TRANSFORM_EXCLUSIVE_ATTRIBUTE_TO_NOTE`. Every other fix is already
+enabled by default, so toggling it on or off only ever affects that specific fix method.
+
 Available fixes:
 
 | Fix | Default | Description |
