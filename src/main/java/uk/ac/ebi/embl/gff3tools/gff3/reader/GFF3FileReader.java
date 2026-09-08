@@ -319,7 +319,7 @@ public class GFF3FileReader implements AutoCloseable {
 
     public Map<String, OffsetRange> getTranslationOffsetForAnnotation(GFF3Annotation annotation) {
         return getTranslationOffsetMap().entrySet().stream()
-                .filter(e -> e.getKey().startsWith(annotation.getAccession()))
+                .filter(e -> TranslationKey.belongsTo(e.getKey(), annotation.getAccession()))
                 // LinkedHashMap keeps the source map's sorted order: written GFF3 must be
                 // byte-stable so consumers can rely on its checksum across runs.
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a, LinkedHashMap::new));

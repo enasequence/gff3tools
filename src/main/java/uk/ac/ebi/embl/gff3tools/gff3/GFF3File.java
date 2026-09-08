@@ -135,8 +135,8 @@ public class GFF3File implements IGFF3Feature {
 
     /** True when a translation key belongs to one of this file's annotations. */
     private static boolean belongsTo(String translationKey, Set<String> accessions) {
-        int separator = translationKey.indexOf('|');
-        return separator > 0 && accessions.contains(translationKey.substring(0, separator));
+        String accession = TranslationKey.accessionOf(translationKey);
+        return accession != null && accessions.contains(accession);
     }
 
     private boolean writeFastaFromTranslationState(Writer writer, Set<String> accessions) throws IOException {
