@@ -189,6 +189,15 @@ public class ValidationRegistry {
         return context;
     }
 
+    /**
+     * Read-only view of the one-time classpath scan's discovered validator/fix classes, for
+     * annotation-only inspection (e.g. {@link ParameterDescriptors}) that must not trigger a
+     * second classpath scan.
+     */
+    public static List<ClassInfo> getScannedValidationClasses() {
+        return ScanHolder.validationList;
+    }
+
     private static List<ValidatorDescriptor> buildDescriptors(
             List<ClassInfo> validationList, ValidationContext context, ValidationConfig config) {
         List<ValidatorDescriptor> descriptors = new ArrayList<>();
