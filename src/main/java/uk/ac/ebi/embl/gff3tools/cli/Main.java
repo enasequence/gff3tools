@@ -39,6 +39,7 @@ public class Main {
         try {
             exitCode = new CommandLine(new Main())
                     .registerConverter(CliRulesOption.class, new RuleConverter())
+                    .registerConverter(CliParamsOption.class, new ParamsConverter())
                     .setExecutionExceptionHandler(new ExecutionExceptionHandler())
                     .execute(args);
         } catch (OutOfMemoryError e) {
@@ -87,6 +88,34 @@ class RuleConverter implements CommandLine.ITypeConverter<CliRulesOption> {
                 throw new CLIException("The rule severity: \"" + pairs[1] + "\" is invalid");
             }
             this.map.rules().put(key, value);
+        }
+        return this.map;
+    }
+}
+
+record CliParamsOption(Map<String, String> params) {}
+
+/**
+ * Mirrors {@link RuleConverter}'s {@code split(",")} then split-on-":" shape, but the value half
+ * is taken verbatim (split on the first ':' only, so a value containing ':' is not truncated) and
+ * there is no exactly-two-halves requirement.
+ */
+class ParamsConverter implements CommandLine.ITypeConverter<CliParamsOption> {
+    CliParamsOption map = new CliParamsOption(new HashMap<>());
+
+    @Override
+    public CliParamsOption convert(String args) throws Exception {
+        String[] entries = args.split(",");
+
+        for (String entry : entries) {
+            String trimmed = entry.trim();
+            int colonIdx = trimmed.indexOf(':');
+            if (colonIdx < 0) {
+                throw new CLIException("Invalid param: '" + entry + "' There must be a ':' separating key and value");
+            }
+            String key = trimmed.substring(0, colonIdx).toUpperCase();
+            String value = trimmed.substring(colonIdx + 1);
+            this.map.params().put(key, value);
         }
         return this.map;
     }
