@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.BufferedReader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
@@ -28,13 +29,19 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
+import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3FileFactory;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
 
 /**
- * Contract tests for the {@code ##FASTA} section written by {@link GFF3File}, taking the javadoc
+ * Contract tests for the GFF3 documents written by {@link GFF3File}, however they were built —
+ * from pre-parsed annotations plus a reader ({@link GFF3FileFactory#fromAnnotationAndReader}), or
+ * converted from an EMBL flat file ({@link GFF3FileFactory#from}).
+ *
+ * <p>For the reader-based route the specification is the javadoc
  * of {@link GFF3FileFactory#fromAnnotationAndReader} as the specification:
  *
  * <ul>
@@ -52,7 +59,7 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
  *
  * <p>See {@code docs/2609071330_annotation_scoped_fasta_writing.md}.
  */
-public class GFF3FileFastaSectionTest {
+public class Gff3FileWritingTest {
 
     /** Two annotations, one CDS each, translations in a single trailing FASTA section. */
     private static final String TWO_ANNOTATIONS = "##gff-version 3\n"
@@ -231,6 +238,107 @@ public class GFF3FileFastaSectionTest {
         }
     }
 
+    /** Two EMBL entries, each with one translated CDS, and differing organisms. */
+    private static final String TWO_FLAT_FILE_ENTRIES = flatFileEntry("BN000065", "Homo sapiens", "RHD", "MSSKYPRSVRR")
+            + flatFileEntry("BN000066", "Mus musculus", "matK", "AALILLFYFFT");
+
+    /** One EMBL entry whose CDS carries no {@code /translation} qualifier. */
+    private static final String ENTRY_WITHOUT_TRANSLATION = flatFileEntry("BN000065", "Homo sapiens", "RHD", null);
+
+    private static String flatFileEntry(String accession, String organism, String gene, String translation) {
+        StringBuilder entry = new StringBuilder()
+                .append("ID   ")
+                .append(accession)
+                .append("; SV 1; linear; genomic DNA; STD; HUM; 315242 BP.\n")
+                .append("XX\n")
+                .append("AC   ")
+                .append(accession)
+                .append(";\n")
+                .append("XX\n")
+                .append("FH   Key             Location/Qualifiers\n")
+                .append("FH\n")
+                .append("FT   source          1..315242\n")
+                .append("FT                   /mol_type=\"genomic DNA\"\n")
+                .append("FT                   /organism=\"")
+                .append(organism)
+                .append("\"\n")
+                .append("FT   gene            100..200\n")
+                .append("FT                   /gene=\"")
+                .append(gene)
+                .append("\"\n")
+                .append("FT   CDS             100..200\n")
+                .append("FT                   /gene=\"")
+                .append(gene)
+                .append("\"\n")
+                .append("FT                   /protein_id=\"CAD29848.1\"\n");
+        if (translation != null) {
+            entry.append("FT                   /translation=\"")
+                    .append(translation)
+                    .append("\"\n");
+        }
+        return entry.append("XX\n//\n").toString();
+    }
+
+    // =====================================================================
+    @Nested
+    @DisplayName("converting an EMBL flat file")
+    class WhenConvertingAFlatFile {
+
+        @Test
+        @DisplayName("writes every entry as an annotation")
+        void writesEveryEntryAsAnAnnotation() throws Exception {
+            String output = convert(TWO_FLAT_FILE_ENTRIES);
+
+            assertTrue(output.contains("BN000065.1\t.\tCDS"), "missing features of the first entry");
+            assertTrue(output.contains("BN000066.1\t.\tCDS"), "missing features of the second entry");
+            assertEquals(2, readAnnotations(output).size(), "every entry written must be readable back");
+        }
+
+        @Test
+        @DisplayName("writes one trailing FASTA section holding every entry's translations")
+        void writesOneTrailingFastaSectionForAllEntries() throws Exception {
+            String fastaSection = trailingFastaSectionOf(convert(TWO_FLAT_FILE_ENTRIES));
+
+            assertTrue(fastaSection.contains("MSSKYPRSVRR"), "missing the first entry's translation");
+            assertTrue(fastaSection.contains("AALILLFYFFT"), "missing the second entry's translation");
+        }
+
+        @Test
+        @DisplayName("writes no FASTA section when no entry carries a translation")
+        void writesNoFastaSectionWithoutTranslations() throws Exception {
+            String output = convert(ENTRY_WITHOUT_TRANSLATION);
+
+            assertEquals(0, countOf(output, "##FASTA"), "no translations exist, so no FASTA section should be written");
+        }
+
+        /**
+         * Characterisation, not a requirement: the factory stamps its own {@code HEADER_VERSION}
+         * rather than carrying anything over from the source. Undocumented today.
+         */
+        @Test
+        @DisplayName("stamps the spec version in the header")
+        void stampsTheSpecVersionHeader() throws Exception {
+            String output = convert(TWO_FLAT_FILE_ENTRIES);
+
+            assertTrue(output.startsWith("##gff-version 3.1.26"), "expected the spec version header, got:\n" + output);
+        }
+
+        /**
+         * Characterisation, not a requirement: {@code ##species} is a file-level directive, so the
+         * factory keeps the first entry's organism and silently discards the rest. Worth pinning
+         * because a mixed-organism flat file loses information with no diagnostic.
+         */
+        @Test
+        @DisplayName("takes the species directive from the first entry only")
+        void takesSpeciesFromTheFirstEntryOnly() throws Exception {
+            String output = convert(TWO_FLAT_FILE_ENTRIES);
+
+            assertEquals(1, countOf(output, "##species"), "##species is a file-level directive");
+            assertTrue(output.contains("name=Homo sapiens"), "expected the first entry's organism, got:\n" + output);
+            assertFalse(output.contains("Mus musculus"), "the second entry's organism should have been discarded");
+        }
+    }
+
     // =====================================================================
     @Nested
     @DisplayName("selecting an annotation's translations")
@@ -346,6 +454,21 @@ public class GFF3FileFastaSectionTest {
             });
             GFF3FileFactory.fromAnnotationAndReader(annotations, reader, appendTranslationFasta, fallback)
                     .writeGFF3String(writer);
+        }
+        return writer.toString();
+    }
+
+    /** Converts an EMBL flat file the way {@code FFToGff3Converter} does. */
+    private String convert(String flatFile) throws Exception {
+        ValidationEngine engine = engine();
+        ReaderOptions readerOptions = new ReaderOptions();
+        readerOptions.setIgnoreSequence(true);
+
+        StringWriter writer = new StringWriter();
+        try (BufferedReader reader = new BufferedReader(new StringReader(flatFile))) {
+            EmblEntryReader entryReader =
+                    new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "", readerOptions);
+            new GFF3FileFactory(engine).from(entryReader, null).writeGFF3String(writer);
         }
         return writer.toString();
     }
