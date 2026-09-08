@@ -18,7 +18,6 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
@@ -52,6 +51,7 @@ public class GFF3FileReader implements AutoCloseable {
     private final Set<String> processedAccessions;
 
     private Map<String, OffsetRange> translationMap;
+    private Map<String, Map<String, OffsetRange>> translationsByAccession;
     private final GFF3TranslationReader translationReader;
 
     // Used by GFF3 conversion process
@@ -318,10 +318,45 @@ public class GFF3FileReader implements AutoCloseable {
         return null;
     }
 
+    /**
+     * The translations belonging to one annotation, keyed as {@code accession|featureId}.
+     *
+     * <p>A lookup into a map built once per reader, not a scan: a document is commonly written out
+     * as several subsets, and filtering the whole offset map per annotation made that
+     * O(annotations × translations) for every subset written.
+     *
+     * <p>Only the annotation's accession is used, and it is matched exactly — version suffix
+     * included — so {@code AB123.1} never claims the translations of {@code AB123.10}.
+     *
+     * @param annotation the annotation whose translations are wanted
+     * @return its translations in the offset map's order, or an empty map when it has none
+     */
     public Map<String, OffsetRange> getTranslationOffsetForAnnotation(GFF3Annotation annotation) {
-        return getTranslationOffsetMap().entrySet().stream()
-                .filter(e -> e.getKey().startsWith(annotation.getAccession()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        return translationsByAccession().getOrDefault(annotation.getAccession(), Map.of());
+    }
+
+    /**
+     * The offset map bucketed by accession, built on first use and reused for the reader's life.
+     *
+     * <p>Accessions are matched exactly rather than by prefix, so {@code AB123.1} never claims the
+     * translations of {@code AB123.10}. Buckets are {@link LinkedHashMap}s filled in the offset
+     * map's own sorted order, so written output stays byte-stable across runs.
+     */
+    private Map<String, Map<String, OffsetRange>> translationsByAccession() {
+        if (translationsByAccession == null) {
+            Map<String, Map<String, OffsetRange>> byAccession = new HashMap<>();
+            for (Map.Entry<String, OffsetRange> entry :
+                    getTranslationOffsetMap().entrySet()) {
+                String accession = TranslationKey.accessionOf(entry.getKey());
+                if (accession != null) {
+                    byAccession
+                            .computeIfAbsent(accession, key -> new LinkedHashMap<>())
+                            .put(entry.getKey(), entry.getValue());
+                }
+            }
+            translationsByAccession = byAccession;
+        }
+        return translationsByAccession;
     }
 
     public Map<String, OffsetRange> getTranslationOffsetMap() {

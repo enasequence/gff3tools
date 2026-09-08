@@ -1,0 +1,19 @@
+##gff-version 3.1.26
+##species https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?name=Homo sapiens
+##sequence-region 1.1 1 102
+1.1	.	CDS	1	102	.	+	0	ID=CDS_BRCA1;gene=BRCA1;product=breast cancer type 1 susceptibility protein;transl_table=1;
+
+##sequence-region 2.1 1 102
+2.1	.	CDS	1	102	.	+	0	ID=CDS_BRCA2;gene=BRCA2;product=breast cancer type 2 susceptibility protein;transl_table=1;
+
+##sequence-region 3.1 1 102
+3.1	.	CDS	1	102	.	+	0	ID=CDS_TP53;gene=TP53;product=cellular tumor antigen p53;transl_table=1;
+
+##FASTA
+>1.1|CDS_BRCA1
+MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+>2.1|CDS_BRCA2
+MCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+>3.1|CDS_TP53
+MDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+
