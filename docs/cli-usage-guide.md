@@ -155,7 +155,7 @@ Reads a GFF3 file, runs all active validation rules, and reports warnings and er
 Exits with code `20` if any rule configured as `ERROR` is violated.
 
 ```bash
-# Validate a file
+# Validate a file (report-only, nothing written)
 $GFF3TOOLS validation annotation.gff3
 
 # Validate from stdin
@@ -167,6 +167,40 @@ $GFF3TOOLS validation --sequence sequences.fasta annotation.gff3
 # Stop on the first error instead of collecting all errors
 $GFF3TOOLS validation --fail-fast annotation.gff3
 ```
+
+### Writing fixed output
+
+By default `validation` is report-only: it never writes a gff3 file, matching the
+behaviour above. Passing an output argument switches it into fix-and-write mode: fixes
+(including gap generation, off by default) are applied and the resulting gff3 is written
+out, atomically for a file destination.
+
+| Output argument | Behaviour |
+|------|------|
+| _(absent)_ | Report-only (default); no gff3 is written |
+| `-` | Write the fixed gff3 to stdout |
+| any other path | Write the fixed gff3 to that file (atomic write) |
+
+```bash
+# Write the fixed gff3 to a file
+$GFF3TOOLS validation annotation.gff3 annotation.fixed.gff3
+
+# Write the fixed gff3 to stdout
+$GFF3TOOLS validation annotation.gff3 - > annotation.fixed.gff3
+
+# Custom gap-generation options (only meaningful when an output argument is given)
+$GFF3TOOLS validation --min-gap-length 50 annotation.gff3 annotation.fixed.gff3
+$GFF3TOOLS validation \
+  --gap-type "within scaffold" \
+  --linkage-evidence "paired-ends" \
+  annotation.gff3 annotation.fixed.gff3
+```
+
+As with `conversion`, informational log messages are suppressed while writing to stdout to
+keep stdout clean; validation warnings, errors, and the final pass/fail summary still go to
+stderr. Reading from stdin means the `##FASTA`/translation section, if any, cannot be
+re-read and is omitted from the output (a warning is logged); gzip-compressed file input is
+supported and round-trips the `##FASTA` section normally.
 
 ---
 

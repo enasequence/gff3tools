@@ -178,12 +178,6 @@ public class FileConversionCommand extends AbstractCommand {
         }
     }
 
-    /** True for the two tokens meaning "use standard I/O instead of a real file": absent (empty) or {@code -}. */
-    private static boolean isStdioSentinel(Path path) {
-        String s = path.toString();
-        return s.isEmpty() || s.equals("-");
-    }
-
     /**
      * Fails fast with a clear usage message for invalid gap options, instead of surfacing the
      * {@code IllegalArgumentException} that {@code AnalysisContext} would otherwise throw when the

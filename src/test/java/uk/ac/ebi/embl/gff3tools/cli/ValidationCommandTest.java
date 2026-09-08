@@ -12,8 +12,10 @@ package uk.ac.ebi.embl.gff3tools.cli;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -219,6 +221,66 @@ public class ValidationCommandTest {
 
         assertEquals(0, exitCode, "Gzipped input should be transparently decompressed");
         assertEquals("##gff-version 3\n", Files.readString(outputFile));
+    }
+
+    @Test
+    void validation_stdinInput_withOutput_warnsAndOmitsFastaSection() throws Exception {
+        String gff3WithFasta = "##gff-version 3.1.26\n"
+                + "##sequence-region BN000065.1 1 315242\n"
+                + "BN000065.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n"
+                + "##FASTA\n"
+                + ">BN000065.1|CDS_RHD\n"
+                + "MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEDQKGLVASYQVGQDLTVMAAI\n";
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        InputStream originalIn = System.in;
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        int exitCode;
+        try {
+            System.setIn(new ByteArrayInputStream(gff3WithFasta.getBytes(StandardCharsets.UTF_8)));
+            System.setErr(new PrintStream(errContent));
+            // An explicit "" for the input positional forces the stdin path, matching how an
+            // absent argument is also treated (see AbstractCommand#isStdioSentinel).
+            exitCode = executeValidation("validation", "", outputFile.toString());
+        } finally {
+            System.setIn(originalIn);
+            System.setErr(originalErr);
+        }
+
+        assertEquals(0, exitCode, "Validation reading from stdin with output should succeed");
+        String warnings = errContent.toString(StandardCharsets.UTF_8);
+        assertTrue(
+                warnings.contains("Reading from stdin") && warnings.contains("FASTA"),
+                "Expected a warning about the FASTA section being omitted for stdin input: " + warnings);
+        String content = Files.readString(outputFile);
+        assertFalse(content.contains("##FASTA"), "FASTA section cannot be re-read from stdin: " + content);
+        assertTrue(content.contains("ID=gene_RHD"), "Annotation content should still be written: " + content);
+    }
+
+    @Test
+    void validation_gzippedInputWithFastaSection_preservesFastaSection() throws Exception {
+        String gff3WithFasta = "##gff-version 3.1.26\n"
+                + "##sequence-region BN000065.1 1 315242\n"
+                + "BN000065.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n"
+                + "##FASTA\n"
+                + ">BN000065.1|CDS_RHD\n"
+                + "MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEDQKGLVASYQVGQDLTVMAAI\n";
+        Path gff3Gz = tempDir.resolve("input.gff3.gz");
+        try (GZIPOutputStream out = new GZIPOutputStream(Files.newOutputStream(gff3Gz))) {
+            out.write(gff3WithFasta.getBytes(StandardCharsets.UTF_8));
+        }
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode = executeValidation("validation", gff3Gz.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "Validation of gzipped input with output should succeed");
+        String content = Files.readString(outputFile);
+        assertTrue(
+                content.contains("##FASTA")
+                        && content.contains(">BN000065.1|CDS_RHD")
+                        && content.contains("MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEDQKGLVASYQVGQDLTVMAAI"),
+                "The FASTA/translation section must round-trip from gzipped input, not be lost: " + content);
     }
 
     @Test

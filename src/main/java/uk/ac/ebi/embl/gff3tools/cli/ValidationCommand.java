@@ -12,6 +12,8 @@ package uk.ac.ebi.embl.gff3tools.cli;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +29,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.utils.GapOptionsValidator;
+import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
@@ -69,7 +72,11 @@ public class ValidationCommand extends AbstractCommand {
     @CommandLine.Parameters(
             paramLabel = "[output-file]",
             defaultValue = "",
-            showDefaultValue = CommandLine.Help.Visibility.NEVER)
+            showDefaultValue = CommandLine.Help.Visibility.NEVER,
+            description = "Optional. Absent (default): report-only, nothing written. '-': write the fixed "
+                    + "gff3 to stdout. Any other value: write the fixed gff3 to that file path. Writing "
+                    + "output enables the GAP_GENERATION fix (see --min-gap-length/--gap-type/"
+                    + "--linkage-evidence).")
     public Path outputFilePath;
 
     private int warningCount = 0;
@@ -113,13 +120,14 @@ public class ValidationCommand extends AbstractCommand {
 
             if (writingToFile) {
                 writeAtomically(
-                        outputFilePath, writer -> runValidation(ruleOverrides, fixOverrides, providers, true, writer));
+                        outputFilePath,
+                        writer -> runValidation(ruleOverrides, fixOverrides, providers, true, writer, false));
             } else if (toStdout) {
                 try (BufferedWriter stdout = createStdoutWriter()) {
-                    runValidation(ruleOverrides, fixOverrides, providers, true, stdout);
+                    runValidation(ruleOverrides, fixOverrides, providers, true, stdout, true);
                 }
             } else {
-                runValidation(ruleOverrides, fixOverrides, providers, false, null);
+                runValidation(ruleOverrides, fixOverrides, providers, false, null, false);
             }
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
@@ -131,59 +139,98 @@ public class ValidationCommand extends AbstractCommand {
             Map<String, Boolean> fixOverrides,
             ContextProvider<?>[] providers,
             boolean outputRequested,
-            BufferedWriter outputWriter)
+            BufferedWriter outputWriter,
+            boolean toStdout)
             throws Exception {
 
         try (ValidationEngine validationEngine = initValidationEngine(ruleOverrides, fixOverrides, providers)) {
 
-            try (BufferedReader inputReader = createInputReader(inputFilePath);
-                    GFF3FileReader gff3Reader = new GFF3FileReader(validationEngine, inputReader, inputFilePath)) {
-                GFF3Header header = gff3Reader.readHeader();
-                List<GFF3Annotation> annotations = outputRequested ? new ArrayList<>() : null;
-                gff3Reader.read(annotation -> {
-                    // The reader replays a final null annotation at EOF when the file has no
-                    // annotations at all (e.g. a header-only file); nothing to collect there.
-                    if (outputRequested && annotation != null) {
-                        annotations.add(annotation);
-                    }
-                    List<ValidationException> warnings = validationEngine.getParsingWarnings();
-                    if (warnings != null && !warnings.isEmpty()) {
-                        for (ValidationException e : warnings) {
-                            log.warn("WARNING: %s".formatted(e.getMessage()));
+            // Re-reading the FASTA/translation section back out of the input requires reopening
+            // it by path; that is impossible when reading from stdin, so it is skipped there.
+            boolean hasRealInputFile = !isStdioSentinel(inputFilePath);
+            Path effectiveInputPath = inputFilePath;
+            Path decompressedTempFile = null;
+
+            if (outputRequested && hasRealInputFile && GzipUtils.isGzipped(inputFilePath)) {
+                // GFF3TranslationReader seeks directly against the input file's raw bytes to read
+                // the FASTA/translation section, which cannot work against gzip-compressed bytes.
+                // Decompress up front so gzip input round-trips the FASTA section like any other
+                // file input, instead of silently losing it.
+                decompressedTempFile = GzipUtils.decompressToTempFile(inputFilePath, "gff3tools-validation-", ".gff3");
+                effectiveInputPath = decompressedTempFile;
+            } else if (outputRequested && !hasRealInputFile) {
+                log.warn("Reading from stdin: the FASTA/translation section, if any, cannot be "
+                        + "re-read from a non-seekable stream and will be omitted from the output.");
+            }
+
+            try {
+                try (BufferedReader inputReader = createInputReader(effectiveInputPath);
+                        GFF3FileReader gff3Reader =
+                                new GFF3FileReader(validationEngine, inputReader, effectiveInputPath)) {
+                    GFF3Header header = gff3Reader.readHeader();
+                    List<GFF3Annotation> annotations = outputRequested ? new ArrayList<>() : null;
+                    gff3Reader.read(annotation -> {
+                        // The reader replays a final null annotation at EOF when the file has no
+                        // annotations at all (e.g. a header-only file); nothing to collect there.
+                        if (outputRequested && annotation != null) {
+                            annotations.add(annotation);
                         }
-                        addToWarnCount(warnings.size());
-                        warnings.clear();
+                        List<ValidationException> warnings = validationEngine.getParsingWarnings();
+                        if (warnings != null && !warnings.isEmpty()) {
+                            for (ValidationException e : warnings) {
+                                log.warn("WARNING: %s".formatted(e.getMessage()));
+                            }
+                            addToWarnCount(warnings.size());
+                            warnings.clear();
+                        }
+                    });
+
+                    // Check for collected errors at end of processing
+                    int errorCount = validationEngine.getCollectedErrors().size();
+                    if (errorCount > 0) {
+                        reportSummary("Validation completed with %d error(s)".formatted(errorCount), toStdout);
+                        validationEngine.throwIfErrorsCollected();
+                    } else if (warningCount > 0) {
+                        reportSummary("The file passed validations with %d warnings".formatted(warningCount), toStdout);
+                    } else {
+                        reportSummary("The file has passed all validations!", toStdout);
                     }
-                });
 
-                // Check for collected errors at end of processing
-                int errorCount = validationEngine.getCollectedErrors().size();
-                if (errorCount > 0) {
-                    log.info("Validation completed with %d error(s)".formatted(errorCount));
-                    validationEngine.throwIfErrorsCollected();
-                } else if (warningCount > 0) {
-                    log.info("The file passed validations with %d warnings".formatted(warningCount));
-                } else {
-                    log.info("The file has passed all validations!");
+                    if (outputRequested) {
+                        GFF3File gff3File = new GFF3File(
+                                header,
+                                gff3Reader.gff3Species,
+                                annotations,
+                                hasRealInputFile ? gff3Reader : null,
+                                null,
+                                false,
+                                null,
+                                null);
+                        gff3File.writeGFF3String(outputWriter);
+                    }
                 }
-
-                if (outputRequested) {
-                    // Re-reading the FASTA/translation section back out of the input requires
-                    // reopening it by path, which is impossible when reading from stdin - skip it
-                    // rather than crash in that case.
-                    boolean hasRealInputFile = !inputFilePath.toString().isEmpty();
-                    GFF3File gff3File = new GFF3File(
-                            header,
-                            gff3Reader.gff3Species,
-                            annotations,
-                            hasRealInputFile ? gff3Reader : null,
-                            null,
-                            false,
-                            null,
-                            null);
-                    gff3File.writeGFF3String(outputWriter);
+            } finally {
+                if (decompressedTempFile != null) {
+                    try {
+                        Files.deleteIfExists(decompressedTempFile);
+                    } catch (IOException e) {
+                        log.warn("Failed to delete temporary file: {}", decompressedTempFile);
+                    }
                 }
             }
+        }
+    }
+
+    /**
+     * Logs {@code message} at INFO as usual, and when writing fixed output to stdout also prints
+     * it directly to stderr: in that mode the root logger is floored to WARN (see
+     * {@link #createStdoutWriter()}) to keep stdout clean, which would otherwise silently drop
+     * this pass/fail/warning-count summary along with it.
+     */
+    private void reportSummary(String message, boolean toStdout) {
+        log.info(message);
+        if (toStdout) {
+            System.err.println(message);
         }
     }
 

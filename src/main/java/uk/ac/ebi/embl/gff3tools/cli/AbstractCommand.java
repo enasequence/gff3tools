@@ -117,13 +117,19 @@ public abstract class AbstractCommand implements Runnable {
         }
     }
 
+    /** True for the two tokens meaning "use standard I/O instead of a real file": absent (empty) or {@code -}. */
+    protected static boolean isStdioSentinel(Path path) {
+        String s = path.toString();
+        return s.isEmpty() || s.equals("-");
+    }
+
     /**
      * Creates a BufferedReader for {@code filePath}, auto-detecting and transparently
-     * decompressing gzip input. An empty path falls back to stdin, matching {@link #getPipe}'s
-     * convention.
+     * decompressing gzip input. An empty or {@code -} path falls back to stdin, matching
+     * {@link #getPipe}'s convention.
      */
     protected BufferedReader createInputReader(Path filePath) throws NonExistingFile, ReadException {
-        if (filePath == null || filePath.toString().isEmpty()) {
+        if (filePath == null || isStdioSentinel(filePath)) {
             return new BufferedReader(new InputStreamReader(System.in));
         }
         boolean gzipped = GzipUtils.isGzipped(filePath);
@@ -139,9 +145,11 @@ public abstract class AbstractCommand implements Runnable {
     }
 
     protected BufferedWriter createStdoutWriter() {
-        // Suppress INFO/WARN logs while writing to stdout to avoid mixing log output with file content
+        // Suppress INFO logs while writing to stdout to avoid mixing log output with file content.
+        // WARN/ERROR already route to a dedicated stderr appender (see logback.xml) rather than
+        // the stdout one, so they stay visible without needing to be muted here.
         LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
-        ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
+        ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.WARN);
         return new BufferedWriter(new OutputStreamWriter(System.out));
     }
 
