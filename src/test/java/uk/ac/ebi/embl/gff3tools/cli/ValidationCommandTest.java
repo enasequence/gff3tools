@@ -15,12 +15,19 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationConfig;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.fix.ProteinIdRemoval;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidatorDescriptor;
 
 public class ValidationCommandTest {
 
@@ -123,5 +130,67 @@ public class ValidationCommandTest {
         command.setErr(new PrintWriter(err));
         command.setOut(new PrintWriter(out));
         return command.execute(args);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T getPrivateField(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return (T) field.get(target);
+    }
+
+    @Test
+    void fixesOverride_structuralOverrideWinsOverCliFixesOption() throws Exception {
+        // Simulates "--fixes GAP_GENERATION:ON": the command's own structural override
+        // (this command discards the fixed annotation, see run()) must still win.
+        validationCommand.fixes = new CliFixesOption(Map.of("GAP_GENERATION", true));
+
+        try (ValidationEngine engine =
+                validationCommand.initValidationEngine(Map.of(), Map.of("GAP_GENERATION", false))) {
+            ValidationConfig config = getPrivateField(engine, "validationConfig");
+            assertFalse(
+                    config.getFix("GAP_GENERATION", true),
+                    "Command's structural fixOverrides must win over a CLI --fixes toggle");
+        }
+    }
+
+    @Test
+    void fixesOverride_cliValueAppliedWhenNoStructuralOverride() throws Exception {
+        // Simulates "--fixes LOCUS_TAG_TO_UPPERCASE:OFF" with no command-level override for it.
+        validationCommand.fixes = new CliFixesOption(Map.of("LOCUS_TAG_TO_UPPERCASE", false));
+
+        try (ValidationEngine engine = validationCommand.initValidationEngine(Map.of(), Map.of())) {
+            ValidationConfig config = getPrivateField(engine, "validationConfig");
+            assertFalse(config.getFix("LOCUS_TAG_TO_UPPERCASE", true), "CLI --fixes toggle should apply");
+        }
+    }
+
+    @Test
+    void fixesOverride_cliOnReenablesClassDisabledFix() throws Exception {
+        // PROTEIN_ID_REMOVE is @Gff3Fix(enabled = false): a class-disabled fix is filtered out
+        // entirely at registration, so only "--fixes PROTEIN_ID_REMOVE:ON" re-enabling the class
+        // (not just the method-level fixOverrides map) makes it run at all.
+        validationCommand.fixes = new CliFixesOption(Map.of("PROTEIN_ID_REMOVE", true));
+
+        try (ValidationEngine engine = validationCommand.initValidationEngine(Map.of(), Map.of())) {
+            Object registry = getPrivateField(engine, "validationRegistry");
+            List<ValidatorDescriptor> fixes = (List<ValidatorDescriptor>)
+                    registry.getClass().getMethod("getFixs").invoke(registry);
+            assertTrue(
+                    fixes.stream().anyMatch(d -> d.clazz().equals(ProteinIdRemoval.class)),
+                    "ProteinIdRemoval must be registered once --fixes PROTEIN_ID_REMOVE:ON is set");
+        }
+    }
+
+    @Test
+    void fixesOverride_classDisabledFixNotRegisteredByDefault() throws Exception {
+        try (ValidationEngine engine = validationCommand.initValidationEngine(Map.of(), Map.of())) {
+            Object registry = getPrivateField(engine, "validationRegistry");
+            List<ValidatorDescriptor> fixes = (List<ValidatorDescriptor>)
+                    registry.getClass().getMethod("getFixs").invoke(registry);
+            assertTrue(
+                    fixes.stream().noneMatch(d -> d.clazz().equals(ProteinIdRemoval.class)),
+                    "ProteinIdRemoval is class-disabled by default and must not be registered without --fixes");
+        }
     }
 }

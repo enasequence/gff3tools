@@ -69,7 +69,8 @@ If using bash, you can see the exit code of the last command using `echo $?`
 * **Info** messages are written to `stdout`.
 * When writing conversion output to `stdout` (pipe mode), info and warning logs are suppressed to avoid mixing with the data stream; only errors reach `stderr`.
 
-See the [CLI Usage Guide](docs/cli-usage-guide.md) for how to configure validation rule severities with `--rules`.
+See the [CLI Usage Guide](docs/cli-usage-guide.md) for how to configure validation rule severities with `--rules`,
+and how to toggle individual auto-fixes with `--fixes`.
 
 # publishing
 

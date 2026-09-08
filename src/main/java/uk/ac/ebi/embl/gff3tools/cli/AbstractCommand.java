@@ -45,7 +45,7 @@ public abstract class AbstractCommand implements Runnable {
     @CommandLine.Option(
             names = "--fixes",
             paramLabel = "<key:ON|OFF,key:ON|OFF>",
-            description = "Toggle auto-fixes by @FixMethod.rule() in the format key:ON or key:OFF")
+            description = "Toggle auto-fixes in the format key:ON or key:OFF")
     public CliFixesOption fixes;
 
     @CommandLine.Parameters(
@@ -75,18 +75,27 @@ public abstract class AbstractCommand implements Runnable {
      * <p>{@code --fixes} overrides from the CLI are merged in first, with {@code fixOverrides}
      * applied on top, so a command's own structural overrides (e.g. a fix disabled because this
      * command discards the annotation it would fix) always win over a user-supplied toggle.
+     *
+     * <p>The CLI {@code --fixes} map is also passed to {@link ValidationEngineBuilder#overrideClassRules}
+     * so that {@code key:ON} can re-enable a fix whose class is {@code @Gff3Fix(enabled = false)} by
+     * default (e.g. {@code PROTEIN_ID_REMOVE}), not just its method-level toggle: a class-disabled fix
+     * is never built into a descriptor at all, so a method-level {@code fixOverrides} entry alone
+     * cannot revive it. This only applies to the CLI input, not per-command structural
+     * {@code fixOverrides}, since no command currently forces a class-disabled fix off.
      */
     protected ValidationEngine initValidationEngine(
             Map<String, RuleSeverity> ruleOverrides,
             Map<String, Boolean> fixOverrides,
             ContextProvider<?>... additionalProviders) {
 
-        Map<String, Boolean> mergedFixOverrides = new HashMap<>(getFixOverrides());
+        Map<String, Boolean> cliFixOverrides = getFixOverrides();
+        Map<String, Boolean> mergedFixOverrides = new HashMap<>(cliFixOverrides);
         mergedFixOverrides.putAll(fixOverrides);
 
         ValidationEngineBuilder builder = new ValidationEngineBuilder()
                 .overrideMethodRules(ruleOverrides)
                 .overrideMethodFixs(mergedFixOverrides)
+                .overrideClassRules(cliFixOverrides)
                 .failFast(failFast);
 
         // Providers gate their own registration via ContextProvider#isActive(). An empty
