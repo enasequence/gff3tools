@@ -183,35 +183,39 @@ Two corrections to the prior draft, found in review:
    that already exists today for `LengthValidation`'s other
    `context.get(...)`-based lookups (e.g. `OntologyClient`), not a new one
    introduced by this feature, but worth a test case covering it explicitly.
-2. When a caller supplies `--params`, they build a **second, explicit**
-   `ParameterProvider` from the raw map (validated per Resolution and fail-fast,
-   below) and register it via `additionalProviders`/`withProvider(...)`, the
-   same way a caller populates and passes `CompositeSequenceProvider` today.
-   Explicit registration overwrites the auto-scanned instance under the same
-   type key, so the caller's overrides win; anything the caller didn't
-   override keeps its declared default because the explicit instance is built
-   from the *same* full descriptor set, not just the supplied keys.
+2. **Settled: the caller-side step always runs, not only when `--params` is
+   supplied.** `AbstractCommand`/the library helper always builds the
+   **explicit** `ParameterProvider` — from the caller's raw map when
+   `--params` was given, or from an **empty** map otherwise — and always
+   registers it via `additionalProviders`/`withProvider(...)`, the same way a
+   caller populates and passes `CompositeSequenceProvider` today. Running the
+   full Resolution-and-fail-fast checker against an empty map still correctly
+   catches a missing mandatory parameter (check 3 fires exactly as it would
+   for any other value), so there is no gap for documented entry points: a
+   rule declaring `mandatory = true` fails the build whether or not `--params`
+   was passed, as long as the caller goes through `AbstractCommand`/the
+   library helper. Explicit registration overwrites the auto-scanned instance
+   under the same type key, so the caller's overrides (or, with an empty map,
+   nothing but declared defaults) win; anything not overridden keeps its
+   declared default because the explicit instance is always built from the
+   *same* full descriptor set, not just the supplied keys.
 
-This means the auto-instance never fails a build when every active rule's
-parameters are optional (defaulted) — the common case today, since no current
-first adopter declares a mandatory parameter. **Known gap, called out
-explicitly rather than silently shipped:** a rule that declares a `mandatory`
-parameter has, by construction, no default to fall back on, so if the engine
-is ever built with *no* `--params` at all (no explicit instance, hence none of
-the five fail-fast checks run), that rule has nothing to read and fails later,
-mid-run, wherever it calls the accessor — not at startup, contradicting this
-spec's own fail-fast premise. Closing this gap (e.g. having the auto-instance
-itself enforce missing-mandatory, which requires the no-arg constructor to be
-allowed to fail loudly rather than be silently dropped by
-`instantiateProviders()`'s exception-swallowing) is out of scope for the first
-adopters in this spec, none of which need a mandatory parameter, and should be
-resolved before any future rule actually declares one.
+With this, the auto-scanned no-arg instance (item 1) is no longer on the path
+for any caller going through `AbstractCommand` or the library helper — it is
+explicitly overwritten every time, including the empty-map case. **Its only
+remaining role is a defensive fallback for code that constructs
+`ValidationRegistry`/`ValidationEngineBuilder` directly, bypassing that helper**
+(as several existing tests do, and as `disableAutodetectContextProviders()`/
+`excludeProvider(ResolvedParameters.class)` allow). For that narrower case, the
+same mandatory-parameter gap described in item 1 still applies — out of scope
+for the first adopters here, none of which declare a mandatory parameter, and
+worth closing before any future rule does.
 
-All five fail-fast checks in *Resolution and fail-fast* below happen only when
-the caller builds the *explicit* instance (i.e. when `--params` is supplied),
-strictly before `ValidationEngineBuilder.build()` is called — genuinely before
-any file is read. The claim that non-`STRING` optional parameters must have a
-coercible default (see Descriptor declaration) still holds regardless.
+All five fail-fast checks in *Resolution and fail-fast* below run every time
+the caller-side helper executes — with a possibly-empty map — strictly before
+`ValidationEngineBuilder.build()` is called, genuinely before any file is read.
+The claim that non-`STRING` optional parameters must have a coercible default
+(see Descriptor declaration) still holds regardless.
 
 **OFF-rule detection needs the real effective severity, not just the CLI map.**
 Effective state is a merge of the annotation's own default severity, the
@@ -245,18 +249,22 @@ library caller ──────────┘                    │
                                                │   --rules/fix overrides to get
                                                │   real effective OFF state)
                                                ▼
-               explicit instance only: coerce + default + validate
+        always: coerce + default + validate (map is empty if no --params)
                                                │  ← fail-fast HERE, in
                                                │  caller-side code, before
                                                │  ValidationEngineBuilder.build()
                                                │  is ever called (missing
                                                │  mandatory, bad type, unknown
-                                               │  key, key for an OFF rule/fix)
+                                               │  key, key for an OFF rule/fix —
+                                               │  catches missing-mandatory even
+                                               │  with an empty map)
                                                ▼
             explicit ParameterProvider (ContextProvider<ResolvedParameters>)
                                                │
-              passed as an additionalProvider (overwrites the auto-scanned,
-              defaults-only instance under the same type key)
+              always passed as an additionalProvider (overwrites the
+              auto-scanned, defaults-only instance under the same type key,
+              which is otherwise only reached by callers that bypass
+              AbstractCommand/the library helper entirely)
                                                │
                                                ▼
                                        ValidationContext
@@ -277,10 +285,13 @@ Main components:
   second one.
 - **`ParameterProvider`** — dual-mode `ContextProvider<ResolvedParameters>`
   (see Detailed Design for the value type): a no-arg, defaults-only
-  auto-scanned instance, and an explicit, caller-built instance from the raw
-  map that overwrites it when `--params` is used. The explicit instance's
+  auto-scanned instance (a fallback for direct `ValidationRegistry`/
+  `ValidationEngineBuilder` use only), and an explicit, caller-built instance
+  that `AbstractCommand`/the library helper *always* constructs — from the
+  raw map when `--params` is supplied, or an empty map otherwise — and always
+  registers, overwriting the auto-scanned instance. The explicit instance's
   construction is the single point where coercion, defaulting, and validity
-  checks happen.
+  checks happen, and it runs unconditionally.
 - **An exposed `ValidationConfig` loader** (settled: make
   `ValidationEngineBuilder.getValidationConfig()`'s loading logic public, e.g.
   `ValidationConfig.loadDefault()`), so the caller-side step can compute real
@@ -289,12 +300,13 @@ Main components:
 
 Integration points:
 
-- The explicit `ParameterProvider` is constructed by the caller (CLI: inside
-  `AbstractCommand` before calling `initValidationEngine`, after the
-  `ruleOverrides`/`fixOverrides` maps are assembled; library: by the pipeline
-  before building the engine) and passed through the existing
-  `additionalProviders` vararg — identical to how a caller populates and
-  passes `CompositeSequenceProvider` today.
+- The explicit `ParameterProvider` is **always** constructed by the caller
+  (CLI: inside `AbstractCommand` before calling `initValidationEngine`, after
+  the `ruleOverrides`/`fixOverrides` maps are assembled; library: by the
+  pipeline before building the engine), using an empty map when `--params`
+  wasn't supplied, and passed through the existing `additionalProviders`
+  vararg — identical to how a caller populates and passes
+  `CompositeSequenceProvider` today.
 - No changes to `ValidationEngineBuilder.build()` or `ValidationRegistry`'s
   provider/descriptor ordering are required. Two small additions to existing
   classes are required: the `ScanHolder.validationList` accessor and the
@@ -436,12 +448,19 @@ each descriptor's owning rule/fix:
    descriptor's declared type fails the build.
 5. **Optional, unsupplied** → the descriptor's default is used.
 
-All five apply only to the **explicit** `ParameterProvider` built when the
-caller supplies `--params` (the auto-scanned, defaults-only instance never has
-supplied keys to validate against). Construction happens in caller-side code
-(`AbstractCommand`/`Main` for the CLI; the pipeline's own setup for a library
-caller) — strictly before `ValidationEngineBuilder.build()` is called, so
-before `ValidationRegistry` does anything and before any file is read.
+All five apply to the **explicit** `ParameterProvider`, which `AbstractCommand`/
+the library helper *always* builds — from the caller's map when `--params` is
+supplied, or from an empty map otherwise. Running the checker against an empty
+map still exercises check 3 correctly (a mandatory descriptor with nothing
+supplied still fails the build), which is what closes the mandatory-parameter
+gap for both documented entry points; only code that bypasses
+`AbstractCommand`/the library helper and talks to `ValidationRegistry`/
+`ValidationEngineBuilder` directly relies on the auto-scanned, defaults-only
+instance instead, which does not run this checker (see System Overview).
+Construction happens in caller-side code (`AbstractCommand`/`Main` for the CLI;
+the pipeline's own setup for a library caller) — strictly before
+`ValidationEngineBuilder.build()` is called, so before `ValidationRegistry`
+does anything and before any file is read.
 
 `ExitException` is a checked exception (`extends Exception`,
 `exception/ExitException.java`). `AbstractCommand implements Runnable`, so
@@ -568,10 +587,19 @@ supplied value or the descriptor's default.
   the file.
 - **Symmetry**: a library caller passing the same map produces identical
   fail-fast behavior to the CLI.
-- **Dual-mode defaults**: an engine built with no `--params` at all (e.g. a
-  plain `new ValidationEngineBuilder().build()`, matching existing tests)
-  resolves `LengthValidation`'s parameters to their declared defaults via the
-  auto-scanned instance, with no crash and no explicit provider present.
+- **Empty-map fail-fast**: a CLI/library run through `AbstractCommand`/the
+  library helper with no `--params` at all resolves `LengthValidation`'s
+  parameters to their declared defaults via the always-built, empty-map
+  explicit instance (not the auto-scanned one). If a rule declares a
+  `mandatory` parameter, this case must fail the build the same way a
+  missing-mandatory `--params` value would, proving the mandatory-parameter gap
+  is closed for both documented entry points.
+- **Bypass-the-helper fallback**: a plain `new ValidationEngineBuilder().build()`
+  (matching existing tests that don't go through `AbstractCommand`) resolves
+  `LengthValidation`'s parameters to their declared defaults via the
+  auto-scanned instance, with no crash — this is the one path that does not run
+  the fail-fast checker, and it must not be used as a stand-in for the
+  empty-map case above.
 - **`--params` for a rule/fix that is effectively `OFF`** exits `USAGE` (2)
   before reading the file, same as an unknown key — one case per disablement
   mechanism: class-level (`@Gff3Validation`/`@Gff3Fix` disabled), method-level
