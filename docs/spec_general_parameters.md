@@ -20,9 +20,11 @@ any file is read — and can render a help listing of everything declared.
 Several validations and fixes hardcode thresholds that are legitimately
 submitter- or dataset-dependent. The concrete trigger: ENA tested an Ensembl
 GFF3 submission that failed built-in length validations (`INTRON_LENGTH`,
-`EXON_LENGTH`, `CDS_LENGTH`). The only lever available was downgrading those
-rules to `WARN` via `--rules`, which turns the check *off* rather than tuning it
-to the submitter's still-valid shape.
+`EXON_LENGTH`, `CDS_LENGTH`). (`EXON_LENGTH` already defaults to `WARN` today—
+`LengthValidation.java:173` — so the concrete workaround applied was downgrading
+`INTRON_LENGTH`/`CDS_LENGTH` from `ERROR` to `WARN` via `--rules`.) Either way,
+downgrading severity turns the check *off* rather than tuning it to the
+submitter's still-valid shape.
 
 Confirmed hardcoded parameters today:
 
@@ -80,7 +82,7 @@ that declare similarly-named parameters. Example, tuning the Ensembl case
 instead of disabling the checks:
 
 ```
-gff3tools validate input.gff3 \
+gff3tools validation input.gff3 \
   --params CDS_LENGTH.MIN_AMINO_ACIDS:15,INTRON_LENGTH.MIN_LENGTH:4
 ```
 
@@ -100,11 +102,17 @@ the listing exists and is driven by the declarations.
 
 ## Library callers
 
-A programmatic caller building a `ValidationEngine` passes the same raw
-`Map<String, String>` alongside `additionalProviders`, e.g. a new
-`AbstractCommand.initValidationEngine(...)` overload / `ValidationEngineBuilder`
-method that accepts the params map. The engine constructs the parameter provider
-from that map plus the registered rules' descriptors.
+A programmatic caller builds `ParameterProvider` itself — from the raw
+`Map<String, String>` plus a static, standalone descriptor scan (see below) —
+**before** building the engine, then passes it through the existing
+`additionalProviders` vararg on `AbstractCommand.initValidationEngine(...)` /
+`ValidationEngineBuilder.withProvider(...)`. No new overload is needed: this
+mirrors exactly how `CompositeSequenceProvider` is built and populated by the
+caller, then handed in the same way. Fail-fast validation therefore happens in
+caller-side code, before `ValidationEngineBuilder.build()` / `ValidationRegistry`
+are touched at all — genuinely before any file is read, and outside the
+ordering constraints of the registry's own provider/descriptor construction
+sequence (see System Overview).
 
 ## Extending: declaring a parameter on a new rule
 
@@ -124,21 +132,49 @@ already use), instead of a hardcoded constant.
 
 # System Overview / High-Level Design
 
+The central design constraint driving this section: `ValidationRegistry`
+instantiates and `initialize()`s all `ContextProvider`s *before* it builds
+validator/fix descriptors (`ValidationRegistry.java:98-156`) — a `ParameterProvider`
+built "from all registered descriptors" cannot be constructed inside that
+sequence without the descriptors it needs already existing. The resolution:
+descriptor collection for `@Parameter` is **not** part of `ValidationRegistry`'s
+instance-scoped, config-aware descriptor build. It is a separate, static,
+annotation-only scan — the same shape as `ValidationRegistry.ScanHolder`'s
+one-time `ClassGraph` pass, which already inspects class/method annotations
+without instantiating anything. The caller runs this scan to build
+`ParameterProvider` **before** the engine is built at all, then passes it in
+through the existing `additionalProviders` mechanism — the same pattern
+`CompositeSequenceProvider` already uses (built and populated by the caller,
+handed to `initValidationEngine`/`ValidationEngineBuilder.withProvider(...)`,
+never classpath auto-scanned itself).
+
 ```
-CLI (--params) ─┐
-                ├─► Map<String,String> ─► ParameterProvider (ContextProvider)
-library caller ─┘                              │
-                                               │ built from raw map
-   Rule/Fix descriptors ───────────────────────┤ + declared descriptors
-   (name,type,opt/mand,default,desc)            │
+CLI (--params, --rules) ─┐
+                         ├─► raw Map<String,String> + RuleSeverity overrides
+library caller ──────────┘                    │
+                                               │
+              ParameterDescriptors.scanAll()   │  (static, annotation-only scan of
+              ─────────────────────────────────┤   @Parameter/@Parameters, mirrors
+              (name,type,opt/mand,default,desc, │   ScanHolder — no instantiation)
+               owning rule/fix + its OFF state) │
                                                ▼
-                              coerce + default + validate  ← fail-fast here
-                                               │  (missing mandatory,
-                                               │   bad type, unknown key)
+                              coerce + default + validate  ← fail-fast HERE,
+                                               │  in caller-side code, before
+                                               │  ValidationEngineBuilder.build()
+                                               │  is ever called
+                                               │  (missing mandatory, bad type,
+                                               │   unknown key, key for an
+                                               │   OFF-toggled rule)
+                                               ▼
+                         ParameterProvider (ContextProvider<ResolvedParameters>)
+                                               │
+                              passed as an additionalProvider, same as
+                              CompositeSequenceProvider
+                                               │
                                                ▼
                                        ValidationContext
                                                │
-                    Rule reads typed value via context.get(...)
+              Rule reads typed value via context.get(ResolvedParameters.class)
 ```
 
 Main components:
@@ -146,24 +182,35 @@ Main components:
 - **`--params` CLI option + converter** on `AbstractCommand` / `Main`. Produces
   a plain `Map<String, String>` (a `CliParamsOption` record mirroring
   `CliRulesOption`, with a converter mirroring `RuleConverter`).
-- **Parameter descriptor** declared by each rule/fix. Powers both validation and
-  the help listing.
-- **`ParameterProvider`** — a `ContextProvider` that holds the resolved, typed
-  parameter values, keyed for lookup by the declaring rule. Constructed from the
-  raw map + all registered descriptors. This is the single point where coercion,
+- **Parameter descriptor** declared by each rule/fix via `@Parameter`. Powers
+  both validation and the help listing.
+- **`ParameterDescriptors.scanAll()`** (or similarly named static utility) — a
+  standalone, one-time, annotation-only classpath scan (mirroring
+  `ValidationRegistry.ScanHolder`) that collects every `@Parameter`/`@Parameters`
+  descriptor together with its owning rule/fix name and whether that rule/fix is
+  currently toggled `OFF` (given the same `RuleSeverity`/fix-enable overrides the
+  engine will apply). This scan has no dependency on `ValidationRegistry`'s
+  instance construction and can run before it.
+- **`ParameterProvider`** — a `ContextProvider<ResolvedParameters>` (see
+  Detailed Design for the value type), built directly by the caller from the raw
+  map + the static scan's descriptors. This is the single point where coercion,
   defaulting, and validity checks happen, so both CLI and library callers get
-  identical fail-fast behavior.
-- **Help renderer** driven by the collected descriptors.
+  identical fail-fast behavior, and it happens strictly before
+  `ValidationEngineBuilder.build()` runs.
+- **Help renderer** driven by the same static scan's descriptors.
 
 Integration points:
 
-- `ValidationEngineBuilder.build()` already assembles the registry, gathers
-  providers, and constructs the context. The parameter provider is registered
-  here so its construction (and therefore its fail-fast validation) runs at
-  engine-build time, before any input is read. Composition with existing
-  provider registration order is an open question below.
-- `AbstractCommand.initValidationEngine(...)` gains a params-map parameter,
-  threaded through to the builder alongside `additionalProviders`.
+- `ParameterProvider` is constructed by the caller (CLI: inside `AbstractCommand`
+  before calling `initValidationEngine`; library: by the pipeline before building
+  the engine) and passed through the existing `additionalProviders` vararg —
+  identical to how a caller populates and passes `CompositeSequenceProvider`
+  today. No changes to `ValidationEngineBuilder.build()` or `ValidationRegistry`'s
+  provider/descriptor ordering are required.
+- Because `ParameterProvider` is never classpath-auto-scanned (it's always
+  explicitly passed in), there is no no-arg-constructor / empty-instance problem
+  for existing engine builds that don't use `--params` at all — those callers
+  simply don't add the provider.
 
 # Detailed Design & Implementation
 
@@ -207,7 +254,7 @@ Usage — colocated with the rule it tunes, no separate registration call:
         description = "Minimum amino acids for a complete CDS", defaultValue = "25")
 @ValidationMethod(rule = "CDS_LENGTH", type = ValidationType.ANNOTATION, priority = ValidationPriority.LOW)
 public void validateCdsLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
-    long minAminoAcids = context.get(ParameterProvider.class).getLong("CDS_LENGTH.MIN_AMINO_ACIDS");
+    long minAminoAcids = context.get(ResolvedParameters.class).getLong("CDS_LENGTH.MIN_AMINO_ACIDS");
     ...
 }
 ```
@@ -216,7 +263,10 @@ The namespaced key is derived as `rule() + "." + name()` — `rule` already exis
 on `@ValidationMethod`/`@FixMethod`, so the parameter annotation never re-states
 it and the two cannot drift out of sync. `@Repeatable` covers rules needing more
 than one parameter (e.g. `TRNA_LENGTH.MIN_LENGTH` and `TRNA_LENGTH.MAX_LENGTH`
-on the same method).
+on the same method). Note `@ValidationMethod` has no `enabled()` member (only
+`@FixMethod` does) — method-level disablement for validations is expressed via
+a `RuleSeverity.OFF` entry in the rule-severity overrides, not an annotation
+attribute; see below for how that interacts with parameter validity.
 
 Rejected alternative: programmatic registration (a rule exposing a
 `declareParameters()`-style method). More flexible for computed defaults, but
@@ -225,34 +275,55 @@ to remember alongside the existing annotation-driven metadata. `defaultValue`
 must be a `String` on the annotation (Java annotations cannot hold arbitrary
 typed values) and is coerced by `type()` at provider-build time through the same
 coercion path as CLI/library-supplied values — a minor asymmetry accepted to
-keep declarations valid Java.
+keep declarations valid Java. A non-`STRING` parameter with `mandatory = false`
+must supply a `defaultValue` that coerces to its declared `type` — an optional
+numeric parameter left at the annotation default (`""`) is a build-time defect
+in the rule itself (verifiable by a unit test over the static scan, not a
+runtime concern), not something `ParameterProvider` needs to handle.
 
-Whichever method carries these annotations, the reflective scan that already
-collects `@ValidationMethod`/`@FixMethod` metadata must also collect
-`@Parameter`/`@Parameters` from the same method, so the registry sees
-descriptors only from *registered* rules/fixes (respecting class/method
-enable-toggles) — the parameter provider and the help listing must see exactly
-the active set.
+`ParameterDescriptors.scanAll()` (see System Overview) is the standalone,
+annotation-only classpath scan that collects `@Parameter`/`@Parameters` from
+every class carrying `@Gff3Validation`/`@Gff3Fix`, mirroring
+`ValidationRegistry.ScanHolder`'s existing one-time `ClassGraph` pass (which
+already inspects class/method annotations without instantiating). It is
+deliberately decoupled from `ValidationRegistry`'s instance-scoped,
+config-filtered descriptor build (`buildDescriptors`) — that decoupling is what
+makes caller-side, pre-engine-build construction of `ParameterProvider`
+possible (see System Overview). Because it is decoupled, it does not know on
+its own which rules are toggled `OFF`; the caller passes it the same
+`RuleSeverity`/fix-enable overrides it will hand to `initValidationEngine`, and
+the scan util cross-references the two to mark a descriptor's owning rule as
+inactive.
 
-## Resolution and fail-fast (in `ParameterProvider` construction)
+## Resolution and fail-fast (settled: caller-side, before engine build)
 
-Given the raw map and the collected descriptors:
+Given the raw map, the static scan's descriptors, and the OFF/enabled state of
+each descriptor's owning rule/fix:
 
 1. **Unknown key** → hard startup error. Any `RULE.PARAM` key in the map that no
-   registered descriptor declares fails the build. (Note: this interacts with
-   disabled rules — a key for a rule that is toggled `OFF` should arguably still
-   be reported rather than silently accepted; see open questions.)
-2. **Missing mandatory** → hard startup error. A mandatory descriptor with no
-   supplied value fails the build.
-3. **Bad type** → hard startup error. A value that does not coerce to the
+   descriptor declares fails the build.
+2. **Key for a toggled-`OFF` rule/fix** → hard startup error, same as an unknown
+   key. (Settled: a parameter for a method-level `OFF` rule is invalid to
+   supply, not silently accepted or silently ignored.)
+3. **Missing mandatory** → hard startup error. A mandatory descriptor with no
+   supplied value fails the build (unless its owning rule is `OFF`, in which case
+   the parameter is simply not required — an `OFF` rule needs no value for a
+   parameter it will never read).
+4. **Bad type** → hard startup error. A value that does not coerce to the
    descriptor's declared type fails the build.
-4. **Optional, unsupplied** → the descriptor's default is used.
+5. **Optional, unsupplied** → the descriptor's default is used.
 
-All four happen at `ValidationContext` construction / engine build, before file
-reading. Errors should surface as an `ExitException` subclass mapping to the
-`USAGE` exit code (2), consistent with other invalid-CLI-argument failures; the
-exact exception class is an implementation detail to align with the existing
-exception hierarchy (`docs/0001_error_handling.md`).
+All five happen in caller-side code (`AbstractCommand`/`Main` for the CLI; the
+pipeline's own setup for a library caller) when `ParameterProvider` is
+constructed — strictly before `ValidationEngineBuilder.build()` is called, so
+before `ValidationRegistry` does anything and before any file is read. Because
+this is caller-side code, not code reached through `ContextProvider`/
+`ValidationEngineBuilder`'s unchecked-only call chain, it can throw a checked
+`ExitException` subclass directly (settled: `ExitException` is in fact a
+checked exception, `extends Exception`, in the current codebase —
+`exception/ExitException.java`) mapping to the `USAGE` exit code (2), consistent
+with other invalid-CLI-argument failures, without needing any `throws`-signature
+changes deeper in the engine.
 
 ## First adopters
 
@@ -274,6 +345,14 @@ exception hierarchy (`docs/0001_error_handling.md`).
   they are (and this feature does not touch the fix) or are folded into
   `--params` with those constructor checks intact; folding is the riskier change
   and should be a deliberate, separately reviewed step, not a silent side effect.
+  Note also: these three values are consumed off a single shared
+  `AnalysisContext`, read by `GapGenerationFix` and (for `analysisType`) by
+  `SequenceLengthValidation` — the strict single-owner `RULE.PARAM` namespacing
+  this spec otherwise assumes doesn't have a natural owning rule for a
+  cross-cutting value like this. If/when gap-fix migration is undertaken, the
+  key naming for these three (e.g. a non-rule-prefixed reserved namespace, or
+  attributing them to one nominal owning rule/fix by convention) is a decision
+  for that follow-on work, not resolved by this spec.
 
 ## Corner cases
 
@@ -281,10 +360,19 @@ exception hierarchy (`docs/0001_error_handling.md`).
   be truncated; split on the first `:` only.
 - A rule declaring no parameters contributes nothing to the map or the help
   listing.
-- Casing: `--rules` upper-cases keys; `--params` key casing must be defined so
-  `cds_length.min_amino_acids` and `CDS_LENGTH.MIN_AMINO_ACIDS` resolve
-  consistently (recommend upper-casing the rule/param segments to match the
-  `--rules` convention).
+- Casing (settled): `--params` **keys** are upper-cased, matching `--rules`
+  (`cds_length.min_amino_acids` and `CDS_LENGTH.MIN_AMINO_ACIDS` resolve
+  identically). This applies to keys only — **values** are passed through
+  verbatim, unmodified by this feature's parsing. This matters concretely for
+  the gap-fix migration case: `GapOptionsValidator.normaliseGapType` /
+  `normaliseLinkageEvidence` apply their own, different casing rules to values
+  downstream, and `--params` must not pre-empt that by uppercasing values.
+- A value containing `,` is not supported (mirrors the same pre-existing
+  limitation in `--rules`/`RuleConverter`'s `split(",")`); no escaping is
+  provided by this feature. `RuleConverter` also trims each whole `key:value`
+  entry but not the individual key/value halves — `--params` follows the same
+  behavior for consistency, so a value with leading/trailing whitespace is taken
+  verbatim.
 
 # Alternatives Considered
 
@@ -306,13 +394,18 @@ exception hierarchy (`docs/0001_error_handling.md`).
 
 - No persistent submitter profiles ("Ensembl profile") — explicitly out of scope;
   every override is per-invocation.
-- Initial type set is intentionally small (`String`, integral). `ENUM` and richer
-  types can be added later without changing the CLI surface.
-- Interaction between `--params` for a disabled rule and the unknown-key error
-  needs a decision (reject vs. ignore).
+- Initial type set is intentionally small (`String`, integral `LONG`). `ENUM` and
+  richer types can be added later without changing the CLI surface.
 - Whether to migrate the gap fix's dedicated flags onto `--params` or leave them
   is deferred; the constructor-level validation in `AnalysisContext` must survive
-  either way.
+  either way, and the shared-value namespacing question (see First adopters)
+  must be resolved as part of that follow-on decision, not assumed.
+- Rule-description text and validation-failure messages that hardcode the same
+  values now being parameterized (e.g. `LengthValidation`'s "at least 25 amino
+  acids" description, and `INVALID_CDS_INTRON_LENGTH_MESSAGE`'s "at least 10 nt")
+  will read incorrectly once a value is overridden. Out of scope for this spec's
+  first pass; worth a follow-up to make these messages read the resolved value
+  rather than a literal.
 
 # Testing Strategy
 
@@ -328,8 +421,14 @@ exception hierarchy (`docs/0001_error_handling.md`).
   the file.
 - **Symmetry**: a library caller passing the same map produces identical
   fail-fast behavior to the CLI.
+- **`--params` for an `OFF`-toggled rule** exits `USAGE` (2) before reading the
+  file, same as an unknown key.
 - **Help listing**: the listing includes a newly declared parameter and omits
-  parameters of disabled rules.
+  parameters of rules toggled `OFF` via rule-severity overrides.
+- **`ParameterDescriptors.scanAll()`**: unit test that a non-`STRING` optional
+  parameter with no `defaultValue` (or a non-coercible one) is caught as a
+  build-time defect in the rule's own annotation, independent of any
+  `--params` map being supplied at all.
 - Gap-fix behavior unchanged (or, if migrated, `AnalysisContext` validation still
   rejects invalid `gap_type`/`linkage_evidence` and non-positive `min-gap-length`).
 
@@ -349,4 +448,6 @@ Verify with `./gradlew spotlessCheck test`.
   `validation/fix/GapGenerationFix.java`,
   `validation/provider/AnalysisContext.java`,
   `validation/provider/AnalysisContextProvider.java`,
-  `validation/provider/TranslationStateProvider.java`
+  `validation/provider/TranslationStateProvider.java`,
+  `validation/provider/CompositeSequenceProvider.java` (the caller-populated,
+  never-auto-scanned provider pattern `ParameterProvider` follows)
