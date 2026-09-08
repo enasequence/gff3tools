@@ -9,9 +9,9 @@ validations and fixes check against, per invocation, without a code change or
 release. A new CLI flag `--params key:value,key:value` (sibling to `--rules`)
 and a symmetric library entry point feed a raw `Map<String, String>` into a
 parameter-provider `ContextProvider`. Each rule/fix declares its own tunable
-parameters (name, type, optional/mandatory, default); the provider coerces,
-defaults, and validates them at `ValidationContext` construction time — before
-any file is read — and can render a help listing of everything declared.
+parameters (name, type, optional/mandatory, default); a caller-side step coerces,
+defaults, and validates them before the engine is built at all — before any
+file is read — and can render a help listing of everything declared.
 
 # Motivation & Rationale
 
@@ -63,9 +63,10 @@ sometimes tied to a known submitter (Ensembl), sometimes not. No persistent
   descriptors rather than a central schema knowing about every rule. This keeps
   related code close (per the project's organic-growth convention) and lets the
   help listing be generated from the declarations themselves.
-- **Fail fast at engine startup.** Missing mandatory value, bad type, or an
-  unrecognized key must be a hard startup error before any file is read, so an
-  operator never believes they relaxed a rule when a typo meant nothing changed.
+- **Fail fast, before the engine is built.** Missing mandatory value, bad type,
+  or an unrecognized key must be a hard startup error before any file is read,
+  so an operator never believes they relaxed a rule when a typo meant nothing
+  changed.
 
 # Usage Guidelines
 
@@ -94,11 +95,18 @@ only (unlike `RuleConverter`, which rejects anything but exactly two halves).
 ### Help listing
 
 An operator can discover what is tunable. The listing is generated from the
-declared descriptors of all registered rules/fixes: for each, the namespaced key
-`RULE_NAME.PARAM_NAME`, type, mandatory/optional, default (for optional), and
-description. Exact surface (new `--list-params` flag vs. a subcommand vs.
-extending existing help) is an open question below; the requirement is only that
-the listing exists and is driven by the declarations.
+same descriptor collection used to build `ParameterProvider` (see System
+Overview): for each descriptor, the namespaced key `RULE_NAME.PARAM_NAME`,
+type, mandatory/optional, default (for optional), and description, omitting
+any descriptor whose owning rule/fix is effectively `OFF` per the same
+three-mechanism check described there. Because that check needs the caller's
+`--rules`/fix-override state, the listing reflects whatever overrides are
+passed alongside the listing request (e.g. `--rules X:OFF --list-params`); with
+no `--rules` supplied, it reflects the default `ValidationConfig` alone. Exact
+surface (new `--list-params` flag vs. a subcommand vs. extending existing help)
+remains an implementation choice; the requirement is only that the listing
+exists, is driven by the declarations, and applies the same OFF-filtering rule
+used for fail-fast validation.
 
 ## Library callers
 
@@ -119,8 +127,8 @@ sequence (see System Overview).
 A rule/fix declares each tunable parameter as a descriptor carrying:
 
 - `name` (combined with the rule name into the `RULE_NAME.PARAM_NAME` key)
-- `type` (initial set: `STRING`, `LONG`/`INT`; `ENUM` is a candidate — see open
-  questions)
+- `type` (initial set: `STRING`, `LONG`; `ENUM` and richer types can be added
+  later, see Technical Debt / Future Considerations)
 - `description` (feeds the help listing)
 - `mandatory` vs `optional`
 - `default` (for optional parameters only)
@@ -138,38 +146,117 @@ validator/fix descriptors (`ValidationRegistry.java:98-156`) — a `ParameterPro
 built "from all registered descriptors" cannot be constructed inside that
 sequence without the descriptors it needs already existing. The resolution:
 descriptor collection for `@Parameter` is **not** part of `ValidationRegistry`'s
-instance-scoped, config-aware descriptor build. It is a separate, static,
-annotation-only scan — the same shape as `ValidationRegistry.ScanHolder`'s
-one-time `ClassGraph` pass, which already inspects class/method annotations
-without instantiating anything. The caller runs this scan to build
-`ParameterProvider` **before** the engine is built at all, then passes it in
-through the existing `additionalProviders` mechanism — the same pattern
-`CompositeSequenceProvider` already uses (built and populated by the caller,
-handed to `initValidationEngine`/`ValidationEngineBuilder.withProvider(...)`,
-never classpath auto-scanned itself).
+instance-scoped, config-aware descriptor build. It reuses the *existing*
+`ValidationRegistry.ScanHolder.validationList` (exposed via a small public
+static accessor — no second classpath scan) to read `@Parameter`/`@Parameters`
+off the same classes, purely by annotation inspection, no instantiation.
+
+Two corrections to the prior draft, found in review:
+
+- **`CompositeSequenceProvider` is *not* an example of "never classpath
+  auto-scanned."** It has an implicit public no-arg constructor and doesn't
+  override `isActive()`, so `ValidationRegistry.instantiateProviders()` *does*
+  auto-instantiate an empty one on every build; an explicitly-passed instance
+  merely overwrites it under the same type key (explicit wins,
+  `ValidationRegistry.java:111-137`). `ParameterProvider` will be auto-scanned
+  the same way, and that's fine — see the dual-mode design below, which uses
+  this rather than fighting it.
+- **Defaults need a path that exists even when nobody passes `--params`.**
+  `ValidationContext.get` throws for an unregistered type, and this feature
+  deletes the hardcoded constants `LengthValidation` used to fall back to, so
+  "the provider just isn't added" cannot be the answer for the common,
+  no-`--params` case.
+
+**Settled: `ParameterProvider` is dual-mode.**
+
+1. A **public no-arg constructor** builds a `ParameterProvider` seeded *only*
+   with each descriptor's declared default (no caller map at all). This is the
+   instance `ValidationRegistry.instantiateProviders()` auto-scans and
+   registers, on any build that leaves classpath-provider scanning enabled and
+   doesn't exclude it. It reproduces today's hardcoded-constant behavior
+   exactly, sourced from the same annotations instead of a `private static
+   final`. **Known gap:** an engine built via
+   `disableAutodetectContextProviders()` or `excludeProvider(ResolvedParameters.class)`
+   gets neither instance unless the caller explicitly adds one, so a rule
+   whose parameters were migrated onto `@Parameter` (deleting its hardcoded
+   constant) has no value to read in that configuration — the same hazard
+   that already exists today for `LengthValidation`'s other
+   `context.get(...)`-based lookups (e.g. `OntologyClient`), not a new one
+   introduced by this feature, but worth a test case covering it explicitly.
+2. When a caller supplies `--params`, they build a **second, explicit**
+   `ParameterProvider` from the raw map (validated per Resolution and fail-fast,
+   below) and register it via `additionalProviders`/`withProvider(...)`, the
+   same way a caller populates and passes `CompositeSequenceProvider` today.
+   Explicit registration overwrites the auto-scanned instance under the same
+   type key, so the caller's overrides win; anything the caller didn't
+   override keeps its declared default because the explicit instance is built
+   from the *same* full descriptor set, not just the supplied keys.
+
+This means the auto-instance never fails a build when every active rule's
+parameters are optional (defaulted) — the common case today, since no current
+first adopter declares a mandatory parameter. **Known gap, called out
+explicitly rather than silently shipped:** a rule that declares a `mandatory`
+parameter has, by construction, no default to fall back on, so if the engine
+is ever built with *no* `--params` at all (no explicit instance, hence none of
+the five fail-fast checks run), that rule has nothing to read and fails later,
+mid-run, wherever it calls the accessor — not at startup, contradicting this
+spec's own fail-fast premise. Closing this gap (e.g. having the auto-instance
+itself enforce missing-mandatory, which requires the no-arg constructor to be
+allowed to fail loudly rather than be silently dropped by
+`instantiateProviders()`'s exception-swallowing) is out of scope for the first
+adopters in this spec, none of which need a mandatory parameter, and should be
+resolved before any future rule actually declares one.
+
+All five fail-fast checks in *Resolution and fail-fast* below happen only when
+the caller builds the *explicit* instance (i.e. when `--params` is supplied),
+strictly before `ValidationEngineBuilder.build()` is called — genuinely before
+any file is read. The claim that non-`STRING` optional parameters must have a
+coercible default (see Descriptor declaration) still holds regardless.
+
+**OFF-rule detection needs the real effective severity, not just the CLI map.**
+Effective state is a merge of the annotation's own default severity, the
+`default-rule-severities.properties` file, and the caller's `--rules`
+override — currently computed by `ValidationConfig.getSeverity(rule,
+defaultAction)` (already public) fed by `ValidationEngineBuilder.getValidationConfig()`
+(currently **private**). Settled: expose that loader (e.g.
+`ValidationConfig.loadDefault()`), so the caller-side step can compute the same
+effective severity `ValidationEngineBuilder` will apply, instead of only seeing
+its own `--rules` map. The equivalent applies to class-level
+`@Gff3Validation`/`@Gff3Fix` enablement via the already-public
+`ValidationConfig.isValidatorEnabled(...)`. Fix-enable overrides that a command
+assembles internally (e.g. `ValidationCommand` hardcoding `GAP_GENERATION:false`)
+are already caller-side data at the point the command builds its `fixOverrides`
+map — the `ParameterProvider`-construction step must run after that map is
+assembled, using the same map, not a separate one.
 
 ```
 CLI (--params, --rules) ─┐
-                         ├─► raw Map<String,String> + RuleSeverity overrides
+                         ├─► raw Map<String,String> + RuleSeverity/fix overrides
 library caller ──────────┘                    │
                                                │
-              ParameterDescriptors.scanAll()   │  (static, annotation-only scan of
-              ─────────────────────────────────┤   @Parameter/@Parameters, mirrors
-              (name,type,opt/mand,default,desc, │   ScanHolder — no instantiation)
-               owning rule/fix + its OFF state) │
-                                               ▼
-                              coerce + default + validate  ← fail-fast HERE,
-                                               │  in caller-side code, before
-                                               │  ValidationEngineBuilder.build()
-                                               │  is ever called
-                                               │  (missing mandatory, bad type,
-                                               │   unknown key, key for an
-                                               │   OFF-toggled rule)
-                                               ▼
-                         ParameterProvider (ContextProvider<ResolvedParameters>)
+     ParameterDescriptors (reuses             │  (annotation-only read of
+     ScanHolder.validationList)  ─────────────┤   @Parameter/@Parameters via the
+     (name,type,opt/mand,default,desc,         │   existing one-time classpath
+      owning rule/fix)                         │   scan — no instantiation)
                                                │
-                              passed as an additionalProvider, same as
-                              CompositeSequenceProvider
+     ValidationConfig.loadDefault()  ─────────┤  (exposed loader: annotation
+     + isValidatorEnabled/getSeverity          │   default + properties file,
+                                               │   merged with the caller's
+                                               │   --rules/fix overrides to get
+                                               │   real effective OFF state)
+                                               ▼
+               explicit instance only: coerce + default + validate
+                                               │  ← fail-fast HERE, in
+                                               │  caller-side code, before
+                                               │  ValidationEngineBuilder.build()
+                                               │  is ever called (missing
+                                               │  mandatory, bad type, unknown
+                                               │  key, key for an OFF rule/fix)
+                                               ▼
+            explicit ParameterProvider (ContextProvider<ResolvedParameters>)
+                                               │
+              passed as an additionalProvider (overwrites the auto-scanned,
+              defaults-only instance under the same type key)
                                                │
                                                ▼
                                        ValidationContext
@@ -184,33 +271,34 @@ Main components:
   `CliRulesOption`, with a converter mirroring `RuleConverter`).
 - **Parameter descriptor** declared by each rule/fix via `@Parameter`. Powers
   both validation and the help listing.
-- **`ParameterDescriptors.scanAll()`** (or similarly named static utility) — a
-  standalone, one-time, annotation-only classpath scan (mirroring
-  `ValidationRegistry.ScanHolder`) that collects every `@Parameter`/`@Parameters`
-  descriptor together with its owning rule/fix name and whether that rule/fix is
-  currently toggled `OFF` (given the same `RuleSeverity`/fix-enable overrides the
-  engine will apply). This scan has no dependency on `ValidationRegistry`'s
-  instance construction and can run before it.
-- **`ParameterProvider`** — a `ContextProvider<ResolvedParameters>` (see
-  Detailed Design for the value type), built directly by the caller from the raw
-  map + the static scan's descriptors. This is the single point where coercion,
-  defaulting, and validity checks happen, so both CLI and library callers get
-  identical fail-fast behavior, and it happens strictly before
-  `ValidationEngineBuilder.build()` runs.
-- **Help renderer** driven by the same static scan's descriptors.
+- **A public static accessor on `ValidationRegistry`** exposing
+  `ScanHolder.validationList` (or an equivalent read-only view), so descriptor
+  collection reuses the existing one-time classpath scan instead of running a
+  second one.
+- **`ParameterProvider`** — dual-mode `ContextProvider<ResolvedParameters>`
+  (see Detailed Design for the value type): a no-arg, defaults-only
+  auto-scanned instance, and an explicit, caller-built instance from the raw
+  map that overwrites it when `--params` is used. The explicit instance's
+  construction is the single point where coercion, defaulting, and validity
+  checks happen.
+- **An exposed `ValidationConfig` loader** (settled: make
+  `ValidationEngineBuilder.getValidationConfig()`'s loading logic public, e.g.
+  `ValidationConfig.loadDefault()`), so the caller-side step can compute real
+  effective severity/enablement, not just its own override map.
+- **Help renderer** driven by the same descriptor collection.
 
 Integration points:
 
-- `ParameterProvider` is constructed by the caller (CLI: inside `AbstractCommand`
-  before calling `initValidationEngine`; library: by the pipeline before building
-  the engine) and passed through the existing `additionalProviders` vararg —
-  identical to how a caller populates and passes `CompositeSequenceProvider`
-  today. No changes to `ValidationEngineBuilder.build()` or `ValidationRegistry`'s
-  provider/descriptor ordering are required.
-- Because `ParameterProvider` is never classpath-auto-scanned (it's always
-  explicitly passed in), there is no no-arg-constructor / empty-instance problem
-  for existing engine builds that don't use `--params` at all — those callers
-  simply don't add the provider.
+- The explicit `ParameterProvider` is constructed by the caller (CLI: inside
+  `AbstractCommand` before calling `initValidationEngine`, after the
+  `ruleOverrides`/`fixOverrides` maps are assembled; library: by the pipeline
+  before building the engine) and passed through the existing
+  `additionalProviders` vararg — identical to how a caller populates and
+  passes `CompositeSequenceProvider` today.
+- No changes to `ValidationEngineBuilder.build()` or `ValidationRegistry`'s
+  provider/descriptor ordering are required. Two small additions to existing
+  classes are required: the `ScanHolder.validationList` accessor and the
+  `ValidationConfig` loader becoming public.
 
 # Detailed Design & Implementation
 
@@ -219,8 +307,11 @@ Integration points:
 - CLI: `@Option(names = "--params", paramLabel = "<key:value,key:value>")`
   producing `Map<String, String>`, following the `--rules` precedent exactly
   (`CliRulesOption` + `RuleConverter` + `AbstractCommand.getRuleOverrides()`).
-- Library: the same `Map<String, String>` passed to the engine builder. No typed
-  overload per parameter; coercion is the provider's job.
+- Library: the caller builds the explicit `ParameterProvider` itself from the
+  same raw `Map<String, String>` (see System Overview) and passes it via
+  `additionalProviders`/`withProvider(...)`; no map is passed to the engine
+  builder directly, and no typed overload per parameter exists — coercion is
+  the provider's job.
 
 ## Descriptor declaration (settled)
 
@@ -281,19 +372,51 @@ numeric parameter left at the annotation default (`""`) is a build-time defect
 in the rule itself (verifiable by a unit test over the static scan, not a
 runtime concern), not something `ParameterProvider` needs to handle.
 
-`ParameterDescriptors.scanAll()` (see System Overview) is the standalone,
-annotation-only classpath scan that collects `@Parameter`/`@Parameters` from
-every class carrying `@Gff3Validation`/`@Gff3Fix`, mirroring
-`ValidationRegistry.ScanHolder`'s existing one-time `ClassGraph` pass (which
-already inspects class/method annotations without instantiating). It is
-deliberately decoupled from `ValidationRegistry`'s instance-scoped,
-config-filtered descriptor build (`buildDescriptors`) — that decoupling is what
-makes caller-side, pre-engine-build construction of `ParameterProvider`
-possible (see System Overview). Because it is decoupled, it does not know on
-its own which rules are toggled `OFF`; the caller passes it the same
-`RuleSeverity`/fix-enable overrides it will hand to `initValidationEngine`, and
-the scan util cross-references the two to mark a descriptor's owning rule as
-inactive.
+Descriptor collection reuses `ValidationRegistry.ScanHolder.validationList`
+(exposed via a small public accessor) to read `@Parameter`/`@Parameters` off
+the same classes already discovered for `@ValidationMethod`/`@FixMethod` — no
+second classpath scan. It is deliberately decoupled from `ValidationRegistry`'s
+instance-scoped, config-filtered descriptor build (`buildDescriptors`) — that
+decoupling is what makes caller-side, pre-engine-build construction of the
+explicit `ParameterProvider` possible (see System Overview).
+
+Because it is decoupled, it does not know on its own which rules are
+effectively `OFF`. Determining that requires all three of the codebase's
+distinct disablement mechanisms, each checked separately:
+
+1. **Class-level**: `@Gff3Validation`/`@Gff3Fix` enablement, via the
+   already-public `ValidationConfig.isValidatorEnabled(...)`, fed the effective
+   `ValidationConfig` (see below). Filters at registration.
+2. **Method-level severity**: `RuleSeverity.OFF`, via
+   `ValidationConfig.getSeverity(rule, defaultAction)` — the effective value
+   merges the annotation's own default severity, `default-rule-severities.properties`,
+   and the caller's `--rules` override. Filters at execution, but for this
+   feature's purposes a descriptor whose rule resolves to `OFF` is treated as
+   inactive.
+3. **Fix-enable**: via the already-public `ValidationConfig.getFix(rule,
+   defaultEnabled)` (the fix-enable analogue of `getSeverity`, same call
+   shape as `ValidationEngine.java:116`) — the effective value merges
+   `@FixMethod`'s own default, `fix.*` entries in
+   `default-rule-severities.properties` (yes, fix-enable has its own
+   properties-file layer too, exactly like severity), and the caller's
+   fix-override map (which some commands partly assemble internally, e.g.
+   `ValidationCommand` hardcoding `GAP_GENERATION:false`).
+
+The caller-side step needs the effective `ValidationConfig` to check (1) and
+(2) correctly — not just its own `--rules` map — which is why
+`ValidationEngineBuilder`'s config loader must be exposed (see System
+Overview's `ValidationConfig.loadDefault()`). For (3), the step must run after
+the command's `fixOverrides` map is fully assembled and use that exact map.
+
+For a **library caller**, the same ordering constraint applies to all three
+mechanisms, not just (3): `overrideClassRules(...)` and `overrideMethodRules(...)`
+are builder calls a pipeline could legally make *after* constructing the
+explicit `ParameterProvider`, at which point the caller-side check would be
+stale. The CLI is unaffected (there is no `--rules`-equivalent path to
+`overrideClassRules` today), but a library caller must construct the explicit
+`ParameterProvider` only after all three override inputs (class rules, method
+rules, fix overrides) are in their final form, immediately before
+`ValidationEngineBuilder.build()`.
 
 ## Resolution and fail-fast (settled: caller-side, before engine build)
 
@@ -313,17 +436,32 @@ each descriptor's owning rule/fix:
    descriptor's declared type fails the build.
 5. **Optional, unsupplied** → the descriptor's default is used.
 
-All five happen in caller-side code (`AbstractCommand`/`Main` for the CLI; the
-pipeline's own setup for a library caller) when `ParameterProvider` is
-constructed — strictly before `ValidationEngineBuilder.build()` is called, so
-before `ValidationRegistry` does anything and before any file is read. Because
-this is caller-side code, not code reached through `ContextProvider`/
-`ValidationEngineBuilder`'s unchecked-only call chain, it can throw a checked
-`ExitException` subclass directly (settled: `ExitException` is in fact a
-checked exception, `extends Exception`, in the current codebase —
-`exception/ExitException.java`) mapping to the `USAGE` exit code (2), consistent
-with other invalid-CLI-argument failures, without needing any `throws`-signature
-changes deeper in the engine.
+All five apply only to the **explicit** `ParameterProvider` built when the
+caller supplies `--params` (the auto-scanned, defaults-only instance never has
+supplied keys to validate against). Construction happens in caller-side code
+(`AbstractCommand`/`Main` for the CLI; the pipeline's own setup for a library
+caller) — strictly before `ValidationEngineBuilder.build()` is called, so
+before `ValidationRegistry` does anything and before any file is read.
+
+`ExitException` is a checked exception (`extends Exception`,
+`exception/ExitException.java`). `AbstractCommand implements Runnable`, so
+`run()` cannot declare `throws`; the existing, working pattern (already used by
+`ValidationCommand.run()`) is to construct the explicit `ParameterProvider`
+inside `run()`'s existing try block, wrap a thrown `ExitException` subclass
+(e.g. a new `CLIException`-mapped-to-`USAGE` case, or reuse `CLIException`
+directly) in an unchecked `RuntimeException(message, cause)`, and let
+`ExecutionExceptionHandler.findExitException` recover the exit code by walking
+the cause chain — exactly the mechanism `ValidationCommand.java` already uses
+for other invalid-argument failures. No `throws`-signature changes are needed
+anywhere in the engine, but the checked exception does not "flow freely" — it
+is wrapped and unwrapped by this existing mechanism, not thrown bare.
+
+`ResolvedParameters` is the context value type `ParameterProvider` produces
+(`ParameterProvider implements ContextProvider<ResolvedParameters>`,
+`type()` returns `ResolvedParameters.class`). It exposes typed accessors keyed
+by the same namespaced `RULE.PARAM` string used everywhere else in this spec
+(e.g. `getLong("CDS_LENGTH.MIN_AMINO_ACIDS")`), resolving either the caller's
+supplied value or the descriptor's default.
 
 ## First adopters
 
@@ -373,6 +511,15 @@ changes deeper in the engine.
   entry but not the individual key/value halves — `--params` follows the same
   behavior for consistency, so a value with leading/trailing whitespace is taken
   verbatim.
+- `mandatory = true` with a non-empty `defaultValue` is simply ignored (the
+  value is never mandatory-and-defaulted at once); a supplied but empty value
+  (`KEY:`) for a mandatory `STRING` parameter is treated as "missing" and fails
+  the same as an absent key, not accepted as a valid empty string.
+- If the gap-fix parameters (`min-gap-length`/`gap_type`/`linkage_evidence`) are
+  ever migrated onto `--params` (see First adopters), their hyphen/underscore
+  names must be translated to a `PARAM_NAME` form consistent with the
+  upper-cased, dot-namespaced key convention (e.g. `MIN_GAP_LENGTH`) as part of
+  that follow-on decision — not resolved by this spec.
 
 # Alternatives Considered
 
@@ -421,14 +568,29 @@ changes deeper in the engine.
   the file.
 - **Symmetry**: a library caller passing the same map produces identical
   fail-fast behavior to the CLI.
-- **`--params` for an `OFF`-toggled rule** exits `USAGE` (2) before reading the
-  file, same as an unknown key.
+- **Dual-mode defaults**: an engine built with no `--params` at all (e.g. a
+  plain `new ValidationEngineBuilder().build()`, matching existing tests)
+  resolves `LengthValidation`'s parameters to their declared defaults via the
+  auto-scanned instance, with no crash and no explicit provider present.
+- **`--params` for a rule/fix that is effectively `OFF`** exits `USAGE` (2)
+  before reading the file, same as an unknown key — one case per disablement
+  mechanism: class-level (`@Gff3Validation`/`@Gff3Fix` disabled), method-level
+  severity `OFF` (via `--rules`, and via `default-rule-severities.properties`
+  alone with no `--rules` override), and fix-enable (via a command's internal
+  `fixOverrides`, e.g. `GAP_GENERATION`, **and** via `fix.*` properties-file
+  entries alone with no override — fix-enable has the same properties layer
+  as severity).
 - **Help listing**: the listing includes a newly declared parameter and omits
-  parameters of rules toggled `OFF` via rule-severity overrides.
-- **`ParameterDescriptors.scanAll()`**: unit test that a non-`STRING` optional
-  parameter with no `defaultValue` (or a non-coercible one) is caught as a
-  build-time defect in the rule's own annotation, independent of any
-  `--params` map being supplied at all.
+  parameters of rules/fixes that are effectively `OFF` under the same
+  three-mechanism check.
+- **Descriptor collection**: unit test that a non-`STRING` optional parameter
+  with no `defaultValue` (or a non-coercible one) is caught as a build-time
+  defect in the rule's own annotation, independent of any `--params` map being
+  supplied at all.
+- **Exit-code path**: a thrown parameter-validation failure is wrapped and
+  recovered by `ExecutionExceptionHandler.findExitException` the same way
+  `ValidationCommand`'s existing invalid-argument failures are, ending in exit
+  code `USAGE` (2).
 - Gap-fix behavior unchanged (or, if migrated, `AnalysisContext` validation still
   rejects invalid `gap_type`/`linkage_evidence` and non-positive `min-gap-length`).
 
@@ -449,5 +611,8 @@ Verify with `./gradlew spotlessCheck test`.
   `validation/provider/AnalysisContext.java`,
   `validation/provider/AnalysisContextProvider.java`,
   `validation/provider/TranslationStateProvider.java`,
-  `validation/provider/CompositeSequenceProvider.java` (the caller-populated,
-  never-auto-scanned provider pattern `ParameterProvider` follows)
+  `validation/provider/CompositeSequenceProvider.java` (the caller-populated
+  provider pattern the explicit `ParameterProvider` follows — note it, like
+  `ParameterProvider`, is also auto-scanned empty and then overwritten, not
+  exempt from auto-scan), `validation/ValidationConfig.java`,
+  `validation/ValidationEngine.java` (`getSeverity` call site)
