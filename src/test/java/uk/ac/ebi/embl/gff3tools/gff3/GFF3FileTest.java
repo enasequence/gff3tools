@@ -21,10 +21,23 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 public class GFF3FileTest {
+
+    /**
+     * A minimal annotation on {@code acc1}, so the file these tests build is a document that could
+     * exist: translations are scoped to the annotations their file contains, and a file with no
+     * annotations owns no translations.
+     */
+    private static GFF3Annotation annotationOn(String accession) {
+        GFF3Annotation annotation = new GFF3Annotation();
+        annotation.setSequenceRegion(new GFF3SequenceRegion(accession, Optional.empty(), 1, 100));
+        return annotation;
+    }
 
     @Test
     void testWriteTranslation() throws Exception {
@@ -64,8 +77,9 @@ public class GFF3FileTest {
         state.record("acc1|cds-1", "OLD", "MKTRANS");
 
         GFF3File file = GFF3File.builder()
-                .annotations(List.of())
+                .annotations(List.of(annotationOn("acc1")))
                 .translationState(state)
+                .writeAnnotationFasta(true)
                 .build();
 
         StringWriter writer = new StringWriter();
@@ -110,8 +124,9 @@ public class GFF3FileTest {
         state.record("acc1|cds-1", "MKOLD", null);
 
         GFF3File file = GFF3File.builder()
-                .annotations(List.of())
+                .annotations(List.of(annotationOn("acc1")))
                 .translationState(state)
+                .writeAnnotationFasta(true)
                 .build();
 
         StringWriter writer = new StringWriter();

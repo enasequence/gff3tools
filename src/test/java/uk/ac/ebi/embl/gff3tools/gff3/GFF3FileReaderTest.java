@@ -489,6 +489,7 @@ public class GFF3FileReaderTest {
                     .species(gff3Species.get())
                     .annotations(annotations)
                     .gff3Reader(reader)
+                    .writeAnnotationFasta(true)
                     .build();
 
             gff3File1.writeGFF3String(writer);

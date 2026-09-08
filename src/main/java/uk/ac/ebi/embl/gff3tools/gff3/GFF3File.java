@@ -19,6 +19,8 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -86,8 +88,6 @@ public class GFF3File implements IGFF3Feature {
             // ##FASTA terminates the feature section, so it is written once, after every
             // annotation — never interleaved between them.
             if (writeAnnotationFasta) {
-                writeFastaFromOffsets(writer, translationOffsetsForAnnotations());
-            } else {
                 writeTranslationSection(writer);
             }
         } catch (IOException e) {
@@ -104,30 +104,54 @@ public class GFF3File implements IGFF3Feature {
      */
     private Map<String, OffsetRange> translationOffsetsForAnnotations() {
         Map<String, OffsetRange> offsets = new LinkedHashMap<>();
+        if (gff3Reader == null) {
+            return offsets;
+        }
         for (GFF3Annotation ann : annotations) {
             offsets.putAll(gff3Reader.getTranslationOffsetForAnnotation(ann));
         }
         return offsets;
     }
 
+    /**
+     * Writes this file's translations, from the first source that actually yields any.
+     *
+     * <p>Selection is by content, not by presence: {@code TranslationState} is supplied by an
+     * auto-discovered provider and so is never null, and a fallback that only fires on null could
+     * never fire at all.
+     */
     private void writeTranslationSection(Writer writer) throws IOException {
-        if (translationState != null) {
-            writeFastaFromTranslationState(writer);
-        } else if (fastaFilePath != null) {
-            writeFastaFromExistingFile(writer);
-        } else if (gff3Reader != null
-                && gff3Reader.getTranslationOffsetMap() != null
-                && !gff3Reader.getTranslationOffsetMap().isEmpty()) {
-            writeFastaFromOffsets(writer, gff3Reader.getTranslationOffsetMap());
+        Set<String> accessions =
+                annotations.stream().map(GFF3Annotation::getAccession).collect(Collectors.toSet());
+
+        if (writeFastaFromTranslationState(writer, accessions)) {
+            return;
         }
+        if (writeFastaFromExistingFile(writer)) {
+            return;
+        }
+        writeFastaFromOffsets(writer, translationOffsetsForAnnotations());
     }
 
-    private void writeFastaFromTranslationState(Writer writer) throws IOException {
+    /** True when a translation key belongs to one of this file's annotations. */
+    private static boolean belongsTo(String translationKey, Set<String> accessions) {
+        int separator = translationKey.indexOf('|');
+        return separator > 0 && accessions.contains(translationKey.substring(0, separator));
+    }
+
+    private boolean writeFastaFromTranslationState(Writer writer, Set<String> accessions) throws IOException {
+        if (translationState == null) {
+            return false;
+        }
         List<Map.Entry<String, String>> toWrite = new java.util.ArrayList<>();
-        translationState.forEachResolved((key, translation) -> toWrite.add(Map.entry(key, translation)));
+        translationState.forEachResolved((key, translation) -> {
+            if (belongsTo(key, accessions)) {
+                toWrite.add(Map.entry(key, translation));
+            }
+        });
 
         if (toWrite.isEmpty()) {
-            return;
+            return false;
         }
 
         writer.write("##FASTA\n");
@@ -136,14 +160,18 @@ public class GFF3File implements IGFF3Feature {
         }
         log.info("Written {} translation sequences from TranslationState", toWrite.size());
         writer.write("\n");
+        return true;
     }
 
-    private void writeFastaFromExistingFile(Writer writer) throws IOException {
+    private boolean writeFastaFromExistingFile(Writer writer) throws IOException {
+        if (fastaFilePath == null) {
+            return false;
+        }
 
         BasicFileAttributes attrs = Files.readAttributes(fastaFilePath, BasicFileAttributes.class);
 
         if (!attrs.isRegularFile() || attrs.size() == 0) {
-            return;
+            return false;
         }
 
         writer.write("##FASTA\n");
@@ -156,6 +184,7 @@ public class GFF3File implements IGFF3Feature {
             }
         }
         log.info("Write translation sequences from: " + fastaFilePath);
+        return true;
     }
 
     private void writeFastaFromOffsets(Writer writer, Map<String, OffsetRange> translationOffsetMap)

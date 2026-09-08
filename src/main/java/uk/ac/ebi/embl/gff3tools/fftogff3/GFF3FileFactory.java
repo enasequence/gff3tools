@@ -65,6 +65,7 @@ public class GFF3FileFactory {
                 .species(species)
                 .annotations(annotations)
                 .translationState(translationState)
+                .writeAnnotationFasta(true)
                 .parsingWarnings(engine.getParsingWarnings())
                 .build();
     }
