@@ -48,8 +48,7 @@ public class ValidationCommand extends AbstractCommand {
             // this command discards the fixed annotation, so this fix is not needed as no validations require it
             Map<String, Boolean> fixOverrides = Map.of("GAP_GENERATION", false);
 
-            if (listParams) {
-                log.info(renderParameterHelp(ruleOverrides, fixOverrides));
+            if (handleListParams(ruleOverrides, fixOverrides)) {
                 return;
             }
 

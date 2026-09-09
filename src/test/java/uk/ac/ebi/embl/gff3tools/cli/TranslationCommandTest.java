@@ -74,10 +74,37 @@ class TranslationCommandTest {
         StringWriter out = new StringWriter();
         CommandLine command = new CommandLine(new Main())
                 .registerConverter(CliRulesOption.class, new RuleConverter())
+                .registerConverter(CliParamsOption.class, new ParamsConverter())
                 .setExecutionExceptionHandler(new ExecutionExceptionHandler());
         command.setErr(new PrintWriter(err));
         command.setOut(new PrintWriter(out));
         return command.execute(args);
+    }
+
+    // ── --params must not be silently discarded on this command ─────────────────────────
+
+    @Test
+    void unknownParamKey_exitsUsageBeforeTranslation() throws Exception {
+        Path fasta = createFastaFile("seq1");
+        Path gff3 = createGff3File("seq1");
+
+        int exitCode = executeTranslate(
+                "translate",
+                "--sequence",
+                fasta.toString(),
+                "--params=NOT_A_REAL_RULE.NOT_A_REAL_PARAM:x",
+                gff3.toString());
+
+        assertEquals(
+                CLIExitCode.USAGE.asInt(),
+                exitCode,
+                "--params must not be silently discarded on the translate command");
+    }
+
+    @Test
+    void listParamsFlag_printsListingAndSkipsTranslation() {
+        int exitCode = executeTranslate("translate", "--list-params");
+        assertEquals(0, exitCode, "--list-params must succeed without any translation inputs");
     }
 
     // --- gff3-fasta mode tests ---

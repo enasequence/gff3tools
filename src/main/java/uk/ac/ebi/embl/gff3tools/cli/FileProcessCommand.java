@@ -40,10 +40,17 @@ public class FileProcessCommand extends AbstractCommand {
     @Override
     public void run() {
         try {
+            if (handleListParams(getRuleOverrides(), java.util.Map.of())) {
+                return;
+            }
             validateFile(gff3InputFile, ConversionFileFormat.gff3.name());
             validateFile(fastaInputFile, ConversionFileFormat.fasta.name());
             validateOutputFile(outputFilePath);
             validateAccessions();
+            // Fail-fast validates --params (unknown key, bad type, missing mandatory) even though
+            // no validation engine exists yet to consume the result, so an invalid --params value
+            // is never silently discarded here either.
+            buildParameterProvider(getRuleOverrides(), java.util.Map.of());
             // TODO: process gff3 + fasta files + initialize validation engine from rules
         } catch (CLIException e) {
             throw new RuntimeException(e);

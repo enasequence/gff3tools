@@ -40,11 +40,14 @@ public class ParamFixtureValidation implements Validation {
     @ValidationMethod(rule = "PARAM_FIXTURE_STRING", type = ValidationType.ANNOTATION, severity = RuleSeverity.ERROR)
     public void validateStringParam(GFF3Annotation annotation, int line) {}
 
+    // OFF by default so this fixture's mandatory parameter does not require every other CLI
+    // command test in the suite to supply it or explicitly disable the rule; tests that need to
+    // prove real mandatory enforcement turn it back on explicitly via --rules=...:ERROR.
     @Parameter(
             name = "MANDATORY_LABEL",
             type = ParameterType.STRING,
             description = "A mandatory label",
             mandatory = true)
-    @ValidationMethod(rule = "PARAM_FIXTURE_MANDATORY", type = ValidationType.ANNOTATION, severity = RuleSeverity.ERROR)
+    @ValidationMethod(rule = "PARAM_FIXTURE_MANDATORY", type = ValidationType.ANNOTATION, severity = RuleSeverity.OFF)
     public void validateMandatoryParam(GFF3Annotation annotation, int line) {}
 }

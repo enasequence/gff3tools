@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.validation;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -18,46 +19,98 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 /**
- * Dual-mode {@link ContextProvider} for {@link ResolvedParameters}.
+ * A {@link ContextProvider} for {@link ResolvedParameters}, shaped the same way as {@code
+ * CompositeSequenceProvider}: one class, one no-arg constructor auto-instantiated by {@code
+ * ValidationRegistry}'s classpath scan (same as every other {@code ContextProvider}), mutated in
+ * place by callers that need real caller-supplied values via {@link #configure}. {@code
+ * ValidationEngineBuilder#withProvider} then overrides the auto-scanned instance by class key,
+ * exactly as it does for {@code CompositeSequenceProvider}.
  *
- * <p>The no-arg constructor builds a defaults-only instance, seeded purely from each declared
- * descriptor's default, and never throws — it is the instance {@code
- * ValidationRegistry.instantiateProviders()} auto-scans on any build that leaves classpath
- * provider scanning enabled, and is the fallback for direct {@code ValidationRegistry}/{@code
- * ValidationEngineBuilder} use that bypasses caller-side {@code --params} resolution.
+ * <p>The no-arg constructor is trivial and never throws: it does not scan descriptors. A caller
+ * that never calls {@link #configure} (e.g. a direct {@code ValidationRegistry}/{@code
+ * ValidationEngineBuilder} user that bypasses {@code AbstractCommand}/the library helper) gets, on
+ * first {@link #get}, a defaults-only snapshot built lazily and cached once — every declared
+ * parameter resolves to its own default, and a mandatory parameter (having no default to fall
+ * back on) is simply absent.
  *
- * <p>The raw-map constructor is the explicit instance callers (CLI/library) always build before
- * the engine, running the five fail-fast checks from the spec's "Resolution and fail-fast"
- * section.
+ * <p>{@link #configure} is the explicit, direct call {@code AbstractCommand}/library callers make
+ * before building the engine. It runs the five fail-fast checks from the spec's "Resolution and
+ * fail-fast" section against the caller's raw {@code --params} map. Because it is called directly
+ * — never through reflection — a malformed {@link Parameter} descriptor (bad/missing default,
+ * duplicate key) propagates as an ordinary, uncaught {@link IllegalStateException}/{@code
+ * DuplicateParameterException}: there is no reflective instantiation on this path for a {@code
+ * catch (Exception e)} to silently swallow it behind.
  */
 public class ParameterProvider implements ContextProvider<ResolvedParameters> {
 
-    private final ResolvedParameters resolved;
+    private final Supplier<List<ParameterDescriptor>> descriptorSupplier;
+    private volatile ResolvedParameters resolved;
+    private volatile boolean configured;
 
-    /**
-     * Builds a defaults-only instance from each descriptor's declared default. Never lets a
-     * malformed descriptor propagate as an ordinary {@link Exception}: a scan-time defect (bad or
-     * missing default on a non-STRING optional parameter, or a duplicate parameter key) is a
-     * programmer error, not a recoverable runtime condition, so it is rethrown as a {@link
-     * ParameterDescriptorDefectError}. This guarantees {@code
-     * ValidationRegistry.instantiateProviders()}'s {@code catch (Exception e)} cannot silently
-     * swallow it. A mandatory descriptor is never resolved here, regardless of whether it also
-     * declares a {@code defaultValue} (a value is never mandatory-and-defaulted at once) — the
-     * auto-instance is defaults-only and has nothing for a mandatory descriptor.
-     */
     public ParameterProvider() {
         this(ParameterDescriptors::scan);
     }
 
+    /**
+     * Package-private: lets tests substitute a fabricated descriptor list, exercising {@link
+     * #configure} and the defaults-only fallback without depending on the shared classpath scan.
+     */
     ParameterProvider(Supplier<List<ParameterDescriptor>> descriptorSupplier) {
-        List<ParameterDescriptor> descriptors;
-        try {
-            descriptors = descriptorSupplier.get();
-        } catch (RuntimeException e) {
-            throw new ParameterDescriptorDefectError(
-                    "Malformed @Parameter descriptor detected while building the defaults-only ParameterProvider", e);
-        }
+        this.descriptorSupplier = descriptorSupplier;
+    }
 
+    /**
+     * Returns {@code true} once {@link #configure} has been called on this instance. Unlike {@link
+     * #resolved} being non-null, this is never set by {@link #get}'s lazy defaults-only fallback,
+     * so it reflects only an explicit {@link #configure} call.
+     */
+    public boolean isConfigured() {
+        return configured;
+    }
+
+    /**
+     * Resolves the caller's raw {@code --params} map against every declared {@link Parameter},
+     * running the five fail-fast checks, and stores the result on this instance. Callable exactly
+     * once per instance: build a new instance rather than reconfiguring one already configured.
+     *
+     * @param rawParams the raw {@code key:value} map (upper-cased on comparison, values passed
+     *     through verbatim); pass an empty map when {@code --params} was not supplied
+     * @param effectiveConfig the effective {@link ValidationConfig}, reflecting the caller's
+     *     {@code --rules}/fix overrides merged over the properties-file defaults, used to resolve
+     *     OFF-rule detection
+     * @throws ParameterResolutionException on any fail-fast violation (unknown key, key for an
+     *     OFF rule/fix, missing mandatory, bad type)
+     * @throws IllegalStateException if this instance was already configured
+     */
+    public synchronized void configure(Map<String, String> rawParams, ValidationConfig effectiveConfig)
+            throws ParameterResolutionException {
+        if (configured) {
+            throw new IllegalStateException("ParameterProvider.configure() was already called on this instance; "
+                    + "build a new instance instead of reconfiguring one already configured");
+        }
+        this.resolved = resolveExplicit(descriptorSupplier.get(), rawParams, effectiveConfig);
+        this.configured = true;
+    }
+
+    @Override
+    public synchronized ResolvedParameters get(ValidationContext context) {
+        if (resolved == null) {
+            resolved = resolveDefaultsOnly(descriptorSupplier.get());
+        }
+        return resolved;
+    }
+
+    @Override
+    public Class<ResolvedParameters> type() {
+        return ResolvedParameters.class;
+    }
+
+    /**
+     * Builds a defaults-only snapshot from each descriptor's declared default. A mandatory
+     * descriptor is never resolved here, regardless of whether it also declares a {@code
+     * defaultValue} (a value is never mandatory-and-defaulted at once).
+     */
+    private static ResolvedParameters resolveDefaultsOnly(List<ParameterDescriptor> descriptors) {
         Map<String, Object> values = new HashMap<>();
         for (ParameterDescriptor descriptor : descriptors) {
             if (descriptor.mandatory()) {
@@ -71,29 +124,12 @@ public class ParameterProvider implements ContextProvider<ResolvedParameters> {
             }
             values.put(descriptor.key(), descriptor.type().coerce(descriptor.defaultValue()));
         }
-        this.resolved = new ResolvedParameters(values);
+        return new ResolvedParameters(values);
     }
 
-    /**
-     * Builds the explicit instance from the caller's raw {@code --params} map, running the five
-     * fail-fast checks: unknown key, key for an OFF-toggled rule/fix, missing mandatory, bad
-     * type, and optional-unsupplied-uses-default.
-     *
-     * <p>OFF-toggled rule/fix detection uses the real, three-mechanism effective state (class-level
-     * {@code @Gff3Validation}/{@code @Gff3Fix} enablement, method-severity {@code OFF}, and
-     * fix-enable), computed from {@code effectiveConfig} via {@link EffectiveRuleState}.
-     * {@code effectiveConfig} must already reflect the caller's {@code --rules}/fix overrides
-     * merged over the properties-file defaults (see {@link EffectiveRuleState#mergedConfig}),
-     * not just the loaded defaults alone.
-     *
-     * @param rawParams the raw {@code key:value} map (upper-cased on comparison, values passed
-     *     through verbatim); pass an empty map when {@code --params} was not supplied
-     * @param effectiveConfig the effective {@link ValidationConfig}, reflecting the caller's
-     *     {@code --rules}/fix overrides merged over the properties-file defaults
-     */
-    public ParameterProvider(Map<String, String> rawParams, ValidationConfig effectiveConfig)
+    private static ResolvedParameters resolveExplicit(
+            List<ParameterDescriptor> descriptors, Map<String, String> rawParams, ValidationConfig effectiveConfig)
             throws ParameterResolutionException {
-        List<ParameterDescriptor> descriptors = ParameterDescriptors.scan();
         Map<String, ParameterDescriptor> byKey = new HashMap<>();
         for (ParameterDescriptor descriptor : descriptors) {
             byKey.put(descriptor.key(), descriptor);
@@ -106,7 +142,7 @@ public class ParameterProvider implements ContextProvider<ResolvedParameters> {
             normalizedRaw.put(entry.getKey().toUpperCase(Locale.ROOT), entry.getValue());
         }
 
-        Set<String> normalizedOffKeys = new java.util.HashSet<>();
+        Set<String> normalizedOffKeys = new HashSet<>();
         for (String key : offRuleKeys) {
             normalizedOffKeys.add(key.toUpperCase(Locale.ROOT));
         }
@@ -153,16 +189,6 @@ public class ParameterProvider implements ContextProvider<ResolvedParameters> {
             // Check 5 (optional, unsupplied uses default) falls out of valueToCoerce above.
         }
 
-        this.resolved = new ResolvedParameters(values);
-    }
-
-    @Override
-    public ResolvedParameters get(ValidationContext context) {
-        return resolved;
-    }
-
-    @Override
-    public Class<ResolvedParameters> type() {
-        return ResolvedParameters.class;
+        return new ResolvedParameters(values);
     }
 }

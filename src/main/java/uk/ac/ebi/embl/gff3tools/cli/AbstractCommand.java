@@ -20,6 +20,7 @@ import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.CLIException;
+import uk.ac.ebi.embl.gff3tools.exception.DuplicateParameterException;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
@@ -83,17 +84,24 @@ public abstract class AbstractCommand implements Runnable {
      * the caller.
      *
      * @throws CLIException wrapping a {@link ParameterResolutionException} on any fail-fast
-     *     violation (unknown key, key for an OFF rule/fix, missing mandatory, bad type)
+     *     violation (unknown key, key for an OFF rule/fix, missing mandatory, bad type), or
+     *     wrapping a malformed {@code @Parameter} descriptor defect ({@link IllegalStateException}/
+     *     {@link DuplicateParameterException}) so both classes of CLI-startup failure exit
+     *     uniformly as USAGE(2) rather than the descriptor defect escaping unhandled as GENERAL(1)
      */
     protected ParameterProvider buildParameterProvider(
             Map<String, RuleSeverity> ruleOverrides, Map<String, Boolean> fixOverrides) throws CLIException {
         ValidationConfig effectiveConfig =
                 EffectiveRuleState.mergedConfig(ValidationConfig.loadDefault(), ruleOverrides, Map.of(), fixOverrides);
+        ParameterProvider provider = new ParameterProvider();
         try {
-            return new ParameterProvider(getParamOverrides(), effectiveConfig);
+            provider.configure(getParamOverrides(), effectiveConfig);
         } catch (ParameterResolutionException e) {
             throw new CLIException(e.getMessage(), e);
+        } catch (IllegalStateException | DuplicateParameterException e) {
+            throw new CLIException("Malformed @Parameter declaration: " + e.getMessage(), e);
         }
+        return provider;
     }
 
     /**
@@ -101,6 +109,20 @@ public abstract class AbstractCommand implements Runnable {
      * mandatory/optional, default, description), omitting any descriptor whose owning rule/fix is
      * effectively OFF under the same three-mechanism check used for fail-fast validation.
      */
+    /**
+     * Handles {@code --list-params} uniformly across every command: renders the declared-parameter
+     * listing and returns {@code true} (signalling the caller to skip file/IO work and return)
+     * when {@code --list-params} was supplied, {@code false} otherwise. Callers must check this
+     * before any file/IO work begins, mirroring {@link #buildParameterProvider}'s placement.
+     */
+    protected boolean handleListParams(Map<String, RuleSeverity> ruleOverrides, Map<String, Boolean> fixOverrides) {
+        if (!listParams) {
+            return false;
+        }
+        log.info(renderParameterHelp(ruleOverrides, fixOverrides));
+        return true;
+    }
+
     protected String renderParameterHelp(Map<String, RuleSeverity> ruleOverrides, Map<String, Boolean> fixOverrides) {
         ValidationConfig effectiveConfig =
                 EffectiveRuleState.mergedConfig(ValidationConfig.loadDefault(), ruleOverrides, Map.of(), fixOverrides);

@@ -275,7 +275,7 @@ public class LengthValidationTest {
 
             assertThrows(ValidationException.class, () -> validation.validateCdsLength(gff3Annotation, 1));
 
-            overrideParameters(mandatoryFixtureAnd("CDS_LENGTH.MIN_AMINO_ACIDS", "15"));
+            overrideParameters(Map.of("CDS_LENGTH.MIN_AMINO_ACIDS", "15"));
             assertDoesNotThrow(() -> validation.validateCdsLength(gff3Annotation, 1));
         }
 
@@ -285,29 +285,24 @@ public class LengthValidationTest {
             // but one nucleotide short of the derived minimum for MIN_AMINO_ACIDS:15.
             addFeatures(cds("cds1", 1L, 45L));
 
-            overrideParameters(mandatoryFixtureAnd("CDS_LENGTH.MIN_AMINO_ACIDS", "14"));
+            overrideParameters(Map.of("CDS_LENGTH.MIN_AMINO_ACIDS", "14"));
             assertDoesNotThrow(() -> validation.validateCdsLength(gff3Annotation, 1));
 
-            overrideParameters(mandatoryFixtureAnd("CDS_LENGTH.MIN_AMINO_ACIDS", "15"));
+            overrideParameters(Map.of("CDS_LENGTH.MIN_AMINO_ACIDS", "15"));
             assertThrows(ValidationException.class, () -> validation.validateCdsLength(gff3Annotation, 1));
-        }
-
-        private Map<String, String> mandatoryFixtureAnd(String key, String value) {
-            // ParamFixtureValidation.MANDATORY_LABEL is a test-fixture mandatory parameter always
-            // present on the classpath scan; the explicit provider requires a value for it too.
-            return Map.of("PARAM_FIXTURE_MANDATORY.MANDATORY_LABEL", "fixture-value", key, value);
         }
 
         private void overrideParameters(Map<String, String> rawParams) {
             ValidationContext context = TestUtils.createTestContext();
             context.register(TranslationState.class, new TranslationStateProvider());
             translationState = context.get(TranslationState.class);
+            ParameterProvider provider = new ParameterProvider();
             try {
-                context.register(
-                        ResolvedParameters.class, new ParameterProvider(rawParams, ValidationConfig.loadDefault()));
+                provider.configure(rawParams, ValidationConfig.loadDefault());
             } catch (uk.ac.ebi.embl.gff3tools.validation.ParameterResolutionException e) {
                 throw new RuntimeException(e);
             }
+            context.register(ResolvedParameters.class, provider);
             TestUtils.injectContext(validation, context);
         }
 

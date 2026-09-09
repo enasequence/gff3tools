@@ -113,7 +113,7 @@ class ParamsConverter implements CommandLine.ITypeConverter<CliParamsOption> {
             if (colonIdx < 0) {
                 throw new CLIException("Invalid param: '" + entry + "' There must be a ':' separating key and value");
             }
-            String key = trimmed.substring(0, colonIdx).toUpperCase();
+            String key = trimmed.substring(0, colonIdx).toUpperCase(java.util.Locale.ROOT);
             String value = trimmed.substring(colonIdx + 1);
             this.map.params().put(key, value);
         }

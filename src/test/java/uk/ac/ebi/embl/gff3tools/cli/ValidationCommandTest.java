@@ -29,14 +29,6 @@ public class ValidationCommandTest {
 
     private ValidationCommand validationCommand;
 
-    // src/test/java/.../validation/fixtures/ParamFixtureValidation.java declares a mandatory
-    // parameter (PARAM_FIXTURE_MANDATORY.MANDATORY_LABEL) with no default, enabled by default.
-    // It is a real, top-level classpath-scanned fixture, so the explicit ParameterProvider now
-    // built unconditionally by ValidationCommand would otherwise fail every run below unless the
-    // rule is turned OFF (proving the empty-map-fail-fast/mandatory-gap behavior exercised
-    // separately in {@code paramsForMandatoryRuleOnUnrelatedRun_failsWithoutOverride}).
-    private static final String DISABLE_PARAM_FIXTURE_MANDATORY = "--rules=PARAM_FIXTURE_MANDATORY:OFF";
-
     @BeforeEach
     public void setUp() {
         validationCommand = new ValidationCommand();
@@ -54,7 +46,7 @@ public class ValidationCommandTest {
         Path tempFile = Files.createTempFile("testFile", ".gff3");
         Files.writeString(tempFile, "# comment\n##gff-version 3\n"); // Add valid GFF3 content here
 
-        String[] args = new String[] {DISABLE_PARAM_FIXTURE_MANDATORY, tempFile.toString()};
+        String[] args = new String[] {tempFile.toString()};
 
         CommandLine commandLine = commandLineFor(validationCommand);
         assertDoesNotThrow(() -> commandLine.parseArgs(args));
@@ -71,7 +63,7 @@ public class ValidationCommandTest {
         Path tempFile = Files.createTempFile("invalidTestFile", ".gff3");
         Files.writeString(tempFile, "invalid content\n"); // Invalid GFF3 content
 
-        String[] args = new String[] {DISABLE_PARAM_FIXTURE_MANDATORY, tempFile.toString()};
+        String[] args = new String[] {tempFile.toString()};
         CommandLine commandLine = commandLineFor(validationCommand);
         assertDoesNotThrow(() -> commandLine.parseArgs(args));
 
@@ -84,8 +76,7 @@ public class ValidationCommandTest {
     @Test
     public void testNonExistingFile() {
         CommandLine commandLine = commandLineFor(validationCommand);
-        assertDoesNotThrow(
-                () -> commandLine.parseArgs(new String[] {DISABLE_PARAM_FIXTURE_MANDATORY, "non_existent_file.gff3 "}));
+        assertDoesNotThrow(() -> commandLine.parseArgs(new String[] {"non_existent_file.gff3 "}));
         assertThrows(RuntimeException.class, () -> validationCommand.run());
     }
 
@@ -106,8 +97,7 @@ public class ValidationCommandTest {
                 seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1
                 """);
 
-        int exitCode = executeValidation(
-                "validation", DISABLE_PARAM_FIXTURE_MANDATORY, "--sequence", fasta.toString(), gff3.toString());
+        int exitCode = executeValidation("validation", "--sequence", fasta.toString(), gff3.toString());
         assertEquals(0, exitCode, "Validation with --sequence should succeed");
     }
 
@@ -123,7 +113,7 @@ public class ValidationCommandTest {
                 """);
 
         // Without --sequence, validation should still work (translation is skipped)
-        int exitCode = executeValidation("validation", DISABLE_PARAM_FIXTURE_MANDATORY, gff3.toString());
+        int exitCode = executeValidation("validation", gff3.toString());
         assertEquals(0, exitCode, "Validation without --sequence should succeed");
     }
 
@@ -166,7 +156,7 @@ public class ValidationCommandTest {
         Path tempFile = Files.createTempFile("testFile", ".gff3");
         Files.writeString(tempFile, "# comment\n##gff-version 3\n");
 
-        String[] args = new String[] {DISABLE_PARAM_FIXTURE_MANDATORY, tempFile.toString()};
+        String[] args = new String[] {tempFile.toString()};
         CommandLine commandLine = commandLineFor(validationCommand);
         commandLine.parseArgs(args);
 
@@ -177,13 +167,15 @@ public class ValidationCommandTest {
 
     @Test
     void mandatoryParamWithoutOverride_failsBuildAsUsage() throws IOException {
-        // PARAM_FIXTURE_MANDATORY is left at its real, enabled-by-default effective state (no
-        // --rules override), so the always-built explicit ParameterProvider must fail with the
-        // real empty --params map, proving the mandatory-parameter gap is closed for the CLI.
+        // PARAM_FIXTURE_MANDATORY is OFF by default (see ParamFixtureValidation), so every other
+        // test in this class is unaffected by its mandatory parameter; turning it back on here
+        // proves the always-built explicit ParameterProvider still enforces a real mandatory
+        // parameter against the real empty --params map, closing the mandatory-parameter gap for
+        // the CLI.
         Path tempFile = Files.createTempFile("testFile", ".gff3");
         Files.writeString(tempFile, "# comment\n##gff-version 3\n");
 
-        int exitCode = executeValidation("validation", tempFile.toString());
+        int exitCode = executeValidation("validation", "--rules=PARAM_FIXTURE_MANDATORY:ERROR", tempFile.toString());
         assertEquals(CLIExitCode.USAGE.asInt(), exitCode);
 
         Files.deleteIfExists(tempFile);
@@ -194,10 +186,7 @@ public class ValidationCommandTest {
     @Test
     void unknownParamKey_exitsUsageBeforeReadingFile() {
         int exitCode = executeValidation(
-                "validation",
-                DISABLE_PARAM_FIXTURE_MANDATORY,
-                "--params=NOT_A_REAL_RULE.NOT_A_REAL_PARAM:x",
-                "non_existent_file.gff3");
+                "validation", "--params=NOT_A_REAL_RULE.NOT_A_REAL_PARAM:x", "non_existent_file.gff3");
         assertEquals(CLIExitCode.USAGE.asInt(), exitCode);
     }
 
@@ -206,10 +195,7 @@ public class ValidationCommandTest {
         // PARAM_FIXTURE_DISABLED_CLASS is disabled at the class level (@Gff3Validation(enabled =
         // false)), with no --rules involved at all.
         int exitCode = executeValidation(
-                "validation",
-                DISABLE_PARAM_FIXTURE_MANDATORY,
-                "--params=PARAM_FIXTURE_DISABLED_CLASS_RULE.THRESHOLD:5",
-                "non_existent_file.gff3");
+                "validation", "--params=PARAM_FIXTURE_DISABLED_CLASS_RULE.THRESHOLD:5", "non_existent_file.gff3");
         assertEquals(CLIExitCode.USAGE.asInt(), exitCode);
     }
 
@@ -217,7 +203,6 @@ public class ValidationCommandTest {
     void paramForMethodSeverityOffRule_viaRulesOverride_exitsUsage() {
         int exitCode = executeValidation(
                 "validation",
-                DISABLE_PARAM_FIXTURE_MANDATORY,
                 "--rules=PARAM_FIXTURE_LONG:OFF",
                 "--params=PARAM_FIXTURE_LONG.MIN_AMINO_ACIDS:30",
                 "non_existent_file.gff3");
@@ -252,7 +237,7 @@ public class ValidationCommandTest {
 
     @Test
     void listParamsFlag_printsListingAndSkipsFileProcessing() {
-        int exitCode = executeValidation("validation", DISABLE_PARAM_FIXTURE_MANDATORY, "--list-params");
+        int exitCode = executeValidation("validation", "--list-params");
         assertEquals(0, exitCode, "--list-params must succeed without an input file");
     }
 
@@ -266,15 +251,14 @@ public class ValidationCommandTest {
                 new uk.ac.ebi.embl.gff3tools.validation.ValidationConfig(
                         new java.util.HashMap<>(), new java.util.HashMap<>(), new java.util.HashMap<>());
 
-        assertThrows(
-                uk.ac.ebi.embl.gff3tools.validation.ParameterResolutionException.class,
-                () -> new uk.ac.ebi.embl.gff3tools.validation.ParameterProvider(raw, config));
+        assertThrows(uk.ac.ebi.embl.gff3tools.validation.ParameterResolutionException.class, () -> {
+            uk.ac.ebi.embl.gff3tools.validation.ParameterProvider provider =
+                    new uk.ac.ebi.embl.gff3tools.validation.ParameterProvider();
+            provider.configure(raw, config);
+        });
 
         int exitCode = executeValidation(
-                "validation",
-                DISABLE_PARAM_FIXTURE_MANDATORY,
-                "--params=NOT_A_REAL_RULE.NOT_A_REAL_PARAM:x",
-                "non_existent_file.gff3");
+                "validation", "--params=NOT_A_REAL_RULE.NOT_A_REAL_PARAM:x", "non_existent_file.gff3");
         assertEquals(CLIExitCode.USAGE.asInt(), exitCode);
     }
 
