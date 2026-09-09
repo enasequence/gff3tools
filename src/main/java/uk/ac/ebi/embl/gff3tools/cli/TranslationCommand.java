@@ -28,6 +28,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
+import uk.ac.ebi.embl.gff3tools.validation.ParameterProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
@@ -58,6 +59,11 @@ public class TranslationCommand extends AbstractCommand {
     @Override
     public void run() {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
+
+        if (handleListParams(ruleOverrides, Map.of())) {
+            return;
+        }
+
         if (translationMode == TranslationMode.attribute && outputPath != null) {
             log.warn("Output path (-o) is ignored in 'attribute' mode.");
         }
@@ -71,11 +77,16 @@ public class TranslationCommand extends AbstractCommand {
                         "A sequence source is required. Provide --sequence or ensure a plugin supplies sequences.");
             }
 
+            // Always constructed, from the raw --params map when supplied or an empty map
+            // otherwise, after ruleOverrides is fully assembled.
+            ParameterProvider parameterProvider = buildParameterProvider(ruleOverrides, Map.of());
+
             List<GFF3Annotation> annotations = new ArrayList<>();
             GFF3Header header;
             TranslationState translationState = null;
 
-            try (ValidationEngine validationEngine = initValidationEngine(ruleOverrides, compositeProvider)) {
+            try (ValidationEngine validationEngine =
+                    initValidationEngine(ruleOverrides, compositeProvider, parameterProvider)) {
 
                 try (BufferedReader inputReader = getPipe(
                                 Files::newBufferedReader,

@@ -42,6 +42,7 @@ import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToGFF3Converter;
 import uk.ac.ebi.embl.gff3tools.utils.GapOptionsValidator;
 import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
+import uk.ac.ebi.embl.gff3tools.validation.ParameterProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContextProvider;
@@ -101,6 +102,10 @@ public class FileConversionCommand extends AbstractCommand {
     public void run() {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
 
+        if (handleListParams(ruleOverrides, Map.of())) {
+            return;
+        }
+
         // Determine if we're writing to a file or stdout
         boolean writingToFile = !outputFilePath.toString().isEmpty();
         Path tempFile = null;
@@ -129,6 +134,16 @@ public class FileConversionCommand extends AbstractCommand {
             // validations run as in the FASTA+GFF3 case.
             FileSequenceSource inputFastaSource = null;
             boolean fastaToGff3 = fromFileType == ConversionFileFormat.fasta && toFileType == ConversionFileFormat.gff3;
+
+            // Gap generation belongs to FASTA -> GFF3, where the gap features are the entire
+            // output. Every other direction is converting annotation the submitter already
+            // wrote, so synthesising extra features into it is not this command's job.
+            Map<String, Boolean> fixOverrides = fastaToGff3 ? Map.of() : Map.of("GAP_GENERATION", false);
+            // Always constructed, from the raw --params map when supplied or an empty map
+            // otherwise, after ruleOverrides/fixOverrides are fully assembled. Built here, before
+            // any input/output stream is opened, so a bad --params value fails USAGE(2) ahead of
+            // any file-not-found/not-readable error from opening the input or output.
+            ParameterProvider parameterProvider = buildParameterProvider(ruleOverrides, fixOverrides);
 
             if (fastaToGff3) {
                 // Only this direction generates gaps, so this is the only direction whose gap
@@ -173,13 +188,15 @@ public class FileConversionCommand extends AbstractCommand {
                 // header-aware rules (e.g. FASTA_HEADER_MAPPING) stay inert.
                 ContextProvider<?>[] providers = analysisContextProvider != null
                         ? new ContextProvider<?>[] {
-                            compositeProvider, metadataProvider, headerProvider, analysisContextProvider
+                            compositeProvider,
+                            metadataProvider,
+                            headerProvider,
+                            parameterProvider,
+                            analysisContextProvider
                         }
-                        : new ContextProvider<?>[] {compositeProvider, metadataProvider, headerProvider};
-                // Gap generation belongs to FASTA -> GFF3, where the gap features are the entire
-                // output. Every other direction is converting annotation the submitter already
-                // wrote, so synthesising extra features into it is not this command's job.
-                Map<String, Boolean> fixOverrides = fastaToGff3 ? Map.of() : Map.of("GAP_GENERATION", false);
+                        : new ContextProvider<?>[] {
+                            compositeProvider, metadataProvider, headerProvider, parameterProvider
+                        };
                 try (ValidationEngine engine = initValidationEngine(ruleOverrides, fixOverrides, providers)) {
                     Converter converter =
                             getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal, sequenceLookup);

@@ -420,11 +420,83 @@ class FileConversionCommandTest {
         assertFalse(Files.exists(outputFile), "No output file should be created on a usage error");
     }
 
+    @Test
+    void unknownParamKey_exitsUsageBeforeConversion() throws Exception {
+        Path inputFile = tempDir.resolve("valid.gff3");
+        Files.writeString(
+                inputFile,
+                "##gff-version 3\n##sequence-region seq1 1 1000\nseq1\t.\tgene\t1\t100\t.\t+\t.\tID=gene1\n");
+        Path outputFile = tempDir.resolve("output.embl");
+
+        int exitCode = executeConversion(
+                "conversion",
+                "--params=NOT_A_REAL_RULE.NOT_A_REAL_PARAM:x",
+                inputFile.toString(),
+                outputFile.toString());
+
+        assertEquals(
+                CLIExitCode.USAGE.asInt(),
+                exitCode,
+                "--params must not be silently discarded on the conversion command");
+        assertFalse(Files.exists(outputFile), "No output file should be created on a usage error");
+    }
+
+    @Test
+    void listParamsFlag_printsListingAndSkipsConversion() {
+        int exitCode = executeConversion("conversion", "--list-params");
+        assertEquals(0, exitCode, "--list-params must succeed without any conversion inputs");
+    }
+
+    @Test
+    void unknownParamKey_withNonExistentInputPath_exitsUsageNotReadError() {
+        // --params is fail-fast checked before the input/output streams are opened, so a bad
+        // --params combined with a nonexistent input path must report USAGE, not
+        // NON_EXISTENT_FILE/READ_ERROR from opening the missing input.
+        Path inputFile = tempDir.resolve("does-not-exist.gff3");
+        Path outputFile = tempDir.resolve("output.embl");
+
+        int exitCode = executeConversion(
+                "conversion",
+                "--params=NOT_A_REAL_RULE.NOT_A_REAL_PARAM:x",
+                inputFile.toString(),
+                outputFile.toString());
+
+        assertEquals(
+                CLIExitCode.USAGE.asInt(),
+                exitCode,
+                "a bad --params value must be reported before the missing input file is opened");
+        assertFalse(Files.exists(outputFile));
+    }
+
+    @Test
+    void reducedMinAminoAcidsOverride_reachesConversionEngine() throws Exception {
+        Path inputFile = tempDir.resolve("valid.gff3");
+        Files.writeString(
+                inputFile, "##gff-version 3\n##sequence-region seq1 1 1000\nseq1\t.\tCDS\t1\t48\t.\t+\t0\tID=cds1\n");
+        Path outputFile = tempDir.resolve("output.embl");
+
+        int exitCodeDefault = executeConversion("conversion", inputFile.toString(), outputFile.toString());
+        assertEquals(
+                CLIExitCode.VALIDATION_ERROR.asInt(),
+                exitCodeDefault,
+                "48nt CDS should fail the default MIN_AMINO_ACIDS of 25");
+        assertFalse(Files.exists(outputFile));
+
+        int exitCodeOverridden = executeConversion(
+                "conversion", "--params=CDS_LENGTH.MIN_AMINO_ACIDS:15", inputFile.toString(), outputFile.toString());
+        assertEquals(
+                0,
+                exitCodeOverridden,
+                "--params override reaching the engine should let the same 48nt CDS pass at MIN_AMINO_ACIDS:15");
+        assertTrue(Files.exists(outputFile));
+    }
+
     private int executeConversion(String... args) {
         StringWriter err = new StringWriter();
         StringWriter out = new StringWriter();
         CommandLine command = new CommandLine(new Main())
                 .registerConverter(CliRulesOption.class, new RuleConverter())
+                .registerConverter(CliParamsOption.class, new ParamsConverter())
                 .setExecutionExceptionHandler(new ExecutionExceptionHandler());
         command.setErr(new PrintWriter(err));
         command.setOut(new PrintWriter(out));

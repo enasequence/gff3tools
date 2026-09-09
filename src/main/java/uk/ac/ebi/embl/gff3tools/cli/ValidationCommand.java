@@ -20,6 +20,7 @@ import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.Gff3ProviderFactory;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.gff3tools.validation.ParameterProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
@@ -44,15 +45,23 @@ public class ValidationCommand extends AbstractCommand {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
 
         try {
+            // this command discards the fixed annotation, so this fix is not needed as no validations require it
+            Map<String, Boolean> fixOverrides = Map.of("GAP_GENERATION", false);
+
+            if (handleListParams(ruleOverrides, fixOverrides)) {
+                return;
+            }
+
             List<FileSequenceSource> sources =
                     buildFastaSourceList(sequenceOptions.sequenceSpecs, sequenceOptions.sequenceFormat);
             CompositeSequenceProvider compositeProvider = Gff3ProviderFactory.buildCompositeProvider(sources);
 
-            // this command discards the fixed annotation, so this fix is not needed as no validations require it
-            Map<String, Boolean> fixOverrides = Map.of("GAP_GENERATION", false);
+            // Always constructed, from the raw --params map when supplied or an empty map
+            // otherwise, after ruleOverrides/fixOverrides are fully assembled.
+            ParameterProvider parameterProvider = buildParameterProvider(ruleOverrides, fixOverrides);
 
             try (ValidationEngine validationEngine =
-                    initValidationEngine(ruleOverrides, fixOverrides, compositeProvider)) {
+                    initValidationEngine(ruleOverrides, fixOverrides, compositeProvider, parameterProvider)) {
 
                 try (BufferedReader inputReader = getPipe(
                                 Files::newBufferedReader,

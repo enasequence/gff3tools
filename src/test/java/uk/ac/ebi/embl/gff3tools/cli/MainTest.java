@@ -23,6 +23,24 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 public class MainTest {
 
     @Test
+    void paramsConverterUpperCasesKeyLocaleIndependently() throws Exception {
+        // With the default (Turkish) locale, String#toUpperCase() maps 'i' to the dotted capital
+        // 'I' (U+0130), not plain ASCII 'I', which would silently change --params key matching
+        // depending on the JVM's default locale. ParamsConverter must be immune to this.
+        java.util.Locale original = java.util.Locale.getDefault();
+        try {
+            java.util.Locale.setDefault(new java.util.Locale("tr", "TR"));
+            ParamsConverter converter = new ParamsConverter();
+            CliParamsOption result = converter.convert("rule_fixture.min_length:5");
+
+            assertTrue(result.params().containsKey("RULE_FIXTURE.MIN_LENGTH"), "Expected ASCII-uppercased key");
+            assertEquals("5", result.params().get("RULE_FIXTURE.MIN_LENGTH"));
+        } finally {
+            java.util.Locale.setDefault(original);
+        }
+    }
+
+    @Test
     void testParseRules() {
         for (String rule : new String[] {"A", "B"}) {
             for (RuleSeverity severity : RuleSeverity.values()) {
