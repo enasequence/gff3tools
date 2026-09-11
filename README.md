@@ -70,7 +70,8 @@ If using bash, you can see the exit code of the last command using `echo $?`
 * When writing conversion output to `stdout` (pipe mode), info and warning logs are suppressed to avoid mixing with the data stream; only errors reach `stderr`.
 * `validation` writing fixed gff3 to `stdout` (via a `-` output argument) suppresses info logs the same way, but validation warnings and the final pass/fail summary still reach `stderr` — the warning report is part of the command's output, not just diagnostic noise.
 
-See the [CLI Usage Guide](docs/cli-usage-guide.md) for how to configure validation rule severities with `--rules`.
+See the [CLI Usage Guide](docs/cli-usage-guide.md) for how to configure validation rule severities with `--rules`,
+and how to toggle individual auto-fixes with `--fixes`.
 
 # publishing
 

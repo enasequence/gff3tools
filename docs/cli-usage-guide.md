@@ -282,6 +282,62 @@ $GFF3TOOLS validation \
   annotation.gff3
 ```
 
+### `--fixes` — toggle individual auto-fixes
+
+Configure individual auto-fixes as `FIX_NAME:ON` or `FIX_NAME:OFF` pairs (case-insensitive),
+separated by commas. Unlike `--rules`, which only affects how a violation is reported, a fix
+actually mutates the feature or annotation being converted or validated.
+
+Some subcommands force a specific fix off or on regardless of `--fixes`, because that
+subcommand's own output would make the fix meaningless or wrong — for example `GAP_GENERATION`
+is always off for `validation` (which discards its output) and for `conversion` in every
+direction except FASTA → GFF3 (the only direction that should synthesize new features). Those
+structural overrides always take precedence over `--fixes`.
+
+`--fixes` is method-level only, mirroring `--rules`: `FIX_NAME:ON` or `FIX_NAME:OFF` only ever
+toggles that one fix method, never a whole class or an unrelated validation class that happens
+to share the same name (e.g. `ATTRIBUTES_VALUE` and `CHROMOSOME_NAME` are also `@Gff3Validation`
+class names). `PROTEIN_ID_REMOVE` and `TRANSFORM_EXCLUSIVE_ATTRIBUTE_TO_NOTE` are disabled at the class
+level by default, so `--fixes` cannot turn them on; toggling those requires
+`default-rule-severities.properties` or the Java builder API.
+
+Available fixes:
+
+| Fix | Default | Description |
+|------|---------|-------------|
+| `ATTRIBUTES_VALUE` | `ON` | Change the attribute value of mod_base. Refer: Modified base abbreviations |
+| `CDS_RNA_LOCUS` | `ON` | Transfers gene, gene_synonym, and locus_tag attributes from gene features to their corresponding CDS, rRNA, and tRNA child features based on location overlap |
+| `CHROMOSOME_NAME` | `ON` | Normalises the chromosome_name of the FASTA header registered for the annotation's accession |
+| `EC_NUMBER` | `ON` | Remove invalid EC_NUMBER values |
+| `FASTA_HEADER_VALUE_NORMALISATION` | `ON` | Folds FASTA header values to ASCII7 and normalises controlled vocabulary fields to their canonical form |
+| `GAP_ESTIMATED_LENGTH` | `ON` | Set estimated_length for a gap feature |
+| `GAP_GENERATION` | `ON` | Add gap features for runs of N bases that no existing gap feature covers (forced off outside FASTA → GFF3 conversion) |
+| `GENE_ASSOCIATED_FEATURE_REMOVAL` | `ON` | Removes gene features entry if locations are identical with gene associated features (CDS, rRNA, tRNA) |
+| `LOCUS_TAG_ADD_TO_FEATURES_SHARING_THE_GENE` | `ON` | Adds locus tag attribute to the features with the gene attribute, considering first-seen pair as the correct one |
+| `LOCUS_TAG_TO_UPPERCASE` | `ON` | Update the locus_tag value to upper case |
+| `PRODUCT_WITH_EC_NUMBER` | `ON` | Derive EC_NUMBER from PRODUCT and clean PRODUCT value |
+| `PROTEIN_ID_REMOVE` | `OFF` | Removes the protein ID from feature |
+| `PUSHING_GENE_SYNONYM_ATTRIBUTE_TO_PARENT_FEATURES_ONLY` | `ON` | Pushes gene_synonym attribute to only persist at a parent level |
+| `REMOVE_ATTRIBUTES` | `ON` | Remove attributes citation & compare from old_sequence feature |
+| `REMOVE_ATTRIBUTES_DUPLICATE_VALUE` | `ON` | Remove the duplicate values in the old_locus_tag and locus_tag |
+| `REMOVE_PSEUDOGENE_QUOTE` | `ON` | Remove single quotes from Pseudogene value |
+| `REMOVE_TRANSLATION_ATTRIBUTE` | `ON` | Capture existing translation attribute into TranslationState and remove it from the feature |
+| `RENAME_ATTRIBUTES` | `ON` | Moves 'label' into 'Note' and renames 'mobile_element' to 'mobile_element_type' |
+| `TRANSFORM_EXCLUSIVE_ATTRIBUTE_TO_NOTE` | `OFF` | Moves the value of one of the mutually exclusive feature attributes to the note attribute |
+| `TRANSLATION` | `ON` | Translate CDS features and set the translation attribute |
+
+```bash
+# Disable locus_tag upper-casing while iterating on a submission
+$GFF3TOOLS conversion \
+  --fixes LOCUS_TAG_TO_UPPERCASE:OFF \
+  OZ026791.embl OZ026791.gff3
+
+# Skip EC_NUMBER cleanup during validation
+$GFF3TOOLS validation \
+  --fixes EC_NUMBER:OFF \
+  annotation.gff3
+```
+
 ---
 
 ## Memory
