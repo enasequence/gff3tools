@@ -87,8 +87,9 @@ $GFF3TOOLS conversion --output-sequence sequences.fasta annotation.tsv annotatio
 
 ### Pipes (stdin / stdout)
 
-When no output file is given, gff3tools writes converted data to stdout. Informational
-log messages are suppressed to keep stdout clean; warnings and errors still go to stderr.
+When no output file is given, gff3tools writes converted data to stdout; `-` is also
+accepted as an explicit stdout token. Informational log messages are suppressed to keep
+stdout clean; warnings and errors still go to stderr.
 
 ```bash
 # GFF3 → EMBL via pipe
@@ -96,6 +97,9 @@ cat OZ026791.gff3 | $GFF3TOOLS conversion -f gff3 -t embl > OZ026791.embl
 
 # EMBL → GFF3 in a pipeline
 $GFF3TOOLS conversion -f embl -t gff3 OZ026791.embl | gzip > OZ026791.gff3.gz
+
+# Explicit '-' for stdout (equivalent to omitting the output argument)
+$GFF3TOOLS conversion -f gff3 -t embl OZ026791.gff3 -
 ```
 
 ### Gzip-compressed input
@@ -151,7 +155,7 @@ Reads a GFF3 file, runs all active validation rules, and reports warnings and er
 Exits with code `20` if any rule configured as `ERROR` is violated.
 
 ```bash
-# Validate a file
+# Validate a file (report-only, nothing written)
 $GFF3TOOLS validation annotation.gff3
 
 # Validate from stdin
@@ -163,6 +167,43 @@ $GFF3TOOLS validation --sequence sequences.fasta annotation.gff3
 # Stop on the first error instead of collecting all errors
 $GFF3TOOLS validation --fail-fast annotation.gff3
 ```
+
+### Writing fixed output
+
+By default `validation` is report-only: it never writes a gff3 file, matching the
+behaviour above. Passing an output argument switches it into fix-and-write mode: fixes
+are applied and the resulting gff3 is written out, atomically for a file destination.
+Gap generation, which is off in report-only mode, always runs when an output argument is
+given (there is no flag to disable it, matching `conversion`'s FASTA → GFF3 behaviour).
+
+| Output argument | Behaviour |
+|------|------|
+| _(absent)_ | Report-only (default); no gff3 is written |
+| `-` | Write the fixed gff3 to stdout |
+| any other path | Write the fixed gff3 to that file (atomic write) |
+
+```bash
+# Write the fixed gff3 to a file
+$GFF3TOOLS validation annotation.gff3 annotation.fixed.gff3
+
+# Write the fixed gff3 to stdout
+$GFF3TOOLS validation annotation.gff3 - > annotation.fixed.gff3
+
+# Custom gap-generation options (only meaningful when an output argument is given, and
+# only take effect when --sequence is also provided, same as for `conversion`)
+$GFF3TOOLS validation --sequence sequences.fasta --min-gap-length 50 \
+  annotation.gff3 annotation.fixed.gff3
+$GFF3TOOLS validation --sequence sequences.fasta \
+  --gap-type "within scaffold" \
+  --linkage-evidence "paired-ends" \
+  annotation.gff3 annotation.fixed.gff3
+```
+
+As with `conversion`, informational log messages are suppressed while writing to stdout to
+keep stdout clean; validation warnings, errors, and the final pass/fail summary still go to
+stderr. Reading from stdin means the `##FASTA`/translation section, if any, cannot be
+re-read and is omitted from the output (a warning is logged); gzip-compressed file input is
+supported and round-trips the `##FASTA` section normally.
 
 ---
 
@@ -197,21 +238,6 @@ $GFF3TOOLS translate \
   --sequence sequences.fasta \
   -o proteins.fasta \
   annotation.gff3
-```
-
----
-
-## `process` — process GFF3 and FASTA files
-
-Validates and processes a GFF3 file together with a FASTA sequence file for a set of
-accessions. All three inputs are required.
-
-```bash
-$GFF3TOOLS process \
-  -accessions ACC001,ACC002,ACC003 \
-  -gff3 annotation.gff3 \
-  -fasta sequences.fasta \
-  -o processed.gff3
 ```
 
 ---

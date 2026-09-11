@@ -10,28 +10,18 @@
  */
 package uk.ac.ebi.embl.gff3tools.cli;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.LoggerContext;
 import java.io.*;
-import java.nio.file.AtomicMoveNotSupportedException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.zip.GZIPInputStream;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.Converter;
 import uk.ac.ebi.embl.gff3tools.Gff3ProviderFactory;
 import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.exception.FormatSupportException;
-import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
-import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FastaToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
@@ -40,7 +30,6 @@ import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToGFF3Converter;
 import uk.ac.ebi.embl.gff3tools.utils.GapOptionsValidator;
-import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
@@ -101,22 +90,12 @@ public class FileConversionCommand extends AbstractCommand {
     public void run() {
         Map<String, RuleSeverity> ruleOverrides = getRuleOverrides();
 
-        // Determine if we're writing to a file or stdout
-        boolean writingToFile = !outputFilePath.toString().isEmpty();
-        Path tempFile = null;
+        // "-" is an explicit alias for stdout, kept alongside the (unchanged) default of an
+        // absent output-file argument also meaning stdout.
+        boolean toStdout = isStdioSentinel(outputFilePath);
+        boolean writingToFile = !toStdout;
 
         try {
-            // Write to a temp file first to ensure atomic output: if conversion fails,
-            // no partial/corrupt output file is created. Only on success do we move the
-            // temp file to the final destination.
-            // Temp files are created in the system temp directory (controlled via -Djava.io.tmpdir)
-            // for better control in pipeline environments.
-            if (writingToFile) {
-                tempFile = Files.createTempFile("gff3tools-", ".tmp");
-            }
-
-            final Path effectiveOutputPath = writingToFile ? tempFile : null;
-
             // Resolve formats up front so the input FASTA can be registered as a sequence source
             // before the engine providers are built.
             fromFileType = validateFileType(fromFileType, inputFilePath, "-f");
@@ -160,55 +139,41 @@ public class FileConversionCommand extends AbstractCommand {
                     : null;
 
             final FileSequenceSource inputFastaSourceFinal = inputFastaSource;
-            // FASTA -> GFF3 reads the sequence exclusively through the shared FileSequenceSource,
-            // so we avoid opening (and, for gzip, decompressing) the input a second time here.
-            try (BufferedReader inputReader = inputFastaSourceFinal != null
-                            ? new BufferedReader(new StringReader(""))
-                            : createInputReader();
-                    BufferedWriter outputWriter =
-                            writingToFile ? Files.newBufferedWriter(effectiveOutputPath) : createStdoutWriter()) {
-                SequenceLookup sequenceLookup = compositeProvider.hasSources() ? compositeProvider.get(null) : null;
-                // The header provider self-skips when it carries no header source (see
-                // FastaHeaderProvider#isActive), so an empty one never lands on the context and
-                // header-aware rules (e.g. FASTA_HEADER_MAPPING) stay inert.
-                ContextProvider<?>[] providers = analysisContextProvider != null
-                        ? new ContextProvider<?>[] {
-                            compositeProvider, metadataProvider, headerProvider, analysisContextProvider
-                        }
-                        : new ContextProvider<?>[] {compositeProvider, metadataProvider, headerProvider};
-                // Gap generation belongs to FASTA -> GFF3, where the gap features are the entire
-                // output. Every other direction is converting annotation the submitter already
-                // wrote, so synthesising extra features into it is not this command's job.
-                Map<String, Boolean> fixOverrides = fastaToGff3 ? Map.of() : Map.of("GAP_GENERATION", false);
-                try (ValidationEngine engine = initValidationEngine(ruleOverrides, fixOverrides, providers)) {
-                    Converter converter =
-                            getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal, sequenceLookup);
-                    converter.convert(inputReader, outputWriter);
+            WriterAction writeAction = writer -> {
+                // FASTA -> GFF3 reads the sequence exclusively through the shared FileSequenceSource,
+                // so we avoid opening (and, for gzip, decompressing) the input a second time here.
+                try (BufferedReader inputReader = inputFastaSourceFinal != null
+                        ? new BufferedReader(new StringReader(""))
+                        : createInputReader(inputFilePath)) {
+                    SequenceLookup sequenceLookup = compositeProvider.hasSources() ? compositeProvider.get(null) : null;
+                    // The header provider self-skips when it carries no header source (see
+                    // FastaHeaderProvider#isActive), so an empty one never lands on the context and
+                    // header-aware rules (e.g. FASTA_HEADER_MAPPING) stay inert.
+                    ContextProvider<?>[] providers = analysisContextProvider != null
+                            ? new ContextProvider<?>[] {
+                                compositeProvider, metadataProvider, headerProvider, analysisContextProvider
+                            }
+                            : new ContextProvider<?>[] {compositeProvider, metadataProvider, headerProvider};
+                    // Gap generation belongs to FASTA -> GFF3, where the gap features are the entire
+                    // output. Every other direction is converting annotation the submitter already
+                    // wrote, so synthesising extra features into it is not this command's job.
+                    Map<String, Boolean> fixOverrides = fastaToGff3 ? Map.of() : Map.of("GAP_GENERATION", false);
+                    try (ValidationEngine engine = initValidationEngine(ruleOverrides, fixOverrides, providers)) {
+                        Converter converter =
+                                getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal, sequenceLookup);
+                        converter.convert(inputReader, writer);
+                    }
                 }
-            }
+            };
 
-            // Conversion succeeded - move temp file to final destination atomically
-            if (writingToFile && tempFile != null) {
-                try {
-                    Files.move(
-                            tempFile,
-                            outputFilePath,
-                            StandardCopyOption.REPLACE_EXISTING,
-                            StandardCopyOption.ATOMIC_MOVE);
-                } catch (AtomicMoveNotSupportedException e) {
-                    // ATOMIC_MOVE fails across filesystems; fall back to a regular move
-                    Files.move(tempFile, outputFilePath, StandardCopyOption.REPLACE_EXISTING);
+            if (writingToFile) {
+                writeAtomically(outputFilePath, writeAction);
+            } else {
+                try (BufferedWriter stdout = createStdoutWriter()) {
+                    writeAction.run(stdout);
                 }
-                tempFile = null;
             }
         } catch (Exception e) {
-            if (tempFile != null) {
-                try {
-                    Files.deleteIfExists(tempFile);
-                } catch (Exception deleteEx) {
-                    log.warn("Failed to delete temporary file: {}", tempFile);
-                }
-            }
             throw new RuntimeException(e.getMessage(), e);
         }
     }
@@ -225,36 +190,6 @@ public class FileConversionCommand extends AbstractCommand {
         Optional<String> problem = GapOptionsValidator.validate(gapType, linkageEvidence);
         if (problem.isPresent()) {
             throw new CLIException(problem.get() + " (see --gap-type / --linkage-evidence)");
-        }
-    }
-
-    private BufferedWriter createStdoutWriter() {
-        // Suppress INFO/WARN logs while writing to stdout to avoid mixing log output with file content
-        LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
-        ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.ERROR);
-        return new BufferedWriter(new OutputStreamWriter(System.out));
-    }
-
-    /**
-     * Creates a BufferedReader for the input file.
-     * Automatically detects and handles gzip-compressed files.
-     */
-    private BufferedReader createInputReader() throws NonExistingFile, ReadException {
-        if (inputFilePath == null || inputFilePath.toString().isEmpty()) {
-            return new BufferedReader(new InputStreamReader(System.in));
-        }
-
-        boolean gzipped = GzipUtils.isGzipped(inputFilePath);
-
-        try {
-            if (gzipped) {
-                log.debug("Detected gzip-compressed input file");
-                return new BufferedReader(
-                        new InputStreamReader(new GZIPInputStream(Files.newInputStream(inputFilePath))));
-            }
-            return new BufferedReader(new InputStreamReader(Files.newInputStream(inputFilePath)));
-        } catch (IOException e) {
-            throw new ReadException("Error opening file: " + inputFilePath, e);
         }
     }
 
@@ -284,7 +219,7 @@ public class FileConversionCommand extends AbstractCommand {
     private ConversionFileFormat validateFileType(ConversionFileFormat fileFormat, Path filePath, String cliOption)
             throws CLIException {
         if (fileFormat == null) {
-            if (!filePath.toString().isEmpty()) {
+            if (!isStdioSentinel(filePath)) {
                 String fileExtension = getFileExtension(filePath)
                         .orElseThrow(() -> new CLIException("No file extension present, use the " + cliOption
                                 + " option to specify the format manually or set the file extension"));
