@@ -20,7 +20,9 @@ Translation FASTA writing was split across two layers with inconsistent approach
 
 - **TranslationFix no longer sets attributes on features**: `fixAnnotation()` records translations exclusively in `TranslationState`. Features never carry the translation attribute after validation. `TranslationComparisonValidation` already read from `TranslationState`, so nothing else depended on the attribute.
 
-- **Boolean decoupling via null check**: `GFF3File` receives an optional `TranslationState` (or null). When non-null, it writes `##FASTA`; when null, no FASTA section. No `TranslationMode` import — CLI concerns stay in CLI.
+- **Boolean decoupling via null check**: `GFF3File` receives an optional `TranslationState` (or null). No `TranslationMode` import — CLI concerns stay in CLI.
+
+  (Updated 2026-09-08: this state is no longer the sole source when non-null. `writeTranslationSection` merges it per-key with `gff3FileReader`'s raw `##FASTA` passthrough — state wins on collision, but a null/empty state, or one that only covers some features, no longer suppresses passthrough for the rest. See `GFF3File.writeTranslationSection` and its constructor javadoc for the current contract.)
 
 - **Old translation fallback**: `writeFastaFromTranslationState()` prefers `newTranslation` but falls back to `oldTranslation`. This handles the FF->GFF3 path where no re-translation occurs (no sequence source available).
 

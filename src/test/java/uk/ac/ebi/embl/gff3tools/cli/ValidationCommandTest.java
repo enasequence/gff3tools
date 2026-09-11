@@ -12,11 +12,17 @@ package uk.ac.ebi.embl.gff3tools.cli;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.zip.GZIPOutputStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -28,6 +34,10 @@ public class ValidationCommandTest {
     Path tempDir;
 
     private ValidationCommand validationCommand;
+
+    private static final String GAPPY_FASTA =
+            ">seq1 | {\"description\":\"test\", \"molecule_type\":\"genomic DNA\", \"topology\":\"linear\"}\n"
+                    + "ATGCATGCNNNNNNNNNNATGCATGCTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n";
 
     @BeforeEach
     public void setUp() {
@@ -112,6 +122,294 @@ public class ValidationCommandTest {
         // Without --sequence, validation should still work (translation is skipped)
         int exitCode = executeValidation("validation", gff3.toString());
         assertEquals(0, exitCode, "Validation without --sequence should succeed");
+    }
+
+    @Test
+    void validation_outputToFile_writesFixedGff3() throws Exception {
+        // gene lacking gene_synonym/gene on the mRNA/rRNA triggers CdsRnaLocusFix to propagate it
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3.1.26
+                ##sequence-region BN000065.1 1 315242
+                BN000065.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;
+                BN000065.1\t.\tmRNA\t133806\t191728\t.\t+\t.\tParent=gene_RHD;
+                BN000065.1\t.\trRNA\t133970\t145841\t.\t+\t.\tParent=gene_RHD;number=1;
+                """);
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode = executeValidation("validation", gff3.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "Validation with output should succeed");
+        assertTrue(Files.exists(outputFile), "Output file should be created");
+        String content = Files.readString(outputFile);
+        String rrnaLine =
+                content.lines().filter(l -> l.contains("rRNA")).findFirst().orElse("");
+        assertTrue(rrnaLine.contains("gene=RHD"), "Fix should have propagated gene=RHD onto the rRNA: " + rrnaLine);
+    }
+
+    @Test
+    void validation_outputToStdout_writesFixedGff3() throws Exception {
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3.1.26
+                ##sequence-region BN000065.1 1 315242
+                BN000065.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;
+                BN000065.1\t.\tmRNA\t133806\t191728\t.\t+\t.\tParent=gene_RHD;
+                BN000065.1\t.\trRNA\t133970\t145841\t.\t+\t.\tParent=gene_RHD;number=1;
+                """);
+
+        PrintStream originalOut = System.out;
+        ByteArrayOutputStream capturedOut = new ByteArrayOutputStream();
+        int exitCode;
+        try {
+            System.setOut(new PrintStream(capturedOut));
+            exitCode = executeValidation("validation", gff3.toString(), "-");
+        } finally {
+            System.setOut(originalOut);
+        }
+
+        assertEquals(0, exitCode, "Validation with '-' output should succeed");
+        String content = capturedOut.toString(StandardCharsets.UTF_8);
+        assertTrue(content.contains("##gff-version 3.1.26"), "Fixed gff3 should be written to stdout: " + content);
+        String rrnaLine =
+                content.lines().filter(l -> l.contains("rRNA")).findFirst().orElse("");
+        assertTrue(rrnaLine.contains("gene=RHD"), "Fix should have propagated gene=RHD onto the rRNA: " + rrnaLine);
+    }
+
+    @Test
+    void validation_reportOnlyDefault_noOutputArgument_noFileWritten() throws Exception {
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(gff3, "##gff-version 3\n");
+
+        int exitCode = executeValidation("validation", gff3.toString());
+
+        assertEquals(0, exitCode, "Report-only validation should succeed");
+        // Nothing to write to and nothing written: the directory holds only the input file.
+        try (var entries = Files.list(gff3.getParent())) {
+            assertEquals(1, entries.count(), "No output file should be created in report-only mode");
+        }
+    }
+
+    @Test
+    void validation_headerOnlyFile_withOutput_doesNotThrow() throws Exception {
+        // Regression test: GFF3FileReader.read() replays a final null annotation at EOF when the
+        // file has no annotations at all; the output path must not NPE on that.
+        Path gff3 = tempDir.resolve("header_only.gff3");
+        Files.writeString(gff3, "##gff-version 3\n");
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode = executeValidation("validation", gff3.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "Header-only file with output should not throw");
+        assertTrue(Files.exists(outputFile), "Output file should be created");
+        assertEquals("##gff-version 3\n", Files.readString(outputFile));
+    }
+
+    @Test
+    void validation_gzippedInput_succeeds() throws Exception {
+        Path gff3Gz = tempDir.resolve("input.gff3.gz");
+        try (GZIPOutputStream out = new GZIPOutputStream(Files.newOutputStream(gff3Gz))) {
+            out.write("##gff-version 3\n".getBytes(StandardCharsets.UTF_8));
+        }
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode = executeValidation("validation", gff3Gz.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "Gzipped input should be transparently decompressed");
+        assertEquals("##gff-version 3\n", Files.readString(outputFile));
+    }
+
+    @Test
+    void validation_stdinInput_withOutput_warnsAndOmitsFastaSection() throws Exception {
+        String gff3WithFasta = "##gff-version 3.1.26\n"
+                + "##sequence-region BN000065.1 1 315242\n"
+                + "BN000065.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n"
+                + "##FASTA\n"
+                + ">BN000065.1|CDS_RHD\n"
+                + "MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEDQKGLVASYQVGQDLTVMAAI\n";
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        InputStream originalIn = System.in;
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream errContent = new ByteArrayOutputStream();
+        int exitCode;
+        try {
+            System.setIn(new ByteArrayInputStream(gff3WithFasta.getBytes(StandardCharsets.UTF_8)));
+            System.setErr(new PrintStream(errContent));
+            // An explicit "" for the input positional forces the stdin path, matching how an
+            // absent argument is also treated (see AbstractCommand#isStdioSentinel).
+            exitCode = executeValidation("validation", "", outputFile.toString());
+        } finally {
+            System.setIn(originalIn);
+            System.setErr(originalErr);
+        }
+
+        assertEquals(0, exitCode, "Validation reading from stdin with output should succeed");
+        String warnings = errContent.toString(StandardCharsets.UTF_8);
+        assertTrue(
+                warnings.contains("Reading from stdin") && warnings.contains("FASTA"),
+                "Expected a warning about the FASTA section being omitted for stdin input: " + warnings);
+        String content = Files.readString(outputFile);
+        assertFalse(content.contains("##FASTA"), "FASTA section cannot be re-read from stdin: " + content);
+        assertTrue(content.contains("ID=gene_RHD"), "Annotation content should still be written: " + content);
+    }
+
+    @Test
+    void validation_gzippedInputWithFastaSection_preservesFastaSection() throws Exception {
+        String gff3WithFasta = "##gff-version 3.1.26\n"
+                + "##sequence-region BN000065.1 1 315242\n"
+                + "BN000065.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n"
+                + "##FASTA\n"
+                + ">BN000065.1|CDS_RHD\n"
+                + "MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEDQKGLVASYQVGQDLTVMAAI\n";
+        Path gff3Gz = tempDir.resolve("input.gff3.gz");
+        try (GZIPOutputStream out = new GZIPOutputStream(Files.newOutputStream(gff3Gz))) {
+            out.write(gff3WithFasta.getBytes(StandardCharsets.UTF_8));
+        }
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode = executeValidation("validation", gff3Gz.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "Validation of gzipped input with output should succeed");
+        String content = Files.readString(outputFile);
+        assertTrue(
+                content.contains("##FASTA")
+                        && content.contains(">BN000065.1|CDS_RHD")
+                        && content.contains("MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEDQKGLVASYQVGQDLTVMAAI"),
+                "The FASTA/translation section must round-trip from gzipped input, not be lost: " + content);
+    }
+
+    @Test
+    void validation_gapGeneration_firesOnlyWhenOutputRequested_andRespectsMinGapLength() throws Exception {
+        Path fasta = tempDir.resolve("sequence.fasta");
+        Files.writeString(fasta, GAPPY_FASTA);
+
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 100
+                seq1\t.\tgene\t1\t8\t.\t+\t.\tID=gene1
+                """);
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode =
+                executeValidation("validation", "--sequence", fasta.toString(), gff3.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "Validation with output and a gap-worthy sequence should succeed");
+        String content = Files.readString(outputFile);
+        assertTrue(
+                content.lines().anyMatch(l -> l.contains("\tgap\t9\t18\t")),
+                "A gap feature covering the 10-base N run should have been generated: " + content);
+    }
+
+    @Test
+    void validation_gapType_reachesGeneratedGapFeature() throws Exception {
+        Path fasta = tempDir.resolve("sequence.fasta");
+        Files.writeString(fasta, GAPPY_FASTA);
+
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 100
+                seq1\t.\tgene\t1\t8\t.\t+\t.\tID=gene1
+                """);
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode = executeValidation(
+                "validation",
+                "--sequence",
+                fasta.toString(),
+                "--gap-type",
+                "telomere",
+                gff3.toString(),
+                outputFile.toString());
+
+        assertEquals(0, exitCode, "Validation with --gap-type should succeed");
+        String content = Files.readString(outputFile);
+        String gapLine = content.lines()
+                .filter(l -> l.contains("\tgap\t9\t18\t"))
+                .findFirst()
+                .orElse("");
+        assertTrue(gapLine.contains("gap_type=telomere"), "--gap-type should reach the generated gap: " + gapLine);
+    }
+
+    @Test
+    void validation_withSequence_writesComputedTranslationToFastaSection() throws Exception {
+        Path fasta = tempDir.resolve("cds.fasta");
+        Files.writeString(
+                fasta,
+                ">seq1 | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
+                        + "ATGTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAATTTTTTT\n");
+
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 100
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1
+                """);
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode =
+                executeValidation("validation", "--sequence", fasta.toString(), gff3.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "Validation with output and --sequence should succeed");
+        String content = Files.readString(outputFile);
+        assertTrue(
+                content.contains("##FASTA")
+                        && content.contains(">seq1|cds1")
+                        && content.contains("MFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
+                "The CDS translation computed by TranslationFix must be written to the output's "
+                        + "##FASTA section, not silently discarded: " + content);
+    }
+
+    @Test
+    void validation_mergesTranslationStateWithRawFastaPassthrough_perFeature() throws Exception {
+        // cds1 has BOTH an inline translation attribute (captured into TranslationState by
+        // REMOVE_TRANSLATION_ATTRIBUTE, which runs unconditionally, without --sequence) AND a raw
+        // ##FASTA entry with a different sequence, to prove TranslationState wins on collision.
+        // cds2 has no inline attribute, only a raw ##FASTA entry, to prove that a feature
+        // TranslationState never touched still gets its translation preserved from the
+        // passthrough instead of being dropped just because cds1 populated TranslationState.
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 100
+                ##sequence-region seq2 1 100
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1;translation=MFAKE
+                seq2\t.\tCDS\t1\t93\t.\t+\t0\tID=cds2
+                ##FASTA
+                >seq1|cds1
+                MOLD
+                >seq2|cds2
+                MREAL
+                """);
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode = executeValidation("validation", gff3.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "Validation with output should succeed");
+        String content = Files.readString(outputFile);
+        assertTrue(
+                content.contains(">seq1|cds1") && content.contains("MFAKE") && !content.contains("MOLD"),
+                "cds1's TranslationState entry (from the inline attribute) must win over its raw "
+                        + "##FASTA passthrough entry: " + content);
+        assertTrue(
+                content.contains(">seq2|cds2") && content.contains("MREAL"),
+                "cds2's raw ##FASTA passthrough translation must survive even though cds1 "
+                        + "populated TranslationState — this is the regression: a per-key merge, not "
+                        + "a whole-file switch between the two sources: " + content);
     }
 
     private int executeValidation(String... args) {
