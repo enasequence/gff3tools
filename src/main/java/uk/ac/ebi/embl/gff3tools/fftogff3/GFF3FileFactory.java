@@ -103,19 +103,22 @@ public class GFF3FileFactory {
      * <p>Pass a subset of the reader's annotations to get a document holding just those, with
      * exactly their translations — that is how one submission is split across several documents.
      *
-     * <p>Translations come from the first source that yields any: the {@link TranslationState} in
-     * the reader's validation context, then {@code existingTranslationFilePathFallback}, then the
-     * source GFF3's own {@code ##FASTA} — the submitter's, so the state wins where they disagree.
+     * <p>Translations, all limited to the accessions of {@code annotations}:
+     * <ol>
+     *   <li>the source GFF3's own {@code ##FASTA}, merged per feature with the
+     *       {@link TranslationState} in the reader's validation context — the state wins where both
+     *       have the same feature;
+     *   <li>only if that merge is empty, {@code existingTranslationFilePathFallback}.
+     * </ol>
+     * If neither yields anything, no {@code ##FASTA} section is written.
      *
      * @param annotations the annotations the document contains; may be a subset of the reader's
-     * @param gff3FileReader the reader those annotations came from; supplies {@code ##species},
-     *     the validation context, parsing warnings, and the last-resort translation source
-     * @param appendTranslationFasta whether the document carries translations. This factory
-     *     always supplies a translation source, so it is the only way to ask for a features-only
-     *     document
-     * @param existingTranslationFilePathFallback a translation FASTA used when the
-     *     {@link TranslationState} yields no translations, filtered to the accessions of
-     *     {@code annotations}; {@link Optional#empty()} for none
+     * @param gff3FileReader the reader those annotations came from; supplies {@code ##species}, the
+     *     validation context, parsing warnings, and the source GFF3's translations
+     * @param appendTranslationFasta whether to write translations at all; {@code false} gives a
+     *     features-only document
+     * @param existingTranslationFilePathFallback a translation FASTA used only when the merge above
+     *     is empty; {@link Optional#empty()} for none
      * @return a document holding the given annotations, and their translations when requested
      */
     public static GFF3File fromAnnotationAndReader(

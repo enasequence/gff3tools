@@ -56,16 +56,19 @@ public class GFF3File implements IGFF3Feature {
      * @param header the {@code ##gff-version} directive, or null to omit it
      * @param species the {@code ##species} directive, or null to omit it
      * @param annotations the annotations this file contains; also the scope for its translations
-     * @param gff3FileReader reader over a source GFF3, used as the last translation source and to
-     *     read translations lazily by offset; may be null when no source GFF3 exists
-     * @param fastaFilePath an existing translation FASTA, used when {@code translationState}
-     *     yields nothing; its records are filtered to this file's accessions. May be null
+     * @param gff3FileReader reader over a source GFF3, whose own {@code ##FASTA} section supplies
+     *     the translations {@code translationState} does not override; may be null when no source
+     *     GFF3 exists or it cannot be re-read (e.g. stdin)
+     * @param fastaFilePath an existing translation FASTA, used only when neither
+     *     {@code gff3FileReader} nor {@code translationState} yields a translation for this file;
+     *     its records are filtered to this file's accessions. May be null
      * @param writeAnnotationFasta whether to write translations at all; when false no
      *     {@code ##FASTA} section is written even if a source could supply one
      * @param parsingWarnings warnings collected while parsing the source; carried for the caller,
      *     never written to the document
-     * @param translationState the preferred translation source, normally populated by
-     *     {@code TranslationFix} during validation; may hold nothing
+     * @param translationState translations captured or computed during validation, normally by
+     *     {@code TranslationFix}; each entry wins over the source GFF3's translation for the same
+     *     feature. May hold nothing
      */
     public GFF3File(
             GFF3Header header,
@@ -120,59 +123,52 @@ public class GFF3File implements IGFF3Feature {
     }
 
     /**
-     * Writes this file's translations, from the first source that actually yields any.
+     * Writes this file's translations, scoped to its accessions.
      *
-     * <p>Selection is by content, not by presence: {@code TranslationState} is supplied by an
-     * auto-discovered provider and so is never null, and a fallback that only fires on null could
-     * never fire at all.
+     * <p>The source GFF3's {@code ##FASTA} and {@code TranslationState} are merged per feature,
+     * not chosen between: a feature this validation run never touched has no state entry, and
+     * must keep its original translation even when other features in the same file do have one.
+     * The state is overlaid last, so it wins where both hold the same feature.
+     *
+     * <p>The existing translation FASTA is used only when that merge is empty. Selection is by
+     * content, not by presence: {@code TranslationState} is supplied by an auto-discovered provider
+     * and so is never null, and a fallback that only fires on null could never fire at all.
      */
     private void writeTranslationSection(Writer writer) throws IOException {
         Set<String> accessions =
                 annotations.stream().map(GFF3Annotation::getAccession).collect(Collectors.toSet());
 
-        if (writeFastaFromTranslationState(writer, accessions)) {
-            return;
-        }
-        if (writeFastaFromExistingFile(writer, accessions)) {
-            return;
-        }
-        writeFastaFromOffsets(writer, translationOffsetsForAnnotations());
-    }
-
-    /** Translation offsets for this file's annotations, in annotation order. */
-    private Map<String, OffsetRange> translationOffsetsForAnnotations() {
-        Map<String, OffsetRange> offsets = new LinkedHashMap<>();
-        if (gff3Reader == null) {
-            return offsets;
-        }
-        for (GFF3Annotation ann : annotations) {
-            offsets.putAll(gff3Reader.getTranslationOffsetForAnnotation(ann));
-        }
-        return offsets;
-    }
-
-    private boolean writeFastaFromTranslationState(Writer writer, Set<String> accessions) throws IOException {
-        if (translationState == null) {
-            return false;
-        }
-        List<Map.Entry<String, String>> toWrite = new java.util.ArrayList<>();
-        translationState.forEachResolved((key, translation) -> {
-            if (TranslationKey.belongsToAny(key, accessions)) {
-                toWrite.add(Map.entry(key, translation));
+        Map<String, String> translations = new LinkedHashMap<>();
+        if (gff3Reader != null) {
+            for (GFF3Annotation ann : annotations) {
+                for (Map.Entry<String, OffsetRange> entry :
+                        gff3Reader.getTranslationOffsetForAnnotation(ann).entrySet()) {
+                    translations.put(entry.getKey(), gff3Reader.getTranslation(entry.getValue()));
+                }
             }
-        });
-
-        if (toWrite.isEmpty()) {
-            return false;
+        }
+        if (translationState != null) {
+            translationState.forEachResolved((key, translation) -> {
+                if (TranslationKey.belongsToAny(key, accessions)) {
+                    translations.put(key, translation);
+                }
+            });
         }
 
+        if (!translations.isEmpty()) {
+            writeFastaFromMap(writer, translations);
+            return;
+        }
+        writeFastaFromExistingFile(writer, accessions);
+    }
+
+    private void writeFastaFromMap(Writer writer, Map<String, String> translations) throws IOException {
         writer.write("##FASTA\n");
-        for (Map.Entry<String, String> e : toWrite) {
-            TranslationWriter.writeTranslation(writer, e.getKey(), e.getValue());
+        for (Map.Entry<String, String> entry : translations.entrySet()) {
+            TranslationWriter.writeTranslation(writer, entry.getKey(), entry.getValue());
         }
-        log.info("Written {} translation sequences from TranslationState", toWrite.size());
+        log.info("Written {} translation sequences", translations.size());
         writer.write("\n");
-        return true;
     }
 
     /**
@@ -180,17 +176,18 @@ public class GFF3File implements IGFF3Feature {
      * header names one of this document's accessions. A header in any other shape is dropped —
      * keeping it is the misattribution this scoping prevents — and dropped records are logged.
      *
-     * <p>An absent, empty or wholly foreign file yields nothing and falls through to the next
-     * source rather than failing the write, since reaching this source is normal, not an error.
+     * <p>This is the last translation source. An absent, empty or wholly foreign file yields no
+     * {@code ##FASTA} section rather than failing the write, since reaching it is normal, not an
+     * error.
      */
-    private boolean writeFastaFromExistingFile(Writer writer, Set<String> accessions) throws IOException {
+    private void writeFastaFromExistingFile(Writer writer, Set<String> accessions) throws IOException {
         if (fastaFilePath == null) {
-            return false;
+            return;
         }
 
         if (!Files.isRegularFile(fastaFilePath) || Files.size(fastaFilePath) == 0) {
             log.warn("No translations taken from {}: missing, not a regular file, or empty", fastaFilePath);
-            return false;
+            return;
         }
 
         boolean fastaSectionStartWritten = false;
@@ -225,29 +222,8 @@ public class GFF3File implements IGFF3Feature {
 
         if (!fastaSectionStartWritten) {
             log.warn("No translations in {} belong to this document's accessions {}", fastaFilePath, accessions);
-            return false;
-        }
-        log.info("Written {} translation sequences from: {}", kept, fastaFilePath);
-        return true;
-    }
-
-    private void writeFastaFromOffsets(Writer writer, Map<String, OffsetRange> translationOffsetMap)
-            throws IOException {
-
-        if (translationOffsetMap.isEmpty()) {
             return;
         }
-
-        writer.write("##FASTA\n");
-
-        for (Map.Entry<String, OffsetRange> entry : translationOffsetMap.entrySet()) {
-            String id = entry.getKey();
-            OffsetRange range = entry.getValue();
-
-            String translation = gff3Reader.getTranslation(range);
-            TranslationWriter.writeTranslation(writer, id, translation);
-        }
-        log.info("Written {} sequences from: ", translationOffsetMap.entrySet().size());
-        writer.write("\n");
+        log.info("Written {} translation sequences from: {}", kept, fastaFilePath);
     }
 }

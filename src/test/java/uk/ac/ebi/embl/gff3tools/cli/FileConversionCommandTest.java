@@ -12,9 +12,12 @@ package uk.ac.ebi.embl.gff3tools.cli;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.zip.GZIPOutputStream;
@@ -255,6 +258,32 @@ class FileConversionCommandTest {
 
         // Output file should NOT exist
         assertFalse(Files.exists(outputFile), "Output file should not be created when errors occur");
+    }
+
+    @Test
+    void conversion_explicitDashOutput_writesToStdout() throws Exception {
+        Path inputFile = tempDir.resolve("valid.gff3");
+        Files.writeString(
+                inputFile,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 1000
+                seq1\t.\tgene\t1\t100\t.\t+\t.\tID=gene1
+                """);
+
+        PrintStream originalOut = System.out;
+        ByteArrayOutputStream capturedOut = new ByteArrayOutputStream();
+        int exitCode;
+        try {
+            System.setOut(new PrintStream(capturedOut));
+            exitCode = executeConversion("conversion", "-t", "embl", inputFile.toString(), "-");
+        } finally {
+            System.setOut(originalOut);
+        }
+
+        assertEquals(0, exitCode, "Conversion with explicit '-' output should succeed");
+        String content = capturedOut.toString(StandardCharsets.UTF_8);
+        assertTrue(content.contains("ID"), "Output should contain EMBL-shaped content: " + content);
     }
 
     @Test
