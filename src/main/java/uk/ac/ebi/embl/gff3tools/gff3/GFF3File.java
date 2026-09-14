@@ -193,19 +193,13 @@ public class GFF3File implements IGFF3Feature {
         return offsets;
     }
 
-    /** True when a translation key belongs to one of this file's annotations. */
-    private static boolean belongsTo(String translationKey, Set<String> accessions) {
-        String accession = TranslationKey.accessionOf(translationKey);
-        return accession != null && accessions.contains(accession);
-    }
-
     private boolean writeFastaFromTranslationState(Writer writer, Set<String> accessions) throws IOException {
         if (translationState == null) {
             return false;
         }
         List<Map.Entry<String, String>> toWrite = new java.util.ArrayList<>();
         translationState.forEachResolved((key, translation) -> {
-            if (belongsTo(key, accessions)) {
+            if (TranslationKey.belongsToAny(key, accessions)) {
                 toWrite.add(Map.entry(key, translation));
             }
         });

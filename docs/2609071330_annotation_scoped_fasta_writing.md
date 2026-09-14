@@ -124,8 +124,8 @@ The document's accessions are collected once per write, and both filterable sour
 to translations belonging to them. Membership is decided by `TranslationKey`:
 
 ```java
-public static String accessionOf(String key);                       // before the first '|'
-public static boolean belongsTo(String key, String accession);      // exact match
+public static String accessionOf(String key);                          // before the first '|'
+public static boolean belongsToAny(String key, Set<String> accessions); // exact match
 ```
 
 Splitting on the first separator is safe: an accession never contains `|`, and feature IDs are

@@ -10,6 +10,8 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3;
 
+import java.util.Set;
+
 /**
  * Shared key format for identifying translations by accession and feature ID.
  *
@@ -50,14 +52,19 @@ public final class TranslationKey {
     }
 
     /**
-     * Whether a translation key belongs to the given accession.
+     * Whether a translation key belongs to any of the given accessions.
      *
      * <p>Matching is exact rather than by prefix: {@code AB123.1} must not claim the translations
      * of {@code AB123.10}. An accession recorded without its version therefore matches nothing
      * rather than matching every version — a missing translation is a visible failure, a
      * misattributed one is not.
+     *
+     * @param key a key produced by {@link #of}, or read from a {@code ##FASTA} header
+     * @param accessions the accessions a document holds
+     * @return whether the key's accession is one of them
      */
-    public static boolean belongsTo(String key, String accession) {
-        return accession != null && accession.equals(accessionOf(key));
+    public static boolean belongsToAny(String key, Set<String> accessions) {
+        String accession = accessionOf(key);
+        return accession != null && accessions.contains(accession);
     }
 }
