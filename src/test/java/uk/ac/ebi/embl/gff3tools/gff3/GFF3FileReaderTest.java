@@ -75,6 +75,27 @@ public class GFF3FileReaderTest {
     }
 
     @Test
+    void readAnnotationSetsEachFeaturesSourceLine() throws Exception {
+        String gff3Content = "##gff-version 3\n"
+                + "##sequence-region seq1 1 200\n"
+                + "seq1\tsource\tgene\t1\t100\t.\t+\t.\tID=feat1\n"
+                + "seq1\tsource\tCDS\t50\t80\t.\t+\t.\tID=cds1\n";
+
+        ValidationEngine validationEngine = getValidationEngine();
+        try (GFF3FileReader gff3Reader =
+                new GFF3FileReader(validationEngine, new StringReader(gff3Content), Path.of("input.gff3"))) {
+            gff3Reader.readHeader();
+            GFF3Annotation annotation = gff3Reader.readAnnotation();
+
+            Assertions.assertNotNull(annotation);
+            // Line 1 is "##gff-version 3", line 2 is "##sequence-region seq1 1 200", so the gene
+            // feature is on line 3 and the CDS feature is on line 4.
+            assertEquals(3, annotation.getFeatures().get(0).getLine());
+            assertEquals(4, annotation.getFeatures().get(1).getLine());
+        }
+    }
+
+    @Test
     void testMissingHeader() throws Exception {
         File testFile = TestUtils.getResourceFile("validation_errors/empty_file.gff3");
         ValidationEngine validationEngine = getValidationEngineFailFast();
