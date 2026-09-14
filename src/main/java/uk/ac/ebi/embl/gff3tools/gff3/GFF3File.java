@@ -31,36 +31,11 @@ import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 /**
- * An in-memory GFF3 document, ready to be written.
+ * An in-memory GFF3 document, ready to be written. It holds whichever annotations it was given —
+ * every annotation of a submission, or a subset of them — and is built with the generated builder.
  *
- * <p>A file holds whichever annotations it was given — every annotation of a submission, or a
- * subset of them — and writes a document of the shape:
- *
- * <pre>
- * ##gff-version …        (header, when set)
- * ##species …            (when set)
- * …features…             (every annotation, in order)
- * ##FASTA                (once, only when translations are written)
- * &gt;accession|featureId
- * …
- * </pre>
- *
- * <p>The {@code ##FASTA} directive terminates the feature section in the GFF3 specification, so it
- * is written once, after the last annotation, and never between annotations. Translations are
- * scoped to the annotations this file contains: a file holding one annotation carries that
- * annotation's translations and no others.
- *
- * <p>Instances are built with the generated builder. Fields:
- *
- * <ul>
- *   <li>{@code header}, {@code species} — optional directives, omitted when null.
- *   <li>{@code annotations} — the annotations this file contains; also the scope for translations.
- *   <li>{@code writeAnnotationFasta} — whether to write translations at all. Defaults to
- *       {@code false}, so a caller that supplies a translation source must also opt in.
- *   <li>{@code translationState}, {@code fastaFilePath}, {@code gff3Reader} — translation sources,
- *       consulted in that order; see {@link #writeGFF3String(Writer)}.
- *   <li>{@code parsingWarnings} — carried for the caller's benefit; not written to the document.
- * </ul>
+ * <p>{@code ##FASTA} terminates the feature section, so it is written once, after the last
+ * annotation, never between them. Translations are scoped to the relevant annotations.
  */
 @Slf4j
 @Builder
@@ -83,16 +58,14 @@ public class GFF3File implements IGFF3Feature {
      * @param annotations the annotations this file contains; also the scope for its translations
      * @param gff3FileReader reader over a source GFF3, used as the last translation source and to
      *     read translations lazily by offset; may be null when no source GFF3 exists
-     * @param fastaFilePath an existing translation FASTA copied verbatim, used when
-     *     {@code translationState} yields nothing; may be null. Cannot be scoped to a subset of
-     *     annotations, so do not combine it with a file holding only some of them
+     * @param fastaFilePath an existing translation FASTA, used when {@code translationState}
+     *     yields nothing; its records are filtered to this file's accessions. May be null
      * @param writeAnnotationFasta whether to write translations at all; when false no
      *     {@code ##FASTA} section is written even if a source could supply one
      * @param parsingWarnings warnings collected while parsing the source; carried for the caller,
      *     never written to the document
      * @param translationState the preferred translation source, normally populated by
-     *     {@code TranslationFix} during validation. Supplied by an auto-discovered provider, so it
-     *     is typically non-null but may hold nothing — selection is by content, not by presence
+     *     {@code TranslationFix} during validation; may hold nothing
      */
     public GFF3File(
             GFF3Header header,
@@ -115,17 +88,9 @@ public class GFF3File implements IGFF3Feature {
     }
 
     /**
-     * Writes this document: header, species, every annotation's features, then at most one
-     * {@code ##FASTA} section.
-     *
-     * <p>Translations are written only when {@code writeAnnotationFasta} is set, and are taken
-     * from the first source that actually yields any — {@code translationState}, then
-     * {@code fastaFilePath}, then the reader's offset map. Selection is by content rather than by
-     * presence: an empty source falls through to the next one instead of ending the chain. When no
-     * source yields a translation, no {@code ##FASTA} directive is written at all.
-     *
-     * <p>Except for {@code fastaFilePath}, which is copied verbatim, translations are filtered to
-     * those belonging to this file's annotations.
+     * Writes this document: header, species, every annotation's features, then the translations of
+     * those annotations in at most one {@code ##FASTA} section — see
+     * {@link #writeTranslationSection(Writer)}.
      *
      * @param writer destination; not closed by this method
      * @throws WriteException if the underlying writer fails
@@ -146,7 +111,6 @@ public class GFF3File implements IGFF3Feature {
                 ann.writeGFF3String(writer);
             }
 
-            // ##FASTA terminates the feature section, so it is written once, after all annotations
             if (writeAnnotationFasta) {
                 writeTranslationSection(writer);
             }
@@ -175,13 +139,7 @@ public class GFF3File implements IGFF3Feature {
         writeFastaFromOffsets(writer, translationOffsetsForAnnotations());
     }
 
-    /**
-     * Translation offsets belonging to this file's annotations, gathered in annotation order.
-     *
-     * <p>Scoping to {@code annotations} rather than taking the reader's whole map is what lets a
-     * file hold a subset of a submission's annotations and carry exactly that subset's
-     * translations.
-     */
+    /** Translation offsets for this file's annotations, in annotation order. */
     private Map<String, OffsetRange> translationOffsetsForAnnotations() {
         Map<String, OffsetRange> offsets = new LinkedHashMap<>();
         if (gff3Reader == null) {
@@ -218,21 +176,12 @@ public class GFF3File implements IGFF3Feature {
     }
 
     /**
-     * Copies the records of an existing translation FASTA that belong to this document.
+     * Copies the records of an existing translation FASTA whose {@code >accession|featureId}
+     * header names one of this document's accessions. A header in any other shape is dropped —
+     * keeping it is the misattribution this scoping prevents — and dropped records are logged.
      *
-     * <p>The file is read record by record — a {@code >accession|featureId} header and the lines
-     * under it — and a record is kept only when its accession is one of this document's. A header
-     * in any other shape is dropped, because keeping it is the misattribution this scoping exists
-     * to prevent. Dropped records are logged, so a fallback file aimed at another submission does
-     * not pass unnoticed.
-     *
-     * <p>A path that is absent, not a regular file, or empty yields nothing and falls through to
-     * the next source instead of failing the write: this source is consulted whenever
-     * {@code translationState} holds nothing for this document, which is a normal state rather
-     * than a caller error. A file whose records all belong elsewhere falls through the same way.
-     *
-     * <p>The {@code ##FASTA} directive is written with the first kept record, so a file that
-     * contributes nothing leaves no directive behind with nothing under it.
+     * <p>An absent, empty or wholly foreign file yields nothing and falls through to the next
+     * source rather than failing the write, since reaching this source is normal, not an error.
      */
     private boolean writeFastaFromExistingFile(Writer writer, Set<String> accessions) throws IOException {
         if (fastaFilePath == null) {

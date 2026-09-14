@@ -27,11 +27,7 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 public class GFF3FileTest {
 
-    /**
-     * A minimal annotation on {@code acc1}, so the file these tests build is a document that could
-     * exist: translations are scoped to the annotations their file contains, and a file with no
-     * annotations owns no translations.
-     */
+    /** A minimal annotation, so the file these tests build is a document that could exist. */
     private static GFF3Annotation annotationOn(String accession) {
         GFF3Annotation annotation = new GFF3Annotation();
         annotation.setSequenceRegion(new GFF3SequenceRegion(accession, Optional.empty(), 1, 100));
@@ -54,10 +50,8 @@ public class GFF3FileTest {
         Method method = GFF3File.class.getDeclaredMethod("writeFastaFromExistingFile", Writer.class, Set.class);
         method.setAccessible(true);
 
-        // call method for a document holding acc1 alone
         method.invoke(obj, writer, Set.of("acc1"));
 
-        // Assert: acc2's record stays in the file it came from
         String output = writer.toString();
         assertEquals(expectedOutput, output);
         Files.deleteIfExists(Path.of("translation.fasta"));

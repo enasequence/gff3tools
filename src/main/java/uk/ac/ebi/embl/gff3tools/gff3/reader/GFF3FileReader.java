@@ -318,17 +318,9 @@ public class GFF3FileReader implements AutoCloseable {
     }
 
     /**
-     * The translations belonging to one annotation, keyed as {@code accession|featureId}.
-     *
-     * <p>A lookup into a map built once per reader, not a scan: a document is commonly written out
-     * as several subsets, and filtering the whole offset map per annotation made that
-     * O(annotations × translations) for every subset written.
-     *
-     * <p>Only the annotation's accession is used, and it is matched exactly — version suffix
-     * included — so {@code AB123.1} never claims the translations of {@code AB123.10}.
-     *
-     * @param annotation the annotation whose translations are wanted
-     * @return its translations in the offset map's order, or an empty map when it has none
+     * The translations belonging to one annotation, keyed as {@code accession|featureId}, in the
+     * offset map's order. A lookup into a map built once per reader, not a scan: one document is
+     * commonly written out as several subsets.
      */
     public Map<String, OffsetRange> getTranslationOffsetForAnnotation(GFF3Annotation annotation) {
         return translationsByAccession().getOrDefault(annotation.getAccession(), Map.of());

@@ -39,9 +39,6 @@ public final class TranslationKey {
      *
      * <p>Split on the first separator: an accession never contains {@code |}, and feature IDs are
      * URL-encoded by {@link #of}, so the first one always delimits the two parts.
-     *
-     * @param key a key produced by {@link #of}, or read from a {@code ##FASTA} header
-     * @return the accession, or {@code null} if the key has no separator
      */
     public static String accessionOf(String key) {
         if (key == null) {
@@ -58,10 +55,6 @@ public final class TranslationKey {
      * of {@code AB123.10}. An accession recorded without its version therefore matches nothing
      * rather than matching every version — a missing translation is a visible failure, a
      * misattributed one is not.
-     *
-     * @param key a key produced by {@link #of}, or read from a {@code ##FASTA} header
-     * @param accessions the accessions a document holds
-     * @return whether the key's accession is one of them
      */
     public static boolean belongsToAny(String key, Set<String> accessions) {
         String accession = accessionOf(key);

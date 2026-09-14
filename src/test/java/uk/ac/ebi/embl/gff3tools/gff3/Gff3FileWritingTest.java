@@ -41,13 +41,9 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
  * plus a reader ({@link GFF3FileFactory#fromAnnotationAndReader}) or from an EMBL flat file
  * ({@link GFF3FileFactory#from}).
  *
- * <p>Every document, whichever route built it, must satisfy two rules:
- *
- * <ul>
- *   <li>At most one {@code ##FASTA} section, placed after the last feature line, with nothing but
- *       sequence data following it.
- *   <li>Reading the document back recovers the annotations that were written.
- * </ul>
+ * <p>Every document, whichever route built it, must satisfy two rules: at most one
+ * {@code ##FASTA} section, after the last feature line with only sequence data below it; and
+ * reading the document back recovers the annotations that were written.
  *
  * <p>The rest is about translations: {@code appendTranslationFasta} decides whether they are
  * written at all, {@code existingTranslationFilePathFallback} supplies them when the
@@ -89,7 +85,6 @@ public class Gff3FileWritingTest {
     @TempDir
     Path tempDir;
 
-    // =====================================================================
     @Nested
     @DisplayName("appendTranslationFasta = false — appends no FASTA output")
     class WhenNotAppendingTranslationFasta {
@@ -142,7 +137,6 @@ public class Gff3FileWritingTest {
         }
     }
 
-    // =====================================================================
     @Nested
     @DisplayName("appendTranslationFasta = true — appends the annotations' FASTA output")
     class WhenAppendingTranslationFasta {
@@ -210,11 +204,7 @@ public class Gff3FileWritingTest {
             assertEquals(0, countOf(output, "##FASTA"), "an empty FASTA section should not be written");
         }
 
-        /**
-         * The fallback file fires when {@code TranslationState} yields no translations, not when
-         * it is missing. An auto-discovered provider always puts a state in the validation
-         * context, so a fallback keyed on its absence could never fire.
-         */
+        /** The fallback fires when {@code TranslationState} yields nothing, not when it is absent. */
         @Test
         @DisplayName("falls back to the supplied FASTA file when TranslationState yields nothing")
         void fallsBackToTheSuppliedFastaFile() throws Exception {
@@ -232,10 +222,8 @@ public class Gff3FileWritingTest {
         }
 
         /**
-         * A fallback path that does not exist is a source with nothing in it, not a failure: the
-         * write completes and the chain moves on. This branch is reached whenever
-         * {@code TranslationState} holds nothing for the document, so a stale or mistyped path
-         * would otherwise abort a write that has already emitted its feature lines.
+         * A path that does not exist is a source with nothing in it, not a failure — otherwise a
+         * stale path would abort a write that has already emitted its feature lines.
          */
         @Test
         @DisplayName("falls through when the fallback file does not exist")
@@ -340,7 +328,6 @@ public class Gff3FileWritingTest {
         return entry.append("XX\n//\n").toString();
     }
 
-    // =====================================================================
     @Nested
     @DisplayName("converting an EMBL flat file")
     class WhenConvertingAFlatFile {
@@ -400,7 +387,6 @@ public class Gff3FileWritingTest {
         }
     }
 
-    // =====================================================================
     @Nested
     @DisplayName("selecting an annotation's translations")
     class TranslationSelection {
@@ -444,9 +430,7 @@ public class Gff3FileWritingTest {
         }
     }
 
-    // =====================================================================
     // helpers
-    // =====================================================================
 
     private static Predicate<GFF3Annotation> all() {
         return a -> true;
@@ -464,10 +448,7 @@ public class Gff3FileWritingTest {
 
     /**
      * Asserts that {@code output} holds exactly one FASTA section with every feature line before
-     * it, and returns that section's body.
-     *
-     * <p>Content assertions run against the returned body, not the whole document, so a
-     * translation counts only when it lands where a reader will find it.
+     * it, and returns that section's body — so a translation counts only where a reader looks.
      */
     private String trailingFastaSectionOf(String output) {
         assertEquals(1, countOf(output, "##FASTA"), "a GFF3 document must not contain two FASTA sections");

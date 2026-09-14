@@ -31,10 +31,6 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 /**
  * Builds {@link GFF3File} documents from the two sources gff3tools converts: EMBL flat files
  * ({@link #from}) and already-parsed GFF3 annotations ({@link #fromAnnotationAndReader}).
- *
- * <p>Both stamp {@link #HEADER_VERSION} as the {@code ##gff-version} directive rather than
- * carrying over whatever the source declared, and both take translations from the
- * {@link TranslationState} in the validation context when one is populated.
  */
 public class GFF3FileFactory {
 
@@ -54,15 +50,12 @@ public class GFF3FileFactory {
     /**
      * Converts an EMBL flat file into a GFF3 document, one annotation per entry.
      *
-     * <p>The resulting file writes its translations: they are taken from the {@link
-     * TranslationState} that {@code TranslationFix} populates during validation, which for this
-     * path captures each entry's {@code /translation} qualifier.
+     * <p>Translations come from the {@link TranslationState} that {@code TranslationFix}
+     * populates during validation — here, each entry's {@code /translation} qualifier.
      *
-     * <p>Two behaviours worth knowing. The {@code ##gff-version} directive is always
-     * {@link #HEADER_VERSION}, whatever the source says. And {@code ##species} is a file-level
-     * directive, so it is taken from the <strong>first</strong> entry that yields one and every
-     * later entry's organism is discarded without a diagnostic — a mixed-organism flat file loses
-     * information here.
+     * <p>The {@code ##gff-version} directive is always {@link #HEADER_VERSION}, whatever the
+     * source says, and {@code ##species} comes from the first entry that yields one — a
+     * mixed-organism flat file loses the rest without a diagnostic.
      *
      * @param entryReader reader over the flat file; consumed to exhaustion
      * @param masterMetadata metadata whose scientific name or taxon takes precedence when deriving
@@ -111,23 +104,18 @@ public class GFF3FileFactory {
      * exactly their translations — that is how one submission is split across several documents.
      *
      * <p>Translations come from the first source that yields any: the {@link TranslationState} in
-     * the reader's validation context, then {@code existingTranslationFilePathFallback}, then
-     * translations read back out of the source GFF3 by {@code gff3FileReader}. That last source is
-     * the submitter's own {@code ##FASTA} rather than anything gff3tools generated, so prefer a
-     * populated {@link TranslationState} when the two could disagree.
+     * the reader's validation context, then {@code existingTranslationFilePathFallback}, then the
+     * source GFF3's own {@code ##FASTA} — the submitter's, so the state wins where they disagree.
      *
      * @param annotations the annotations the document contains; may be a subset of the reader's
-     * @param gff3FileReader the reader those annotations came from; supplies the {@code ##species}
-     *     directive, the validation context that holds the {@link TranslationState}, parsing
-     *     warnings, and the last-resort translation source
-     * @param appendTranslationFasta whether the document carries translations. When false no
-     *     {@code ##FASTA} section is written even though this factory always supplies a
-     *     translation source, which makes it the only way to ask this factory for a features-only
+     * @param gff3FileReader the reader those annotations came from; supplies {@code ##species},
+     *     the validation context, parsing warnings, and the last-resort translation source
+     * @param appendTranslationFasta whether the document carries translations. This factory
+     *     always supplies a translation source, so it is the only way to ask for a features-only
      *     document
-     * @param existingTranslationFilePathFallback a translation FASTA copied verbatim when the
-     *     {@link TranslationState} yields no translations; {@link Optional#empty()} for none.
-     *     Being an opaque file it cannot be filtered to a subset of annotations, so do not combine
-     *     it with a subset of the reader's annotations
+     * @param existingTranslationFilePathFallback a translation FASTA used when the
+     *     {@link TranslationState} yields no translations, filtered to the accessions of
+     *     {@code annotations}; {@link Optional#empty()} for none
      * @return a document holding the given annotations, and their translations when requested
      */
     public static GFF3File fromAnnotationAndReader(

@@ -42,36 +42,20 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
  * webin-gff3-stages archives in — a submission split into one object per annotation group, each
  * object a standalone GFF3 carrying its own annotations and exactly their translations.
  *
- * <p>Two ways of splitting are covered, because the pipeline needs both: into <em>groups</em>
- * (chromosomes split out, the remainder bundled) and into <em>one document per annotation</em>
- * (every TSV annotation archived separately).
+ * <p>Both ways of splitting are covered, because the pipeline needs both: into <em>groups</em>
+ * (chromosomes split out, the remainder bundled) and into <em>one document per annotation</em>.
+ * Inputs and expected outputs are cleartext files under {@code src/test/resources/regrouping}.
  *
- * <p>Inputs and expected outputs are cleartext files under {@code src/test/resources/regrouping}:
+ * <p>Groups are written from {@code expected-whole.gff3} rather than from the source, so the tests
+ * take the same two-pass path a separate archiving process would: translations survive only
+ * through the document's own {@code ##FASTA}, because {@code TranslationState} does not outlive
+ * the run that produced it.
  *
- * <pre>
- * source.gff3                    5 annotations, one translated CDS each
- * expected-whole.gff3            all 5 written as one document; the input both nests regroup
- * groups/expected-1-2.gff3       ACC1.1 ACC2.1
- * groups/expected-3-4-5.gff3     ACC3.1 ACC4.1 ACC5.1
- * each/expected-ACC1_1.gff3 …    one document per annotation
- * tsv/cds-three-entries.tsv      3 CDS entries, the only TSV shape that yields translations
- * tsv/expected-converted.gff3    that TSV converted to GFF3
- * tsv/expected-1_1.gff3 …        the converted document, one annotation per file
- * </pre>
- *
- * <p>Groups are written from {@code expected-whole.gff3}, not from the source, so the tests
- * exercise the same two-pass path a separate archiving process would: translations survive only
- * through the document's own {@code ##FASTA}, because {@code TranslationState} is per-run and is
- * empty by the time the document is read back.
- *
- * <p><strong>All groups are produced from a single read.</strong> Annotations are routed into
- * their groups in one pass and every group is then written through the same reader, whose
- * translation offset map is parsed and bucketed once. Re-opening a reader per group instead costs
- * a full parse and a full validation pass each time — measured at roughly 180&nbsp;ms per pass for
- * 2000 annotations, so 100 groups took 2.1&nbsp;s where the one-read shape takes 0.09&nbsp;s
- * regardless of group count. That matters most for the per-annotation case below, where the group
- * count equals the annotation count. This test is also the reference for how a caller should drive
- * the API.
+ * <p><strong>All groups come from a single read</strong> — annotations are routed into their
+ * groups in one pass and every group is written through that same reader. Re-opening a reader per
+ * group would re-parse and re-validate the whole file each time, which costs most in the
+ * per-annotation case, where the group count equals the annotation count. This test is also the
+ * reference for how a caller should drive the API.
  */
 public class Gff3FileRegroupingTest {
 
@@ -91,7 +75,6 @@ public class Gff3FileRegroupingTest {
     @TempDir
     Path tempDir;
 
-    // =====================================================================
     @Nested
     @DisplayName("regrouped into groups of annotations")
     class IntoGroups {
@@ -156,7 +139,6 @@ public class Gff3FileRegroupingTest {
         }
     }
 
-    // =====================================================================
     @Nested
     @DisplayName("regrouped into one document per annotation")
     class IntoOnePerAnnotation {
@@ -217,7 +199,6 @@ public class Gff3FileRegroupingTest {
         }
     }
 
-    // =====================================================================
     @Nested
     @DisplayName("converted from TSV, then one document per annotation")
     class FromTsv {
@@ -274,14 +255,11 @@ public class Gff3FileRegroupingTest {
         }
     }
 
-    // =====================================================================
     // helpers
-    // =====================================================================
 
     /**
-     * Converts the TSV fixture to GFF3. Translations are generated during conversion and written
-     * from {@code TranslationState}; they reach the per-annotation documents below only through
-     * this file's own {@code ##FASTA}, since the state does not outlive the conversion.
+     * Converts the TSV fixture to GFF3. Its generated translations reach the per-annotation
+     * documents below only through this file's own {@code ##FASTA}.
      */
     private Path convertTsv() throws Exception {
         Path output = tempDir.resolve("converted.gff3");
@@ -308,10 +286,6 @@ public class Gff3FileRegroupingTest {
 
     /**
      * Reads {@code source} <strong>once</strong> and writes each group as a standalone document.
-     *
-     * <p>Annotations are routed into their groups during the single pass, and every group is
-     * written through that same reader — so the file is parsed once and validated once however
-     * many groups come out of it, and the translation offset map is bucketed once and reused.
      *
      * @param source the document to regroup
      * @param groups output file name to the accessions that document should contain

@@ -317,7 +317,6 @@ public class GFF3FileReaderTest {
                 + "MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEMSSKYPRSVRRCLPLWALTLE\n"
                 + "AALILLFYFFTHYDASLE\n\n";
 
-        // Each annotation becomes a document of its own, carrying only its own translations.
         String expectedDocument1 = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
                 + "##sequence-region BN000065.1 1 315242\n"
                 + "BN000065.1\t.\tCDS\t1\t315242\t.\t+\t.\tID=CDS_RHD;gene=RHD;\n\n"
@@ -440,10 +439,9 @@ public class GFF3FileReaderTest {
      * Writes each annotation as a document of its own and returns those documents, in the order the
      * reader produced them.
      *
-     * <p>Each document gets its own writer. {@code ##FASTA} terminates the feature section, so
-     * joining several single-annotation documents into one output would not be valid GFF3, however
-     * well formed each of them is on its own; {@link #testReadWithHeaderAndFastaInEnd} covers the
-     * other shape, where one document holds every annotation and one trailing FASTA section.
+     * <p>Each document gets its own writer: joining them into one output would not be valid
+     * GFF3, however well formed each is on its own. {@link #testReadWithHeaderAndFastaInEnd}
+     * covers the other shape, one document holding every annotation.
      */
     private List<String> readAndWriteOneDocumentPerAnnotation(String input)
             throws IOException, ValidationException, ReadException, WriteException {
@@ -474,11 +472,7 @@ public class GFF3FileReaderTest {
         return documents;
     }
 
-    /**
-     * Asserts that {@code document} is a valid GFF3 document holding exactly one annotation: at
-     * most one {@code ##FASTA} directive, no feature line after it, and one annotation when read
-     * back.
-     */
+    /** Asserts that {@code document} is a valid GFF3 document holding exactly one annotation. */
     private void assertIsSingleAnnotationDocument(String document)
             throws IOException, ValidationException, ReadException, WriteException {
         int fastaCount = document.split("##FASTA", -1).length - 1;
