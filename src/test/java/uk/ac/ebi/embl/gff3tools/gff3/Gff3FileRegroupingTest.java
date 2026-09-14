@@ -371,9 +371,9 @@ public class Gff3FileRegroupingTest {
     }
 
     /**
-     * Distinct translations, letters only: {@code GFF3TranslationReader.isValidSequence} accepts
-     * A-Z and {@code *} alone, and a stray digit would abort its backwards scan of the FASTA
-     * section.
+     * The protein {@code source.gff3} holds for {@code ACC<i>.1}: {@code protein(1)} is ACC1.1's,
+     * {@code protein(2)} is ACC2.1's, and so on. Tests use it to check a document got the right
+     * protein; letters only, or the reader stops reading the FASTA section early.
      */
     private static String protein(int i) {
         return "MK" + "ACDEF".charAt(i - 1) + "PQRW";

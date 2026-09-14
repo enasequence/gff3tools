@@ -37,27 +37,22 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
 
 /**
- * Contract tests for the GFF3 documents written by {@link GFF3File}, however they were built —
- * from pre-parsed annotations plus a reader ({@link GFF3FileFactory#fromAnnotationAndReader}), or
- * converted from an EMBL flat file ({@link GFF3FileFactory#from}).
+ * Contract tests for the documents {@link GFF3File} writes, built either from parsed annotations
+ * plus a reader ({@link GFF3FileFactory#fromAnnotationAndReader}) or from an EMBL flat file
+ * ({@link GFF3FileFactory#from}).
  *
- * <p>For the reader-based route the specification is the javadoc
- * of {@link GFF3FileFactory#fromAnnotationAndReader} as the specification:
+ * <p>Every document, whichever route built it, must satisfy two rules:
  *
  * <ul>
- *   <li>{@code appendTranslationFasta} — "flag indicating whether to append annotation FASTA
- *       output". So {@code false} appends nothing, and {@code true} appends the annotations'
- *       translations.
- *   <li>{@code existingTranslationFilePathFallback} — "will be defaulted to if the
- *       {@link uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState} is not available".
+ *   <li>At most one {@code ##FASTA} section, placed after the last feature line, with nothing but
+ *       sequence data following it.
+ *   <li>Reading the document back recovers the annotations that were written.
  * </ul>
  *
- * <p>Independent of that flag, any GFF3 document the writer produces must be well formed: the
- * GFF3 specification makes {@code ##FASTA} terminate the feature section, so a document has at
- * most one of them and nothing but sequence data after it, and reading a written document back
- * must recover the annotations that were written.
- *
- * <p>See {@code docs/2609071330_annotation_scoped_fasta_writing.md}.
+ * <p>The rest is about translations: {@code appendTranslationFasta} decides whether they are
+ * written at all, {@code existingTranslationFilePathFallback} supplies them when the
+ * {@link uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState} has none, and a document
+ * carries only the translations of the annotations it holds.
  */
 public class Gff3FileWritingTest {
 
@@ -132,10 +127,8 @@ public class Gff3FileWritingTest {
         }
 
         /**
-         * The fallback parameter is documented as supplying translations when {@code
-         * TranslationState} is unavailable — but this flag is documented as appending no FASTA at
-         * all. The two clauses cannot both hold, so this pins down which one wins: appending
-         * nothing.
+         * A caller can ask for no FASTA and still pass a fallback file. The flag wins: nothing is
+         * appended, and the fallback file is never read.
          */
         @Test
         @DisplayName("ignores the fallback FASTA file")
@@ -216,10 +209,9 @@ public class Gff3FileWritingTest {
         }
 
         /**
-         * Documented behaviour of {@code existingTranslationFilePathFallback}. "Not available" is
-         * read as "yields no translations": {@code TranslationState} is always present in the
-         * validation context via its auto-discovered provider, so presence alone cannot be the
-         * trigger or the parameter could never fire.
+         * The fallback file fires when {@code TranslationState} yields no translations, not when
+         * it is missing. An auto-discovered provider always puts a state in the validation
+         * context, so a fallback keyed on its absence could never fire.
          */
         @Test
         @DisplayName("falls back to the supplied FASTA file when TranslationState yields nothing")
@@ -345,10 +337,9 @@ public class Gff3FileWritingTest {
     class TranslationSelection {
 
         /**
-         * Keys are {@code accession|featureId}, but {@code getTranslationOffsetForAnnotation}
-         * selects with {@code key.startsWith(accession)}, so an accession that is a string prefix
-         * of another claims the other's translations. The realistic trigger is mixed versioning of
-         * seqIds — {@code AB123456} claiming every key of {@code AB123456.1}.
+         * Translation keys are {@code accession|featureId}, so picking an annotation's keys by
+         * prefix would give {@code AB123.1} everything belonging to {@code AB123.10} as well. The
+         * whole accession must match, so each one gets only its own.
          */
         @Test
         @DisplayName("matches accessions exactly, not by prefix")
@@ -403,13 +394,11 @@ public class Gff3FileWritingTest {
     }
 
     /**
-     * Asserts that {@code output} is a structurally well-formed GFF3 document and returns the body
-     * of its FASTA section.
+     * Asserts that {@code output} holds exactly one FASTA section with every feature line before
+     * it, and returns that section's body.
      *
-     * <p>The GFF3 specification makes {@code ##FASTA} terminate the feature section, so a document
-     * carries at most one of them and every feature line precedes it. Content assertions run
-     * against the returned body rather than the whole document, so a translation only counts when
-     * it is appended in the one place a reader will look for it.
+     * <p>Content assertions run against the returned body, not the whole document, so a
+     * translation counts only when it lands where a reader will find it.
      */
     private String trailingFastaSectionOf(String output) {
         assertEquals(1, countOf(output, "##FASTA"), "a GFF3 document must not contain two FASTA sections");
