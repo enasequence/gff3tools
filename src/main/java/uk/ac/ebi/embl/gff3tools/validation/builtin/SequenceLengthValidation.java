@@ -10,9 +10,12 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import uk.ac.ebi.embl.api.entry.genomeassembly.AssemblyType;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
@@ -39,6 +42,17 @@ public class SequenceLengthValidation implements Validation {
     private static final Integer LNCRNA_MINIMUM_SEQUENCE_LENGTH = 200;
     private static final Integer ASSEMBLY_MINIMUM_SEQUENCE_LENGTH = 1000;
 
+    /**
+     * The assembly types whose top level sequences are whole genome sequences, and therefore must
+     * meet {@link #ASSEMBLY_MINIMUM_SEQUENCE_LENGTH}. The remaining types (clinical isolate
+     * assembly, primary metagenome and binned metagenome) can legitimately contain shorter sequences.
+     */
+    private static final Set<AssemblyType> WGS_ASSEMBLY_TYPES = EnumSet.of(
+            AssemblyType.CLONEORISOLATE,
+            AssemblyType.METAGENOME_ASSEMBLEDGENOME,
+            AssemblyType.ENVIRONMENTALSINGLE_CELLAMPLIFIEDGENOME,
+            AssemblyType.COVID_19_OUTBREAK);
+
     private static final String MESSAGE_SEQUENCE_REGION_START_OUT_OF_BOUNDS =
             "The start position of the sequence region (\"%d\") is not equal to 1.";
     private static final String MESSAGE_SEQUENCE_REGION_END_OUT_OF_BOUNDS =
@@ -59,7 +73,7 @@ public class SequenceLengthValidation implements Validation {
     private ValidationContext context;
 
     private final Map<String, Long> sequenceLengthCache = new HashMap<>();
-    private Boolean sequenceAssembly;
+    private Boolean wgsAssembly;
 
     @ValidationMethod(
             rule = RULE_SEQUENCE_REGION_OUT_OF_BOUNDS,
@@ -107,13 +121,13 @@ public class SequenceLengthValidation implements Validation {
 
     @ValidationMethod(
             rule = RULE_ASSEMBLY_SEQUENCE_TOO_SHORT,
-            description = "Whole genome sequence submissions must be at least 1000 nt",
+            description = "Whole genome sequence assembly submissions must be at least 1000 nt",
             type = ValidationType.ANNOTATION,
             priority = ValidationPriority.NORMAL)
     public void validateWGSMinimumLength(GFF3Annotation annotation, int line) throws ValidationException {
         Long length = ValidationUtils.resolveSequenceLength(annotation.getAccession(), sequenceLengthCache, context);
 
-        if (isSequenceAssembly() && length != null && length < ASSEMBLY_MINIMUM_SEQUENCE_LENGTH) {
+        if (isWgsAssembly() && length != null && length < ASSEMBLY_MINIMUM_SEQUENCE_LENGTH) {
             throw new ValidationException(RULE_ASSEMBLY_SEQUENCE_TOO_SHORT, line, MESSAGE_ASSEMBLY_SEQUENCE_TOO_SHORT);
         }
     }
@@ -132,14 +146,26 @@ public class SequenceLengthValidation implements Validation {
         }
     }
 
-    private boolean isSequenceAssembly() {
-        if (sequenceAssembly == null) {
+    /**
+     * Whether the submission is a whole genome sequence assembly, which is decided by the assembly
+     * type as well as the analysis type: only some of the assembly types within {@link
+     * AnalysisType#SEQUENCE_ASSEMBLY} are whole genome sequences.
+     *
+     * <p>An assembly type is only ever present for {@link AnalysisType#SEQUENCE_ASSEMBLY}, so a
+     * submission that does not declare one is not checked.
+     */
+    private boolean isWgsAssembly() {
+        if (wgsAssembly == null) {
             AnalysisContext analysisContext =
                     context.contains(AnalysisContext.class) ? context.get(AnalysisContext.class) : null;
-            sequenceAssembly =
-                    analysisContext != null && analysisContext.getAnalysisType() == AnalysisType.SEQUENCE_ASSEMBLY;
+            wgsAssembly = analysisContext != null
+                    && analysisContext.getAnalysisType() == AnalysisType.SEQUENCE_ASSEMBLY
+                    && analysisContext
+                            .getAssemblyType()
+                            .filter(WGS_ASSEMBLY_TYPES::contains)
+                            .isPresent();
         }
-        return sequenceAssembly;
+        return wgsAssembly;
     }
 
     private Optional<GFF3Feature> findLncRnaFeature(GFF3Annotation annotation) {
@@ -156,7 +182,7 @@ public class SequenceLengthValidation implements Validation {
     @ExitMethod
     public void clear() {
         sequenceLengthCache.clear();
-        sequenceAssembly = null;
+        wgsAssembly = null;
     }
 
     private boolean hasMinimumLengthException(GFF3Annotation annotation) {
