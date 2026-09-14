@@ -64,8 +64,7 @@ public class AttributesLocationValidation implements Validation {
             rule = "TRANSL_EXCEPT_STRAND_CONFLICT",
             description =
                     "Check that a complement(...) wrapper in a transl_except attribute location agrees with the strand",
-            type = ValidationType.FEATURE,
-            severity = RuleSeverity.ERROR)
+            type = ValidationType.FEATURE)
     public void validateTranslExceptStrandConflict(GFF3Feature feature, int line) throws ValidationException {
 
         /** a "-" strand feature row can have a complement but does not have to,
