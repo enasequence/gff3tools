@@ -66,8 +66,9 @@ has already put its feature lines in the output. If no source has anything, no `
 is written — an empty section is never emitted.
 
 **Scoping.** A document carries the translations of the annotations it holds; give it a subset of a
-submission and it carries exactly that subset's translations. The exception is `fastaFilePath`,
-which is copied verbatim and cannot be filtered — do not combine it with a partial document.
+submission and it carries exactly that subset's translations. This includes `fastaFilePath`, whose
+records are kept or dropped by the accession in their `>accession|featureId` header — a header in
+any other shape is dropped and logged.
 
 **Accession matching is exact**, version suffix included. An annotation recorded without its
 version matches no translations rather than every version of that accession: a missing translation
@@ -83,6 +84,19 @@ is a visible failure, a misattributed one is not.
 …features…             every annotation, in order
 ##FASTA                once, only when a source has translations
 >accession|featureId   scoped to this document's annotations
+```
+
+The source chain behind that one section:
+
+```mermaid
+flowchart TD
+    F[Header, species, every annotation's features] --> S1{"1 · translationState<br/>keys for this document?"}
+    S1 -- yes --> OUT["One FASTA section, after the last annotation"]
+    S1 -- empty --> S2{"2 · fastaFilePath<br/>records for this document?"}
+    S2 -- yes --> OUT
+    S2 -- "empty, missing, or all dropped" --> S3{"3 · reader offsets<br/>translations for this document?"}
+    S3 -- yes --> OUT
+    S3 -- empty --> NONE[No FASTA directive at all]
 ```
 
 `TranslationState` (`validation/provider`) is the shared state `TranslationFix` records into during
@@ -132,8 +146,6 @@ to produce invalid output for a use case that one document per annotation alread
 
 # Technical Debt / Future Considerations
 
-- **`fastaFilePath` cannot be scoped.** A partial document that needs it would need that file
-  indexed, or its records filtered by FASTA header.
 - **Nothing checks the reverse direction**: that every translation belongs to an annotation in the
   document.
 - **A submitted `##FASTA` is used or ignored silently**, depending on whether a higher-priority

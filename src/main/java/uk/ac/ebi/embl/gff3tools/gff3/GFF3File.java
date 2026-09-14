@@ -169,7 +169,7 @@ public class GFF3File implements IGFF3Feature {
         if (writeFastaFromTranslationState(writer, accessions)) {
             return;
         }
-        if (writeFastaFromExistingFile(writer)) {
+        if (writeFastaFromExistingFile(writer, accessions)) {
             return;
         }
         writeFastaFromOffsets(writer, translationOffsetsForAnnotations());
@@ -218,17 +218,23 @@ public class GFF3File implements IGFF3Feature {
     }
 
     /**
-     * Copies an existing translation FASTA verbatim.
+     * Copies the records of an existing translation FASTA that belong to this document.
+     *
+     * <p>The file is read record by record — a {@code >accession|featureId} header and the lines
+     * under it — and a record is kept only when its accession is one of this document's. A header
+     * in any other shape is dropped, because keeping it is the misattribution this scoping exists
+     * to prevent. Dropped records are logged, so a fallback file aimed at another submission does
+     * not pass unnoticed.
      *
      * <p>A path that is absent, not a regular file, or empty yields nothing and falls through to
      * the next source instead of failing the write: this source is consulted whenever
      * {@code translationState} holds nothing for this document, which is a normal state rather
-     * than a caller error. It is logged, so a mistyped path does not pass unnoticed.
+     * than a caller error. A file whose records all belong elsewhere falls through the same way.
      *
-     * <p>The {@code ##FASTA} directive is written only once the first content has been read, so a
-     * file that cannot be read leaves no directive behind with nothing under it.
+     * <p>The {@code ##FASTA} directive is written with the first kept record, so a file that
+     * contributes nothing leaves no directive behind with nothing under it.
      */
-    private boolean writeFastaFromExistingFile(Writer writer) throws IOException {
+    private boolean writeFastaFromExistingFile(Writer writer, Set<String> accessions) throws IOException {
         if (fastaFilePath == null) {
             return false;
         }
@@ -239,22 +245,40 @@ public class GFF3File implements IGFF3Feature {
         }
 
         boolean fastaSectionStartWritten = false;
+        boolean keepingRecord = false;
+        boolean unreadableHeaderLogged = false;
+        int kept = 0;
+
         try (BufferedReader br = Files.newBufferedReader(fastaFilePath)) {
-            char[] buffer = new char[8192];
-            int n;
-            while ((n = br.read(buffer)) != -1) {
-                if (!fastaSectionStartWritten) {
-                    writer.write("##FASTA\n");
-                    fastaSectionStartWritten = true;
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.startsWith(">")) {
+                    String key = line.substring(1).trim();
+                    keepingRecord = TranslationKey.belongsToAny(key, accessions);
+                    if (keepingRecord) {
+                        kept++;
+                    } else if (TranslationKey.accessionOf(key) == null && !unreadableHeaderLogged) {
+                        log.warn("Ignoring records of {}: header {} is not accession|featureId", fastaFilePath, line);
+                        unreadableHeaderLogged = true;
+                    }
                 }
-                writer.write(buffer, 0, n);
+
+                if (keepingRecord) {
+                    if (!fastaSectionStartWritten) {
+                        writer.write("##FASTA\n");
+                        fastaSectionStartWritten = true;
+                    }
+                    writer.write(line);
+                    writer.write("\n");
+                }
             }
         }
 
         if (!fastaSectionStartWritten) {
+            log.warn("No translations in {} belong to this document's accessions {}", fastaFilePath, accessions);
             return false;
         }
-        log.info("Write translation sequences from: " + fastaFilePath);
+        log.info("Written {} translation sequences from: {}", kept, fastaFilePath);
         return true;
     }
 

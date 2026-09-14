@@ -82,7 +82,9 @@ public class Gff3FileWritingTest {
             + ">AB123.10|CDS_LONG\n"
             + "AALILLFYFFTHYDASLE\n\n";
 
-    private static final String FALLBACK_FASTA = ">FALLBACK|CDS_Z\nMMMMMMMM\n";
+    /** A fallback file holding one record for BN000065.1 and one for an accession nobody here has. */
+    private static final String FALLBACK_FASTA =
+            ">BN000065.1|CDS_FALLBACK\nMMMMMMMM\n>ZZ999.9|CDS_STRANGER\nWWWWWWWW\n";
 
     @TempDir
     Path tempDir;
@@ -136,7 +138,7 @@ public class Gff3FileWritingTest {
             String output = write(TWO_ANNOTATIONS, all(), false, Optional.of(fallbackFile()));
 
             assertEquals(0, countOf(output, "##FASTA"), "no FASTA output was requested");
-            assertFalse(output.contains(">FALLBACK"), "fallback file used despite append=false");
+            assertFalse(output.contains("MMMMMMMM"), "fallback file used despite append=false");
         }
     }
 
@@ -223,9 +225,9 @@ public class Gff3FileWritingTest {
 
             String output = write(withoutTranslations, all(), true, Optional.of(fallbackFile()));
 
-            assertTrue(output.contains(">FALLBACK"), "the documented fallback file was never read");
+            assertTrue(output.contains(">BN000065.1|CDS_FALLBACK"), "the fallback file was never read");
             assertTrue(
-                    trailingFastaSectionOf(output).contains(">FALLBACK"),
+                    trailingFastaSectionOf(output).contains(">BN000065.1|CDS_FALLBACK"),
                     "the fallback translations must be appended in the trailing FASTA section");
         }
 
@@ -257,6 +259,43 @@ public class Gff3FileWritingTest {
             String fasta = trailingFastaSectionOf(output);
             assertTrue(fasta.contains(">BN000065.1|CDS_A"), "expected the document's own translations");
             assertTrue(fasta.contains(">BN000066.1|CDS_B"), "expected the document's own translations");
+        }
+
+        /**
+         * The fallback file is filtered like every other source: a document takes the records whose
+         * header names one of its own accessions and leaves the rest, so a file covering a whole
+         * submission can be handed to a document holding part of it.
+         */
+        @Test
+        @DisplayName("copies only the fallback records belonging to this document")
+        void copiesOnlyTheFallbackRecordsBelongingToThisDocument() throws Exception {
+            String withoutTranslations = "##gff-version 3\n"
+                    + "##species http://example.org?name=Homo sapiens\n"
+                    + "##sequence-region BN000065.1 1 315242\n"
+                    + "BN000065.1\t.\tCDS\t1\t315242\t.\t+\t.\tID=CDS_A;gene=RHD;\n\n";
+
+            String fasta = trailingFastaSectionOf(write(withoutTranslations, all(), true, Optional.of(fallbackFile())));
+
+            assertTrue(fasta.contains(">BN000065.1|CDS_FALLBACK"), "expected this document's own fallback record");
+            assertTrue(fasta.contains("MMMMMMMM"), "expected this document's own fallback translation");
+            assertFalse(fasta.contains("ZZ999.9"), "a record for another accession leaked out of the fallback file");
+            assertFalse(fasta.contains("WWWWWWWW"), "a translation for another accession leaked out");
+        }
+
+        @Test
+        @DisplayName("falls through when no fallback record belongs to this document")
+        void fallsThroughWhenNoFallbackRecordBelongs() throws Exception {
+            String withoutTranslations = "##gff-version 3\n"
+                    + "##species http://example.org?name=Homo sapiens\n"
+                    + "##sequence-region BN000065.1 1 315242\n"
+                    + "BN000065.1\t.\tCDS\t1\t315242\t.\t+\t.\tID=CDS_A;gene=RHD;\n\n";
+
+            Path strangers = tempDir.resolve("strangers.fasta");
+            Files.writeString(strangers, ">ZZ999.9|CDS_STRANGER\nWWWWWWWW\n", Charset.defaultCharset());
+
+            String output = write(withoutTranslations, all(), true, Optional.of(strangers));
+
+            assertEquals(0, countOf(output, "##FASTA"), "no fallback record belongs here, so nothing is appended");
         }
     }
 

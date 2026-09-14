@@ -18,10 +18,9 @@ import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
@@ -42,30 +41,23 @@ public class GFF3FileTest {
     @Test
     void testWriteTranslation() throws Exception {
 
-        String input = "##FASTA\n" + ">geneB\n" + "GGTTAA\n" + ">geneA\n" + "ATGC\n";
-        String expectedOutput = "##FASTA\n" + input;
-
-        // Inject cdsTranslationMap
-        Map<String, String> testMap = new HashMap<>();
-        testMap.put("geneA", "ATGC");
-        testMap.put("geneB", "GGTTAA");
+        String input = ">acc1|cds-1\n" + "GGTTAA\n" + ">acc2|cds-2\n" + "ATGC\n";
+        String expectedOutput = "##FASTA\n" + ">acc1|cds-1\n" + "GGTTAA\n";
 
         Files.writeString(Path.of("translation.fasta"), input, Charset.defaultCharset());
         GFF3File obj =
                 GFF3File.builder().fastaFilePath(Path.of("translation.fasta")).build();
 
-        // obj.cdsTranslationMap = testMap;
-
         StringWriter writer = new StringWriter();
 
         // Access private method via reflection
-        Method method = GFF3File.class.getDeclaredMethod("writeFastaFromExistingFile", Writer.class);
+        Method method = GFF3File.class.getDeclaredMethod("writeFastaFromExistingFile", Writer.class, Set.class);
         method.setAccessible(true);
 
-        // call method
-        method.invoke(obj, writer);
+        // call method for a document holding acc1 alone
+        method.invoke(obj, writer, Set.of("acc1"));
 
-        // Assert
+        // Assert: acc2's record stays in the file it came from
         String output = writer.toString();
         assertEquals(expectedOutput, output);
         Files.deleteIfExists(Path.of("translation.fasta"));
