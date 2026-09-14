@@ -228,6 +228,36 @@ public class Gff3FileWritingTest {
                     trailingFastaSectionOf(output).contains(">FALLBACK"),
                     "the fallback translations must be appended in the trailing FASTA section");
         }
+
+        /**
+         * A fallback path that does not exist is a source with nothing in it, not a failure: the
+         * write completes and the chain moves on. This branch is reached whenever
+         * {@code TranslationState} holds nothing for the document, so a stale or mistyped path
+         * would otherwise abort a write that has already emitted its feature lines.
+         */
+        @Test
+        @DisplayName("falls through when the fallback file does not exist")
+        void fallsThroughWhenTheFallbackFileDoesNotExist() throws Exception {
+            String withoutTranslations = "##gff-version 3\n"
+                    + "##species http://example.org?name=Homo sapiens\n"
+                    + "##sequence-region BN000065.1 1 315242\n"
+                    + "BN000065.1\t.\tCDS\t1\t315242\t.\t+\t.\tID=CDS_A;gene=RHD;\n\n";
+
+            String output = write(withoutTranslations, all(), true, Optional.of(tempDir.resolve("absent.fasta")));
+
+            assertTrue(output.contains("BN000065.1\t.\tCDS"), "the document itself must still be written");
+            assertEquals(0, countOf(output, "##FASTA"), "a missing fallback file supplies no translations");
+        }
+
+        @Test
+        @DisplayName("keeps the document's own translations when the fallback file is missing")
+        void keepsItsOwnTranslationsWhenTheFallbackFileIsMissing() throws Exception {
+            String output = write(TWO_ANNOTATIONS, all(), true, Optional.of(tempDir.resolve("absent.fasta")));
+
+            String fasta = trailingFastaSectionOf(output);
+            assertTrue(fasta.contains(">BN000065.1|CDS_A"), "expected the document's own translations");
+            assertTrue(fasta.contains(">BN000066.1|CDS_B"), "expected the document's own translations");
+        }
     }
 
     /** Two EMBL entries, each with one translated CDS, and differing organisms. */

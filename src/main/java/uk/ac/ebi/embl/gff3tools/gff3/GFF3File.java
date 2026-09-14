@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -224,25 +223,42 @@ public class GFF3File implements IGFF3Feature {
         return true;
     }
 
+    /**
+     * Copies an existing translation FASTA verbatim.
+     *
+     * <p>A path that is absent, not a regular file, or empty yields nothing and falls through to
+     * the next source instead of failing the write: this source is consulted whenever
+     * {@code translationState} holds nothing for this document, which is a normal state rather
+     * than a caller error. It is logged, so a mistyped path does not pass unnoticed.
+     *
+     * <p>The {@code ##FASTA} directive is written only once the first content has been read, so a
+     * file that cannot be read leaves no directive behind with nothing under it.
+     */
     private boolean writeFastaFromExistingFile(Writer writer) throws IOException {
         if (fastaFilePath == null) {
             return false;
         }
 
-        BasicFileAttributes attrs = Files.readAttributes(fastaFilePath, BasicFileAttributes.class);
-
-        if (!attrs.isRegularFile() || attrs.size() == 0) {
+        if (!Files.isRegularFile(fastaFilePath) || Files.size(fastaFilePath) == 0) {
+            log.warn("No translations taken from {}: missing, not a regular file, or empty", fastaFilePath);
             return false;
         }
 
-        writer.write("##FASTA\n");
-
+        boolean fastaSectionStartWritten = false;
         try (BufferedReader br = Files.newBufferedReader(fastaFilePath)) {
             char[] buffer = new char[8192];
             int n;
             while ((n = br.read(buffer)) != -1) {
+                if (!fastaSectionStartWritten) {
+                    writer.write("##FASTA\n");
+                    fastaSectionStartWritten = true;
+                }
                 writer.write(buffer, 0, n);
             }
+        }
+
+        if (!fastaSectionStartWritten) {
+            return false;
         }
         log.info("Write translation sequences from: " + fastaFilePath);
         return true;
