@@ -151,6 +151,7 @@ public class TranslationCommand extends AbstractCommand {
                 .header(header)
                 .annotations(annotations)
                 .translationState(translationState)
+                .writeAnnotationFasta(true)
                 .build();
 
         try (BufferedWriter outputWriter = Files.newBufferedWriter(outPath)) {
