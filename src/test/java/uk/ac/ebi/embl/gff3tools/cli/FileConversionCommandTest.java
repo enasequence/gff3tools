@@ -247,6 +247,7 @@ class FileConversionCommandTest {
                   "totalFeatures" : 2,
                   "annotations" : [ {
                     "accession" : "seq1",
+                    "sequenceBases" : 1000,
                     "totalFeatures" : 2,
                     "features" : [ {
                       "name" : "CDS",
@@ -289,7 +290,7 @@ class FileConversionCommandTest {
         assertEquals(0, exitCode, "Conversion should succeed");
         assertEquals(
                 """
-                seq1: 2 features (CDS 1, 93 bases; gene 1, 100 bases)
+                seq1: 2 features on 1000 bases (CDS 1, 93 bases; gene 1, 100 bases)
                 total: 2 features
                 """,
                 Files.readString(metricsFile));

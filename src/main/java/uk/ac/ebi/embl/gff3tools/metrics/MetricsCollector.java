@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 
 /**
  * Accumulates per-run metrics as plain counters, never retaining features, so it is safe to feed
@@ -41,7 +42,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
  */
 public class MetricsCollector {
 
-    private final Map<String, TreeMap<String, TypeStats>> annotations = new LinkedHashMap<>();
+    private final Map<String, Annotation> annotations = new LinkedHashMap<>();
     private long totalFeatures;
 
     /**
@@ -57,7 +58,12 @@ public class MetricsCollector {
         if (accession == null) {
             return;
         }
-        TreeMap<String, TypeStats> featureStats = annotations.computeIfAbsent(accession, a -> new TreeMap<>());
+        Annotation entry = annotations.computeIfAbsent(accession, a -> new Annotation());
+        GFF3SequenceRegion region = annotation.getSequenceRegion();
+        if (region != null) {
+            entry.sequenceBases = Math.max(region.end() - region.start() + 1, 0);
+        }
+        TreeMap<String, TypeStats> featureStats = entry.featureStats;
         for (GFF3Feature feature : annotation.getFeatures()) {
             TypeStats stats = featureStats.computeIfAbsent(feature.getName(), name -> new TypeStats());
             stats.count++;
@@ -89,10 +95,11 @@ public class MetricsCollector {
                 annotations.entrySet().stream()
                         .map(entry -> new Gff3Metrics.AnnotationMetrics(
                                 entry.getKey(),
-                                entry.getValue().values().stream()
+                                entry.getValue().sequenceBases,
+                                entry.getValue().featureStats.values().stream()
                                         .mapToLong(stats -> stats.count)
                                         .sum(),
-                                entry.getValue().entrySet().stream()
+                                entry.getValue().featureStats.entrySet().stream()
                                         .map(feature -> new Gff3Metrics.FeatureCount(
                                                 feature.getKey(),
                                                 feature.getValue().count,
@@ -125,6 +132,12 @@ public class MetricsCollector {
             }
         }
         return union + (curEnd - curStart + 1);
+    }
+
+    /** Per-accession state: declared region span plus per-type feature stats. */
+    private static final class Annotation {
+        long sequenceBases;
+        final TreeMap<String, TypeStats> featureStats = new TreeMap<>();
     }
 
     /** Running count and intervals for one feature type within one accession. */

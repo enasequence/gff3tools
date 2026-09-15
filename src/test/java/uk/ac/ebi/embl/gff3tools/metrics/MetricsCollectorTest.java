@@ -67,6 +67,7 @@ public class MetricsCollectorTest {
                         3,
                         List.of(new Gff3Metrics.AnnotationMetrics(
                                 "ACC1",
+                                1000,
                                 3,
                                 List.of(
                                         new Gff3Metrics.FeatureCount("CDS", 1, 10),
@@ -85,6 +86,7 @@ public class MetricsCollectorTest {
         Gff3Metrics metrics = collector.snapshot();
 
         assertEquals(2, metrics.totalFeatures());
+        assertEquals(1000, metrics.annotations().get(0).sequenceBases());
         assertEquals(1, metrics.annotations().size());
         assertEquals(
                 List.of(new Gff3Metrics.FeatureCount("CDS", 1, 10), new Gff3Metrics.FeatureCount("gene", 1, 10)),
@@ -109,7 +111,7 @@ public class MetricsCollectorTest {
         collector.record(annotation("ACC1"));
 
         assertEquals(
-                new Gff3Metrics(0, List.of(new Gff3Metrics.AnnotationMetrics("ACC1", 0, List.of()))),
+                new Gff3Metrics(0, List.of(new Gff3Metrics.AnnotationMetrics("ACC1", 1000, 0, List.of()))),
                 collector.snapshot());
     }
 
@@ -211,6 +213,35 @@ public class MetricsCollectorTest {
     }
 
     @Test
+    public void sequenceBasesComesFromTheRegionDirective() {
+        MetricsCollector collector = new MetricsCollector();
+        GFF3Annotation chunk = new GFF3Annotation();
+        chunk.setSequenceRegion(new GFF3SequenceRegion("ACC1", Optional.empty(), 500, 1500));
+        chunk.addFeature(featureAt("ACC1", "CDS", 500, 1500));
+        collector.record(chunk);
+
+        Gff3Metrics.AnnotationMetrics acc1 = collector.snapshot().annotations().get(0);
+
+        // Declared span 500..1500 -> 1001 bases, independent of feature spans.
+        assertEquals(1001, acc1.sequenceBases());
+        assertEquals(1001, acc1.features().get(0).bases());
+    }
+
+    @Test
+    public void annotationWithoutRegionHasZeroSequenceBases() {
+        MetricsCollector collector = new MetricsCollector();
+        GFF3Annotation chunk = new GFF3Annotation();
+        chunk.addFeature(featureAt("ACC1", "CDS", 1, 10));
+        collector.record(chunk);
+
+        Gff3Metrics.AnnotationMetrics acc1 = collector.snapshot().annotations().get(0);
+
+        assertEquals("ACC1", acc1.accession());
+        assertEquals(0, acc1.sequenceBases());
+        assertEquals(10, acc1.features().get(0).bases());
+    }
+
+    @Test
     public void jsonShapeIsStable() {
         MetricsCollector collector = new MetricsCollector();
         collector.record(annotation("ACC1", "gene", "gene", "CDS"));
@@ -221,6 +252,7 @@ public class MetricsCollectorTest {
                   "totalFeatures" : 3,
                   "annotations" : [ {
                     "accession" : "ACC1",
+                    "sequenceBases" : 1000,
                     "totalFeatures" : 3,
                     "features" : [ {
                       "name" : "CDS",

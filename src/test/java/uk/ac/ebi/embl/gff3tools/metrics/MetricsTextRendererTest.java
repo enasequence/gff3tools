@@ -28,6 +28,7 @@ public class MetricsTextRendererTest {
                 3,
                 List.of(new Gff3Metrics.AnnotationMetrics(
                         "seq1",
+                        1000,
                         3,
                         List.of(
                                 new Gff3Metrics.FeatureCount("CDS", 1, 10),
@@ -35,7 +36,7 @@ public class MetricsTextRendererTest {
 
         assertEquals(
                 """
-                seq1: 3 features (CDS 1, 10 bases; gene 2, 10 bases)
+                seq1: 3 features on 1000 bases (CDS 1, 10 bases; gene 2, 10 bases)
                 total: 3 features
                 """,
                 MetricsTextRenderer.render(metrics));
@@ -43,7 +44,7 @@ public class MetricsTextRendererTest {
 
     @Test
     public void annotationWithoutFeaturesOmitsCounts() {
-        Gff3Metrics metrics = new Gff3Metrics(0, List.of(new Gff3Metrics.AnnotationMetrics("seq1", 0, List.of())));
+        Gff3Metrics metrics = new Gff3Metrics(0, List.of(new Gff3Metrics.AnnotationMetrics("seq1", 0, 0, List.of())));
 
         assertEquals(
                 """

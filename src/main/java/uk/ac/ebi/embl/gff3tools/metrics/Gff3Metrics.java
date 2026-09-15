@@ -28,9 +28,9 @@ import java.util.List;
  * name. Records are immutable, so a snapshot stays valid after the run that produced it.
  *
  * <p>Serialization uses Jackson: record component names become the JSON keys, so the schema is
- * {@code totalFeatures}, {@code annotations[].accession}, {@code annotations[].totalFeatures},
- * {@code annotations[].features[].name}, {@code annotations[].features[].count},
- * {@code annotations[].features[].bases}.
+ * {@code totalFeatures}, {@code annotations[].accession}, {@code annotations[].sequenceBases},
+ * {@code annotations[].totalFeatures}, {@code annotations[].features[].name},
+ * {@code annotations[].features[].count}, {@code annotations[].features[].bases}.
  */
 public record Gff3Metrics(long totalFeatures, List<AnnotationMetrics> annotations) {
 
@@ -40,8 +40,14 @@ public record Gff3Metrics(long totalFeatures, List<AnnotationMetrics> annotation
         annotations = List.copyOf(annotations);
     }
 
-    /** Feature counts of one annotation (one entry per accession). */
-    public record AnnotationMetrics(String accession, long totalFeatures, List<FeatureCount> features) {
+    /**
+     * Feature counts of one annotation (one entry per accession). {@code sequenceBases} is the
+     * number of bases the annotation's {@code ##sequence-region} spans — the denominator for
+     * coverage questions ("feature type X covers {@code bases} of {@code sequenceBases}"); 0
+     * when the annotation declares no sequence region.
+     */
+    public record AnnotationMetrics(
+            String accession, long sequenceBases, long totalFeatures, List<FeatureCount> features) {
 
         public AnnotationMetrics {
             features = List.copyOf(features);

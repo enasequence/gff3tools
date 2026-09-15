@@ -17,8 +17,8 @@ import java.util.stream.Collectors;
  * total. Feature-name columns vary per file, so no table layout is attempted.
  *
  * <pre>
- * seq1: 812 features (CDS 310, 88000 bases; exon 382, 95000 bases; gene 120, 210000 bases)
- * seq2: 731 features (CDS 305, 87000 bases)
+ * seq1: 812 features on 79936830 bases (CDS 310, 88000 bases; exon 382, 95000 bases)
+ * seq2: 731 features on 44545901 bases (CDS 305, 87000 bases)
  * total: 1543 features
  * </pre>
  */
@@ -30,6 +30,9 @@ public final class MetricsTextRenderer {
         StringBuilder text = new StringBuilder();
         for (Gff3Metrics.AnnotationMetrics annotation : metrics.annotations()) {
             text.append("%s: %d features".formatted(annotation.accession(), annotation.totalFeatures()));
+            if (annotation.sequenceBases() > 0) {
+                text.append(" on %d bases".formatted(annotation.sequenceBases()));
+            }
             if (!annotation.features().isEmpty()) {
                 text.append(" (")
                         .append(annotation.features().stream()
