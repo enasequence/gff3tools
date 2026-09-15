@@ -51,6 +51,10 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
  * through the document's own {@code ##FASTA}, because {@code TranslationState} does not outlive
  * the run that produced it.
  *
+ * <p>The regrouping read uses {@link #readOnlyEngine()}: no fixes, validations or context providers,
+ * failing fast on syntax errors. The document was validated when it was first written, so
+ * regrouping only parses and writes; {@code WithoutValidation} checks that nothing else runs.
+ *
  * <p><strong>All groups come from a single read</strong> — annotations are routed into their
  * groups in one pass and every group is written through that same reader. Re-opening a reader per
  * group would re-parse and re-validate the whole file each time, which costs most in the
@@ -255,6 +259,56 @@ public class Gff3FileRegroupingTest {
         }
     }
 
+    @Nested
+    @DisplayName("regrouped without running fixes or validations")
+    class WithoutValidation {
+
+        private static final String LOWER_CASE_LOCUS_TAG = "locus_tag=lower_case_tag";
+        private static final String UPPER_CASE_LOCUS_TAG = "locus_tag=LOWER_CASE_TAG";
+
+        @Test
+        @DisplayName("the validating engine does fix and flag the source, so the checks below are meaningful")
+        void validatingEngineFixesAndFlagsTheSource() throws Exception {
+            ValidationEngine validating = validatingEngine();
+
+            String written = Files.readString(writeViolations(validating));
+
+            assertTrue(written.contains(UPPER_CASE_LOCUS_TAG), "LOCUS_TAG_TO_UPPERCASE did not run");
+            assertTrue(
+                    validating.getCollectedErrors().stream()
+                            .anyMatch(error -> "ONTOLOGY_FEATURE".equals(error.getValidationRule())),
+                    "ONTOLOGY_FEATURE did not flag the unknown feature type");
+        }
+
+        @Test
+        @DisplayName("leaves values a fix would change untouched")
+        void appliesNoFixes() throws Exception {
+            String written = Files.readString(writeViolations(readOnlyEngine()));
+
+            assertTrue(written.contains(LOWER_CASE_LOCUS_TAG), "a fix changed the regrouped document");
+            assertFalse(written.contains(UPPER_CASE_LOCUS_TAG), "a fix changed the regrouped document");
+        }
+
+        @Test
+        @DisplayName("reports no rule violations for a source that breaks a rule")
+        void runsNoValidations() throws Exception {
+            ValidationEngine readOnly = readOnlyEngine();
+
+            writeViolations(readOnly);
+
+            assertTrue(readOnly.getCollectedErrors().isEmpty(), "a validation ran during regrouping");
+            assertTrue(readOnly.getParsingWarnings().isEmpty(), "a validation ran during regrouping");
+        }
+
+        private Path writeViolations(ValidationEngine engine) throws Exception {
+            return writeGroups(
+                            resource("unvalidated/rule-violations.gff3"),
+                            Map.of("violations.gff3", List.of("ACC1.1")),
+                            engine)
+                    .get("violations.gff3");
+        }
+    }
+
     // helpers
 
     /**
@@ -265,7 +319,7 @@ public class Gff3FileRegroupingTest {
         Path output = tempDir.resolve("converted.gff3");
         try (BufferedReader tsv = Files.newBufferedReader(resource("tsv/cds-three-entries.tsv"));
                 BufferedWriter gff3 = Files.newBufferedWriter(output);
-                ValidationEngine engine = engine()) {
+                ValidationEngine engine = validatingEngine()) {
             new TSVToGFF3Converter(engine).convert(tsv, gff3);
         }
         return output;
@@ -279,9 +333,10 @@ public class Gff3FileRegroupingTest {
         return groups;
     }
 
-    /** The five-annotation source, written out as one document. */
+    /** The five-annotation source, validated and written out as one document. */
     private Path writeWhole() throws Exception {
-        return writeGroups(resource("source.gff3"), Map.of("whole.gff3", ALL)).get("whole.gff3");
+        return writeGroups(resource("source.gff3"), Map.of("whole.gff3", ALL), validatingEngine())
+                .get("whole.gff3");
     }
 
     /**
@@ -292,12 +347,17 @@ public class Gff3FileRegroupingTest {
      * @return each group's written path, by output file name
      */
     private Map<String, Path> writeGroups(Path source, Map<String, List<String>> groups) throws Exception {
+        return writeGroups(source, groups, readOnlyEngine());
+    }
+
+    private Map<String, Path> writeGroups(Path source, Map<String, List<String>> groups, ValidationEngine engine)
+            throws Exception {
         Map<String, List<GFF3Annotation>> selected = new LinkedHashMap<>();
         groups.keySet().forEach(name -> selected.put(name, new ArrayList<>()));
         Map<String, Path> written = new LinkedHashMap<>();
 
         try (BufferedReader text = Files.newBufferedReader(source);
-                GFF3FileReader reader = new GFF3FileReader(engine(), text, source)) {
+                GFF3FileReader reader = new GFF3FileReader(engine, text, source)) {
             reader.readHeader();
             reader.read(annotation -> groups.forEach((name, wanted) -> {
                 if (wanted.contains(annotation.getAccession())) {
@@ -321,7 +381,7 @@ public class Gff3FileRegroupingTest {
     private List<String> readAccessions(Path file) throws Exception {
         List<String> accessions = new ArrayList<>();
         try (BufferedReader text = Files.newBufferedReader(file);
-                GFF3FileReader reader = new GFF3FileReader(engine(), text, file)) {
+                GFF3FileReader reader = new GFF3FileReader(readOnlyEngine(), text, file)) {
             reader.readHeader();
             reader.read(annotation -> accessions.add(annotation.getAccession()));
         }
@@ -353,8 +413,18 @@ public class Gff3FileRegroupingTest {
         return "MK" + "ACDEF".charAt(i - 1) + "PQRW";
     }
 
-    private ValidationEngine engine() {
+    /** The engine a document is first validated with: every default fix, validation and provider. */
+    private ValidationEngine validatingEngine() {
         return new ValidationEngineBuilder().build();
+    }
+
+    /** The engine regrouping reads with: parses only, and fails on the first syntax error. */
+    private ValidationEngine readOnlyEngine() {
+        return new ValidationEngineBuilder()
+                .disableAutodetectValidationsAndFixes()
+                .disableAutodetectContextProviders()
+                .failFast(true)
+                .build();
     }
 
     private static int countOf(String haystack, String needle) {
