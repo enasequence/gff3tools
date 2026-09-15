@@ -188,6 +188,85 @@ public class ValidationCommandTest {
     }
 
     @Test
+    void metricsStderrDefaultsToText() throws Exception {
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 200
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1
+                seq1\t.\tCDS\t100\t193\t.\t+\t0\tID=cds2
+                ##sequence-region seq2 1 100
+                seq2\t.\tCDS\t1\t93\t.\t+\t0\tID=cds3
+                """);
+
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream captured = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(captured, true, StandardCharsets.UTF_8));
+        try {
+            int exitCode = executeValidation("validation", "--metrics", "-", gff3.toString());
+            assertEquals(0, exitCode, "Validation should succeed");
+            String stderr = captured.toString(StandardCharsets.UTF_8);
+            assertTrue(stderr.contains("seq1: 2 features (CDS 2)"), stderr);
+            assertTrue(stderr.contains("seq2: 1 features (CDS 1)"), stderr);
+            assertTrue(stderr.contains("total: 3 features"), stderr);
+            assertFalse(stderr.contains("totalFeatures"), "stderr should be text, not JSON: " + stderr);
+        } finally {
+            System.setErr(originalErr);
+        }
+    }
+
+    @Test
+    void metricsStderrExplicitJson() throws Exception {
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 93
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1
+                """);
+
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream captured = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(captured, true, StandardCharsets.UTF_8));
+        try {
+            int exitCode =
+                    executeValidation("validation", "--metrics", "-", "--metrics-format", "json", gff3.toString());
+            assertEquals(0, exitCode, "Validation should succeed");
+            String stderr = captured.toString(StandardCharsets.UTF_8);
+            assertTrue(stderr.contains("\"totalFeatures\" : 1"), stderr);
+        } finally {
+            System.setErr(originalErr);
+        }
+    }
+
+    @Test
+    void metricsFileExplicitTextFormat() throws Exception {
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 93
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1
+                """);
+        Path metricsFile = tempDir.resolve("metrics.txt");
+
+        int exitCode = executeValidation(
+                "validation", "--metrics", metricsFile.toString(), "--metrics-format", "text", gff3.toString());
+
+        assertEquals(0, exitCode, "Validation should succeed");
+        assertEquals(
+                """
+                seq1: 1 features (CDS 1)
+                total: 1 features
+                """,
+                Files.readString(metricsFile));
+    }
+
+    @Test
     void validation_outputToFile_writesFixedGff3() throws Exception {
         // gene lacking gene_synonym/gene on the mRNA/rRNA triggers CdsRnaLocusFix to propagate it
         Path gff3 = tempDir.resolve("input.gff3");

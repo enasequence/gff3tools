@@ -35,7 +35,10 @@ import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
+import uk.ac.ebi.embl.gff3tools.metrics.Gff3Metrics;
 import uk.ac.ebi.embl.gff3tools.metrics.MetricsCollector;
+import uk.ac.ebi.embl.gff3tools.metrics.MetricsFormat;
+import uk.ac.ebi.embl.gff3tools.metrics.MetricsTextRenderer;
 import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
@@ -211,15 +214,28 @@ public abstract class AbstractCommand implements Runnable {
     }
 
     /**
-     * Writes the optional {@code --metrics} JSON report. Never masks the primary result: a
-     * metrics write failure is logged and the run's own outcome (and exit code) stands.
+     * Writes the optional {@code --metrics} report in the resolved {@link MetricsFormat}: JSON
+     * for a file path, human-readable text for the terminal sentinel {@code -}, with an explicit
+     * {@code --metrics-format} always winning. Terminal output goes to stderr — stdout carries
+     * the command's primary output. Never masks the primary result: a metrics write failure is
+     * logged and the run's own outcome (and exit code) stands.
      */
-    protected void writeMetricsReport(MetricsCollector metrics, Path metricsFilePath) {
+    protected void writeMetricsReport(MetricsCollector metrics, Path metricsFilePath, MetricsFormat metricsFormat) {
         if (metrics == null || metricsFilePath == null) {
             return;
         }
+        boolean toStderr = isStdioSentinel(metricsFilePath);
+        MetricsFormat format = MetricsFormat.resolve(metricsFormat, toStderr);
         try {
-            metrics.snapshot().writeJson(metricsFilePath);
+            Gff3Metrics snapshot = metrics.snapshot();
+            if (toStderr) {
+                System.err.println(
+                        format == MetricsFormat.TEXT ? MetricsTextRenderer.render(snapshot) : snapshot.toJson());
+            } else if (format == MetricsFormat.TEXT) {
+                Files.writeString(metricsFilePath, MetricsTextRenderer.render(snapshot));
+            } else {
+                snapshot.writeJson(metricsFilePath);
+            }
             log.info("Metrics written to {}", metricsFilePath);
         } catch (IOException e) {
             log.error("Failed to write metrics file {}: {}", metricsFilePath, e.getMessage());

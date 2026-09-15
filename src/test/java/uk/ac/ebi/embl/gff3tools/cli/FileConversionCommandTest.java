@@ -261,6 +261,39 @@ class FileConversionCommandTest {
     }
 
     @Test
+    void metricsFileExplicitTextFormatForConversion() throws Exception {
+        Path inputFile = tempDir.resolve("valid.gff3");
+        Files.writeString(
+                inputFile,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 1000
+                seq1\t.\tgene\t1\t100\t.\t+\t.\tID=gene1
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1;Parent=gene1
+                """);
+
+        Path outputFile = tempDir.resolve("output.embl");
+        Path metricsFile = tempDir.resolve("metrics.txt");
+
+        int exitCode = executeConversion(
+                "conversion",
+                "--metrics",
+                metricsFile.toString(),
+                "--metrics-format",
+                "text",
+                inputFile.toString(),
+                outputFile.toString());
+
+        assertEquals(0, exitCode, "Conversion should succeed");
+        assertEquals(
+                """
+                seq1: 2 features (CDS 1, gene 1)
+                total: 2 features
+                """,
+                Files.readString(metricsFile));
+    }
+
+    @Test
     void conversion_withUnmappedFeature_collectsErrors() throws Exception {
         // Create a GFF3 file with an unmapped feature (misc_RNA has no INSDC mapping)
         Path inputFile = tempDir.resolve("unmapped_feature.gff3");

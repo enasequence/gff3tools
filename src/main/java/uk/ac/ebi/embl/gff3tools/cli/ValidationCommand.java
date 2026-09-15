@@ -29,6 +29,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.metrics.MetricsCollector;
+import uk.ac.ebi.embl.gff3tools.metrics.MetricsFormat;
 import uk.ac.ebi.embl.gff3tools.utils.GapOptionsValidator;
 import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
@@ -68,9 +69,17 @@ public class ValidationCommand extends AbstractCommand {
 
     @CommandLine.Option(
             names = {"--metrics"},
-            description = "Optional. Write a JSON metrics report (feature counts per annotation) to this "
-                    + "path. The report is written even when validation fails.")
+            description = "Optional. Write a metrics report (feature counts per annotation) to this path, "
+                    + "or '-' to print it to stderr. Default format: JSON for a file, text for '-'. "
+                    + "The report is written even when validation fails.")
     public Path metricsFilePath;
+
+    @CommandLine.Option(
+            names = {"--metrics-format"},
+            converter = MetricsFormat.Converter.class,
+            description = "Format of the --metrics report: ${COMPLETION-CANDIDATES} (case-insensitive). "
+                    + "Default: json for a file, text for '-'. Inert without --metrics.")
+    public MetricsFormat metricsFormat;
 
     /**
      * Absent (the default) means report-only: no gff3 is written, and this stays backward
@@ -231,7 +240,7 @@ public class ValidationCommand extends AbstractCommand {
                 }
             } finally {
                 // Written in a finally so a failing validation still reports what it counted.
-                writeMetricsReport(metrics, metricsFilePath);
+                writeMetricsReport(metrics, metricsFilePath, metricsFormat);
                 if (decompressedTempFile != null) {
                     try {
                         Files.deleteIfExists(decompressedTempFile);
