@@ -211,17 +211,13 @@ supported and round-trips the `##FASTA` section normally.
 
 Both `conversion` and `validation` can emit a metrics report summarising the features of each
 annotation they read or produce: feature counts and base counts grouped by feature type, per
-annotation (accession), plus totals. Three base metrics are reported per type:
-
-- `bases` — the summed feature span lengths (`end - start + 1`). Overlapping features of the
-  same type are counted per feature, so multi-isoform annotations inflate this number.
-- `uniqueBases` — the union of those spans with overlaps merged: how much of the sequence the
-  features of that type actually cover. Strand-agnostic; scoped to one type per accession.
-- comparing `uniqueBases` against the sequence length (the `region` feature or
-  `##sequence-region` directive) gives the uncovered portion of the sequence.
-
-The report is written even when the run fails validation (exit code `20`), so the counts are
-available exactly when they are most useful.
+annotation (accession), plus totals. `bases` per type is the overlap-merged union of the
+feature spans — how much of the sequence the features of that type actually cover. It is
+strand-agnostic and scoped to one type per accession: overlapping same-type features (e.g.
+mRNA isoforms sharing exons) count once, not once per feature. Comparing `bases` against the
+sequence length (the `region` feature or `##sequence-region` directive) gives the uncovered
+portion of the sequence. The report is written even when the run fails validation (exit code
+`20`), so the counts are available exactly when they are most useful.
 
 | Invocation | Output |
 |------|------|
@@ -263,13 +259,11 @@ The JSON report is stable, pretty-printed, and maps directly onto the library's
     "features" : [ {
       "name" : "CDS",
       "count" : 1,
-      "bases" : 93,
-      "uniqueBases" : 93
+      "bases" : 93
     }, {
       "name" : "gene",
       "count" : 1,
-      "bases" : 100,
-      "uniqueBases" : 100
+      "bases" : 100
     } ]
   }, {
     "accession" : "seq2",
@@ -277,8 +271,7 @@ The JSON report is stable, pretty-printed, and maps directly onto the library's
     "features" : [ {
       "name" : "CDS",
       "count" : 1,
-      "bases" : 93,
-      "uniqueBases" : 93
+      "bases" : 93
     } ]
   } ]
 }
@@ -292,8 +285,8 @@ produces one entry per accession. Feature counts are sorted by name.
 The text rendering is a summary for humans: one line per annotation, then a total.
 
 ```text
-seq1: 2 features (CDS 1, 93 bases, unique 93; gene 1, 100 bases, unique 100)
-seq2: 1 features (CDS 1, 93 bases, unique 93)
+seq1: 2 features (CDS 1, 93 bases; gene 1, 100 bases)
+seq2: 1 features (CDS 1, 93 bases)
 total: 3 features
 ```
 

@@ -30,16 +30,14 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
  * {@link #snapshot()} to obtain the immutable {@link Gff3Metrics} model, which can be consumed
  * programmatically or serialized to JSON.
  *
- * <p>Base counts per feature type: {@code bases} is the plain sum of feature span lengths
- * ({@link GFF3Feature#getLength()}), while {@code uniqueBases} is the union of those spans with
- * overlaps merged — "how much of the sequence features of this type cover". Both are
- * strand-agnostic and scoped to one type within one accession. Overlapping features of the same
- * type (for example mRNA isoforms sharing exons) count once towards {@code uniqueBases} but once
- * per feature towards {@code bases}.
+ * <p>Base counts per feature type: {@code bases} is the union of the feature spans with overlaps
+ * merged — "how much of the sequence features of this type cover". It is strand-agnostic and
+ * scoped to one type within one accession, so overlapping features of the same type (for example
+ * mRNA isoforms sharing exons) count once, not once per feature.
  *
- * <p>Memory: {@code bases} is a running counter, but the union requires retaining each feature's
- * interval until {@link #snapshot()} merges it — O(intervals of the run), a few MB per million
- * features. Feature counts themselves are still never retained.
+ * <p>Memory: the union requires retaining each feature's interval until {@link #snapshot()}
+ * merges it — O(intervals of the run), a few MB per million features. Feature counts themselves
+ * are still never retained.
  */
 public class MetricsCollector {
 
@@ -63,9 +61,7 @@ public class MetricsCollector {
         for (GFF3Feature feature : annotation.getFeatures()) {
             TypeStats stats = featureStats.computeIfAbsent(feature.getName(), name -> new TypeStats());
             stats.count++;
-            long length = feature.getLength();
-            stats.bases += length;
-            if (length > 0) {
+            if (feature.getLength() > 0) {
                 stats.intervals.add(new long[] {feature.getStart(), feature.getEnd()});
             }
         }
@@ -100,7 +96,6 @@ public class MetricsCollector {
                                         .map(feature -> new Gff3Metrics.FeatureCount(
                                                 feature.getKey(),
                                                 feature.getValue().count,
-                                                feature.getValue().bases,
                                                 unionOf(feature.getValue().intervals)))
                                         .toList()))
                         .toList());
@@ -132,10 +127,9 @@ public class MetricsCollector {
         return union + (curEnd - curStart + 1);
     }
 
-    /** Running count, base total and intervals for one feature type within one accession. */
+    /** Running count and intervals for one feature type within one accession. */
     private static final class TypeStats {
         long count;
-        long bases;
         // Retained until snapshot(); {start, end} pairs of length > 0 only.
         final List<long[]> intervals = new ArrayList<>();
     }

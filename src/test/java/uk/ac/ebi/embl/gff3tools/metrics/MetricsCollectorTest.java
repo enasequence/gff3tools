@@ -69,8 +69,8 @@ public class MetricsCollectorTest {
                                 "ACC1",
                                 3,
                                 List.of(
-                                        new Gff3Metrics.FeatureCount("CDS", 1, 10, 10),
-                                        new Gff3Metrics.FeatureCount("gene", 2, 20, 10))))),
+                                        new Gff3Metrics.FeatureCount("CDS", 1, 10),
+                                        new Gff3Metrics.FeatureCount("gene", 2, 10))))),
                 metrics);
     }
 
@@ -87,9 +87,7 @@ public class MetricsCollectorTest {
         assertEquals(2, metrics.totalFeatures());
         assertEquals(1, metrics.annotations().size());
         assertEquals(
-                List.of(
-                        new Gff3Metrics.FeatureCount("CDS", 1, 10, 10),
-                        new Gff3Metrics.FeatureCount("gene", 1, 10, 10)),
+                List.of(new Gff3Metrics.FeatureCount("CDS", 1, 10), new Gff3Metrics.FeatureCount("gene", 1, 10)),
                 metrics.annotations().get(0).features());
     }
 
@@ -145,7 +143,7 @@ public class MetricsCollectorTest {
 
         assertEquals(1, first.totalFeatures());
         assertEquals(
-                List.of(new Gff3Metrics.FeatureCount("gene", 1, 10, 10)),
+                List.of(new Gff3Metrics.FeatureCount("gene", 1, 10)),
                 first.annotations().get(0).features());
         assertEquals(2, collector.snapshot().totalFeatures());
     }
@@ -162,7 +160,7 @@ public class MetricsCollectorTest {
     }
 
     @Test
-    public void baseCountsSumFeatureSpans() {
+    public void basesMergeOverlappingAndDisjointSpans() {
         MetricsCollector collector = new MetricsCollector();
         collector.record(annotation("ACC1", "gene", "gene"));
         GFF3Annotation chunk = new GFF3Annotation();
@@ -173,15 +171,14 @@ public class MetricsCollectorTest {
 
         Gff3Metrics.AnnotationMetrics acc1 = collector.snapshot().annotations().get(0);
 
+        assertEquals(new Gff3Metrics.FeatureCount("CDS", 2, 26), acc1.features().get(0));
+        // Same-type overlaps count once in 'bases' (see MetricsCollector javadoc).
         assertEquals(
-                new Gff3Metrics.FeatureCount("CDS", 2, 26, 26), acc1.features().get(0));
-        // Same-type overlaps are double-counted in 'bases' by design (see MetricsCollector javadoc).
-        assertEquals(
-                new Gff3Metrics.FeatureCount("gene", 2, 20, 10), acc1.features().get(1));
+                new Gff3Metrics.FeatureCount("gene", 2, 10), acc1.features().get(1));
     }
 
     @Test
-    public void uniqueBasesMergesOverlappingAndDisjointSpans() {
+    public void basesUnionMergesAcrossContiguousChunks() {
         MetricsCollector collector = new MetricsCollector();
         GFF3Annotation chunk = new GFF3Annotation();
         chunk.setSequenceRegion(new GFF3SequenceRegion("ACC1", Optional.empty(), 1, 1000));
@@ -193,12 +190,12 @@ public class MetricsCollectorTest {
         Gff3Metrics.FeatureCount cds =
                 collector.snapshot().annotations().get(0).features().get(0);
 
-        // bases = 10 + 16 + 11; unique = [1..10] + [20..40] (the 30..35 overlap merges).
-        assertEquals(new Gff3Metrics.FeatureCount("CDS", 3, 37, 31), cds);
+        // bases = union of [1..10] + [20..40] (the 30..35 overlap merges).
+        assertEquals(new Gff3Metrics.FeatureCount("CDS", 3, 31), cds);
     }
 
     @Test
-    public void uniqueBasesIsStrandAgnostic() {
+    public void basesIsStrandAgnostic() {
         MetricsCollector collector = new MetricsCollector();
         GFF3Annotation chunk = new GFF3Annotation();
         chunk.setSequenceRegion(new GFF3SequenceRegion("ACC1", Optional.empty(), 1, 1000));
@@ -210,7 +207,7 @@ public class MetricsCollectorTest {
         Gff3Metrics.FeatureCount gene =
                 collector.snapshot().annotations().get(0).features().get(0);
 
-        assertEquals(new Gff3Metrics.FeatureCount("gene", 2, 200, 100), gene);
+        assertEquals(new Gff3Metrics.FeatureCount("gene", 2, 100), gene);
     }
 
     @Test
@@ -228,13 +225,11 @@ public class MetricsCollectorTest {
                     "features" : [ {
                       "name" : "CDS",
                       "count" : 1,
-                      "bases" : 10,
-                      "uniqueBases" : 10
+                      "bases" : 10
                     }, {
                       "name" : "gene",
                       "count" : 2,
-                      "bases" : 20,
-                      "uniqueBases" : 10
+                      "bases" : 10
                     } ]
                   } ]
                 }""",

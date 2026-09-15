@@ -48,8 +48,11 @@ public record Gff3Metrics(long totalFeatures, List<AnnotationMetrics> annotation
         }
     }
 
-    /** Count and span metrics of a single feature type within one annotation. */
-    public record FeatureCount(String name, long count, long bases, long uniqueBases) {}
+    /**
+     * Count and covered bases of a single feature type within one annotation. {@code bases} is
+     * the overlap-merged union of the feature spans (see {@link MetricsCollector}).
+     */
+    public record FeatureCount(String name, long count, long bases) {}
 
     /** Renders the metrics as a pretty-printed JSON report. */
     public String toJson() {

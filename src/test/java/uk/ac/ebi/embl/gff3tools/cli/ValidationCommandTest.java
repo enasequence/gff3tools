@@ -161,8 +161,7 @@ public class ValidationCommandTest {
                     "features" : [ {
                       "name" : "CDS",
                       "count" : 2,
-                      "bases" : 187,
-                      "uniqueBases" : 187
+                      "bases" : 187
                     } ]
                   }, {
                     "accession" : "seq2",
@@ -170,8 +169,7 @@ public class ValidationCommandTest {
                     "features" : [ {
                       "name" : "CDS",
                       "count" : 1,
-                      "bases" : 93,
-                      "uniqueBases" : 93
+                      "bases" : 93
                     } ]
                   } ]
                 }""",
@@ -212,8 +210,8 @@ public class ValidationCommandTest {
             int exitCode = executeValidation("validation", "--metrics", "-", gff3.toString());
             assertEquals(0, exitCode, "Validation should succeed");
             String stderr = captured.toString(StandardCharsets.UTF_8);
-            assertTrue(stderr.contains("seq1: 2 features (CDS 2, 187 bases, unique 187)"), stderr);
-            assertTrue(stderr.contains("seq2: 1 features (CDS 1, 93 bases, unique 93)"), stderr);
+            assertTrue(stderr.contains("seq1: 2 features (CDS 2, 187 bases)"), stderr);
+            assertTrue(stderr.contains("seq2: 1 features (CDS 1, 93 bases)"), stderr);
             assertTrue(stderr.contains("total: 3 features"), stderr);
             assertFalse(stderr.contains("totalFeatures"), "stderr should be text, not JSON: " + stderr);
         } finally {
@@ -264,7 +262,7 @@ public class ValidationCommandTest {
         assertEquals(0, exitCode, "Validation should succeed");
         assertEquals(
                 """
-                seq1: 1 features (CDS 1, 93 bases, unique 93)
+                seq1: 1 features (CDS 1, 93 bases)
                 total: 1 features
                 """,
                 Files.readString(metricsFile));
