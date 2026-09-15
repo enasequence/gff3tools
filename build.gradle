@@ -75,6 +75,9 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:1.18.30")
     implementation('uk.ac.ebi.ena.sequence:sequencetools:2.+')
     implementation("uk.ac.ebi.ena:fastareader:1.2.0")
+    // Declared explicitly (also pulled transitively via fastareader/owlapi): the metrics model
+    // serializes itself with Jackson, so it must not depend on a transitive's goodwill.
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.6")
     implementation "io.vavr:vavr:0.10.5"
     implementation "org.jgrapht:jgrapht-core:1.5.2"
     implementation("info.picocli:picocli:4.7.6")

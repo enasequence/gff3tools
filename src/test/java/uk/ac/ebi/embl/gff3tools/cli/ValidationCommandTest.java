@@ -134,6 +134,60 @@ public class ValidationCommandTest {
     }
 
     @Test
+    void metricsOptionWritesFeatureCounts() throws Exception {
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 200
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1
+                seq1\t.\tCDS\t100\t193\t.\t+\t0\tID=cds2
+                ##sequence-region seq2 1 100
+                seq2\t.\tCDS\t1\t93\t.\t+\t0\tID=cds3
+                """);
+        Path metricsFile = tempDir.resolve("metrics.json");
+
+        int exitCode = executeValidation("validation", "--metrics", metricsFile.toString(), gff3.toString());
+
+        assertEquals(0, exitCode, "Validation should succeed");
+        assertEquals(
+                """
+                {
+                  "totalFeatures" : 3,
+                  "annotations" : [ {
+                    "accession" : "seq1",
+                    "totalFeatures" : 2,
+                    "features" : [ {
+                      "name" : "CDS",
+                      "count" : 2
+                    } ]
+                  }, {
+                    "accession" : "seq2",
+                    "totalFeatures" : 1,
+                    "features" : [ {
+                      "name" : "CDS",
+                      "count" : 1
+                    } ]
+                  } ]
+                }""",
+                Files.readString(metricsFile));
+    }
+
+    @Test
+    void metricsOptionWritesReportWhenValidationFails() throws Exception {
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(gff3, "invalid content\n");
+        Path metricsFile = tempDir.resolve("metrics.json");
+
+        int exitCode = executeValidation("validation", "--metrics", metricsFile.toString(), gff3.toString());
+
+        assertNotEquals(0, exitCode, "Validation should fail");
+        assertTrue(Files.exists(metricsFile), "Metrics report should be written even on failure");
+        assertTrue(Files.readString(metricsFile).contains("\"totalFeatures\" : 0"), "no features were read");
+    }
+
+    @Test
     void validation_outputToFile_writesFixedGff3() throws Exception {
         // gene lacking gene_synonym/gene on the mRNA/rRNA triggers CdsRnaLocusFix to propagate it
         Path gff3 = tempDir.resolve("input.gff3");

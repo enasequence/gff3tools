@@ -35,6 +35,7 @@ import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
+import uk.ac.ebi.embl.gff3tools.metrics.MetricsCollector;
 import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
@@ -206,6 +207,22 @@ public abstract class AbstractCommand implements Runnable {
                 log.warn("Failed to delete temporary file: {}", tempFile);
             }
             throw e;
+        }
+    }
+
+    /**
+     * Writes the optional {@code --metrics} JSON report. Never masks the primary result: a
+     * metrics write failure is logged and the run's own outcome (and exit code) stands.
+     */
+    protected void writeMetricsReport(MetricsCollector metrics, Path metricsFilePath) {
+        if (metrics == null || metricsFilePath == null) {
+            return;
+        }
+        try {
+            metrics.snapshot().writeJson(metricsFilePath);
+            log.info("Metrics written to {}", metricsFilePath);
+        } catch (IOException e) {
+            log.error("Failed to write metrics file {}: {}", metricsFilePath, e.getMessage());
         }
     }
 
