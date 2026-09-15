@@ -31,8 +31,12 @@ public class MetricsCollectorTest {
     Path tempDir;
 
     private static GFF3Feature feature(String seqId, String name) {
+        return featureAt(seqId, name, 1L, 10L);
+    }
+
+    private static GFF3Feature featureAt(String seqId, String name, long start, long end) {
         return new GFF3Feature(
-                Optional.empty(), Optional.empty(), seqId, Optional.empty(), "", name, 1L, 10L, "", "", "");
+                Optional.empty(), Optional.empty(), seqId, Optional.empty(), "", name, start, end, "", "", "");
     }
 
     private static GFF3Annotation annotation(String accession, String... featureNames) {
@@ -65,8 +69,8 @@ public class MetricsCollectorTest {
                                 "ACC1",
                                 3,
                                 List.of(
-                                        new Gff3Metrics.FeatureCount("CDS", 1),
-                                        new Gff3Metrics.FeatureCount("gene", 2))))),
+                                        new Gff3Metrics.FeatureCount("CDS", 1, 10),
+                                        new Gff3Metrics.FeatureCount("gene", 2, 20))))),
                 metrics);
     }
 
@@ -83,7 +87,7 @@ public class MetricsCollectorTest {
         assertEquals(2, metrics.totalFeatures());
         assertEquals(1, metrics.annotations().size());
         assertEquals(
-                List.of(new Gff3Metrics.FeatureCount("CDS", 1), new Gff3Metrics.FeatureCount("gene", 1)),
+                List.of(new Gff3Metrics.FeatureCount("CDS", 1, 10), new Gff3Metrics.FeatureCount("gene", 1, 10)),
                 metrics.annotations().get(0).features());
     }
 
@@ -139,7 +143,7 @@ public class MetricsCollectorTest {
 
         assertEquals(1, first.totalFeatures());
         assertEquals(
-                List.of(new Gff3Metrics.FeatureCount("gene", 1)),
+                List.of(new Gff3Metrics.FeatureCount("gene", 1, 10)),
                 first.annotations().get(0).features());
         assertEquals(2, collector.snapshot().totalFeatures());
     }
@@ -156,6 +160,24 @@ public class MetricsCollectorTest {
     }
 
     @Test
+    public void baseCountsSumFeatureSpans() {
+        MetricsCollector collector = new MetricsCollector();
+        collector.record(annotation("ACC1", "gene", "gene"));
+        GFF3Annotation chunk = new GFF3Annotation();
+        chunk.setSequenceRegion(new GFF3SequenceRegion("ACC1", Optional.empty(), 1, 1000));
+        chunk.addFeature(featureAt("ACC1", "CDS", 1, 10));
+        chunk.addFeature(featureAt("ACC1", "CDS", 20, 35));
+        collector.record(chunk);
+
+        Gff3Metrics.AnnotationMetrics acc1 = collector.snapshot().annotations().get(0);
+
+        assertEquals(new Gff3Metrics.FeatureCount("CDS", 2, 26), acc1.features().get(0));
+        // Same-type overlaps are double-counted by design (see MetricsCollector javadoc).
+        assertEquals(
+                new Gff3Metrics.FeatureCount("gene", 2, 20), acc1.features().get(1));
+    }
+
+    @Test
     public void jsonShapeIsStable() {
         MetricsCollector collector = new MetricsCollector();
         collector.record(annotation("ACC1", "gene", "gene", "CDS"));
@@ -169,10 +191,12 @@ public class MetricsCollectorTest {
                     "totalFeatures" : 3,
                     "features" : [ {
                       "name" : "CDS",
-                      "count" : 1
+                      "count" : 1,
+                      "bases" : 10
                     }, {
                       "name" : "gene",
-                      "count" : 2
+                      "count" : 2,
+                      "bases" : 20
                     } ]
                   } ]
                 }""",

@@ -29,11 +29,13 @@ public class MetricsTextRendererTest {
                 List.of(new Gff3Metrics.AnnotationMetrics(
                         "seq1",
                         3,
-                        List.of(new Gff3Metrics.FeatureCount("CDS", 1), new Gff3Metrics.FeatureCount("gene", 2)))));
+                        List.of(
+                                new Gff3Metrics.FeatureCount("CDS", 1, 10),
+                                new Gff3Metrics.FeatureCount("gene", 2, 20)))));
 
         assertEquals(
                 """
-                seq1: 3 features (CDS 1, gene 2)
+                seq1: 3 features (CDS 1, 10 bases; gene 2, 20 bases)
                 total: 3 features
                 """,
                 MetricsTextRenderer.render(metrics));

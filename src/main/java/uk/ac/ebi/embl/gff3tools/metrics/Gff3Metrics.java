@@ -29,7 +29,8 @@ import java.util.List;
  *
  * <p>Serialization uses Jackson: record component names become the JSON keys, so the schema is
  * {@code totalFeatures}, {@code annotations[].accession}, {@code annotations[].totalFeatures},
- * {@code annotations[].features[].name}, {@code annotations[].features[].count}.
+ * {@code annotations[].features[].name}, {@code annotations[].features[].count},
+ * {@code annotations[].features[].bases}.
  */
 public record Gff3Metrics(long totalFeatures, List<AnnotationMetrics> annotations) {
 
@@ -47,8 +48,8 @@ public record Gff3Metrics(long totalFeatures, List<AnnotationMetrics> annotation
         }
     }
 
-    /** Count of a single feature type within one annotation. */
-    public record FeatureCount(String name, long count) {}
+    /** Count and summed span length of a single feature type within one annotation. */
+    public record FeatureCount(String name, long count, long bases) {}
 
     /** Renders the metrics as a pretty-printed JSON report. */
     public String toJson() {

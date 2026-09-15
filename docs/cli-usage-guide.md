@@ -210,9 +210,12 @@ supported and round-trips the `##FASTA` section normally.
 ## Metrics reports (`--metrics`)
 
 Both `conversion` and `validation` can emit a metrics report summarising the features of each
-annotation they read or produce: feature counts grouped by feature type, per annotation
-(accession), plus totals. The report is written even when the run fails validation (exit code
-`20`), so the counts are available exactly when they are most useful.
+annotation they read or produce: feature counts and base counts grouped by feature type, per
+annotation (accession), plus totals. Base counts are the summed feature span lengths
+(`end - start + 1`); overlapping features of the same type (e.g. mRNA isoforms sharing exons)
+are counted in every feature, so per-type base counts can exceed the unique bases covered. The
+report is written even when the run fails validation (exit code `20`), so the counts are
+available exactly when they are most useful.
 
 | Invocation | Output |
 |------|------|
@@ -253,17 +256,20 @@ The JSON report is stable, pretty-printed, and maps directly onto the library's
     "totalFeatures" : 2,
     "features" : [ {
       "name" : "CDS",
-      "count" : 1
+      "count" : 1,
+      "bases" : 93
     }, {
       "name" : "gene",
-      "count" : 1
+      "count" : 1,
+      "bases" : 100
     } ]
   }, {
     "accession" : "seq2",
     "totalFeatures" : 1,
     "features" : [ {
       "name" : "CDS",
-      "count" : 1
+      "count" : 1,
+      "bases" : 93
     } ]
   } ]
 }
@@ -277,8 +283,8 @@ produces one entry per accession. Feature counts are sorted by name.
 The text rendering is a summary for humans: one line per annotation, then a total.
 
 ```text
-seq1: 2 features (CDS 1, gene 1)
-seq2: 1 features (CDS 1)
+seq1: 2 features (CDS 1, 93 bases; gene 1, 100 bases)
+seq2: 1 features (CDS 1, 93 bases)
 total: 3 features
 ```
 

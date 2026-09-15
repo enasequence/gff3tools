@@ -17,8 +17,8 @@ import java.util.stream.Collectors;
  * total. Feature-name columns vary per file, so no table layout is attempted.
  *
  * <pre>
- * seq1: 812 features (CDS 310, exon 382, gene 120)
- * seq2: 731 features (CDS 305, exon 308, gene 118)
+ * seq1: 812 features (CDS 310, 93000 bases; exon 382, 150000 bases; gene 120, 210000 bases)
+ * seq2: 731 features (CDS 305, 88000 bases; exon 308, 148000 bases; gene 118, 205000 bases)
  * total: 1543 features
  * </pre>
  */
@@ -33,8 +33,9 @@ public final class MetricsTextRenderer {
             if (!annotation.features().isEmpty()) {
                 text.append(" (")
                         .append(annotation.features().stream()
-                                .map(feature -> "%s %d".formatted(feature.name(), feature.count()))
-                                .collect(Collectors.joining(", ")))
+                                .map(feature ->
+                                        "%s %d, %d bases".formatted(feature.name(), feature.count(), feature.bases()))
+                                .collect(Collectors.joining("; ")))
                         .append(")");
             }
             text.append("\n");

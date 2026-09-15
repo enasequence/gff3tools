@@ -26,10 +26,16 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
  * merged back here so the report carries one entry per accession, in first-seen order. Call
  * {@link #snapshot()} to obtain the immutable {@link Gff3Metrics} model, which can be consumed
  * programmatically or serialized to JSON.
+ *
+ * <p>Base counts per feature type are the plain sum of feature span lengths
+ * ({@link GFF3Feature#getLength()}). Overlapping features of the same type — for example mRNA
+ * isoforms sharing exons — are therefore counted more than once; the metric is "bases spanned by
+ * features of this type", not "unique bases covered". Keeping it a running sum avoids retaining
+ * intervals, so the collector stays O(1) per feature.
  */
 public class MetricsCollector {
 
-    private final Map<String, TreeMap<String, Long>> annotations = new LinkedHashMap<>();
+    private final Map<String, TreeMap<String, TypeStats>> annotations = new LinkedHashMap<>();
     private long totalFeatures;
 
     /**
@@ -45,9 +51,11 @@ public class MetricsCollector {
         if (accession == null) {
             return;
         }
-        TreeMap<String, Long> featureCounts = annotations.computeIfAbsent(accession, a -> new TreeMap<>());
+        TreeMap<String, TypeStats> featureStats = annotations.computeIfAbsent(accession, a -> new TreeMap<>());
         for (GFF3Feature feature : annotation.getFeatures()) {
-            featureCounts.merge(feature.getName(), 1L, Long::sum);
+            TypeStats stats = featureStats.computeIfAbsent(feature.getName(), name -> new TypeStats());
+            stats.count++;
+            stats.bases += feature.getLength();
         }
         totalFeatures += annotation.getFeatures().size();
     }
@@ -74,12 +82,18 @@ public class MetricsCollector {
                         .map(entry -> new Gff3Metrics.AnnotationMetrics(
                                 entry.getKey(),
                                 entry.getValue().values().stream()
-                                        .mapToLong(Long::longValue)
+                                        .mapToLong(stats -> stats.count)
                                         .sum(),
                                 entry.getValue().entrySet().stream()
-                                        .map(feature ->
-                                                new Gff3Metrics.FeatureCount(feature.getKey(), feature.getValue()))
+                                        .map(feature -> new Gff3Metrics.FeatureCount(
+                                                feature.getKey(), feature.getValue().count, feature.getValue().bases))
                                         .toList()))
                         .toList());
+    }
+
+    /** Running count and base total for one feature type within one accession. */
+    private static final class TypeStats {
+        long count;
+        long bases;
     }
 }
