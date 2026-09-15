@@ -18,6 +18,7 @@ import uk.ac.ebi.embl.gff3tools.exception.AggregatedValidationException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.metrics.MetricsCollector;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 public class ValidationEngine implements AutoCloseable {
@@ -30,6 +31,9 @@ public class ValidationEngine implements AutoCloseable {
     private final ValidationConfig validationConfig;
     private final ValidationRegistry validationRegistry;
     private final ValidationContext context;
+
+    // Nullable: metrics collection is opt-in via --metrics (or the builder API).
+    private MetricsCollector metrics;
 
     ValidationEngine(
             ValidationConfig validationConfig,
@@ -48,6 +52,11 @@ public class ValidationEngine implements AutoCloseable {
         return context;
     }
 
+    /** Attaches an optional {@link MetricsCollector}; without one, no metrics are collected. */
+    public void setMetrics(MetricsCollector metrics) {
+        this.metrics = metrics;
+    }
+
     /**
      * Executes fixes and validations interleaved by priority tier.
      * For each tier (CRITICAL → HIGH → NORMAL → LOW), fixes run first, then validations.
@@ -58,9 +67,17 @@ public class ValidationEngine implements AutoCloseable {
         Map<ValidationPriority, List<ValidatorDescriptor>> validationsByPriority =
                 validationRegistry.getValidationsByPriority();
 
-        for (ValidationPriority priority : ValidationPriority.values()) {
-            executeFixes(target, line, fixesByPriority.getOrDefault(priority, List.of()));
-            executeValidations(target, line, validationsByPriority.getOrDefault(priority, List.of()));
+        try {
+            for (ValidationPriority priority : ValidationPriority.values()) {
+                executeFixes(target, line, fixesByPriority.getOrDefault(priority, List.of()));
+                executeValidations(target, line, validationsByPriority.getOrDefault(priority, List.of()));
+            }
+        } finally {
+            // Record after the tiers ran so features added by fixes (e.g. GAP_GENERATION) are
+            // counted too, and in a finally so an aborted run still reports what it saw.
+            if (metrics != null && target instanceof GFF3Annotation annotation) {
+                metrics.record(annotation);
+            }
         }
     }
 

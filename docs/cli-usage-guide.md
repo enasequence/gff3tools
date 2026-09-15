@@ -207,6 +207,94 @@ supported and round-trips the `##FASTA` section normally.
 
 ---
 
+## Metrics reports (`--metrics`)
+
+Both `conversion` and `validation` can emit a metrics report summarising the features of each
+annotation they read or produce: feature counts and base counts grouped by feature type, per
+annotation (accession), plus totals. `bases` per type is the overlap-merged union of the
+feature spans — how much of the sequence the features of that type actually cover. It is
+strand-agnostic and scoped to one type per accession: overlapping same-type features (e.g.
+mRNA isoforms sharing exons) count once, not once per feature. The annotation-level
+`sequenceBases` is the span declared by the annotation's `##sequence-region` directive (0 when
+absent), so `bases / sequenceBases` is coverage by a feature type, and
+`sequenceBases - bases` the uncovered portion. The report is written even when the run fails
+validation (exit code `20`), so the counts are available exactly when they are most useful.
+
+| Invocation | Output |
+|------|------|
+| `--metrics metrics.json` | JSON to that file (default format for a file path) |
+| `--metrics -` | Human-readable text to **stderr** (default format for `-`) |
+| `--metrics - --metrics-format json` | JSON to stderr |
+| `--metrics stats.txt --metrics-format text` | Text to that file |
+
+`--metrics-format` accepts `json` or `text` (case-insensitive); when omitted, the format
+follows the destination: JSON for a file path, text for `-`. Terminal output goes to stderr
+because stdout carries the command's primary output (converted data or fixed gff3). The
+option is inert without `--metrics`.
+
+```bash
+# JSON report to a file alongside a validation
+$GFF3TOOLS validation --metrics metrics.json annotation.gff3
+
+# Human-readable summary on the terminal
+$GFF3TOOLS validation --metrics - annotation.gff3
+
+# JSON on stderr, for pipelines that cannot take a second file
+cat annotation.gff3 | $GFF3TOOLS validation --metrics - --metrics-format json
+
+# Feature counts of the GFF3 read during a conversion
+$GFF3TOOLS conversion --metrics converted-metrics.json OZ026791.gff3 OZ026791.embl
+```
+
+### JSON format
+
+The JSON report is stable, pretty-printed, and maps directly onto the library's
+`Gff3Metrics` record model, so it can also be parsed back programmatically:
+
+```json
+{
+  "totalFeatures" : 3,
+  "annotations" : [ {
+    "accession" : "seq1",
+    "sequenceBases" : 200,
+    "totalFeatures" : 2,
+    "features" : [ {
+      "name" : "CDS",
+      "count" : 1,
+      "bases" : 93
+    }, {
+      "name" : "gene",
+      "count" : 1,
+      "bases" : 100
+    } ]
+  }, {
+    "accession" : "seq2",
+    "sequenceBases" : 100,
+    "totalFeatures" : 1,
+    "features" : [ {
+      "name" : "CDS",
+      "count" : 1,
+      "bases" : 93
+    } ]
+  } ]
+}
+```
+
+Annotations appear in first-seen accession order; a GFF3 file with several accessions
+produces one entry per accession. Feature counts are sorted by name.
+
+### Text format
+
+The text rendering is a summary for humans: one line per annotation, then a total.
+
+```text
+seq1: 2 features on 200 bases (CDS 1, 93 bases; gene 1, 100 bases)
+seq2: 1 features on 100 bases (CDS 1, 93 bases)
+total: 3 features
+```
+
+---
+
 ## `translate` — translate CDS features to protein sequences
 
 Reads a GFF3 file and translates CDS features using the provided nucleotide sequences.
