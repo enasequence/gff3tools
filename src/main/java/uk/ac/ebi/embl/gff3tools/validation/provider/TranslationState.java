@@ -63,13 +63,18 @@ public class TranslationState {
      */
     public void forEachResolved(BiConsumer<String, String> action) {
         entries.forEach((key, entry) -> {
-            String translation = entry.newTranslation();
-            if (translation == null || translation.isEmpty()) {
-                translation = entry.oldTranslation();
-            }
+            String translation = resolve(entry);
             if (translation != null && !translation.isEmpty()) {
                 action.accept(key, translation);
             }
         });
+    }
+
+    private static String resolve(TranslationEntry entry) {
+        String translation = entry.newTranslation();
+        if (translation == null || translation.isEmpty()) {
+            translation = entry.oldTranslation();
+        }
+        return translation;
     }
 }

@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Map;
@@ -52,6 +53,13 @@ public class GFF3TranslationReader {
      */
     public Map<String, OffsetRange> readTranslationOffset() {
         Map<String, OffsetRange> offsetMap = new TreeMap<>();
+
+        // gff3Path is not always a real, seekable file (e.g. stdin input, represented as an
+        // empty or "-" path): there is no FASTA/translation section to read back in that case.
+        if (!Files.isRegularFile(gff3Path)) {
+            log.info("Translation sequence not found");
+            return offsetMap;
+        }
 
         try (FileChannel channel = FileChannel.open(gff3Path, StandardOpenOption.READ)) {
 

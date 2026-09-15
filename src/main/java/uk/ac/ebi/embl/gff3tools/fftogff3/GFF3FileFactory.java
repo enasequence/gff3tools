@@ -75,7 +75,7 @@ public class GFF3FileFactory {
      * @param annotations list of already constructed GFF3 annotations
      * @param gff3FileReader reader providing species, validation context, and warnings
      * @param appendTranslationFasta flag indicating whether to append annotation FASTA output
-     * @param existingTranslationFilePathFallback optional path to an existing translation FASTA file, which will be defaulted to if the {@link TranslationState} is not available }
+     * @param existingTranslationFilePathFallback optional path to an existing translation FASTA file, used only when neither {@code gff3FileReader}'s raw {@code ##FASTA} passthrough nor the {@link TranslationState} produce any translation (see the {@link GFF3File} constructor's {@code translationState} javadoc)
      * @return a GFF3File populated with provided annotations, reader context, optional FASTA path, and warnings
      */
     public static GFF3File fromAnnotationAndReader(
