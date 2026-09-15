@@ -251,11 +251,13 @@ class FileConversionCommandTest {
                     "features" : [ {
                       "name" : "CDS",
                       "count" : 1,
-                      "bases" : 93
+                      "bases" : 93,
+                      "uniqueBases" : 93
                     }, {
                       "name" : "gene",
                       "count" : 1,
-                      "bases" : 100
+                      "bases" : 100,
+                      "uniqueBases" : 100
                     } ]
                   } ]
                 }""",
@@ -289,7 +291,7 @@ class FileConversionCommandTest {
         assertEquals(0, exitCode, "Conversion should succeed");
         assertEquals(
                 """
-                seq1: 2 features (CDS 1, 93 bases; gene 1, 100 bases)
+                seq1: 2 features (CDS 1, 93 bases, unique 93; gene 1, 100 bases, unique 100)
                 total: 2 features
                 """,
                 Files.readString(metricsFile));

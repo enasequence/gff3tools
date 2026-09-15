@@ -69,8 +69,8 @@ public class MetricsCollectorTest {
                                 "ACC1",
                                 3,
                                 List.of(
-                                        new Gff3Metrics.FeatureCount("CDS", 1, 10),
-                                        new Gff3Metrics.FeatureCount("gene", 2, 20))))),
+                                        new Gff3Metrics.FeatureCount("CDS", 1, 10, 10),
+                                        new Gff3Metrics.FeatureCount("gene", 2, 20, 10))))),
                 metrics);
     }
 
@@ -87,7 +87,9 @@ public class MetricsCollectorTest {
         assertEquals(2, metrics.totalFeatures());
         assertEquals(1, metrics.annotations().size());
         assertEquals(
-                List.of(new Gff3Metrics.FeatureCount("CDS", 1, 10), new Gff3Metrics.FeatureCount("gene", 1, 10)),
+                List.of(
+                        new Gff3Metrics.FeatureCount("CDS", 1, 10, 10),
+                        new Gff3Metrics.FeatureCount("gene", 1, 10, 10)),
                 metrics.annotations().get(0).features());
     }
 
@@ -143,7 +145,7 @@ public class MetricsCollectorTest {
 
         assertEquals(1, first.totalFeatures());
         assertEquals(
-                List.of(new Gff3Metrics.FeatureCount("gene", 1, 10)),
+                List.of(new Gff3Metrics.FeatureCount("gene", 1, 10, 10)),
                 first.annotations().get(0).features());
         assertEquals(2, collector.snapshot().totalFeatures());
     }
@@ -171,10 +173,44 @@ public class MetricsCollectorTest {
 
         Gff3Metrics.AnnotationMetrics acc1 = collector.snapshot().annotations().get(0);
 
-        assertEquals(new Gff3Metrics.FeatureCount("CDS", 2, 26), acc1.features().get(0));
-        // Same-type overlaps are double-counted by design (see MetricsCollector javadoc).
         assertEquals(
-                new Gff3Metrics.FeatureCount("gene", 2, 20), acc1.features().get(1));
+                new Gff3Metrics.FeatureCount("CDS", 2, 26, 26), acc1.features().get(0));
+        // Same-type overlaps are double-counted in 'bases' by design (see MetricsCollector javadoc).
+        assertEquals(
+                new Gff3Metrics.FeatureCount("gene", 2, 20, 10), acc1.features().get(1));
+    }
+
+    @Test
+    public void uniqueBasesMergesOverlappingAndDisjointSpans() {
+        MetricsCollector collector = new MetricsCollector();
+        GFF3Annotation chunk = new GFF3Annotation();
+        chunk.setSequenceRegion(new GFF3SequenceRegion("ACC1", Optional.empty(), 1, 1000));
+        chunk.addFeature(featureAt("ACC1", "CDS", 1, 10));
+        chunk.addFeature(featureAt("ACC1", "CDS", 20, 35));
+        chunk.addFeature(featureAt("ACC1", "CDS", 30, 40));
+        collector.record(chunk);
+
+        Gff3Metrics.FeatureCount cds =
+                collector.snapshot().annotations().get(0).features().get(0);
+
+        // bases = 10 + 16 + 11; unique = [1..10] + [20..40] (the 30..35 overlap merges).
+        assertEquals(new Gff3Metrics.FeatureCount("CDS", 3, 37, 31), cds);
+    }
+
+    @Test
+    public void uniqueBasesIsStrandAgnostic() {
+        MetricsCollector collector = new MetricsCollector();
+        GFF3Annotation chunk = new GFF3Annotation();
+        chunk.setSequenceRegion(new GFF3SequenceRegion("ACC1", Optional.empty(), 1, 1000));
+        chunk.addFeature(featureAt("ACC1", "gene", 1, 100));
+        chunk.addFeature(new GFF3Feature(
+                Optional.empty(), Optional.empty(), "ACC1", Optional.empty(), "", "gene", 1L, 100L, "", "-", ""));
+        collector.record(chunk);
+
+        Gff3Metrics.FeatureCount gene =
+                collector.snapshot().annotations().get(0).features().get(0);
+
+        assertEquals(new Gff3Metrics.FeatureCount("gene", 2, 200, 100), gene);
     }
 
     @Test
@@ -192,11 +228,13 @@ public class MetricsCollectorTest {
                     "features" : [ {
                       "name" : "CDS",
                       "count" : 1,
-                      "bases" : 10
+                      "bases" : 10,
+                      "uniqueBases" : 10
                     }, {
                       "name" : "gene",
                       "count" : 2,
-                      "bases" : 20
+                      "bases" : 20,
+                      "uniqueBases" : 10
                     } ]
                   } ]
                 }""",

@@ -30,12 +30,12 @@ public class MetricsTextRendererTest {
                         "seq1",
                         3,
                         List.of(
-                                new Gff3Metrics.FeatureCount("CDS", 1, 10),
-                                new Gff3Metrics.FeatureCount("gene", 2, 20)))));
+                                new Gff3Metrics.FeatureCount("CDS", 1, 10, 10),
+                                new Gff3Metrics.FeatureCount("gene", 2, 20, 20)))));
 
         assertEquals(
                 """
-                seq1: 3 features (CDS 1, 10 bases; gene 2, 20 bases)
+                seq1: 3 features (CDS 1, 10 bases, unique 10; gene 2, 20 bases, unique 20)
                 total: 3 features
                 """,
                 MetricsTextRenderer.render(metrics));

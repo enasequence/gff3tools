@@ -10,7 +10,10 @@
  */
 package uk.ac.ebi.embl.gff3tools.metrics;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -27,11 +30,16 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
  * {@link #snapshot()} to obtain the immutable {@link Gff3Metrics} model, which can be consumed
  * programmatically or serialized to JSON.
  *
- * <p>Base counts per feature type are the plain sum of feature span lengths
- * ({@link GFF3Feature#getLength()}). Overlapping features of the same type — for example mRNA
- * isoforms sharing exons — are therefore counted more than once; the metric is "bases spanned by
- * features of this type", not "unique bases covered". Keeping it a running sum avoids retaining
- * intervals, so the collector stays O(1) per feature.
+ * <p>Base counts per feature type: {@code bases} is the plain sum of feature span lengths
+ * ({@link GFF3Feature#getLength()}), while {@code uniqueBases} is the union of those spans with
+ * overlaps merged — "how much of the sequence features of this type cover". Both are
+ * strand-agnostic and scoped to one type within one accession. Overlapping features of the same
+ * type (for example mRNA isoforms sharing exons) count once towards {@code uniqueBases} but once
+ * per feature towards {@code bases}.
+ *
+ * <p>Memory: {@code bases} is a running counter, but the union requires retaining each feature's
+ * interval until {@link #snapshot()} merges it — O(intervals of the run), a few MB per million
+ * features. Feature counts themselves are still never retained.
  */
 public class MetricsCollector {
 
@@ -55,7 +63,11 @@ public class MetricsCollector {
         for (GFF3Feature feature : annotation.getFeatures()) {
             TypeStats stats = featureStats.computeIfAbsent(feature.getName(), name -> new TypeStats());
             stats.count++;
-            stats.bases += feature.getLength();
+            long length = feature.getLength();
+            stats.bases += length;
+            if (length > 0) {
+                stats.intervals.add(new long[] {feature.getStart(), feature.getEnd()});
+            }
         }
         totalFeatures += annotation.getFeatures().size();
     }
@@ -86,14 +98,45 @@ public class MetricsCollector {
                                         .sum(),
                                 entry.getValue().entrySet().stream()
                                         .map(feature -> new Gff3Metrics.FeatureCount(
-                                                feature.getKey(), feature.getValue().count, feature.getValue().bases))
+                                                feature.getKey(),
+                                                feature.getValue().count,
+                                                feature.getValue().bases,
+                                                unionOf(feature.getValue().intervals)))
                                         .toList()))
                         .toList());
     }
 
-    /** Running count and base total for one feature type within one accession. */
+    /** Merges overlapping intervals and returns the total covered bases. */
+    private static long unionOf(List<long[]> intervals) {
+        if (intervals.isEmpty()) {
+            return 0;
+        }
+        intervals.sort(Comparator.comparingLong(interval -> interval[0]));
+        long union = 0;
+        long curStart = 0;
+        long curEnd = -1;
+        boolean open = false;
+        for (long[] interval : intervals) {
+            if (!open) {
+                curStart = interval[0];
+                curEnd = interval[1];
+                open = true;
+            } else if (interval[0] <= curEnd) {
+                curEnd = Math.max(curEnd, interval[1]);
+            } else {
+                union += curEnd - curStart + 1;
+                curStart = interval[0];
+                curEnd = interval[1];
+            }
+        }
+        return union + (curEnd - curStart + 1);
+    }
+
+    /** Running count, base total and intervals for one feature type within one accession. */
     private static final class TypeStats {
         long count;
         long bases;
+        // Retained until snapshot(); {start, end} pairs of length > 0 only.
+        final List<long[]> intervals = new ArrayList<>();
     }
 }
