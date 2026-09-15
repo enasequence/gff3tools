@@ -78,7 +78,7 @@ public class LengthValidation implements Validation {
         }
     }
 
-    @ValidationMethod(rule = "CDS_INTRON_LENGTH", type = ValidationType.ANNOTATION)
+    @ValidationMethod(rule = "CDS_INTRON_LENGTH", type = ValidationType.ANNOTATION, severity = RuleSeverity.WARN)
     public void validateCdsIntronLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
         OntologyClient ontologyClient = context.get(OntologyClient.class);
         Map<String, List<GFF3Feature>> cdsListById = new HashMap<>();
