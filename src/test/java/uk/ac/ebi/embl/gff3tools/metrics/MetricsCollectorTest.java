@@ -180,6 +180,38 @@ public class MetricsCollectorTest {
     }
 
     @Test
+    public void basesMergeTouchingSpansSharingOneBase() {
+        MetricsCollector collector = new MetricsCollector();
+        GFF3Annotation chunk = new GFF3Annotation();
+        chunk.setSequenceRegion(new GFF3SequenceRegion("ACC1", Optional.empty(), 1, 1000));
+        chunk.addFeature(featureAt("ACC1", "CDS", 1, 10));
+        chunk.addFeature(featureAt("ACC1", "CDS", 10, 20));
+        collector.record(chunk);
+
+        Gff3Metrics.FeatureCount cds =
+                collector.snapshot().annotations().get(0).features().get(0);
+
+        // [1..10] and [10..20] share base 10: they merge into one 20-base span, not 21.
+        assertEquals(new Gff3Metrics.FeatureCount("CDS", 2, 20), cds);
+    }
+
+    @Test
+    public void basesDoNotMergeAdjacentDisjointSpans() {
+        MetricsCollector collector = new MetricsCollector();
+        GFF3Annotation chunk = new GFF3Annotation();
+        chunk.setSequenceRegion(new GFF3SequenceRegion("ACC1", Optional.empty(), 1, 1000));
+        chunk.addFeature(featureAt("ACC1", "CDS", 1, 10));
+        chunk.addFeature(featureAt("ACC1", "CDS", 11, 20));
+        collector.record(chunk);
+
+        Gff3Metrics.FeatureCount cds =
+                collector.snapshot().annotations().get(0).features().get(0);
+
+        // [1..10] and [11..20] are adjacent but disjoint: bases is 10 + 10 = 20, not 21.
+        assertEquals(new Gff3Metrics.FeatureCount("CDS", 2, 20), cds);
+    }
+
+    @Test
     public void basesUnionMergesAcrossContiguousChunks() {
         MetricsCollector collector = new MetricsCollector();
         GFF3Annotation chunk = new GFF3Annotation();

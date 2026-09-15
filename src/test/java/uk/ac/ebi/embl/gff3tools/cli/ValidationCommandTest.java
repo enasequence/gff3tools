@@ -192,6 +192,43 @@ public class ValidationCommandTest {
     }
 
     @Test
+    void metricsOptionWritesReportWhenValidationFailsOnParseableInput() throws Exception {
+        // A dangling Parent reference is a validation failure (DANGLING_PARENT, exit 20) on GFF3
+        // that still parses and yields real features, unlike unparseable input: it proves
+        // collection survives a failing run rather than just a collector that was never fed.
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 100
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1;Parent=missing_gene
+                """);
+        Path metricsFile = tempDir.resolve("metrics.json");
+
+        int exitCode = executeValidation("validation", "--metrics", metricsFile.toString(), gff3.toString());
+
+        assertEquals(20, exitCode, "DANGLING_PARENT should fail validation");
+        assertTrue(Files.exists(metricsFile), "Metrics report should be written even on failure");
+        assertEquals(
+                """
+                {
+                  "totalFeatures" : 1,
+                  "annotations" : [ {
+                    "accession" : "seq1",
+                    "sequenceBases" : 100,
+                    "totalFeatures" : 1,
+                    "features" : [ {
+                      "name" : "CDS",
+                      "count" : 1,
+                      "bases" : 93
+                    } ]
+                  } ]
+                }""",
+                Files.readString(metricsFile));
+    }
+
+    @Test
     void metricsStderrDefaultsToText() throws Exception {
         Path gff3 = tempDir.resolve("input.gff3");
         Files.writeString(
