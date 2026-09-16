@@ -178,6 +178,7 @@ public class TSVToGFF3Converter implements Converter {
                 .species(species)
                 .annotations(annotations)
                 .translationState(translationState)
+                .writeAnnotationFasta(true)
                 .parsingWarnings(validationEngine.getParsingWarnings())
                 .build();
 

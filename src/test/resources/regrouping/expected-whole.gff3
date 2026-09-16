@@ -1,0 +1,29 @@
+##gff-version 3.1.26
+##species http://example.org?name=Homo sapiens
+##sequence-region ACC1.1 1 1000
+ACC1.1	.	CDS	1	99	.	+	.	ID=CDS_1;
+
+##sequence-region ACC2.1 1 1000
+ACC2.1	.	CDS	1	99	.	+	.	ID=CDS_2;
+
+##sequence-region ACC3.1 1 1000
+ACC3.1	.	CDS	1	99	.	+	.	ID=CDS_3;
+
+##sequence-region ACC4.1 1 1000
+ACC4.1	.	CDS	1	99	.	+	.	ID=CDS_4;
+
+##sequence-region ACC5.1 1 1000
+ACC5.1	.	CDS	1	99	.	+	.	ID=CDS_5;
+
+##FASTA
+>ACC1.1|CDS_1
+MKAPQRW
+>ACC2.1|CDS_2
+MKCPQRW
+>ACC3.1|CDS_3
+MKDPQRW
+>ACC4.1|CDS_4
+MKEPQRW
+>ACC5.1|CDS_5
+MKFPQRW
+
