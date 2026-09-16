@@ -44,7 +44,7 @@ public class SequenceMappingValidation implements Validation {
             rule = RULE_SEQUENCE_MAPPING,
             description = "Every feature accession must map to a sequence when a sequence provider is registered",
             type = ValidationType.FEATURE,
-            priority = ValidationPriority.HIGH)
+            priority = ValidationPriority.CRITICAL)
     public void validateSequenceMapping(GFF3Feature feature, int line) throws ValidationException {
         SequenceLookup lookup = registeredSequenceLookup();
         if (lookup == null) {

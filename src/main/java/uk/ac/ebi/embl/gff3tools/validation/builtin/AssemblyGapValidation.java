@@ -61,6 +61,15 @@ public class AssemblyGapValidation implements Validation {
     @InjectContext
     private ValidationContext context;
 
+    /**
+     * The valid {@code gap_type} vocabulary. Single source of truth, shared with
+     * {@code GapOptionsValidator} so the up-front check on generated gaps cannot drift from the
+     * check applied here to submitted ones.
+     */
+    public static Set<String> validGapTypes() {
+        return GAP_TYPE.keySet();
+    }
+
     @ValidationMethod(rule = VALIDATION_RULE, type = ValidationType.FEATURE)
     public void validateGapFeature(GFF3Feature feature, int line) throws ValidationException {
         OntologyClient ontologyClient = context.get(OntologyClient.class);

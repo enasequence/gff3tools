@@ -23,6 +23,7 @@ public class GFF3Attributes {
     public static final String LOCUS_TAG = "locus_tag";
     public static final String PROTEIN_ID = "protein_id";
     public static final String ATTRIBUTE_ID = "ID";
+    public static final String ATTRIBUTE_PARENT = "Parent";
     public static final String MAP = "map";
     public static final String PCR_PRIMERS = "PCR_primers";
     public static final String SATELLITE = "satellite";
@@ -77,4 +78,5 @@ public class GFF3Attributes {
     public static final String TRANSLATION = "translation";
     public static final String CODON_START = "codon_start";
     public static final String TRANSL_TABLE = "transl_table";
+    public static final String TRANSCRIPT_ID = "transcript_id";
 }

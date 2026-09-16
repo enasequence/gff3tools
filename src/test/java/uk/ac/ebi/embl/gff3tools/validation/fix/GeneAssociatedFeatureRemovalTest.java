@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 
@@ -123,7 +124,7 @@ public class GeneAssociatedFeatureRemovalTest {
 
         assertFalse(gff3Annotation.getFeatures().contains(gene));
         assertEquals(Optional.of("gene_1"), cds.getParentId());
-        assertEquals("gene_1", cds.getAttribute("Parent").orElse(null));
+        assertEquals("gene_1", cds.getAttribute(GFF3Attributes.ATTRIBUTE_PARENT).orElse(null));
     }
 
     @Test
@@ -142,7 +143,7 @@ public class GeneAssociatedFeatureRemovalTest {
                 ".",
                 "+",
                 "");
-        cds2.addAttribute("Parent", "gene_1");
+        cds2.addAttribute(GFF3Attributes.ATTRIBUTE_PARENT, "gene_1");
         gff3Annotation.setFeatures(new ArrayList<>(List.of(gene, cds1, cds2)));
 
         geneAssociatedFeatureRemoval.fixAnnotation(gff3Annotation, 1);
@@ -150,8 +151,8 @@ public class GeneAssociatedFeatureRemovalTest {
         assertFalse(gff3Annotation.getFeatures().contains(gene));
         assertTrue(cds1.getParentId().isEmpty());
         assertTrue(cds2.getParentId().isEmpty());
-        assertTrue(cds1.getAttribute("Parent").isEmpty());
-        assertTrue(cds2.getAttribute("Parent").isEmpty());
+        assertTrue(cds1.getAttribute(GFF3Attributes.ATTRIBUTE_PARENT).isEmpty());
+        assertTrue(cds2.getAttribute(GFF3Attributes.ATTRIBUTE_PARENT).isEmpty());
     }
 
     @Test
@@ -171,7 +172,7 @@ public class GeneAssociatedFeatureRemovalTest {
                 ".",
                 "+",
                 "");
-        cdsChildOfKeptGene.addAttribute("Parent", "gene_2");
+        cdsChildOfKeptGene.addAttribute(GFF3Attributes.ATTRIBUTE_PARENT, "gene_2");
         gff3Annotation.setFeatures(
                 new ArrayList<>(List.of(removedGene, keptGene, cdsMatchingRemovedGene, cdsChildOfKeptGene)));
 
@@ -181,7 +182,9 @@ public class GeneAssociatedFeatureRemovalTest {
         assertTrue(gff3Annotation.getFeatures().contains(keptGene));
         assertTrue(cdsMatchingRemovedGene.getParentId().isEmpty());
         assertEquals(Optional.of("gene_2"), cdsChildOfKeptGene.getParentId());
-        assertEquals("gene_2", cdsChildOfKeptGene.getAttribute("Parent").orElse(null));
+        assertEquals(
+                "gene_2",
+                cdsChildOfKeptGene.getAttribute(GFF3Attributes.ATTRIBUTE_PARENT).orElse(null));
     }
 
     private GFF3Feature geneWithId(String id, long start, long end) {
@@ -214,7 +217,7 @@ public class GeneAssociatedFeatureRemovalTest {
                 ".",
                 "+",
                 "");
-        cds.addAttribute("Parent", parentId);
+        cds.addAttribute(GFF3Attributes.ATTRIBUTE_PARENT, parentId);
         return cds;
     }
 }

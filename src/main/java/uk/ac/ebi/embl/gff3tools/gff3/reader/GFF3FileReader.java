@@ -18,7 +18,6 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
@@ -26,13 +25,17 @@ import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonAccessionRegistry;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonomyIdentifier;
 
 public class GFF3FileReader implements AutoCloseable {
 
     static Pattern VERSION_DIRECTIVE = Pattern.compile(
             "^##gff-version (?<version>(?<major>[0-9]+)(\\.(?<minor>[0-9]+)(:?\\.(?<patch>[0-9]+))?)?)\\s*$");
     static Pattern SPECIES_DIRECTIVE = Pattern.compile("^##species (?<species>.*)$");
+    static Pattern SPECIES_TAX_ID_PATTERN = Pattern.compile("(?:^|[?&])id=(?<taxId>[0-9]+)(?:&.*)?$");
     static Pattern SEQUENCE_REGION_DIRECTIVE = Pattern.compile(
             "^##sequence-region\\s+(?<accession>(?<accessionId>[^.]+)(?:\\.(?<accessionVersion>\\d+))?)\\s+(?<start>[0-9]+)\\s+(?<end>[0-9]+)$");
     static Pattern RESOLUTION_DIRECTIVE = Pattern.compile("^###$");
@@ -49,9 +52,11 @@ public class GFF3FileReader implements AutoCloseable {
     ValidationEngine validationEngine;
 
     public GFF3Species gff3Species;
+    private Long speciesTaxId;
     private final Set<String> processedAccessions;
 
     private Map<String, OffsetRange> translationMap;
+    private Map<String, Map<String, OffsetRange>> translationsByAccession;
     private final GFF3TranslationReader translationReader;
 
     // Used by GFF3 conversion process
@@ -86,10 +91,15 @@ public class GFF3FileReader implements AutoCloseable {
                 // Create species
                 String species = m.group("species");
                 gff3Species = new GFF3Species(species);
+                Long taxId = extractTaxId(species);
+                if (taxId != null) {
+                    speciesTaxId = taxId;
+                }
             } else if ((m = SEQUENCE_REGION_DIRECTIVE.matcher(line)).matches()) {
                 // Create directive
                 GFF3SequenceRegion sequenceRegion = readSequenceRegion(m);
                 accessionSequenceRegionMap.put(sequenceRegion.accession(), sequenceRegion);
+                registerTaxon(sequenceRegion.accession());
             } else if (RESOLUTION_DIRECTIVE.matcher(line).matches()) {
                 if (!currentAnnotation.getFeatures().isEmpty() || currentAnnotation.getSequenceRegion() != null) {
                     GFF3Annotation previousAnnotation = currentAnnotation;
@@ -103,6 +113,7 @@ public class GFF3FileReader implements AutoCloseable {
                     // In case of different accession create a new GFF3Annotation and return the
                     // previous one.
                     currentAccession = feature.accession();
+                    registerTaxon(currentAccession);
                     GFF3Annotation previousAnnotation = currentAnnotation;
                     currentAnnotation = new GFF3Annotation();
                     currentAnnotation.addFeature(feature);
@@ -195,6 +206,42 @@ public class GFF3FileReader implements AutoCloseable {
         return previousAnnotation != null && currentAnnotation.getAccession().equals(previousAnnotation.getAccession());
     }
 
+    /**
+     * Extracts a numeric NCBI taxon ID from a {@code ##species} directive value, e.g.
+     * {@code https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=9662} or a bare numeric
+     * ID. Returns {@code null} when the value isn't a recognisable NCBI taxon reference, so
+     * parsing never fails on an unsupported species value.
+     */
+    private static Long extractTaxId(String species) {
+        if (species == null) {
+            return null;
+        }
+        String trimmed = species.trim();
+        try {
+            if (trimmed.matches("[0-9]+")) {
+                return Long.parseLong(trimmed);
+            }
+            Matcher m = SPECIES_TAX_ID_PATTERN.matcher(trimmed);
+            if (m.find()) {
+                return Long.parseLong(m.group("taxId"));
+            }
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        return null;
+    }
+
+    private void registerTaxon(String accession) {
+        if (accession == null || speciesTaxId == null) {
+            return;
+        }
+        ValidationContext context = validationEngine.getContext();
+        if (!context.contains(TaxonAccessionRegistry.class)) {
+            context.register(TaxonAccessionRegistry.class, new TaxonAccessionRegistry());
+        }
+        context.get(TaxonAccessionRegistry.class).record(accession, new TaxonomyIdentifier.ByTaxId(speciesTaxId));
+    }
+
     private GFF3SequenceRegion readSequenceRegion(Matcher m) {
 
         String accessionId = m.group("accessionId");
@@ -227,7 +274,7 @@ public class GFF3FileReader implements AutoCloseable {
         Optional<String> id = Optional.ofNullable(attributesMap.get("ID"))
                 .filter((l) -> !l.isEmpty())
                 .map((l) -> l.get(0));
-        Optional<String> parentId = Optional.ofNullable(attributesMap.get("Parent"))
+        Optional<String> parentId = Optional.ofNullable(attributesMap.get(GFF3Attributes.ATTRIBUTE_PARENT))
                 .filter((l) -> !l.isEmpty())
                 .map((l) -> l.get(0));
 
@@ -251,6 +298,7 @@ public class GFF3FileReader implements AutoCloseable {
             GFF3Feature feature = new GFF3Feature(
                     id, parentId, accessionId, accessionVersion, source, name, start, end, score, strand, phase);
             feature.addAttributes(attributesMap);
+            feature.setLine(lineCount);
 
             validationEngine.validate(feature, lineCount);
             return feature;
@@ -317,10 +365,37 @@ public class GFF3FileReader implements AutoCloseable {
         return null;
     }
 
+    /**
+     * The translations belonging to one annotation, keyed as {@code accession|featureId}, in the
+     * offset map's order. A lookup into a map built once per reader, not a scan: one document is
+     * commonly written out as several subsets.
+     */
     public Map<String, OffsetRange> getTranslationOffsetForAnnotation(GFF3Annotation annotation) {
-        return getTranslationOffsetMap().entrySet().stream()
-                .filter(e -> e.getKey().startsWith(annotation.getAccession()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        return translationsByAccession().getOrDefault(annotation.getAccession(), Map.of());
+    }
+
+    /**
+     * The offset map bucketed by accession, built on first use and reused for the reader's life.
+     *
+     * <p>Accessions are matched exactly rather than by prefix, so {@code AB123.1} never claims the
+     * translations of {@code AB123.10}. Buckets are {@link LinkedHashMap}s filled in the offset
+     * map's own sorted order, so written output stays byte-stable across runs.
+     */
+    private Map<String, Map<String, OffsetRange>> translationsByAccession() {
+        if (translationsByAccession == null) {
+            Map<String, Map<String, OffsetRange>> byAccession = new HashMap<>();
+            for (Map.Entry<String, OffsetRange> entry :
+                    getTranslationOffsetMap().entrySet()) {
+                String accession = TranslationKey.accessionOf(entry.getKey());
+                if (accession != null) {
+                    byAccession
+                            .computeIfAbsent(accession, key -> new LinkedHashMap<>())
+                            .put(entry.getKey(), entry.getValue());
+                }
+            }
+            translationsByAccession = byAccession;
+        }
+        return translationsByAccession;
     }
 
     public Map<String, OffsetRange> getTranslationOffsetMap() {

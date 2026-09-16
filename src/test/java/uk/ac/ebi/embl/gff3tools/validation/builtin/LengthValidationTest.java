@@ -118,6 +118,49 @@ public class LengthValidationTest {
     }
 
     @Test
+    public void testCdsIntronValidationReportsTheViolatingFeatureLineNotTheAnnotationLine() {
+
+        GFF3Feature cds1 = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
+        cds1.setLine(42);
+
+        GFF3Feature cds2 = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(), 102L, 200L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
+        cds2.setLine(99);
+
+        gff3Annotation.addFeature(cds1);
+        gff3Annotation.addFeature(cds2);
+
+        // 7777 is the line the reader had reached when it flushed this whole annotation (e.g. the
+        // next accession's first feature); the violation must be reported at cds2's own line (99),
+        // not at this annotation-level line.
+        ValidationException ex = assertThrows(
+                ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 7777));
+
+        assertEquals(99, ex.getLine());
+    }
+
+    @Test
+    public void testCdsIntronValidationFallsBackToTheAnnotationLineWhenFeatureLineIsUnset() {
+        // GFF3Feature.line defaults to -1 on the flat file to GFF3 conversion path, which has no
+        // source GFF3 line to report.
+
+        GFF3Feature cds1 = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
+
+        GFF3Feature cds2 = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(), 102L, 200L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
+
+        gff3Annotation.addFeature(cds1);
+        gff3Annotation.addFeature(cds2);
+
+        ValidationException ex = assertThrows(
+                ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 7777));
+
+        assertEquals(7777, ex.getLine());
+    }
+
+    @Test
     public void testIntronValidationForCDSSuccessWithPseudo() {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(), 1L, 5L, Map.of(GFF3Attributes.PSEUDO, List.of("pseudo")));
@@ -363,6 +406,33 @@ public class LengthValidationTest {
             assertThrows(ValidationException.class, () -> validation.validateCdsLength(gff3Annotation, 1));
         }
 
+        @Test
+        void reportsTheViolatingFeatureLineNotTheAnnotationLine() {
+            GFF3Feature cds1 = cds("cds1", 1L, 9L);
+            cds1.setLine(42);
+            addFeatures(cds1);
+
+            // 7777 is the line the reader had reached when it flushed this whole annotation (e.g.
+            // the next accession's first feature); the violation must be reported at cds1's own
+            // line (42), not at this annotation-level line.
+            ValidationException ex =
+                    assertThrows(ValidationException.class, () -> validation.validateCdsLength(gff3Annotation, 7777));
+
+            assertEquals(42, ex.getLine());
+        }
+
+        @Test
+        void fallsBackToTheAnnotationLineWhenFeatureLineIsUnset() {
+            // GFF3Feature.line defaults to -1 on the flat file to GFF3 conversion path, which has no
+            // source GFF3 line to report.
+            addFeatures(cds("cds1", 1L, 9L));
+
+            ValidationException ex =
+                    assertThrows(ValidationException.class, () -> validation.validateCdsLength(gff3Annotation, 7777));
+
+            assertEquals(7777, ex.getLine());
+        }
+
         private void addFeatures(GFF3Feature... features) {
             for (GFF3Feature f : features) {
                 gff3Annotation.addFeature(f);
@@ -541,6 +611,33 @@ public class LengthValidationTest {
             addFeatures(feature("tRNA", null, 1L, 30L, Map.of()), feature("tRNA", null, 200L, 229L, Map.of()));
 
             assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void reportsTheViolatingFeatureLineNotTheAnnotationLine() {
+            GFF3Feature trna1 = trna("trna1", 1L, 49L);
+            trna1.setLine(42);
+            addFeatures(trna1);
+
+            // 7777 is the line the reader had reached when it flushed this whole annotation (e.g.
+            // the next accession's first feature); the violation must be reported at trna1's own
+            // line (42), not at this annotation-level line.
+            ValidationException ex =
+                    assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 7777));
+
+            assertEquals(42, ex.getLine());
+        }
+
+        @Test
+        void fallsBackToTheAnnotationLineWhenFeatureLineIsUnset() {
+            // GFF3Feature.line defaults to -1 on the flat file to GFF3 conversion path, which has no
+            // source GFF3 line to report.
+            addFeatures(trna("trna1", 1L, 49L));
+
+            ValidationException ex =
+                    assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 7777));
+
+            assertEquals(7777, ex.getLine());
         }
 
         private void addFeatures(GFF3Feature... features) {

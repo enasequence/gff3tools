@@ -10,18 +10,32 @@
  */
 package uk.ac.ebi.embl.gff3tools.cli;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
 import io.vavr.Function0;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.zip.GZIPInputStream;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
+import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
@@ -42,6 +56,12 @@ public abstract class AbstractCommand implements Runnable {
             description = "Specify rules in the format key:value")
     public CliRulesOption rules;
 
+    @CommandLine.Option(
+            names = "--fixes",
+            paramLabel = "<key:ON|OFF,key:ON|OFF>",
+            description = "Toggle auto-fixes in the format key:ON or key:OFF")
+    public CliFixesOption fixes;
+
     @CommandLine.Parameters(
             paramLabel = "[input-file]",
             defaultValue = "",
@@ -52,11 +72,42 @@ public abstract class AbstractCommand implements Runnable {
         return Optional.ofNullable(rules).map((r) -> r.rules()).orElse(new HashMap<>());
     }
 
+    protected Map<String, Boolean> getFixOverrides() {
+        return Optional.ofNullable(fixes).map((f) -> f.fixes()).orElse(new HashMap<>());
+    }
+
     protected ValidationEngine initValidationEngine(
             Map<String, RuleSeverity> ruleOverrides, ContextProvider<?>... additionalProviders) {
+        return initValidationEngine(ruleOverrides, Map.of(), additionalProviders);
+    }
 
-        ValidationEngineBuilder builder =
-                new ValidationEngineBuilder().overrideMethodRules(ruleOverrides).failFast(failFast);
+    /**
+     * Builds a {@link ValidationEngine}, additionally toggling individual fixes by their
+     * {@code @FixMethod.rule()}. Use it to keep a fix off a command where its output would be
+     * discarded.
+     *
+     * <p>{@code --fixes} overrides from the CLI are merged in first, with {@code fixOverrides}
+     * applied on top, so a command's own structural overrides (e.g. a fix disabled because this
+     * command discards the annotation it would fix) always win over a user-supplied toggle.
+     *
+     * <p>{@code --fixes} is method-level only, mirroring {@code --rules}: it cannot re-enable a fix
+     * whose class is {@code @Gff3Fix(enabled = false)} by default (e.g. {@code PROTEIN_ID_REMOVE}),
+     * since such a class is never built into a descriptor at all. Toggling those requires
+     * {@code default-rule-severities.properties} or the {@link ValidationEngineBuilder} API
+     * directly.
+     */
+    protected ValidationEngine initValidationEngine(
+            Map<String, RuleSeverity> ruleOverrides,
+            Map<String, Boolean> fixOverrides,
+            ContextProvider<?>... additionalProviders) {
+
+        Map<String, Boolean> mergedFixOverrides = new HashMap<>(getFixOverrides());
+        mergedFixOverrides.putAll(fixOverrides);
+
+        ValidationEngineBuilder builder = new ValidationEngineBuilder()
+                .overrideMethodRules(ruleOverrides)
+                .overrideMethodFixs(mergedFixOverrides)
+                .failFast(failFast);
 
         // Providers gate their own registration via ContextProvider#isActive(). An empty
         // FastaHeaderProvider (no header source supplied) reports inactive and is kept off the
@@ -86,6 +137,75 @@ public abstract class AbstractCommand implements Runnable {
             }
         } else {
             return newStdPipe.apply();
+        }
+    }
+
+    /** True for the two tokens meaning "use standard I/O instead of a real file": absent (empty) or {@code -}. */
+    protected static boolean isStdioSentinel(Path path) {
+        String s = path.toString();
+        return s.isEmpty() || s.equals("-");
+    }
+
+    /**
+     * Creates a BufferedReader for {@code filePath}, auto-detecting and transparently
+     * decompressing gzip input. An empty or {@code -} path falls back to stdin, matching
+     * {@link #getPipe}'s convention.
+     */
+    protected BufferedReader createInputReader(Path filePath) throws NonExistingFile, ReadException {
+        if (filePath == null || isStdioSentinel(filePath)) {
+            return new BufferedReader(new InputStreamReader(System.in));
+        }
+        boolean gzipped = GzipUtils.isGzipped(filePath);
+        try {
+            InputStream in =
+                    gzipped ? new GZIPInputStream(Files.newInputStream(filePath)) : Files.newInputStream(filePath);
+            return new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
+        } catch (NoSuchFileException e) {
+            throw new NonExistingFile("The file does not exist: " + filePath, e);
+        } catch (IOException e) {
+            throw new ReadException("Error opening file: " + filePath, e);
+        }
+    }
+
+    protected BufferedWriter createStdoutWriter() {
+        // Suppress INFO logs while writing to stdout to avoid mixing log output with file content.
+        // WARN/ERROR already route to a dedicated stderr appender (see logback.xml) rather than
+        // the stdout one, so they stay visible without needing to be muted here.
+        LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
+        ctx.getLogger(Logger.ROOT_LOGGER_NAME).setLevel(Level.WARN);
+        return new BufferedWriter(new OutputStreamWriter(System.out));
+    }
+
+    @FunctionalInterface
+    protected interface WriterAction {
+        void run(BufferedWriter writer) throws Exception;
+    }
+
+    /**
+     * Runs {@code action} against a temp file and only moves it into place at {@code outputPath}
+     * on success, so a failure never leaves a partial or corrupt file at the destination. The temp
+     * file lives in the system temp directory (see -Djava.io.tmpdir) for control in pipeline
+     * environments.
+     */
+    protected void writeAtomically(Path outputPath, WriterAction action) throws Exception {
+        Path tempFile = Files.createTempFile("gff3tools-", ".tmp");
+        try {
+            try (BufferedWriter writer = Files.newBufferedWriter(tempFile)) {
+                action.run(writer);
+            }
+            try {
+                Files.move(tempFile, outputPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                // ATOMIC_MOVE fails across filesystems; fall back to a regular move
+                Files.move(tempFile, outputPath, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (Exception e) {
+            try {
+                Files.deleteIfExists(tempFile);
+            } catch (IOException deleteEx) {
+                log.warn("Failed to delete temporary file: {}", tempFile);
+            }
+            throw e;
         }
     }
 

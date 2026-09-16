@@ -75,6 +75,27 @@ public class GFF3FileReaderTest {
     }
 
     @Test
+    void readAnnotationSetsEachFeaturesSourceLine() throws Exception {
+        String gff3Content = "##gff-version 3\n"
+                + "##sequence-region seq1 1 200\n"
+                + "seq1\tsource\tgene\t1\t100\t.\t+\t.\tID=feat1\n"
+                + "seq1\tsource\tCDS\t50\t80\t.\t+\t.\tID=cds1\n";
+
+        ValidationEngine validationEngine = getValidationEngine();
+        try (GFF3FileReader gff3Reader =
+                new GFF3FileReader(validationEngine, new StringReader(gff3Content), Path.of("input.gff3"))) {
+            gff3Reader.readHeader();
+            GFF3Annotation annotation = gff3Reader.readAnnotation();
+
+            Assertions.assertNotNull(annotation);
+            // Line 1 is "##gff-version 3", line 2 is "##sequence-region seq1 1 200", so the gene
+            // feature is on line 3 and the CDS feature is on line 4.
+            assertEquals(3, annotation.getFeatures().get(0).getLine());
+            assertEquals(4, annotation.getFeatures().get(1).getLine());
+        }
+    }
+
+    @Test
     void testMissingHeader() throws Exception {
         File testFile = TestUtils.getResourceFile("validation_errors/empty_file.gff3");
         ValidationEngine validationEngine = getValidationEngineFailFast();
@@ -258,37 +279,30 @@ public class GFF3FileReaderTest {
     @Test
     void testReadSpecies_noSpecies() throws Exception {
         // GFF3 with species
-        String input = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
+        String withSpecies1 = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
                 + "##sequence-region BN000065.1 1 315242\n"
-                + "BN000065.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n\n"
-                + "##gff-version 3\n"
-                + "##species http://example.org?name=Homo sapiens\n"
+                + "BN000065.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n\n";
+        String withSpecies2 = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
                 + "##sequence-region BN000066.1 1 315242\n"
                 + "BN000066.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n\n";
-        String output = testReadWithHeaderAndFastaOnEachAnnotation(input);
-        assertEquals(input, output);
+        assertEquals(
+                List.of(withSpecies1, withSpecies2), readAndWriteOneDocumentPerAnnotation(withSpecies1 + withSpecies2));
 
         // GFF3 with out species
-        input = "##gff-version 3\n" + "##sequence-region BN000065.1 1 315242\n"
+        String withoutSpecies = "##gff-version 3\n" + "##sequence-region BN000065.1 1 315242\n"
                 + "BN000065.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n\n";
-        output = testReadWithHeaderAndFastaOnEachAnnotation(input);
-        assertEquals(input, output);
+        assertEquals(List.of(withoutSpecies), readAndWriteOneDocumentPerAnnotation(withoutSpecies));
 
         // GFF3 header on each annotation
-        input = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
-                + "##sequence-region BN000065.1 1 315242\n\n"
-                + "##gff-version 3\n"
-                + "##species http://example.org?name=Homo sapiens\n"
+        String noFeatures1 = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
+                + "##sequence-region BN000065.1 1 315242\n\n";
+        String noFeatures2 = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
                 + "##sequence-region BN000066.1 1 315242\n\n";
-        output = testReadWithHeaderAndFastaOnEachAnnotation(input);
-        assertEquals(input, output);
+        assertEquals(
+                List.of(noFeatures1, noFeatures2), readAndWriteOneDocumentPerAnnotation(noFeatures1 + noFeatures2));
 
-        input = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
-                + "##sequence-region BN000065.1 1 315242\n\n"
-                + "##gff-version 3\n"
-                + "##species http://example.org?name=Homo sapiens\n"
-                + "##sequence-region BN000066.1 1 315242\n\n";
-        output = testReadWithHeaderOnce(input);
+        String input = noFeatures1 + noFeatures2;
+        String output = testReadWithHeaderOnce(input);
         String inputWithoutRepeatingVersionAndSequence = input.replaceAll("##gff-version 3\\n", "");
         inputWithoutRepeatingVersionAndSequence = inputWithoutRepeatingVersionAndSequence.replaceAll(
                 "##species http://example.org\\?name=Homo sapiens\n", "");
@@ -324,14 +338,14 @@ public class GFF3FileReaderTest {
                 + "MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEMSSKYPRSVRRCLPLWALTLE\n"
                 + "AALILLFYFFTHYDASLE\n\n";
 
-        String expected = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
+        String expectedDocument1 = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
                 + "##sequence-region BN000065.1 1 315242\n"
                 + "BN000065.1\t.\tCDS\t1\t315242\t.\t+\t.\tID=CDS_RHD;gene=RHD;\n\n"
                 + "##FASTA\n"
                 + ">BN000065.1|CDS_RHX\n"
-                + "MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLE\n\n"
-                + "##gff-version 3\n"
-                + "##species http://example.org?name=Homo sapiens\n"
+                + "MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLE\n\n";
+
+        String expectedDocument2 = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
                 + "##sequence-region BN000066.1 1 315242\n"
                 + "BN000066.1\t.\tCDS\t1\t315242\t.\t+\t.\tID=CDS_RHX;gene=RHD;\n\n"
                 + "##FASTA\n"
@@ -339,8 +353,7 @@ public class GFF3FileReaderTest {
                 + "MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEMSSKYPRSVRRCLPLWALTLE\n"
                 + "AALILLFYFFTHYDASLE\n\n";
 
-        String output = testReadWithHeaderAndFastaOnEachAnnotation(input);
-        assertEquals(expected, output);
+        assertEquals(List.of(expectedDocument1, expectedDocument2), readAndWriteOneDocumentPerAnnotation(input));
     }
 
     @Test
@@ -443,29 +456,66 @@ public class GFF3FileReaderTest {
         return writer.toString();
     }
 
-    private String testReadWithHeaderAndFastaOnEachAnnotation(String input)
+    /**
+     * Writes each annotation as a document of its own and returns those documents, in the order the
+     * reader produced them.
+     *
+     * <p>Each document gets its own writer: joining them into one output would not be valid
+     * GFF3, however well formed each is on its own. {@link #testReadWithHeaderAndFastaInEnd}
+     * covers the other shape, one document holding every annotation.
+     */
+    private List<String> readAndWriteOneDocumentPerAnnotation(String input)
             throws IOException, ValidationException, ReadException, WriteException {
-        StringWriter writer = new StringWriter();
+        List<String> documents = new ArrayList<>();
         Files.deleteIfExists(Path.of("input.gff3"));
         Files.writeString(Path.of("input.gff3"), input, Charset.defaultCharset());
         try (GFF3FileReader reader =
                 new GFF3FileReader(getValidationEngine(), new StringReader(input), Path.of("input.gff3"))) {
             GFF3Header gff3Header = reader.readHeader();
-            AtomicReference<GFF3File> gff3File = new AtomicReference<>();
             reader.read(annotation -> {
-                GFF3Species gff3Species = reader.getSpecies();
-                gff3File.set(GFF3File.builder()
+                StringWriter writer = new StringWriter();
+                GFF3File.builder()
                         .header(gff3Header)
-                        .species(gff3Species)
+                        .species(reader.getSpecies())
                         .annotations(Collections.singletonList(annotation))
                         .gff3Reader(reader)
                         .writeAnnotationFasta(true)
-                        .build());
-                gff3File.get().writeGFF3String(writer);
+                        .build()
+                        .writeGFF3String(writer);
+                documents.add(writer.toString());
             });
             Files.deleteIfExists(Path.of("input.gff3"));
         }
-        return writer.toString();
+
+        for (String document : documents) {
+            assertIsSingleAnnotationDocument(document);
+        }
+        return documents;
+    }
+
+    /** Asserts that {@code document} is a valid GFF3 document holding exactly one annotation. */
+    private void assertIsSingleAnnotationDocument(String document)
+            throws IOException, ValidationException, ReadException, WriteException {
+        int fastaCount = document.split("##FASTA", -1).length - 1;
+        Assertions.assertTrue(fastaCount <= 1, "a GFF3 document must not contain two FASTA sections:\n" + document);
+
+        int marker = document.indexOf("##FASTA");
+        if (marker >= 0) {
+            Assertions.assertTrue(
+                    !document.substring(marker).contains("\t"),
+                    "no feature line may follow the FASTA section:\n" + document);
+        }
+
+        Path roundTrip = Path.of("roundtrip.gff3");
+        Files.writeString(roundTrip, document, Charset.defaultCharset());
+        List<GFF3Annotation> readBack = new ArrayList<>();
+        try (GFF3FileReader reader = new GFF3FileReader(getValidationEngine(), new StringReader(document), roundTrip)) {
+            reader.readHeader();
+            reader.read(readBack::add);
+        } finally {
+            Files.deleteIfExists(roundTrip);
+        }
+        assertEquals(1, readBack.size(), "a single-annotation document must read back as one annotation");
     }
 
     private String testReadWithHeaderAndFastaInEnd(String input)
@@ -489,6 +539,7 @@ public class GFF3FileReaderTest {
                     .species(gff3Species.get())
                     .annotations(annotations)
                     .gff3Reader(reader)
+                    .writeAnnotationFasta(true)
                     .build();
 
             gff3File1.writeGFF3String(writer);

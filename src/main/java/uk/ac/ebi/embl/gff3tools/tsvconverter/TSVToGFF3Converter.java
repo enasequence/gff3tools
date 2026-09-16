@@ -134,6 +134,7 @@ public class TSVToGFF3Converter implements Converter {
                 if (sourceOutputPath != null) {
                     SourceFeatureDTO sourceFeature =
                             new SourceFeatureDTO(submissionId, entry.getPrimarySourceFeature());
+                    sourceFeature.setBiosampleId(entry.getBiosampleId());
                     sourceFeatures.add(sourceFeature);
                 }
 
@@ -177,6 +178,7 @@ public class TSVToGFF3Converter implements Converter {
                 .species(species)
                 .annotations(annotations)
                 .translationState(translationState)
+                .writeAnnotationFasta(true)
                 .parsingWarnings(validationEngine.getParsingWarnings())
                 .build();
 
