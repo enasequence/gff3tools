@@ -154,6 +154,7 @@ public class ValidationCommandTest {
         assertEquals(
                 """
                 {
+                  "gff3Spec" : "3",
                   "totalFeatures" : 3,
                   "annotations" : [ {
                     "accession" : "seq1",
@@ -213,6 +214,7 @@ public class ValidationCommandTest {
         assertEquals(
                 """
                 {
+                  "gff3Spec" : "3",
                   "totalFeatures" : 1,
                   "annotations" : [ {
                     "accession" : "seq1",

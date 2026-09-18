@@ -42,7 +42,10 @@ import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
  */
 public class MetricsCollector {
 
-    private final Map<String, Annotation> annotations = new LinkedHashMap<>();
+    private final Map<String, AnnotationStats> annotations = new LinkedHashMap<>();
+
+    // Version declared by the file header (##gff-version); null until seen.
+    private String gff3Spec;
     private long totalFeatures;
 
     /**
@@ -50,6 +53,18 @@ public class MetricsCollector {
      * accession was already seen. Annotations without features and without a sequence region are
      * skipped: they carry nothing to count and no accession to file them under.
      */
+    /**
+     * Records the GFF3 spec declared by the input's {@code ##gff-version} directive (the version
+     * string as written, for example "3" or "3.1.26"). The first directive wins: a GFF3 file
+     * declares exactly one version header. Runs that produce GFF3 without reading a version
+     * directive (EMBL/FASTA/TSV input) carry no spec, and the report omits the field.
+     */
+    public void recordGff3Spec(String gff3Spec) {
+        if (this.gff3Spec == null) {
+            this.gff3Spec = gff3Spec;
+        }
+    }
+
     public void record(GFF3Annotation annotation) {
         if (annotation == null) {
             return;
@@ -58,7 +73,7 @@ public class MetricsCollector {
         if (accession == null) {
             return;
         }
-        Annotation entry = annotations.computeIfAbsent(accession, a -> new Annotation());
+        AnnotationStats entry = annotations.computeIfAbsent(accession, a -> new AnnotationStats());
         GFF3SequenceRegion region = annotation.getSequenceRegion();
         if (region != null) {
             entry.sequenceBases = Math.max(region.end() - region.start() + 1, 0);
@@ -91,6 +106,7 @@ public class MetricsCollector {
      */
     public Gff3Metrics snapshot() {
         return new Gff3Metrics(
+                gff3Spec,
                 totalFeatures,
                 annotations.entrySet().stream()
                         .map(entry -> new Gff3Metrics.AnnotationMetrics(
@@ -135,7 +151,7 @@ public class MetricsCollector {
     }
 
     /** Per-accession state: declared region span plus per-type feature stats. */
-    private static final class Annotation {
+    private static final class AnnotationStats {
         long sequenceBases;
         final TreeMap<String, TypeStats> featureStats = new TreeMap<>();
     }

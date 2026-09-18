@@ -244,6 +244,7 @@ class FileConversionCommandTest {
         assertEquals(
                 """
                 {
+                  "gff3Spec" : "3",
                   "totalFeatures" : 2,
                   "annotations" : [ {
                     "accession" : "seq1",

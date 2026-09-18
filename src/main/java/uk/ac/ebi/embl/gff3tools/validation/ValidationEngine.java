@@ -18,6 +18,7 @@ import uk.ac.ebi.embl.gff3tools.exception.AggregatedValidationException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.metrics.MetricsCollector;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
@@ -74,9 +75,12 @@ public class ValidationEngine implements AutoCloseable {
             }
         } finally {
             // Record after the tiers ran so features added by fixes (e.g. GAP_GENERATION) are
-            // counted too, and in a finally so an aborted run still reports what it saw.
+            // counted too, and in a finally so an aborted run still reports what it saw. The
+            // version header feeds through as well, so the report carries the file's GFF3 spec.
             if (metrics != null && target instanceof GFF3Annotation annotation) {
                 metrics.record(annotation);
+            } else if (metrics != null && target instanceof GFF3Header header) {
+                metrics.recordGff3Spec(header.version());
             }
         }
     }

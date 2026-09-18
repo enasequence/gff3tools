@@ -29,7 +29,6 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.metrics.MetricsCollector;
-import uk.ac.ebi.embl.gff3tools.metrics.MetricsFormat;
 import uk.ac.ebi.embl.gff3tools.utils.GapOptionsValidator;
 import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
@@ -66,20 +65,6 @@ public class ValidationCommand extends AbstractCommand {
             description = "Optional INSDC linkage_evidence for generated gap features (only used when an output "
                     + "argument is given). Only valid with a gap_type that requires it (e.g. \"within scaffold\").")
     public String linkageEvidence;
-
-    @CommandLine.Option(
-            names = {"--metrics"},
-            description = "Optional. Write a metrics report (feature counts per annotation) to this path, "
-                    + "or '-' to print it to stderr. Default format: JSON for a file, text for '-'. "
-                    + "The report is written even when validation fails.")
-    public Path metricsFilePath;
-
-    @CommandLine.Option(
-            names = {"--metrics-format"},
-            converter = MetricsFormat.Converter.class,
-            description = "Format of the --metrics report: ${COMPLETION-CANDIDATES} (case-insensitive). "
-                    + "Default: json for a file, text for '-'. Inert without --metrics.")
-    public MetricsFormat metricsFormat;
 
     /**
      * Absent (the default) means report-only: no gff3 is written, and this stays backward

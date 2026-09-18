@@ -66,6 +66,20 @@ public abstract class AbstractCommand implements Runnable {
             description = "Toggle auto-fixes in the format key:ON or key:OFF")
     public CliFixesOption fixes;
 
+    @CommandLine.Option(
+            names = {"--metrics"},
+            description = "Optional. Write a metrics report (feature counts per annotation of the GFF3 "
+                    + "read or produced) to this path, or '-' to print it to stderr. Default format: JSON "
+                    + "for a file, text for '-'. The report is written even when the run fails validation.")
+    public Path metricsFilePath;
+
+    @CommandLine.Option(
+            names = {"--metrics-format"},
+            converter = MetricsFormat.Converter.class,
+            description = "Format of the --metrics report: ${COMPLETION-CANDIDATES} (case-insensitive). "
+                    + "Default: json for a file, text for '-'. Inert without --metrics.")
+    public MetricsFormat metricsFormat;
+
     @CommandLine.Parameters(
             paramLabel = "[input-file]",
             defaultValue = "",

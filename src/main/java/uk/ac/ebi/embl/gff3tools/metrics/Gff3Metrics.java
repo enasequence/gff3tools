@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.metrics;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.BufferedWriter;
@@ -28,11 +29,15 @@ import java.util.List;
  * name. Records are immutable, so a snapshot stays valid after the run that produced it.
  *
  * <p>Serialization uses Jackson: record component names become the JSON keys, so the schema is
- * {@code totalFeatures}, {@code annotations[].accession}, {@code annotations[].sequenceBases},
- * {@code annotations[].totalFeatures}, {@code annotations[].features[].name},
- * {@code annotations[].features[].count}, {@code annotations[].features[].bases}.
+ * {@code gff3Spec}, {@code totalFeatures}, {@code annotations[].accession},
+ * {@code annotations[].sequenceBases}, {@code annotations[].totalFeatures},
+ * {@code annotations[].features[].name}, {@code annotations[].features[].count},
+ * {@code annotations[].features[].bases}. {@code gff3Spec} is the version declared by the
+ * input's {@code ##gff-version} directive; it is omitted when the run saw no version directive
+ * (EMBL/FASTA/TSV to GFF3 runs read no GFF3 header).
  */
-public record Gff3Metrics(long totalFeatures, List<AnnotationMetrics> annotations) {
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public record Gff3Metrics(String gff3Spec, long totalFeatures, List<AnnotationMetrics> annotations) {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
