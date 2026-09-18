@@ -18,6 +18,14 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
+// Generates gff3tools.properties with the build version, so the library (and the metrics
+// report) can resolve it at runtime in both the shadow jar and unpacked test classes.
+processResources {
+    filesMatching('**/gff3tools.properties') {
+        expand(version: project.version)
+    }
+}
+
 ext.codonDeployBaseDir = "/hps/software/users/tburdett/ena/jar/gff3tools/";
 
 

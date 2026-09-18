@@ -19,13 +19,16 @@ public class MetricsTextRendererTest {
 
     @Test
     public void emptyMetricsRenderTotalOnly() {
-        assertEquals("total: 0 features\n", MetricsTextRenderer.render(new Gff3Metrics(null, 0, List.of())));
+        assertEquals(
+                "total: 0 features\n",
+                MetricsTextRenderer.render(new Gff3Metrics(null, Gff3ToolsVersion.VERSION, 0, List.of())));
     }
 
     @Test
     public void annotationsRenderOneLineEachWithCounts() {
         Gff3Metrics metrics = new Gff3Metrics(
                 null,
+                Gff3ToolsVersion.VERSION,
                 3,
                 List.of(new Gff3Metrics.AnnotationMetrics(
                         "seq1",
@@ -45,8 +48,8 @@ public class MetricsTextRendererTest {
 
     @Test
     public void annotationWithoutFeaturesOmitsCounts() {
-        Gff3Metrics metrics =
-                new Gff3Metrics(null, 0, List.of(new Gff3Metrics.AnnotationMetrics("seq1", 0, 0, List.of())));
+        Gff3Metrics metrics = new Gff3Metrics(
+                null, Gff3ToolsVersion.VERSION, 0, List.of(new Gff3Metrics.AnnotationMetrics("seq1", 0, 0, List.of())));
 
         assertEquals(
                 """

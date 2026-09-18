@@ -24,6 +24,7 @@ import java.util.zip.GZIPOutputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
+import uk.ac.ebi.embl.gff3tools.metrics.Gff3ToolsVersion;
 
 class FileConversionCommandTest {
 
@@ -245,6 +246,7 @@ class FileConversionCommandTest {
                 """
                 {
                   "gff3Spec" : "3",
+                  "gff3toolsVersion" : "%s",
                   "totalFeatures" : 2,
                   "annotations" : [ {
                     "accession" : "seq1",
@@ -260,7 +262,8 @@ class FileConversionCommandTest {
                       "bases" : 100
                     } ]
                   } ]
-                }""",
+                }"""
+                        .formatted(Gff3ToolsVersion.VERSION),
                 Files.readString(metricsFile));
     }
 

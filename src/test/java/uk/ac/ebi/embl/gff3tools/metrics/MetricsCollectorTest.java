@@ -52,7 +52,7 @@ public class MetricsCollectorTest {
     public void emptyCollectorProducesZeroTotals() {
         Gff3Metrics metrics = new MetricsCollector().snapshot();
 
-        assertEquals(new Gff3Metrics(null, 0, List.of()), metrics);
+        assertEquals(new Gff3Metrics(null, Gff3ToolsVersion.VERSION, 0, List.of()), metrics);
     }
 
     @Test
@@ -65,6 +65,7 @@ public class MetricsCollectorTest {
         assertEquals(
                 new Gff3Metrics(
                         null,
+                        Gff3ToolsVersion.VERSION,
                         3,
                         List.of(new Gff3Metrics.AnnotationMetrics(
                                 "ACC1",
@@ -112,7 +113,11 @@ public class MetricsCollectorTest {
         collector.record(annotation("ACC1"));
 
         assertEquals(
-                new Gff3Metrics(null, 0, List.of(new Gff3Metrics.AnnotationMetrics("ACC1", 1000, 0, List.of()))),
+                new Gff3Metrics(
+                        null,
+                        Gff3ToolsVersion.VERSION,
+                        0,
+                        List.of(new Gff3Metrics.AnnotationMetrics("ACC1", 1000, 0, List.of()))),
                 collector.snapshot());
     }
 
@@ -122,7 +127,7 @@ public class MetricsCollectorTest {
 
         assertDoesNotThrow(() -> collector.record(null));
 
-        assertEquals(new Gff3Metrics(null, 0, List.of()), collector.snapshot());
+        assertEquals(new Gff3Metrics(null, Gff3ToolsVersion.VERSION, 0, List.of()), collector.snapshot());
     }
 
     @Test
@@ -132,6 +137,13 @@ public class MetricsCollectorTest {
         collector.recordGff3Spec("3.1.26");
 
         assertEquals("3", collector.snapshot().gff3Spec());
+    }
+
+    @Test
+    public void gff3toolsVersionIsTheBuildVersion() {
+        MetricsCollector collector = new MetricsCollector();
+
+        assertEquals(Gff3ToolsVersion.VERSION, collector.snapshot().gff3toolsVersion());
     }
 
     @Test
@@ -298,6 +310,7 @@ public class MetricsCollectorTest {
         assertEquals(
                 """
                 {
+                  "gff3toolsVersion" : "%s",
                   "totalFeatures" : 3,
                   "annotations" : [ {
                     "accession" : "ACC1",
@@ -313,7 +326,7 @@ public class MetricsCollectorTest {
                       "bases" : 10
                     } ]
                   } ]
-                }""",
+                }""".formatted(Gff3ToolsVersion.VERSION),
                 collector.snapshot().toJson());
     }
 

@@ -30,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
+import uk.ac.ebi.embl.gff3tools.metrics.Gff3ToolsVersion;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationConfig;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.builtin.AttributesValueValidation;
@@ -155,6 +156,7 @@ public class ValidationCommandTest {
                 """
                 {
                   "gff3Spec" : "3",
+                  "gff3toolsVersion" : "%s",
                   "totalFeatures" : 3,
                   "annotations" : [ {
                     "accession" : "seq1",
@@ -175,7 +177,8 @@ public class ValidationCommandTest {
                       "bases" : 93
                     } ]
                   } ]
-                }""",
+                }"""
+                        .formatted(Gff3ToolsVersion.VERSION),
                 Files.readString(metricsFile));
     }
 
@@ -215,6 +218,7 @@ public class ValidationCommandTest {
                 """
                 {
                   "gff3Spec" : "3",
+                  "gff3toolsVersion" : "%s",
                   "totalFeatures" : 1,
                   "annotations" : [ {
                     "accession" : "seq1",
@@ -226,7 +230,8 @@ public class ValidationCommandTest {
                       "bases" : 93
                     } ]
                   } ]
-                }""",
+                }"""
+                        .formatted(Gff3ToolsVersion.VERSION),
                 Files.readString(metricsFile));
     }
 

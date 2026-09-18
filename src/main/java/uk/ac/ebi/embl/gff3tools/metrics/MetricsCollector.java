@@ -107,6 +107,7 @@ public class MetricsCollector {
     public Gff3Metrics snapshot() {
         return new Gff3Metrics(
                 gff3Spec,
+                Gff3ToolsVersion.VERSION,
                 totalFeatures,
                 annotations.entrySet().stream()
                         .map(entry -> new Gff3Metrics.AnnotationMetrics(

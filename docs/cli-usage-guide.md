@@ -254,6 +254,7 @@ The JSON report is stable, pretty-printed, and maps directly onto the library's
 ```json
 {
   "gff3Spec" : "3",
+  "gff3toolsVersion" : "5.2.3",
   "totalFeatures" : 3,
   "annotations" : [ {
     "accession" : "seq1",
@@ -286,7 +287,8 @@ produces one entry per accession. Feature counts are sorted by name.
 
 `gff3Spec` carries the version declared by the input's `##gff-version` directive. It is
 omitted when the run produces GFF3 without reading a version header (EMBL/FASTA/TSV
-to GFF3).
+to GFF3). `gff3toolsVersion` carries the gff3tools build version that produced the
+report.
 
 ### Text format
 
