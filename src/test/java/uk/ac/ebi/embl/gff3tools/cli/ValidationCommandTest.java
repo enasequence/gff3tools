@@ -30,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
+import uk.ac.ebi.embl.gff3tools.metrics.Gff3ToolsVersion;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationConfig;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.builtin.AttributesValueValidation;
@@ -131,6 +132,186 @@ public class ValidationCommandTest {
         // Without --sequence, validation should still work (translation is skipped)
         int exitCode = executeValidation("validation", gff3.toString());
         assertEquals(0, exitCode, "Validation without --sequence should succeed");
+    }
+
+    @Test
+    void metricsOptionWritesFeatureCounts() throws Exception {
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 200
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1
+                seq1\t.\tCDS\t100\t193\t.\t+\t0\tID=cds2
+                ##sequence-region seq2 1 100
+                seq2\t.\tCDS\t1\t93\t.\t+\t0\tID=cds3
+                """);
+        Path metricsFile = tempDir.resolve("metrics.json");
+
+        int exitCode = executeValidation("validation", "--metrics", metricsFile.toString(), gff3.toString());
+
+        assertEquals(0, exitCode, "Validation should succeed");
+        assertEquals(
+                """
+                {
+                  "gff3Spec" : "3",
+                  "gff3toolsVersion" : "%s",
+                  "totalFeatures" : 3,
+                  "annotations" : [ {
+                    "accession" : "seq1",
+                    "sequenceBases" : 200,
+                    "totalFeatures" : 2,
+                    "features" : [ {
+                      "name" : "CDS",
+                      "count" : 2,
+                      "bases" : 187
+                    } ]
+                  }, {
+                    "accession" : "seq2",
+                    "sequenceBases" : 100,
+                    "totalFeatures" : 1,
+                    "features" : [ {
+                      "name" : "CDS",
+                      "count" : 1,
+                      "bases" : 93
+                    } ]
+                  } ]
+                }"""
+                        .formatted(Gff3ToolsVersion.VERSION),
+                Files.readString(metricsFile));
+    }
+
+    @Test
+    void metricsOptionWritesReportWhenValidationFails() throws Exception {
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(gff3, "invalid content\n");
+        Path metricsFile = tempDir.resolve("metrics.json");
+
+        int exitCode = executeValidation("validation", "--metrics", metricsFile.toString(), gff3.toString());
+
+        assertNotEquals(0, exitCode, "Validation should fail");
+        assertTrue(Files.exists(metricsFile), "Metrics report should be written even on failure");
+        assertTrue(Files.readString(metricsFile).contains("\"totalFeatures\" : 0"), "no features were read");
+    }
+
+    @Test
+    void metricsOptionWritesReportWhenValidationFailsOnParseableInput() throws Exception {
+        // A dangling Parent reference is a validation failure (DANGLING_PARENT, exit 20) on GFF3
+        // that still parses and yields real features, unlike unparseable input: it proves
+        // collection survives a failing run rather than just a collector that was never fed.
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 100
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1;Parent=missing_gene
+                """);
+        Path metricsFile = tempDir.resolve("metrics.json");
+
+        int exitCode = executeValidation("validation", "--metrics", metricsFile.toString(), gff3.toString());
+
+        assertEquals(20, exitCode, "DANGLING_PARENT should fail validation");
+        assertTrue(Files.exists(metricsFile), "Metrics report should be written even on failure");
+        assertEquals(
+                """
+                {
+                  "gff3Spec" : "3",
+                  "gff3toolsVersion" : "%s",
+                  "totalFeatures" : 1,
+                  "annotations" : [ {
+                    "accession" : "seq1",
+                    "sequenceBases" : 100,
+                    "totalFeatures" : 1,
+                    "features" : [ {
+                      "name" : "CDS",
+                      "count" : 1,
+                      "bases" : 93
+                    } ]
+                  } ]
+                }"""
+                        .formatted(Gff3ToolsVersion.VERSION),
+                Files.readString(metricsFile));
+    }
+
+    @Test
+    void metricsStderrDefaultsToText() throws Exception {
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 200
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1
+                seq1\t.\tCDS\t100\t193\t.\t+\t0\tID=cds2
+                ##sequence-region seq2 1 100
+                seq2\t.\tCDS\t1\t93\t.\t+\t0\tID=cds3
+                """);
+
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream captured = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(captured, true, StandardCharsets.UTF_8));
+        try {
+            int exitCode = executeValidation("validation", "--metrics", "-", gff3.toString());
+            assertEquals(0, exitCode, "Validation should succeed");
+            String stderr = captured.toString(StandardCharsets.UTF_8);
+            assertTrue(stderr.contains("seq1: 2 features on 200 bases (CDS 2, 187 bases)"), stderr);
+            assertTrue(stderr.contains("seq2: 1 features on 100 bases (CDS 1, 93 bases)"), stderr);
+            assertTrue(stderr.contains("total: 3 features"), stderr);
+            assertFalse(stderr.contains("totalFeatures"), "stderr should be text, not JSON: " + stderr);
+        } finally {
+            System.setErr(originalErr);
+        }
+    }
+
+    @Test
+    void metricsStderrExplicitJson() throws Exception {
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 93
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1
+                """);
+
+        PrintStream originalErr = System.err;
+        ByteArrayOutputStream captured = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(captured, true, StandardCharsets.UTF_8));
+        try {
+            int exitCode =
+                    executeValidation("validation", "--metrics", "-", "--metrics-format", "json", gff3.toString());
+            assertEquals(0, exitCode, "Validation should succeed");
+            String stderr = captured.toString(StandardCharsets.UTF_8);
+            assertTrue(stderr.contains("\"totalFeatures\" : 1"), stderr);
+        } finally {
+            System.setErr(originalErr);
+        }
+    }
+
+    @Test
+    void metricsFileExplicitTextFormat() throws Exception {
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 93
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1
+                """);
+        Path metricsFile = tempDir.resolve("metrics.txt");
+
+        int exitCode = executeValidation(
+                "validation", "--metrics", metricsFile.toString(), "--metrics-format", "text", gff3.toString());
+
+        assertEquals(0, exitCode, "Validation should succeed");
+        assertEquals(
+                """
+                seq1: 1 features on 93 bases (CDS 1, 93 bases)
+                total: 1 features
+                """,
+                Files.readString(metricsFile));
     }
 
     @Test

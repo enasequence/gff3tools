@@ -354,8 +354,11 @@ public class GFF3FileReader implements AutoCloseable {
 
             Matcher m = VERSION_DIRECTIVE.matcher(line);
             if (m.matches()) {
-                String version = m.group("version");
-                return new GFF3Header(version);
+                GFF3Header header = new GFF3Header(m.group("version"));
+                // Feed the header through the validation engine so the metrics collector (when
+                // attached) records the file's GFF3 spec; no validators target the header itself.
+                validationEngine.validate(header, lineCount);
+                return header;
             } else if (!COMMENT.matcher(line).matches()) {
                 validationEngine.handleSyntacticError(
                         new InvalidGFF3HeaderException(lineCount, "Invalid gff3 header \"" + line + "\""));
