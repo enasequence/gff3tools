@@ -326,7 +326,8 @@ public class MetricsCollectorTest {
                       "bases" : 10
                     } ]
                   } ]
-                }""".formatted(Gff3ToolsVersion.VERSION),
+                }"""
+                        .formatted(Gff3ToolsVersion.VERSION),
                 collector.snapshot().toJson());
     }
 
