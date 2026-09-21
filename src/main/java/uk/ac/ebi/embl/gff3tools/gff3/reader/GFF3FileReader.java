@@ -25,6 +25,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
+import uk.ac.ebi.embl.gff3tools.metrics.MetricsCollector;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
@@ -355,9 +356,12 @@ public class GFF3FileReader implements AutoCloseable {
             Matcher m = VERSION_DIRECTIVE.matcher(line);
             if (m.matches()) {
                 GFF3Header header = new GFF3Header(m.group("version"));
-                // Feed the header through the validation engine so the metrics collector (when
-                // attached) records the file's GFF3 spec; no validators target the header itself.
-                validationEngine.validate(header, lineCount);
+                // The version header is not a validation target; record the file's GFF3 spec
+                // straight on the collector when --metrics attached one.
+                MetricsCollector metrics = validationEngine.getMetricsCollector();
+                if (metrics != null) {
+                    metrics.recordGff3Spec(header.version());
+                }
                 return header;
             } else if (!COMMENT.matcher(line).matches()) {
                 validationEngine.handleSyntacticError(
