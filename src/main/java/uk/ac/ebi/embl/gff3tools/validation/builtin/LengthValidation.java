@@ -10,12 +10,15 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
+import static uk.ac.ebi.embl.gff3tools.utils.ValidationUtils.groupFeaturesById;
+
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -43,6 +46,18 @@ public class LengthValidation implements Validation {
     private static final long COMPLETE_TRNA_MIN_LENGTH = 50;
     private static final long COMPLETE_TRNA_MAX_LENGTH = 150;
 
+    /** Exception values that explain a short intron, in the form produced by {@link #normaliseVocabulary}. */
+    private static final Set<String> INTRON_LENGTH_EXEMPT_EXCEPTIONS = Set.of(
+            "ribosomal slippage",
+            "trans splicing",
+            "low quality sequence region",
+            "heterogeneous population sequenced",
+            "rna editing",
+            "reasons given in citation",
+            "rearrangement required for product",
+            "annotated by transcript or proteomic data",
+            "circular rna");
+
     private static final String INVALID_PROPEPTIDE_LENGTH_MESSAGE =
             "Propeptide feature length must be a multiple of 3 for accession \"%s\"";
     private static final String INVALID_INTRON_LENGTH_MESSAGE = "Intron feature length is invalid for accession \"%s\"";
@@ -60,7 +75,8 @@ public class LengthValidation implements Validation {
                     + "\n /artificial_location=\"heterogeneous population sequenced\" \n "
                     + "OR \n /artificial_location=\"low-quality sequence region\". "
                     + "\n Alternatively, use where appropriate: "
-                    + "\n /pseudo, /pseudogene, /trans_splicing, /ribosomal_slippage";
+                    + "\n /pseudo, /pseudogene, /trans_splicing, /ribosomal_slippage"
+                    + "\n or an /exception explaining the short intron";
 
     @InjectContext
     private ValidationContext context;
@@ -73,65 +89,41 @@ public class LengthValidation implements Validation {
         if (soIdOpt.isEmpty()) return;
 
         if (ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.INTRON.ID)
-                && length < INTRON_FEATURE_MIN_LENGTH) {
+                && length < INTRON_FEATURE_MIN_LENGTH
+                && !isIntronLengthExempt(feature)) {
             throw new ValidationException(line, INVALID_INTRON_LENGTH_MESSAGE.formatted(feature.accession()));
         }
     }
 
     @ValidationMethod(rule = "CDS_INTRON_LENGTH", type = ValidationType.ANNOTATION, severity = RuleSeverity.WARN)
     public void validateCdsIntronLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
-        OntologyClient ontologyClient = context.get(OntologyClient.class);
-        Map<String, List<GFF3Feature>> cdsListById = new HashMap<>();
+        // Features without an ID are keyed individually, so unrelated CDSs are never measured as one.
+        Map<String, List<GFF3Feature>> cdsGroups = groupFeaturesById(gff3Annotation, this::isCdsTerm);
 
-        for (GFF3Feature feature : gff3Annotation.getFeatures()) {
-
-            if (feature == null) continue;
-
-            Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
-            if (soIdOpt.isEmpty()) continue;
-
-            boolean isCds = OntologyTerm.CDS.ID.equals(soIdOpt.get())
-                    || ontologyClient.isSelfOrDescendantOf(soIdOpt.get(), OntologyTerm.CDS.ID);
-
-            if (!isCds) continue;
-
-            if (isPseudo(feature)
-                    || feature.hasAttribute(GFF3Attributes.RIBOSOMAL_SLIPPAGE)
-                    || feature.hasAttribute(GFF3Attributes.TRANS_SPLICING)) {
+        for (List<GFF3Feature> cdsList : cdsGroups.values()) {
+            // An exemption on any one segment explains the whole coding region.
+            if (cdsList.size() <= 1 || cdsList.stream().anyMatch(this::isIntronLengthExempt)) {
                 continue;
             }
+            List<GFF3Feature> sortedCdsGroup = new ArrayList<>(cdsList);
+            sortedCdsGroup.sort(Comparator.comparingLong(GFF3Feature::getStart));
 
-            String cdsId = feature.getAttribute(GFF3Attributes.ATTRIBUTE_ID).orElse(null);
+            for (int i = 1; i < sortedCdsGroup.size(); i++) {
+                GFF3Feature prev = sortedCdsGroup.get(i - 1);
+                GFF3Feature curr = sortedCdsGroup.get(i);
+                // Coordinates are 1-based and inclusive, so the bases between the segments are
+                // prev.end + 1 .. curr.start - 1. Overlapping segments are left to other rules.
+                long intronLen = curr.getStart() - prev.getEnd() - 1;
+                if (intronLen >= 0 && intronLen < INTRON_FEATURE_MIN_LENGTH) {
+                    boolean artificial = prev.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION)
+                            || curr.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION);
 
-            cdsListById.computeIfAbsent(cdsId, k -> new ArrayList<>()).add(feature);
-        }
-
-        for (List<GFF3Feature> cdsGroup : cdsListById.values()) {
-            validateCdsIntronLength(cdsGroup, line);
-        }
-    }
-
-    private void validateCdsIntronLength(List<GFF3Feature> cdsList, int line) throws ValidationException {
-
-        if (cdsList.size() <= 1) {
-            return;
-        }
-        cdsList.sort(Comparator.comparingLong(GFF3Feature::getStart));
-
-        for (int i = 1; i < cdsList.size(); i++) {
-            GFF3Feature prev = cdsList.get(i - 1);
-            GFF3Feature curr = cdsList.get(i);
-            long intronLen = curr.getStart() - prev.getEnd();
-            if (intronLen >= 0 && intronLen < 10) {
-                boolean artificial = prev.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION)
-                        || curr.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION);
-
-                if (!artificial && !isPseudo(curr)) {
-                    throw new ValidationException(reportedLine(curr, line), INVALID_CDS_INTRON_LENGTH_MESSAGE);
+                    if (!artificial) {
+                        throw new ValidationException(reportedLine(curr, line), INVALID_CDS_INTRON_LENGTH_MESSAGE);
+                    }
                 }
             }
         }
-        cdsList.clear();
     }
 
     /**
@@ -149,7 +141,7 @@ public class LengthValidation implements Validation {
             type = ValidationType.ANNOTATION,
             priority = ValidationPriority.LOW)
     public void validateCdsLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
-        Map<String, List<GFF3Feature>> cdsGroups = ValidationUtils.groupFeaturesById(gff3Annotation, this::isCds);
+        Map<String, List<GFF3Feature>> cdsGroups = groupFeaturesById(gff3Annotation, this::isCds);
 
         for (List<GFF3Feature> segments : cdsGroups.values()) {
             validateCdsLength(segments, line);
@@ -163,7 +155,7 @@ public class LengthValidation implements Validation {
             type = ValidationType.ANNOTATION)
     public void validateTrnaLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
         // Features without an ID are keyed individually, so unrelated tRNAs are never summed as one.
-        Map<String, List<GFF3Feature>> trnaGroups = ValidationUtils.groupFeaturesById(gff3Annotation, this::isTrna);
+        Map<String, List<GFF3Feature>> trnaGroups = groupFeaturesById(gff3Annotation, this::isTrna);
 
         for (List<GFF3Feature> segments : trnaGroups.values()) {
             validateTrnaLength(segments, line);
@@ -211,8 +203,52 @@ public class LengthValidation implements Validation {
         return feature.hasAttribute(GFF3Attributes.PSEUDO) || feature.hasAttribute(GFF3Attributes.PSEUDOGENE);
     }
 
+    /** Features whose short introns are explained by their annotation rather than being errors. */
+    private boolean isIntronLengthExempt(GFF3Feature feature) {
+        return isPseudo(feature)
+                || feature.hasAttribute(GFF3Attributes.RIBOSOMAL_SLIPPAGE)
+                || feature.hasAttribute(GFF3Attributes.TRANS_SPLICING)
+                || hasIntronLengthExemptException(feature);
+    }
+
+    private boolean hasIntronLengthExemptException(GFF3Feature feature) {
+        return feature.getAttributeList(GFF3Attributes.EXCEPTION)
+                .map(values -> values.stream()
+                        .map(LengthValidation::normaliseVocabulary)
+                        .anyMatch(INTRON_LENGTH_EXEMPT_EXCEPTIONS::contains))
+                .orElse(false);
+    }
+
+    /**
+     * Ignores case and treats "_", "-" and whitespace alike, so "trans_splicing", "trans-splicing" and
+     * "Trans splicing" compare equal.
+     */
+    private static String normaliseVocabulary(String value) {
+        return value.trim().toLowerCase(Locale.ROOT).replaceAll("[_\\-\\s]+", " ");
+    }
+
+    /**
+     * Matches features named exactly "CDS". Deliberately a literal comparison rather than an
+     * ontology lookup: {@link uk.ac.ebi.embl.gff3tools.validation.fix.TranslationFix} selects CDS
+     * features the same way, and CDS_LENGTH must measure the same groups that fix translates.
+     * Synonyms such as "coding_sequence" are therefore not matched; see {@link #isCdsTerm}.
+     */
     private boolean isCds(GFF3Feature feature) {
         return feature != null && OntologyTerm.CDS.name().equals(feature.getName());
+    }
+
+    /**
+     * Matches the CDS term itself by name or synonym, so "CDS", "coding_sequence" and
+     * "coding sequence" all match. Unlike {@link #isCds}, this does not depend on translation, so
+     * it can accept synonyms. SO subtypes of CDS (the CDS extensions) are pieces of a coding region
+     * rather than whole ones, so they are not matched.
+     */
+    private boolean isCdsTerm(GFF3Feature feature) {
+        return feature != null
+                && context.get(OntologyClient.class)
+                        .findTermByNameOrSynonym(feature.getName())
+                        .filter(OntologyTerm.CDS.ID::equals)
+                        .isPresent();
     }
 
     private boolean isTrna(GFF3Feature feature) {
