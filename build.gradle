@@ -10,12 +10,20 @@ plugins {
 base {
     archivesName = 'gff3tools'
     group = 'uk.ac.ebi.ena'
-    version = '5.3.1'
+    version = '5.3.0'
 }
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
+}
+
+// Generates gff3tools.properties with the build version, so the library (and the metrics
+// report) can resolve it at runtime in both the shadow jar and unpacked test classes.
+processResources {
+    filesMatching('**/gff3tools.properties') {
+        expand(version: project.version)
+    }
 }
 
 ext.codonDeployBaseDir = "/hps/software/users/tburdett/ena/jar/gff3tools/";
@@ -75,6 +83,9 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:1.18.30")
     implementation('uk.ac.ebi.ena.sequence:sequencetools:2.+')
     implementation("uk.ac.ebi.ena:fastareader:1.2.0")
+    // Declared explicitly (also pulled transitively via fastareader/owlapi): the metrics model
+    // serializes itself with Jackson, so it must not depend on a transitive's goodwill.
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.6")
     implementation "io.vavr:vavr:0.10.5"
     implementation "org.jgrapht:jgrapht-core:1.5.2"
     implementation("info.picocli:picocli:4.7.6")

@@ -28,6 +28,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.gff3tools.metrics.MetricsCollector;
 import uk.ac.ebi.embl.gff3tools.utils.GapOptionsValidator;
 import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
@@ -146,6 +147,9 @@ public class ValidationCommand extends AbstractCommand {
 
         try (ValidationEngine validationEngine = initValidationEngine(ruleOverrides, fixOverrides, providers)) {
 
+            MetricsCollector metrics = metricsFilePath != null ? new MetricsCollector() : null;
+            validationEngine.setMetrics(metrics);
+
             // Re-reading the FASTA/translation section back out of the input requires reopening
             // it by path; that is impossible when reading from stdin, so it is skipped there.
             boolean hasRealInputFile = !isStdioSentinel(inputFilePath);
@@ -220,6 +224,8 @@ public class ValidationCommand extends AbstractCommand {
                     }
                 }
             } finally {
+                // Written in a finally so a failing validation still reports what it counted.
+                writeMetricsReport(metrics, metricsFilePath, metricsFormat);
                 if (decompressedTempFile != null) {
                     try {
                         Files.deleteIfExists(decompressedTempFile);

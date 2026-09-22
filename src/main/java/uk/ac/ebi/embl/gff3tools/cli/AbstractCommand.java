@@ -35,6 +35,10 @@ import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
+import uk.ac.ebi.embl.gff3tools.metrics.Gff3Metrics;
+import uk.ac.ebi.embl.gff3tools.metrics.MetricsCollector;
+import uk.ac.ebi.embl.gff3tools.metrics.MetricsFormat;
+import uk.ac.ebi.embl.gff3tools.metrics.MetricsTextRenderer;
 import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
@@ -61,6 +65,20 @@ public abstract class AbstractCommand implements Runnable {
             paramLabel = "<key:ON|OFF,key:ON|OFF>",
             description = "Toggle auto-fixes in the format key:ON or key:OFF")
     public CliFixesOption fixes;
+
+    @CommandLine.Option(
+            names = {"--metrics"},
+            description = "Optional. Write a metrics report (feature counts per annotation of the GFF3 "
+                    + "read or produced) to this path, or '-' to print it to stderr. Default format: JSON "
+                    + "for a file, text for '-'. The report is written even when the run fails validation.")
+    public Path metricsFilePath;
+
+    @CommandLine.Option(
+            names = {"--metrics-format"},
+            converter = MetricsFormat.Converter.class,
+            description = "Format of the --metrics report: ${COMPLETION-CANDIDATES} (case-insensitive). "
+                    + "Default: json for a file, text for '-'. Inert without --metrics.")
+    public MetricsFormat metricsFormat;
 
     @CommandLine.Parameters(
             paramLabel = "[input-file]",
@@ -206,6 +224,35 @@ public abstract class AbstractCommand implements Runnable {
                 log.warn("Failed to delete temporary file: {}", tempFile);
             }
             throw e;
+        }
+    }
+
+    /**
+     * Writes the optional {@code --metrics} report in the resolved {@link MetricsFormat}: JSON
+     * for a file path, human-readable text for the terminal sentinel {@code -}, with an explicit
+     * {@code --metrics-format} always winning. Terminal output goes to stderr — stdout carries
+     * the command's primary output. Never masks the primary result: a metrics write failure is
+     * logged and the run's own outcome (and exit code) stands.
+     */
+    protected void writeMetricsReport(MetricsCollector metrics, Path metricsFilePath, MetricsFormat metricsFormat) {
+        if (metrics == null || metricsFilePath == null) {
+            return;
+        }
+        boolean toStderr = isStdioSentinel(metricsFilePath);
+        MetricsFormat format = MetricsFormat.resolve(metricsFormat, toStderr);
+        try {
+            Gff3Metrics snapshot = metrics.snapshot();
+            if (toStderr) {
+                System.err.println(
+                        format == MetricsFormat.TEXT ? MetricsTextRenderer.render(snapshot) : snapshot.toJson());
+            } else if (format == MetricsFormat.TEXT) {
+                Files.writeString(metricsFilePath, MetricsTextRenderer.render(snapshot));
+            } else {
+                snapshot.writeJson(metricsFilePath);
+            }
+            log.info("Metrics written to {}", metricsFilePath);
+        } catch (IOException e) {
+            log.error("Failed to write metrics file {}: {}", metricsFilePath, e.getMessage());
         }
     }
 

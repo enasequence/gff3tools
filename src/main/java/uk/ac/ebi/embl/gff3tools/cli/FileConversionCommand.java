@@ -26,6 +26,7 @@ import uk.ac.ebi.embl.gff3tools.fftogff3.FFToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.fftogff3.FastaToGff3Converter;
 import uk.ac.ebi.embl.gff3tools.gff3toff.Gff3ToFFConverter;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
+import uk.ac.ebi.embl.gff3tools.metrics.MetricsCollector;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.tsvconverter.TSVToGFF3Converter;
@@ -158,10 +159,17 @@ public class FileConversionCommand extends AbstractCommand {
                     // output. Every other direction is converting annotation the submitter already
                     // wrote, so synthesising extra features into it is not this command's job.
                     Map<String, Boolean> fixOverrides = fastaToGff3 ? Map.of() : Map.of("GAP_GENERATION", false);
+                    MetricsCollector metrics = metricsFilePath != null ? new MetricsCollector() : null;
                     try (ValidationEngine engine = initValidationEngine(ruleOverrides, fixOverrides, providers)) {
+                        engine.setMetrics(metrics);
                         Converter converter =
                                 getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal, sequenceLookup);
-                        converter.convert(inputReader, writer);
+                        try {
+                            converter.convert(inputReader, writer);
+                        } finally {
+                            // Written in a finally so a failed conversion still reports what it counted.
+                            writeMetricsReport(metrics, metricsFilePath, metricsFormat);
+                        }
                     }
                 }
             };

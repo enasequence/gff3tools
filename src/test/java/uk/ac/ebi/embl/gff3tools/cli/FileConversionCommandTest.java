@@ -24,6 +24,7 @@ import java.util.zip.GZIPOutputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
+import uk.ac.ebi.embl.gff3tools.metrics.Gff3ToolsVersion;
 
 class FileConversionCommandTest {
 
@@ -220,6 +221,83 @@ class FileConversionCommandTest {
 
         assertEquals(0, exitCode, "Conversion without --sequence should succeed");
         assertTrue(Files.exists(outputFile), "Output file should be created");
+    }
+
+    @Test
+    void metricsOptionWritesFeatureCountsForConversion() throws Exception {
+        Path inputFile = tempDir.resolve("valid.gff3");
+        Files.writeString(
+                inputFile,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 1000
+                seq1\t.\tgene\t1\t100\t.\t+\t.\tID=gene1
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1;Parent=gene1
+                """);
+
+        Path outputFile = tempDir.resolve("output.embl");
+        Path metricsFile = tempDir.resolve("metrics.json");
+
+        int exitCode = executeConversion(
+                "conversion", "--metrics", metricsFile.toString(), inputFile.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "Conversion should succeed");
+        assertEquals(
+                """
+                {
+                  "gff3Spec" : "3",
+                  "gff3toolsVersion" : "%s",
+                  "totalFeatures" : 2,
+                  "annotations" : [ {
+                    "accession" : "seq1",
+                    "sequenceBases" : 1000,
+                    "totalFeatures" : 2,
+                    "features" : [ {
+                      "name" : "CDS",
+                      "count" : 1,
+                      "bases" : 93
+                    }, {
+                      "name" : "gene",
+                      "count" : 1,
+                      "bases" : 100
+                    } ]
+                  } ]
+                }"""
+                        .formatted(Gff3ToolsVersion.VERSION),
+                Files.readString(metricsFile));
+    }
+
+    @Test
+    void metricsFileExplicitTextFormatForConversion() throws Exception {
+        Path inputFile = tempDir.resolve("valid.gff3");
+        Files.writeString(
+                inputFile,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 1000
+                seq1\t.\tgene\t1\t100\t.\t+\t.\tID=gene1
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1;Parent=gene1
+                """);
+
+        Path outputFile = tempDir.resolve("output.embl");
+        Path metricsFile = tempDir.resolve("metrics.txt");
+
+        int exitCode = executeConversion(
+                "conversion",
+                "--metrics",
+                metricsFile.toString(),
+                "--metrics-format",
+                "text",
+                inputFile.toString(),
+                outputFile.toString());
+
+        assertEquals(0, exitCode, "Conversion should succeed");
+        assertEquals(
+                """
+                seq1: 2 features on 1000 bases (CDS 1, 93 bases; gene 1, 100 bases)
+                total: 2 features
+                """,
+                Files.readString(metricsFile));
     }
 
     @Test
