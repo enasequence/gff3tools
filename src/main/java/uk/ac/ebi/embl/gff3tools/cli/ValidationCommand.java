@@ -217,7 +217,7 @@ public class ValidationCommand extends AbstractCommand {
                                 annotations,
                                 hasRealInputFile ? gff3Reader : null,
                                 null,
-                                false,
+                                true,
                                 null,
                                 translationState);
                         gff3File.writeGFF3String(outputWriter);
