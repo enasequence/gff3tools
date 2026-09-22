@@ -48,15 +48,15 @@ public class LengthValidation implements Validation {
 
     /** Exception values that explain a short intron, in the form produced by {@link #normaliseVocabulary}. */
     private static final Set<String> INTRON_LENGTH_EXEMPT_EXCEPTIONS = Set.of(
-            "ribosomal slippage",
-            "trans splicing",
-            "low quality sequence region",
+            "ribosomal_slippage",
+            "trans_splicing",
+            "low-quality sequence region",
             "heterogeneous population sequenced",
-            "rna editing",
+            "RNA editing",
             "reasons given in citation",
             "rearrangement required for product",
             "annotated by transcript or proteomic data",
-            "circular rna");
+            "circular_RNA");
 
     private static final String INVALID_PROPEPTIDE_LENGTH_MESSAGE =
             "Propeptide feature length must be a multiple of 3 for accession \"%s\"";
