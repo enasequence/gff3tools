@@ -19,6 +19,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -233,6 +236,243 @@ public class LengthValidationTest {
     public void testPropetideValidationInvalidName() {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), 1L, 180L);
         Assertions.assertDoesNotThrow(() -> lengthValidation.validatePropeptideLength(feature, 1));
+    }
+
+    /** Exception values the ticket lists, spelled as the ticket writes them. */
+    static List<String> exemptExceptionValues() {
+        return List.of(
+                "ribosomal_slippage",
+                "trans_splicing",
+                "low-quality sequence region",
+                "heterogeneous population sequenced",
+                "RNA editing",
+                "reasons given in citation",
+                "rearrangement required for product",
+                "annotated by transcript or proteomic data",
+                "circular_RNA");
+    }
+
+    @Nested
+    class CdsIntronLengthValidation {
+
+        private static final String SEQ_ID = "seq1";
+
+        @Test
+        void failsWhenTheIntronIsOneBelowTheMinimum() {
+            // 101..109 is 9 nt.
+            addFeatures(cds("cds1", 1L, 100L), cds("cds1", 110L, 200L));
+
+            assertThrows(ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void passesWhenTheIntronIsExactlyTheMinimum() {
+            // 101..110 is 10 nt.
+            addFeatures(cds("cds1", 1L, 100L), cds("cds1", 111L, 200L));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void failsWhenSegmentsAreAdjacent() {
+            addFeatures(cds("cds1", 1L, 100L), cds("cds1", 101L, 200L));
+
+            assertThrows(ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void ignoresOverlappingSegments() {
+            addFeatures(cds("cds1", 1L, 100L), cds("cds1", 90L, 200L));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void measuresSegmentsInLocationOrderRegardlessOfFileOrder() {
+            addFeatures(cds("cds1", 105L, 200L), cds("cds1", 1L, 100L));
+
+            assertThrows(ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @ParameterizedTest
+        @MethodSource("uk.ac.ebi.embl.gff3tools.validation.builtin.LengthValidationTest#exemptExceptionValues")
+        void skipsCdsWithAnExemptException(String exception) {
+            addFeatures(
+                    cds("cds1", 1L, 100L, Map.of(GFF3Attributes.EXCEPTION, List.of(exception))),
+                    cds("cds1", 105L, 200L, Map.of(GFF3Attributes.EXCEPTION, List.of(exception))));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @ParameterizedTest
+        @ValueSource(
+                strings = {
+                    "trans-splicing",
+                    "ribosomal slippage",
+                    "Low-Quality Sequence Region",
+                    "low quality sequence region",
+                    "rna editing",
+                    "RNA  editing",
+                    "  RNA editing  ",
+                    "circular RNA"
+                })
+        void matchesExemptExceptionsIgnoringCaseSeparatorsAndSurroundingWhitespace(String exception) {
+            addFeatures(
+                    cds("cds1", 1L, 100L, Map.of(GFF3Attributes.EXCEPTION, List.of(exception))),
+                    cds("cds1", 105L, 200L, Map.of(GFF3Attributes.EXCEPTION, List.of(exception))));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void failsWhenTheExceptionIsNotAnExemptValue() {
+            addFeatures(
+                    cds("cds1", 1L, 100L, Map.of(GFF3Attributes.EXCEPTION, List.of("something else"))),
+                    cds("cds1", 105L, 200L, Map.of(GFF3Attributes.EXCEPTION, List.of("something else"))));
+
+            assertThrows(ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsWhenAnyOfSeveralExceptionValuesIsExempt() {
+            List<String> exceptions = List.of("something else", "RNA editing");
+            addFeatures(
+                    cds("cds1", 1L, 100L, Map.of(GFF3Attributes.EXCEPTION, exceptions)),
+                    cds("cds1", 105L, 200L, Map.of(GFF3Attributes.EXCEPTION, exceptions)));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsTheWholeCdsWhenOnlyOneSegmentCarriesTheException() {
+            addFeatures(
+                    cds("cds1", 1L, 100L),
+                    cds("cds1", 105L, 200L),
+                    cds("cds1", 205L, 300L, Map.of(GFF3Attributes.EXCEPTION, List.of("RNA editing"))));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {GFF3Attributes.RIBOSOMAL_SLIPPAGE, GFF3Attributes.TRANS_SPLICING})
+        void skipsCdsWithAnExemptAttribute(String attribute) {
+            addFeatures(cds("cds1", 1L, 100L, Map.of(attribute, List.of("true"))), cds("cds1", 105L, 200L));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void anExemptCdsDoesNotStopLaterCdsFromBeingChecked() {
+            addFeatures(
+                    cds("cds1", 1L, 100L, Map.of(GFF3Attributes.EXCEPTION, List.of("RNA editing"))),
+                    cds("cds1", 105L, 200L, Map.of(GFF3Attributes.EXCEPTION, List.of("RNA editing"))),
+                    cds("cds2", 300L, 400L),
+                    cds("cds2", 405L, 500L));
+
+            assertThrows(ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void aSingleSegmentCdsDoesNotStopLaterCdsFromBeingChecked() {
+            addFeatures(cds("cds1", 1L, 100L), cds("cds2", 300L, 400L), cds("cds2", 405L, 500L));
+
+            assertThrows(ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void doesNotMeasureUnrelatedCdsThatHaveNoIdAsOne() {
+            addFeatures(cdsWithoutId(1L, 100L), cdsWithoutId(105L, 200L));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void measuresCdsTypedWithASynonym() {
+            addFeatures(
+                    feature("coding_sequence", Optional.of("cds1"), 1L, 100L, Map.of()),
+                    feature("coding_sequence", Optional.of("cds1"), 105L, 200L, Map.of()));
+
+            assertThrows(ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void ignoresFeaturesThatAreNotCds() {
+            addFeatures(
+                    feature("exon", Optional.of("exon1"), 1L, 100L, Map.of()),
+                    feature("exon", Optional.of("exon1"), 105L, 200L, Map.of()));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        private void addFeatures(GFF3Feature... features) {
+            for (GFF3Feature f : features) {
+                gff3Annotation.addFeature(f);
+            }
+        }
+
+        private GFF3Feature cds(String id, long start, long end) {
+            return cds(id, start, end, Map.of());
+        }
+
+        private GFF3Feature cds(String id, long start, long end, Map<String, List<String>> attributes) {
+            return feature(OntologyTerm.CDS.name(), Optional.of(id), start, end, attributes);
+        }
+
+        private GFF3Feature cdsWithoutId(long start, long end) {
+            return feature(OntologyTerm.CDS.name(), Optional.empty(), start, end, Map.of());
+        }
+
+        private GFF3Feature feature(
+                String name, Optional<String> id, long start, long end, Map<String, List<String>> attributes) {
+            GFF3Feature f = new GFF3Feature(
+                    id, Optional.empty(), SEQ_ID, Optional.empty(), ".", name, start, end, ".", "+", "0");
+            f.addAttributes(attributes);
+            return f;
+        }
+    }
+
+    @Nested
+    class IntronLengthValidation {
+
+        @ParameterizedTest
+        @MethodSource("uk.ac.ebi.embl.gff3tools.validation.builtin.LengthValidationTest#exemptExceptionValues")
+        void skipsShortIntronWithAnExemptException(String exception) {
+            feature = shortIntron(Map.of(GFF3Attributes.EXCEPTION, List.of(exception)));
+
+            assertDoesNotThrow(() -> lengthValidation.validateIntronLength(feature, 1));
+        }
+
+        @Test
+        void matchesExemptExceptionsIgnoringCaseAndSeparators() {
+            feature = shortIntron(Map.of(GFF3Attributes.EXCEPTION, List.of("Trans-Splicing")));
+
+            assertDoesNotThrow(() -> lengthValidation.validateIntronLength(feature, 1));
+        }
+
+        @Test
+        void failsWhenTheExceptionIsNotAnExemptValue() {
+            feature = shortIntron(Map.of(GFF3Attributes.EXCEPTION, List.of("something else")));
+
+            assertThrows(ValidationException.class, () -> lengthValidation.validateIntronLength(feature, 1));
+        }
+
+        @ParameterizedTest
+        @ValueSource(
+                strings = {
+                    GFF3Attributes.PSEUDO,
+                    GFF3Attributes.PSEUDOGENE,
+                    GFF3Attributes.RIBOSOMAL_SLIPPAGE,
+                    GFF3Attributes.TRANS_SPLICING
+                })
+        void skipsShortIntronWithAnExemptAttribute(String attribute) {
+            feature = shortIntron(Map.of(attribute, List.of("true")));
+
+            assertDoesNotThrow(() -> lengthValidation.validateIntronLength(feature, 1));
+        }
+
+        private GFF3Feature shortIntron(Map<String, List<String>> attributes) {
+            return TestUtils.createGFF3Feature(OntologyTerm.SPLICEOSOMAL_INTRON.name(), 1L, 9L, attributes);
+        }
     }
 
     @Nested

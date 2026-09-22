@@ -19,6 +19,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -46,8 +47,8 @@ public class LengthValidation implements Validation {
     private static final long COMPLETE_TRNA_MIN_LENGTH = 50;
     private static final long COMPLETE_TRNA_MAX_LENGTH = 150;
 
-    /** Exception values that explain a short intron, in the form produced by {@link #normaliseVocabulary}. */
-    private static final Set<String> INTRON_LENGTH_EXEMPT_EXCEPTIONS = Set.of(
+    /** Exception values that explain a short intron, spelled as the ticket lists them. */
+    private static final List<String> INTRON_LENGTH_EXEMPT_EXCEPTIONS = List.of(
             "ribosomal_slippage",
             "trans_splicing",
             "low-quality sequence region",
@@ -57,6 +58,12 @@ public class LengthValidation implements Validation {
             "rearrangement required for product",
             "annotated by transcript or proteomic data",
             "circular_RNA");
+
+    /** {@link #INTRON_LENGTH_EXEMPT_EXCEPTIONS} in the form produced by {@link #normaliseVocabulary}. */
+    private static final Set<String> NORMALISED_INTRON_LENGTH_EXEMPT_EXCEPTIONS =
+            INTRON_LENGTH_EXEMPT_EXCEPTIONS.stream()
+                    .map(LengthValidation::normaliseVocabulary)
+                    .collect(Collectors.toUnmodifiableSet());
 
     private static final String INVALID_PROPEPTIDE_LENGTH_MESSAGE =
             "Propeptide feature length must be a multiple of 3 for accession \"%s\"";
@@ -98,7 +105,7 @@ public class LengthValidation implements Validation {
     @ValidationMethod(rule = "CDS_INTRON_LENGTH", type = ValidationType.ANNOTATION, severity = RuleSeverity.WARN)
     public void validateCdsIntronLength(GFF3Annotation gff3Annotation, int line) throws ValidationException {
         // Features without an ID are keyed individually, so unrelated CDSs are never measured as one.
-        Map<String, List<GFF3Feature>> cdsGroups = groupFeaturesById(gff3Annotation, this::isCdsTerm);
+        Map<String, List<GFF3Feature>> cdsGroups = groupFeaturesById(gff3Annotation, this::isCdsOrDescendant);
 
         for (List<GFF3Feature> cdsList : cdsGroups.values()) {
             // An exemption on any one segment explains the whole coding region.
@@ -215,7 +222,7 @@ public class LengthValidation implements Validation {
         return feature.getAttributeList(GFF3Attributes.EXCEPTION)
                 .map(values -> values.stream()
                         .map(LengthValidation::normaliseVocabulary)
-                        .anyMatch(INTRON_LENGTH_EXEMPT_EXCEPTIONS::contains))
+                        .anyMatch(NORMALISED_INTRON_LENGTH_EXEMPT_EXCEPTIONS::contains))
                 .orElse(false);
     }
 
@@ -231,24 +238,26 @@ public class LengthValidation implements Validation {
      * Matches features named exactly "CDS". Deliberately a literal comparison rather than an
      * ontology lookup: {@link uk.ac.ebi.embl.gff3tools.validation.fix.TranslationFix} selects CDS
      * features the same way, and CDS_LENGTH must measure the same groups that fix translates.
-     * Synonyms such as "coding_sequence" are therefore not matched; see {@link #isCdsTerm}.
+     * Synonyms such as "coding_sequence" are therefore not matched; see {@link #isCdsOrDescendant}.
      */
     private boolean isCds(GFF3Feature feature) {
         return feature != null && OntologyTerm.CDS.name().equals(feature.getName());
     }
 
     /**
-     * Matches the CDS term itself by name or synonym, so "CDS", "coding_sequence" and
-     * "coding sequence" all match. Unlike {@link #isCds}, this does not depend on translation, so
-     * it can accept synonyms. SO subtypes of CDS (the CDS extensions) are pieces of a coding region
-     * rather than whole ones, so they are not matched.
+     * Matches CDS or any SO subtype of it, looked up by name or synonym, so "CDS", "coding_sequence"
+     * and the CDS extension terms all match. This is the selection CDS_INTRON_LENGTH has always made.
+     * Unlike {@link #isCds}, it does not depend on translation, so it is free to accept synonyms.
      */
-    private boolean isCdsTerm(GFF3Feature feature) {
-        return feature != null
-                && context.get(OntologyClient.class)
-                        .findTermByNameOrSynonym(feature.getName())
-                        .filter(OntologyTerm.CDS.ID::equals)
-                        .isPresent();
+    private boolean isCdsOrDescendant(GFF3Feature feature) {
+        if (feature == null) {
+            return false;
+        }
+        OntologyClient ontologyClient = context.get(OntologyClient.class);
+        return ontologyClient
+                .findTermByNameOrSynonym(feature.getName())
+                .map(soId -> ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.CDS.ID))
+                .orElse(false);
     }
 
     private boolean isTrna(GFF3Feature feature) {
