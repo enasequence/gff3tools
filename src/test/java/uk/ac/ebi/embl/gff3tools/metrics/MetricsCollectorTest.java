@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
@@ -52,7 +53,7 @@ public class MetricsCollectorTest {
     public void emptyCollectorProducesZeroTotals() {
         Gff3Metrics metrics = new MetricsCollector().snapshot();
 
-        assertEquals(new Gff3Metrics(null, Gff3ToolsVersion.VERSION, 0, List.of()), metrics);
+        assertEquals(new Gff3Metrics(GFF3Header.DEFAULT_VERSION, Gff3ToolsVersion.VERSION, 0, List.of()), metrics);
     }
 
     @Test
@@ -64,7 +65,7 @@ public class MetricsCollectorTest {
 
         assertEquals(
                 new Gff3Metrics(
-                        null,
+                        GFF3Header.DEFAULT_VERSION,
                         Gff3ToolsVersion.VERSION,
                         3,
                         List.of(new Gff3Metrics.AnnotationMetrics(
@@ -114,7 +115,7 @@ public class MetricsCollectorTest {
 
         assertEquals(
                 new Gff3Metrics(
-                        null,
+                        GFF3Header.DEFAULT_VERSION,
                         Gff3ToolsVersion.VERSION,
                         0,
                         List.of(new Gff3Metrics.AnnotationMetrics("ACC1", 1000, 0, List.of()))),
@@ -127,7 +128,9 @@ public class MetricsCollectorTest {
 
         assertDoesNotThrow(() -> collector.record(null));
 
-        assertEquals(new Gff3Metrics(null, Gff3ToolsVersion.VERSION, 0, List.of()), collector.snapshot());
+        assertEquals(
+                new Gff3Metrics(GFF3Header.DEFAULT_VERSION, Gff3ToolsVersion.VERSION, 0, List.of()),
+                collector.snapshot());
     }
 
     @Test
@@ -147,10 +150,10 @@ public class MetricsCollectorTest {
     }
 
     @Test
-    public void absentVersionDirectiveLeavesGff3SpecAbsent() {
+    public void absentVersionDirectiveDefaultsToGff3Spec() {
         MetricsCollector collector = new MetricsCollector();
 
-        assertNull(collector.snapshot().gff3Spec());
+        assertEquals(GFF3Header.DEFAULT_VERSION, collector.snapshot().gff3Spec());
     }
 
     @Test
@@ -310,6 +313,7 @@ public class MetricsCollectorTest {
         assertEquals(
                 """
                 {
+                  "gff3Spec" : "%s",
                   "gff3toolsVersion" : "%s",
                   "totalFeatures" : 3,
                   "annotations" : [ {
@@ -327,7 +331,7 @@ public class MetricsCollectorTest {
                     } ]
                   } ]
                 }"""
-                        .formatted(Gff3ToolsVersion.VERSION),
+                        .formatted(GFF3Header.DEFAULT_VERSION, Gff3ToolsVersion.VERSION),
                 collector.snapshot().toJson());
     }
 
