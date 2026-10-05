@@ -106,6 +106,9 @@ public class GFF3FileReader implements AutoCloseable {
                     GFF3Annotation previousAnnotation = currentAnnotation;
                     currentAnnotation = new GFF3Annotation();
                     validationEngine.validate(previousAnnotation, lineCount);
+                    // Record it like the other return paths, or the featureless-region pass at the
+                    // end of the file would emit this accession again as an empty annotation.
+                    processedAccessions.add(previousAnnotation.getAccession());
                     return previousAnnotation;
                 }
                 continue;

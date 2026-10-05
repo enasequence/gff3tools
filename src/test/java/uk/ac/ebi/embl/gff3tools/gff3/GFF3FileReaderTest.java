@@ -11,6 +11,8 @@
 package uk.ac.ebi.embl.gff3tools.gff3;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.*;
@@ -246,6 +248,75 @@ public class GFF3FileReaderTest {
             Assertions.assertNull(annotation3);
             Files.deleteIfExists(Path.of("input.gff3"));
         }
+    }
+
+    /** Reads every annotation {@link GFF3FileReader#readAnnotation()} returns, without merging. */
+    private List<GFF3Annotation> readAllAnnotations(String gff3Content) throws Exception {
+        List<GFF3Annotation> annotations = new ArrayList<>();
+        Files.writeString(Path.of("input.gff3"), gff3Content, Charset.defaultCharset());
+        try (GFF3FileReader gff3Reader =
+                new GFF3FileReader(getValidationEngine(), new StringReader(gff3Content), Path.of("input.gff3"))) {
+            gff3Reader.readHeader();
+            GFF3Annotation annotation;
+            while ((annotation = gff3Reader.readAnnotation()) != null) {
+                annotations.add(annotation);
+            }
+        } finally {
+            Files.deleteIfExists(Path.of("input.gff3"));
+        }
+        return annotations;
+    }
+
+    @Test
+    void testResolutionDirectiveAfterLastFeatureDoesNotRepeatAccessionAsEmptyAnnotation() throws Exception {
+        String gff3Content = "##gff-version 3\n"
+                + "##sequence-region ID1 1 12\n"
+                + "##sequence-region ID2 1 8\n"
+                + "ID1\tENA\tCDS\t1\t12\t.\t+\t0\tID=cds1\n"
+                + "###\n"
+                + "ID2\tENA\tCDS\t1\t8\t.\t+\t0\tID=cds2\n"
+                + "###\n";
+
+        List<GFF3Annotation> annotations = readAllAnnotations(gff3Content);
+
+        assertEquals(
+                List.of("ID1", "ID2"),
+                annotations.stream().map(GFF3Annotation::getAccession).toList());
+        assertTrue(annotations.stream().allMatch(GFF3Annotation::hasFeatures));
+    }
+
+    @Test
+    void testResolutionDirectiveEndingSingleAccessionDoesNotRepeatIt() throws Exception {
+        String gff3Content = "##gff-version 3\n"
+                + "##sequence-region seq1 1 200\n"
+                + "seq1\tsource\tgene\t1\t100\t.\t+\t.\tID=gene1\n"
+                + "###\n"
+                + "###\n";
+
+        List<GFF3Annotation> annotations = readAllAnnotations(gff3Content);
+
+        assertEquals(1, annotations.size());
+        assertEquals("seq1", annotations.get(0).getAccession());
+        assertEquals(1, annotations.get(0).getFeatures().size());
+    }
+
+    @Test
+    void testResolutionDirectiveStillEmitsSequenceRegionWithoutFeatures() throws Exception {
+        // Only accessions that were actually returned are recorded: a region no feature references
+        // is still emitted once, as an empty annotation.
+        String gff3Content = "##gff-version 3\n"
+                + "##sequence-region seq1 1 200\n"
+                + "##sequence-region seq2 1 200\n"
+                + "seq1\tsource\tgene\t1\t100\t.\t+\t.\tID=gene1\n"
+                + "###\n";
+
+        List<GFF3Annotation> annotations = readAllAnnotations(gff3Content);
+
+        assertEquals(
+                List.of("seq1", "seq2"),
+                annotations.stream().map(GFF3Annotation::getAccession).toList());
+        assertTrue(annotations.get(0).hasFeatures());
+        assertFalse(annotations.get(1).hasFeatures());
     }
 
     @Test
