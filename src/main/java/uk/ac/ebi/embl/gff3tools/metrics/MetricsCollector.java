@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 
 /**
@@ -106,7 +107,7 @@ public class MetricsCollector {
      */
     public Gff3Metrics snapshot() {
         return new Gff3Metrics(
-                gff3Spec,
+                gff3Spec != null ? gff3Spec : GFF3Header.DEFAULT_VERSION,
                 Gff3ToolsVersion.VERSION,
                 totalFeatures,
                 annotations.entrySet().stream()
