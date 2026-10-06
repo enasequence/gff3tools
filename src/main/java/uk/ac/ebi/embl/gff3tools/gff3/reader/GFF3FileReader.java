@@ -55,6 +55,9 @@ public class GFF3FileReader implements AutoCloseable {
     public GFF3Species gff3Species;
     private Long speciesTaxId;
     private final Set<String> processedAccessions;
+    // Annotations end at ##FASTA. Once it is reached, only the regions without features are left to
+    // return: reading on would hit the first translation header and end the file before them.
+    private boolean fastaReached;
 
     private Map<String, OffsetRange> translationMap;
     private Map<String, Map<String, OffsetRange>> translationsByAccession;
@@ -79,12 +82,13 @@ public class GFF3FileReader implements AutoCloseable {
 
         String line;
         GFF3Feature feature;
-        while ((line = readLine()) != null) {
+        while (!fastaReached && (line = readLine()) != null) {
             if (line.isBlank()) {
                 // Ignore blank lines
                 continue;
             }
             if (line.startsWith("##FASTA")) {
+                fastaReached = true;
                 break;
             }
             Matcher m = SPECIES_DIRECTIVE.matcher(line);
