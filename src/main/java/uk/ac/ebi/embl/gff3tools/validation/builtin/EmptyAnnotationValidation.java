@@ -21,7 +21,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.*;
  *
  * <p>Off by default: a sequence with no features is a valid entry when the sequences come from a
  * submitted FASTA file. Turn it on ({@code rule.EMPTY_ANNOTATION=ERROR}) when the GFF3 is the only
- * thing submitted, e.g. when all sequences come from ECA.
+ * thing submitted.
  */
 @Gff3Validation(name = "EMPTY_ANNOTATION", description = "Rejects annotations without features")
 public class EmptyAnnotationValidation implements Validation {
