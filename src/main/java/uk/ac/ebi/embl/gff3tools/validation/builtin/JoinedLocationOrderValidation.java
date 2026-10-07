@@ -19,9 +19,6 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
@@ -67,7 +64,7 @@ public class JoinedLocationOrderValidation implements Validation {
             return;
         }
 
-        boolean circular = isCircularSequence(annotation.getAccession());
+        boolean circular = ValidationUtils.isCircularSequence(annotation.getAccession(), context);
         for (List<GFF3Feature> joinedFeature : joinedFeaturesById.values()) {
             String violation = detectRuleViolation(joinedFeature, circular);
             if (violation != null) {
@@ -119,25 +116,6 @@ public class JoinedLocationOrderValidation implements Validation {
             }
         }
         return false;
-    }
-
-    /**
-     * Topology needs a registered FASTA header source; absent or unrecognised counts as non-circular,
-     * since circular is always declared explicitly.
-     */
-    private boolean isCircularSequence(String accession) {
-        if (!context.contains(FastaHeaderProvider.class)) {
-            return false;
-        }
-        return context.get(FastaHeaderProvider.class)
-                .getHeader(accession)
-                .map(FastaHeader::getTopology)
-                // Canonicalise: FastaHeaderNormalisationFix runs after this annotation is validated.
-                .flatMap(topology ->
-                        ControlledVocabularyUtils.canonicalise(ControlledVocabularyUtils.Topology.class, topology))
-                .flatMap(ControlledVocabularyUtils.Topology::fromValue)
-                .map(ControlledVocabularyUtils.Topology.CIRCULAR::equals)
-                .orElse(false);
     }
 
     /** Names the feature in a message by ID, falling back to its first segment's location. */
