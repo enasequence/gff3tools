@@ -207,6 +207,32 @@ class JoinedLocationOrderValidationTest {
         assertTrue(exception.getMessage().contains("segment 300..350 starts before the preceding segment 400..500"));
     }
 
+    /** Segments on both sides of the origin, stopping short of where the feature began. */
+    @Test
+    void multiSegmentOriginSpanningJoinOnCircularSequenceIsValid() {
+        injectTopology("circular");
+        segment("gene1", 800, 850);
+        segment("gene1", 900, 1000);
+        segment("gene1", 1, 200);
+        segment("gene1", 300, 400);
+
+        assertDoesNotThrow(() -> validation.validateJoinedLocationOrder(annotation, 1));
+    }
+
+    /** A single step back mid-join is not the origin: the feature would run past its own start. */
+    @Test
+    void backwardStepAwayFromOriginOnCircularSequenceIsReported() {
+        injectTopology("circular");
+        segment("gene1", 100, 200);
+        segment("gene1", 500, 600);
+        segment("gene1", 300, 400);
+        segment("gene1", 700, 800);
+
+        ValidationException exception =
+                assertThrows(ValidationException.class, () -> validation.validateJoinedLocationOrder(annotation, 1));
+        assertTrue(exception.getMessage().contains("segment 300..400 starts before the preceding segment 500..600"));
+    }
+
     @Test
     void unknownTopologyIsTreatedAsLinear() {
         injectTopology("something-else");

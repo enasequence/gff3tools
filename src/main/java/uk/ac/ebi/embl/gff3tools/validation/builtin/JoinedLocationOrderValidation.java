@@ -79,10 +79,13 @@ public class JoinedLocationOrderValidation implements Validation {
 
     /**
      * The first segment starting before its predecessor in file order, or null where the feature is
-     * in order. A circular sequence allows one step back, which is the feature crossing the origin.
+     * in order. A circular sequence allows one step back, which is the feature crossing the origin -
+     * provided it then stops short of where it began, so a step back elsewhere in the join is still
+     * reported.
      */
     private String detectRuleViolation(List<GFF3Feature> joinedFeature, boolean circular) {
         int allowance = circular ? 1 : 0;
+        int wrap = -1;
 
         for (int i = 1; i < joinedFeature.size(); i++) {
             GFF3Feature previous = joinedFeature.get(i - 1);
@@ -93,16 +96,24 @@ public class JoinedLocationOrderValidation implements Validation {
             }
             if (allowance > 0) {
                 allowance--;
+                wrap = i;
                 continue;
             }
-            return VIOLATION_MESSAGE.formatted(
-                    current.getName(),
-                    identify(joinedFeature),
-                    current.accession(),
-                    location(current),
-                    location(previous));
+            return violation(joinedFeature, current, previous);
+        }
+
+        // Past the origin the last segment must start before the first, or the feature laps its own start.
+        GFF3Feature first = joinedFeature.get(0);
+        GFF3Feature last = joinedFeature.get(joinedFeature.size() - 1);
+        if (wrap > 0 && last.getStart() >= first.getStart()) {
+            return violation(joinedFeature, joinedFeature.get(wrap), joinedFeature.get(wrap - 1));
         }
         return null;
+    }
+
+    private String violation(List<GFF3Feature> joinedFeature, GFF3Feature current, GFF3Feature previous) {
+        return VIOLATION_MESSAGE.formatted(
+                current.getName(), identify(joinedFeature), current.accession(), location(current), location(previous));
     }
 
     /**
