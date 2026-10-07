@@ -13,16 +13,15 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
@@ -63,17 +62,14 @@ public class TranslationComparisonValidation {
         // Group CDS features by ID, using the same fallback key as TranslationFix so that
         // groups match 1:1. This relies on no fix modifying feature coordinates before these
         // LOW-priority rules execute.
-        Map<String, List<GFF3Feature>> cdsGroups = annotation.getFeatures().stream()
-                .filter(f -> OntologyTerm.CDS.name().equals(f.getName()))
-                .collect(Collectors.groupingBy(f -> f.getId().orElse("__no_id_" + f.getStart() + "_" + f.getEnd())));
+        Map<String, List<GFF3Feature>> cdsGroups = ValidationUtils.groupFeaturesById(
+                annotation, f -> OntologyTerm.CDS.name().equals(f.getName()));
 
         List<String> mismatches = new ArrayList<>();
 
         for (Map.Entry<String, List<GFF3Feature>> entry : cdsGroups.entrySet()) {
             // Sort by start position to match TranslationFix's representative selection
-            GFF3Feature representative = entry.getValue().stream()
-                    .min(Comparator.comparingLong(GFF3Feature::getStart))
-                    .orElseThrow();
+            GFF3Feature representative = ValidationUtils.representativeOfFeatureGroup(entry.getValue());
             String key = TranslationState.buildKey(
                     representative.accession(), representative.getId().orElse(null));
             if (key == null) {

@@ -27,8 +27,8 @@ class TranslationCommandTest {
 
     /**
      * Creates a FASTA file with JSON headers for sequence lookup.
-     * The sequence contains a CDS region at positions 1-9: ATGAAATAA
-     * which translates to MK (ATG=M, AAA=K, TAA=stop).
+     * The sequence contains a CDS region at positions 1-93
+     * which translates to a 30 amino acid protein (ATG=M, TTT=F, TAA=stop).
      */
     private Path createFastaFile(String seqId) throws Exception {
         Path fasta = tempDir.resolve("sequence.fasta");
@@ -36,7 +36,7 @@ class TranslationCommandTest {
                 fasta,
                 ">%s | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
                                 .formatted(seqId)
-                        + "ATGAAATAATTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n");
+                        + "ATGTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAATTTTTTT\n");
         return fasta;
     }
 
@@ -47,13 +47,13 @@ class TranslationCommandTest {
         Path seq = tempDir.resolve(filename);
         Files.writeString(
                 seq,
-                "ATGAAATAATTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n");
+                "ATGTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAATTTTTTT\n");
         return seq;
     }
 
     /**
      * Creates a minimal GFF3 file with CDS features for the given seqIds.
-     * Each seqId gets one CDS at positions 1-9 on the + strand.
+     * Each seqId gets one CDS at positions 1-93 on the + strand.
      */
     private Path createGff3File(String... seqIds) throws Exception {
         Path gff3 = tempDir.resolve("input.gff3");
@@ -63,7 +63,7 @@ class TranslationCommandTest {
         }
         int cdsNum = 1;
         for (String seqId : seqIds) {
-            sb.append("%s\t.\tCDS\t1\t9\t.\t+\t0\tID=cds%d\n".formatted(seqId, cdsNum++));
+            sb.append("%s\t.\tCDS\t1\t93\t.\t+\t0\tID=cds%d\n".formatted(seqId, cdsNum++));
         }
         Files.writeString(gff3, sb.toString());
         return gff3;
@@ -218,7 +218,7 @@ class TranslationCommandTest {
         Files.writeString(
                 fa,
                 ">seq1 | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n"
-                        + "ATGAAATAATTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n");
+                        + "ATGTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAATTTTTTT\n");
         Path gff3 = createGff3File("seq1");
         Path output = tempDir.resolve("output.gff3");
 
@@ -248,7 +248,7 @@ class TranslationCommandTest {
         Path seq = tempDir.resolve("sequence.dat");
         Files.writeString(
                 seq,
-                "ATGAAATAATTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT\n");
+                "ATGTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTAATTTTTTT\n");
         Path gff3 = createGff3File("seq1");
         Path output = tempDir.resolve("output.gff3");
 

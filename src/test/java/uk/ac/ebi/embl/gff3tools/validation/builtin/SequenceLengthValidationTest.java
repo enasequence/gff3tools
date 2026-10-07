@@ -18,7 +18,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -58,15 +57,13 @@ class SequenceLengthValidationTest {
 
     private void injectLookupReturning(String seqId, long len) throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getSequenceLength(seqId, SequenceRangeOption.WHOLE_SEQUENCE))
-                .thenReturn(len);
+        when(mockLookup.getSequenceLength(seqId)).thenReturn(len);
         injectLookup(mockLookup);
     }
 
     private void injectLookupReturning(String seqId, long len, AnalysisType analysisType) throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getSequenceLength(seqId, SequenceRangeOption.WHOLE_SEQUENCE))
-                .thenReturn(len);
+        when(mockLookup.getSequenceLength(seqId)).thenReturn(len);
         ValidationContext context = TestUtils.createTestContext();
         context.register(SequenceLookup.class, new ContextProvider<>() {
             @Override

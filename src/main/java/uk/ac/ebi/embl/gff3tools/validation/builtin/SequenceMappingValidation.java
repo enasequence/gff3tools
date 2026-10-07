@@ -12,7 +12,6 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import java.util.HashSet;
 import java.util.Set;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
@@ -45,7 +44,7 @@ public class SequenceMappingValidation implements Validation {
             rule = RULE_SEQUENCE_MAPPING,
             description = "Every feature accession must map to a sequence when a sequence provider is registered",
             type = ValidationType.FEATURE,
-            priority = ValidationPriority.HIGH)
+            priority = ValidationPriority.CRITICAL)
     public void validateSequenceMapping(GFF3Feature feature, int line) throws ValidationException {
         SequenceLookup lookup = registeredSequenceLookup();
         if (lookup == null) {
@@ -66,7 +65,7 @@ public class SequenceMappingValidation implements Validation {
 
     private void resolveOrExplode(SequenceLookup lookup, String accession, int line) throws ValidationException {
         try {
-            lookup.getSequenceLength(accession, SequenceRangeOption.WHOLE_SEQUENCE);
+            lookup.getSequenceLength(accession);
         } catch (Exception e) {
             validatedAccessions.remove(accession);
             throw new ValidationException(RULE_SEQUENCE_MAPPING, line, NO_MAPPING_MESSAGE.formatted(accession));

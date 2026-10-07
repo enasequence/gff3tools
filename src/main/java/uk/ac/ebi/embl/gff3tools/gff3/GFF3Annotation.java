@@ -48,7 +48,7 @@ public class GFF3Annotation implements IGFF3Feature {
                 .sorted(
                         Comparator.comparingInt((String key) -> {
                                     if (key.equals("ID")) return -2; // Highest priority
-                                    if (key.equals("Parent")) return -1; // Next
+                                    if (key.equals(GFF3Attributes.ATTRIBUTE_PARENT)) return -1; // Next
                                     return 0; // Others
                                 })
                                 .thenComparing(Comparator.naturalOrder()) // Sort others by key
@@ -109,6 +109,15 @@ public class GFF3Annotation implements IGFF3Feature {
                     .map(GFF3Feature::accession)
                     .orElseThrow(RuntimeException::new);
         }
+    }
+
+    /**
+     * Whether this annotation holds any feature. An annotation without features still carries its
+     * sequence region, e.g. a {@code ##sequence-region} no feature referenced, or a FASTA sequence
+     * with no gaps.
+     */
+    public boolean hasFeatures() {
+        return !features.isEmpty();
     }
 
     public void removeFeature(GFF3Feature feature) {

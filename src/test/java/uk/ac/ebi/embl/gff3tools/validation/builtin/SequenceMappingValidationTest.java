@@ -16,7 +16,6 @@ import static org.mockito.Mockito.*;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
@@ -65,8 +64,7 @@ class SequenceMappingValidationTest {
     @Test
     void mappingResolvesSuccess() throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getSequenceLength(SEQ_ID, SequenceRangeOption.WHOLE_SEQUENCE))
-                .thenReturn(1000L);
+        when(mockLookup.getSequenceLength(SEQ_ID)).thenReturn(1000L);
         injectLookup(mockLookup);
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 1L, 500L, Map.of());
@@ -76,8 +74,7 @@ class SequenceMappingValidationTest {
     @Test
     void noMappingExplodes() throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getSequenceLength(SEQ_ID, SequenceRangeOption.WHOLE_SEQUENCE))
-                .thenThrow(new RuntimeException("seqId not found"));
+        when(mockLookup.getSequenceLength(SEQ_ID)).thenThrow(new RuntimeException("seqId not found"));
         injectLookup(mockLookup);
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 1L, 500L, Map.of());
@@ -90,8 +87,7 @@ class SequenceMappingValidationTest {
     @Test
     void alreadyValidatedAccessionNotResolvedAgain() throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getSequenceLength(SEQ_ID, SequenceRangeOption.WHOLE_SEQUENCE))
-                .thenReturn(1000L);
+        when(mockLookup.getSequenceLength(SEQ_ID)).thenReturn(1000L);
         injectLookup(mockLookup);
 
         GFF3Feature first = TestUtils.createGFF3Feature("gene", SEQ_ID, 1L, 500L, Map.of());
@@ -101,14 +97,13 @@ class SequenceMappingValidationTest {
         assertDoesNotThrow(() -> check.validateSequenceMapping(second, 2));
 
         // Same accession on both features: the provider is only queried once.
-        verify(mockLookup, times(1)).getSequenceLength(SEQ_ID, SequenceRangeOption.WHOLE_SEQUENCE);
+        verify(mockLookup, times(1)).getSequenceLength(SEQ_ID);
     }
 
     @Test
     void failedAccessionIsRetriedNotCachedAsValid() throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getSequenceLength(SEQ_ID, SequenceRangeOption.WHOLE_SEQUENCE))
-                .thenThrow(new RuntimeException("seqId not found"));
+        when(mockLookup.getSequenceLength(SEQ_ID)).thenThrow(new RuntimeException("seqId not found"));
         injectLookup(mockLookup);
 
         GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 1L, 500L, Map.of());
@@ -117,6 +112,6 @@ class SequenceMappingValidationTest {
         assertThrows(ValidationException.class, () -> check.validateSequenceMapping(feature, 2));
 
         // A failed accession must not be remembered as validated.
-        verify(mockLookup, times(2)).getSequenceLength(SEQ_ID, SequenceRangeOption.WHOLE_SEQUENCE);
+        verify(mockLookup, times(2)).getSequenceLength(SEQ_ID);
     }
 }
