@@ -69,7 +69,8 @@ public class LocationValidation implements Validation {
     @ValidationMethod(
             rule = RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH,
             description = "Feature end position must not exceed the sequence length",
-            type = ValidationType.FEATURE)
+            type = ValidationType.FEATURE,
+            priority = ValidationPriority.LOW)
     public void validateFeatureEndWithinSequence(GFF3Feature feature, int line) throws ValidationException {
         Long lastBaseIndex = ValidationUtils.resolveSequenceLength(feature.accession(), sequenceLengthCache, context);
         if (lastBaseIndex == null) {
@@ -91,7 +92,8 @@ public class LocationValidation implements Validation {
     @ValidationMethod(
             rule = RULE_FEATURE_END_BELOW_ONE,
             description = "Feature end position must be at least 1",
-            type = ValidationType.FEATURE)
+            type = ValidationType.FEATURE,
+            priority = ValidationPriority.LOW)
     public void validateFeatureEndAboveZero(GFF3Feature feature, int line) throws ValidationException {
         if (feature.getEnd() < 1) {
             throw new ValidationException(
@@ -104,7 +106,8 @@ public class LocationValidation implements Validation {
     @ValidationMethod(
             rule = RULE_FEATURE_START_BELOW_ONE,
             description = "Feature start position must be at least 1",
-            type = ValidationType.FEATURE)
+            type = ValidationType.FEATURE,
+            priority = ValidationPriority.LOW)
     public void validateFeatureStartAboveZero(GFF3Feature feature, int line) throws ValidationException {
         if (feature.getStart() < 1) {
             throw new ValidationException(

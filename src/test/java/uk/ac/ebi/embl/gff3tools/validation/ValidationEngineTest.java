@@ -74,8 +74,8 @@ public class ValidationEngineTest {
         ValidationException ex =
                 Assertions.assertThrows(ValidationException.class, () -> validationEngine.validate(invalidFeature, 1));
 
-        Assertions.assertAll(() ->
-                Assertions.assertTrue(ex.getMessage().contains("Violation of rule FEATURE_START_BELOW_ONE on line 1")));
+        Assertions.assertAll(
+                () -> Assertions.assertTrue(ex.getMessage().contains("Violation of rule ONTOLOGY_FEATURE")));
     }
 
     @Test
