@@ -41,7 +41,7 @@ public class JoinedPartialAttributeValidation implements Validation {
             "Only the terminal segments of a joined feature may be partial:%s";
 
     private static final String VIOLATION_MESSAGE =
-            "\nFeature %s %s on accession \"%s\": segment %s carries a partial attribute, which belongs to the "
+            "\nFeature %s \"%s\" on accession \"%s\": segment %s carries a partial attribute, which belongs to the "
                     + "segments the join opens and closes with, %s and %s";
 
     @ValidationMethod(
@@ -57,8 +57,8 @@ public class JoinedPartialAttributeValidation implements Validation {
                 // Both segments of a two-segment join are terminal, so an interior starts at three.
                 joinedFeature -> joinedFeature.size() > 2);
 
-        for (List<GFF3Feature> joinedFeature : joinedFeaturesById.values()) {
-            violations.addAll(describeMisplacedPartials(joinedFeature));
+        for (Map.Entry<String, List<GFF3Feature>> joinedFeature : joinedFeaturesById.entrySet()) {
+            violations.addAll(describeMisplacedPartials(joinedFeature.getKey(), joinedFeature.getValue()));
         }
 
         if (!violations.isEmpty()) {
@@ -67,7 +67,7 @@ public class JoinedPartialAttributeValidation implements Validation {
     }
 
     /** Reports every segment between the first and the last that is marked partial. */
-    private List<String> describeMisplacedPartials(List<GFF3Feature> joinedFeature) {
+    private List<String> describeMisplacedPartials(String id, List<GFF3Feature> joinedFeature) {
         List<String> violations = new ArrayList<>();
 
         for (int i = 1; i < joinedFeature.size() - 1; i++) {
@@ -75,7 +75,7 @@ public class JoinedPartialAttributeValidation implements Validation {
             if (segment.hasAttribute(GFF3Attributes.PARTIAL)) {
                 violations.add(VIOLATION_MESSAGE.formatted(
                         segment.getName(),
-                        identify(joinedFeature),
+                        id,
                         segment.accession(),
                         location(segment),
                         location(joinedFeature.get(0)),
@@ -83,14 +83,6 @@ public class JoinedPartialAttributeValidation implements Validation {
             }
         }
         return violations;
-    }
-
-    /** Names the feature by ID, falling back to its first segment's location. */
-    private String identify(List<GFF3Feature> joinedFeature) {
-        // Every segment answers for the group: they share the ID they were grouped under, and a
-        // group without one was keyed on coordinates every member repeats.
-        GFF3Feature representative = joinedFeature.get(0);
-        return representative.getId().map("\"%s\""::formatted).orElseGet(() -> location(representative));
     }
 
     private String location(GFF3Feature feature) {

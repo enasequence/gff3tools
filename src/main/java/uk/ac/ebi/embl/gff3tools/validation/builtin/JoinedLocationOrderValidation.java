@@ -43,7 +43,7 @@ public class JoinedLocationOrderValidation implements Validation {
             "Joined features must list their segments in ascending coordinate order:%s";
 
     private static final String VIOLATION_MESSAGE =
-            "\nFeature %s %s on accession \"%s\": segment %s starts before the preceding segment %s";
+            "\nFeature %s \"%s\" on accession \"%s\": segment %s starts before the preceding segment %s";
 
     @InjectContext
     private ValidationContext context;
@@ -65,8 +65,8 @@ public class JoinedLocationOrderValidation implements Validation {
         }
 
         boolean circular = ValidationUtils.isCircularSequence(annotation.getAccession(), context);
-        for (List<GFF3Feature> joinedFeature : joinedFeaturesById.values()) {
-            String violation = detectRuleViolation(joinedFeature, circular);
+        for (Map.Entry<String, List<GFF3Feature>> joinedFeature : joinedFeaturesById.entrySet()) {
+            String violation = detectRuleViolation(joinedFeature.getKey(), joinedFeature.getValue(), circular);
             if (violation != null) {
                 violations.add(violation);
             }
@@ -83,7 +83,7 @@ public class JoinedLocationOrderValidation implements Validation {
      * provided it then stops short of where it began, so a step back elsewhere in the join is still
      * reported.
      */
-    private String detectRuleViolation(List<GFF3Feature> joinedFeature, boolean circular) {
+    private String detectRuleViolation(String id, List<GFF3Feature> joinedFeature, boolean circular) {
         int allowance = circular ? 1 : 0;
         int wrap = -1;
 
@@ -99,21 +99,21 @@ public class JoinedLocationOrderValidation implements Validation {
                 wrap = i;
                 continue;
             }
-            return violation(joinedFeature, current, previous);
+            return violation(id, current, previous);
         }
 
         // Past the origin the last segment must start before the first, or the feature laps its own start.
         GFF3Feature first = joinedFeature.get(0);
         GFF3Feature last = joinedFeature.get(joinedFeature.size() - 1);
         if (wrap > 0 && last.getStart() >= first.getStart()) {
-            return violation(joinedFeature, joinedFeature.get(wrap), joinedFeature.get(wrap - 1));
+            return violation(id, joinedFeature.get(wrap), joinedFeature.get(wrap - 1));
         }
         return null;
     }
 
-    private String violation(List<GFF3Feature> joinedFeature, GFF3Feature current, GFF3Feature previous) {
+    private String violation(String id, GFF3Feature current, GFF3Feature previous) {
         return VIOLATION_MESSAGE.formatted(
-                current.getName(), identify(joinedFeature), current.accession(), location(current), location(previous));
+                current.getName(), id, current.accession(), location(current), location(previous));
     }
 
     /**
@@ -127,12 +127,6 @@ public class JoinedLocationOrderValidation implements Validation {
             }
         }
         return false;
-    }
-
-    /** Names the feature in a message by ID, falling back to its first segment's location. */
-    private String identify(List<GFF3Feature> segments) {
-        GFF3Feature representative = ValidationUtils.representativeOfFeatureGroup(segments);
-        return representative.getId().map("\"%s\""::formatted).orElseGet(() -> location(representative));
     }
 
     private String location(GFF3Feature feature) {
