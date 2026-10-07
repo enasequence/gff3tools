@@ -16,9 +16,13 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.cli.SequenceFormat;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FileFastaHeaderSource;
@@ -206,6 +210,107 @@ class FastaToGff3ConverterTest {
         // IDs are unique across the document: "gap" and "gap_1".
         assertTrue(actual.contains("ID=gap;"));
         assertTrue(actual.contains("ID=gap_1;"));
+
+        Files.deleteIfExists(fasta);
+    }
+
+    /** One sequence with a 10bp gap (SEQ1.1) and one without any N (SEQ2.1). */
+    private static Path writeGappedAndUngappedFasta() throws IOException {
+        Path fasta = Files.createTempFile("gapped_and_ungapped", ".fasta");
+        Files.writeString(
+                fasta,
+                ">SEQ1.1 | {\"description\":\"gapped\", \"molecule_type\":\"GENOMIC DNA\", \"topology\":\"linear\"}\nATGCNNNNNNNNNNATGC\n"
+                        + ">SEQ2.1 | {\"description\":\"ungapped\", \"molecule_type\":\"GENOMIC DNA\", \"topology\":\"linear\"}\nATGCATGCATGCATGCAT\n");
+        return fasta;
+    }
+
+    @Test
+    void buildAnnotationsReturnsOneAnnotationPerSequenceIncludingFeatureless() throws Exception {
+        Path fasta = writeGappedAndUngappedFasta();
+
+        FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
+        ValidationEngine engine = engineWithHeaders(source, 1);
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source);
+
+        List<GFF3Annotation> annotations = converter.buildAnnotations();
+        source.close();
+
+        assertEquals(
+                List.of("SEQ1.1", "SEQ2.1"),
+                annotations.stream().map(GFF3Annotation::getAccession).toList());
+        assertTrue(annotations.get(0).hasFeatures());
+        assertEquals("gap", annotations.get(0).getFeatures().get(0).getName());
+        assertFalse(annotations.get(1).hasFeatures());
+        assertEquals(18, annotations.get(1).getSequenceRegion().end());
+
+        Files.deleteIfExists(fasta);
+    }
+
+    @Test
+    void convertStillWritesFeaturelessSequenceRegions() throws Exception {
+        // convert() is unchanged by the buildAnnotations() split: featureless sequences are kept.
+        Path fasta = writeGappedAndUngappedFasta();
+
+        FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
+        ValidationEngine engine = engineWithHeaders(source, 1);
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source);
+
+        String actual = runConversion(converter);
+        source.close();
+
+        assertTrue(actual.contains("##sequence-region SEQ1.1 1 18"));
+        assertTrue(actual.contains("SEQ1.1\t.\tgap\t5\t14\t"));
+        assertTrue(actual.contains("##sequence-region SEQ2.1 1 18"));
+
+        Files.deleteIfExists(fasta);
+    }
+
+    @Test
+    void annotationsFilteredOnHasFeaturesWriteWithoutFeaturelessSequenceRegions() throws Exception {
+        // The pipeline use case: build, drop featureless annotations, write the rest.
+        Path fasta = writeGappedAndUngappedFasta();
+
+        FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
+        ValidationEngine engine = engineWithHeaders(source, 1);
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source);
+
+        List<GFF3Annotation> annotated = converter.buildAnnotations().stream()
+                .filter(GFF3Annotation::hasFeatures)
+                .toList();
+        StringWriter output = new StringWriter();
+        GFF3File.builder()
+                .header(new GFF3Header(GFF3Header.DEFAULT_VERSION))
+                .annotations(annotated)
+                .build()
+                .writeGFF3String(output);
+        engine.throwIfErrorsCollected();
+        source.close();
+
+        String actual = output.toString();
+        assertTrue(actual.contains("##sequence-region SEQ1.1 1 18"));
+        assertTrue(actual.contains("SEQ1.1\t.\tgap\t5\t14\t"));
+        assertFalse(actual.contains("SEQ2.1"));
+
+        Files.deleteIfExists(fasta);
+    }
+
+    @Test
+    void buildAnnotationsReturnsOnlyFeaturelessAnnotationsWhenNoSequenceHasGaps() throws Exception {
+        Path fasta = Files.createTempFile("no_gaps", ".fasta");
+        Files.writeString(
+                fasta,
+                ">NOGAP.1 | {\"description\":\"No gaps\", \"molecule_type\":\"GENOMIC DNA\", \"topology\":\"linear\"}\nATGCATGCATGC\n");
+
+        FileSequenceSource source = new FileSequenceSource(fasta, SequenceFormat.fasta, null);
+        ValidationEngine engine = engineWithHeaders(source, 1);
+        FastaToGff3Converter converter = new FastaToGff3Converter(engine, source);
+
+        List<GFF3Annotation> annotations = converter.buildAnnotations();
+        source.close();
+
+        assertEquals(1, annotations.size());
+        assertFalse(annotations.get(0).hasFeatures());
+        assertEquals("NOGAP.1", annotations.get(0).getAccession());
 
         Files.deleteIfExists(fasta);
     }

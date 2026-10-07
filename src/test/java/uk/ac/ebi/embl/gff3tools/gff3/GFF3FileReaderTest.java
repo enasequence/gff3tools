@@ -11,6 +11,8 @@
 package uk.ac.ebi.embl.gff3tools.gff3;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.*;
@@ -22,12 +24,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3FileFactory;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
@@ -92,6 +96,90 @@ public class GFF3FileReaderTest {
             // feature is on line 3 and the CDS feature is on line 4.
             assertEquals(3, annotation.getFeatures().get(0).getLine());
             assertEquals(4, annotation.getFeatures().get(1).getLine());
+        }
+    }
+
+    @Test
+    void readAnnotation_featurelessRegionBeforeFasta_isReturned() throws Exception {
+        String gff3Content = "##gff-version 3\n"
+                + "##sequence-region ACC2.1 1 40\n"
+                + "##sequence-region ACC1.1 1 24\n"
+                + "ACC1.1\tENA\tgene\t1\t12\t.\t+\t.\tID=gene1\n"
+                + "##FASTA\n"
+                + ">ACC1.1|CDS_1\n"
+                + "MKP\n";
+
+        List<String> annotations = new ArrayList<>();
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(
+                getValidationEngineFailFast(), new StringReader(gff3Content), Path.of("input.gff3"))) {
+            gff3Reader.readHeader();
+            GFF3Annotation annotation;
+            while ((annotation = gff3Reader.readAnnotation()) != null) {
+                annotations.add(annotation.getAccession() + ":"
+                        + annotation.getFeatures().size());
+            }
+            // the reader stays at the end once everything has been returned
+            Assertions.assertNull(gff3Reader.readAnnotation());
+        }
+
+        // before the fix the first translation header ended the file and ACC2.1 was never returned
+        assertEquals(List.of("ACC1.1:1", "ACC2.1:0"), annotations);
+    }
+
+    @Test
+    void read_featurelessRegionsBeforeFasta_comeAfterAnnotatedOnes() throws Exception {
+        String gff3Content = "##gff-version 3\n"
+                + "##sequence-region ACC4.1 1 40\n"
+                + "##sequence-region ACC1.1 1 24\n"
+                + "##sequence-region ACC2.1 1 40\n"
+                + "##sequence-region ACC3.1 1 24\n"
+                + "ACC1.1\tENA\tgene\t1\t12\t.\t+\t.\tID=gene1\n"
+                + "###\n"
+                + "ACC3.1\tENA\tgene\t1\t12\t.\t+\t.\tID=gene3\n"
+                + "###\n"
+                + "##FASTA\n"
+                + ">ACC1.1|CDS_1\n"
+                + "MKP\n"
+                + ">ACC3.1|CDS_3\n"
+                + "MKP\n";
+
+        // read() is what the GFF3 to flatfile conversion uses
+        List<String> annotations = new ArrayList<>();
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(
+                getValidationEngineFailFast(), new StringReader(gff3Content), Path.of("input.gff3"))) {
+            gff3Reader.readHeader();
+            gff3Reader.read(annotation -> annotations.add(
+                    annotation.getAccession() + ":" + annotation.getFeatures().size()));
+        }
+
+        // annotated ones in file order, then the featureless ones sorted by accession
+        assertEquals(List.of("ACC1.1:1", "ACC3.1:1", "ACC2.1:0", "ACC4.1:0"), annotations);
+    }
+
+    @Test
+    void readAnnotation_featurelessRegionBeforeFasta_translationsStillReadable(@TempDir Path tempDir) throws Exception {
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                "##gff-version 3\n"
+                        + "##sequence-region ACC2.1 1 40\n"
+                        + "##sequence-region ACC1.1 1 24\n"
+                        // a gene, not a CDS: the CDS rules would reject this short sequence, and
+                        // translations are read by file offset whatever the features are
+                        + "ACC1.1\tENA\tgene\t1\t12\t.\t+\t.\tID=gene1\n"
+                        + "##FASTA\n"
+                        + ">ACC1.1|CDS_1\n"
+                        + "MKP\n");
+
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(getValidationEngineFailFast(), gff3)) {
+            gff3Reader.readHeader();
+            while (gff3Reader.readAnnotation() != null) {
+                // read every annotation, including the featureless ACC2.1
+            }
+
+            Map<String, OffsetRange> translations = gff3Reader.getTranslationOffsetMap();
+            assertEquals(Set.of("ACC1.1|CDS_1"), translations.keySet());
+            assertEquals("MKP", gff3Reader.getTranslation(translations.get("ACC1.1|CDS_1")));
         }
     }
 
@@ -246,6 +334,75 @@ public class GFF3FileReaderTest {
             Assertions.assertNull(annotation3);
             Files.deleteIfExists(Path.of("input.gff3"));
         }
+    }
+
+    /** Reads every annotation {@link GFF3FileReader#readAnnotation()} returns, without merging. */
+    private List<GFF3Annotation> readAllAnnotations(String gff3Content) throws Exception {
+        List<GFF3Annotation> annotations = new ArrayList<>();
+        Files.writeString(Path.of("input.gff3"), gff3Content, Charset.defaultCharset());
+        try (GFF3FileReader gff3Reader =
+                new GFF3FileReader(getValidationEngine(), new StringReader(gff3Content), Path.of("input.gff3"))) {
+            gff3Reader.readHeader();
+            GFF3Annotation annotation;
+            while ((annotation = gff3Reader.readAnnotation()) != null) {
+                annotations.add(annotation);
+            }
+        } finally {
+            Files.deleteIfExists(Path.of("input.gff3"));
+        }
+        return annotations;
+    }
+
+    @Test
+    void testResolutionDirectiveAfterLastFeatureDoesNotRepeatAccessionAsEmptyAnnotation() throws Exception {
+        String gff3Content = "##gff-version 3\n"
+                + "##sequence-region ID1 1 12\n"
+                + "##sequence-region ID2 1 8\n"
+                + "ID1\tENA\tCDS\t1\t12\t.\t+\t0\tID=cds1\n"
+                + "###\n"
+                + "ID2\tENA\tCDS\t1\t8\t.\t+\t0\tID=cds2\n"
+                + "###\n";
+
+        List<GFF3Annotation> annotations = readAllAnnotations(gff3Content);
+
+        assertEquals(
+                List.of("ID1", "ID2"),
+                annotations.stream().map(GFF3Annotation::getAccession).toList());
+        assertTrue(annotations.stream().allMatch(GFF3Annotation::hasFeatures));
+    }
+
+    @Test
+    void testResolutionDirectiveEndingSingleAccessionDoesNotRepeatIt() throws Exception {
+        String gff3Content = "##gff-version 3\n"
+                + "##sequence-region seq1 1 200\n"
+                + "seq1\tsource\tgene\t1\t100\t.\t+\t.\tID=gene1\n"
+                + "###\n"
+                + "###\n";
+
+        List<GFF3Annotation> annotations = readAllAnnotations(gff3Content);
+
+        assertEquals(1, annotations.size());
+        assertEquals("seq1", annotations.get(0).getAccession());
+        assertEquals(1, annotations.get(0).getFeatures().size());
+    }
+
+    @Test
+    void testResolutionDirectiveStillEmitsSequenceRegionWithoutFeatures() throws Exception {
+        // Only accessions that were actually returned are recorded: a region no feature references
+        // is still emitted once, as an empty annotation.
+        String gff3Content = "##gff-version 3\n"
+                + "##sequence-region seq1 1 200\n"
+                + "##sequence-region seq2 1 200\n"
+                + "seq1\tsource\tgene\t1\t100\t.\t+\t.\tID=gene1\n"
+                + "###\n";
+
+        List<GFF3Annotation> annotations = readAllAnnotations(gff3Content);
+
+        assertEquals(
+                List.of("seq1", "seq2"),
+                annotations.stream().map(GFF3Annotation::getAccession).toList());
+        assertTrue(annotations.get(0).hasFeatures());
+        assertFalse(annotations.get(1).hasFeatures());
     }
 
     @Test

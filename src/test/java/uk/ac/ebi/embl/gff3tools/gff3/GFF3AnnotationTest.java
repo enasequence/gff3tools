@@ -48,6 +48,27 @@ public class GFF3AnnotationTest {
         test(attributes, expectedAttribute);
     }
 
+    @Test
+    public void hasFeaturesIsFalseForSequenceRegionOnlyAnnotation() {
+        GFF3Annotation annotation = new GFF3Annotation();
+        annotation.setSequenceRegion(new GFF3SequenceRegion("SEQ1", Optional.of(1), 1, 100));
+
+        assertFalse(annotation.hasFeatures());
+    }
+
+    @Test
+    public void hasFeaturesTracksAddedAndRemovedFeatures() {
+        GFF3Annotation annotation = new GFF3Annotation();
+        annotation.setSequenceRegion(new GFF3SequenceRegion("SEQ1", Optional.of(1), 1, 100));
+        GFF3Feature feature = TestUtils.createGFF3Feature("gene", Map.of("ID", List.of("gene1")));
+
+        annotation.addFeature(feature);
+        assertTrue(annotation.hasFeatures());
+
+        annotation.removeFeature(feature);
+        assertFalse(annotation.hasFeatures());
+    }
+
     private void test(Map<String, List<String>> attributes, String expectedAttribute)
             throws IOException, WriteException {
         try (StringWriter gff3Writer = new StringWriter()) {
