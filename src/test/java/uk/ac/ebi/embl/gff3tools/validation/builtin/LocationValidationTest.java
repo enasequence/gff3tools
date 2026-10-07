@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -87,8 +86,7 @@ public class LocationValidationTest {
 
     private SequenceLookup mockLookupReturning(String seqId, long len) throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getSequenceLength(seqId, SequenceRangeOption.WHOLE_SEQUENCE))
-                .thenReturn(len);
+        when(mockLookup.getSequenceLength(seqId)).thenReturn(len);
         return mockLookup;
     }
 
@@ -103,8 +101,7 @@ public class LocationValidationTest {
 
     private void injectLookupThrowing(String seqId) throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getSequenceLength(seqId, SequenceRangeOption.WHOLE_SEQUENCE))
-                .thenThrow(new RuntimeException("seqId not found"));
+        when(mockLookup.getSequenceLength(seqId)).thenThrow(new RuntimeException("seqId not found"));
         injectLookup(mockLookup);
     }
 
