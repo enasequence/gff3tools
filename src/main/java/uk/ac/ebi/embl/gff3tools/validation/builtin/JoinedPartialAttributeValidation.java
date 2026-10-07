@@ -77,15 +77,11 @@ public class JoinedPartialAttributeValidation implements Validation {
                         segment.getName(),
                         id,
                         segment.accession(),
-                        location(segment),
-                        location(joinedFeature.get(0)),
-                        location(joinedFeature.get(joinedFeature.size() - 1))));
+                        ValidationUtils.getLocationString(segment),
+                        ValidationUtils.getLocationString(joinedFeature.get(0)),
+                        ValidationUtils.getLocationString(joinedFeature.get(joinedFeature.size() - 1))));
             }
         }
         return violations;
-    }
-
-    private String location(GFF3Feature feature) {
-        return "%d..%d".formatted(feature.getStart(), feature.getEnd());
     }
 }

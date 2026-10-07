@@ -113,7 +113,11 @@ public class JoinedLocationOrderValidation implements Validation {
 
     private String violation(String id, GFF3Feature current, GFF3Feature previous) {
         return VIOLATION_MESSAGE.formatted(
-                current.getName(), id, current.accession(), location(current), location(previous));
+                current.getName(),
+                id,
+                current.accession(),
+                ValidationUtils.getLocationString(current),
+                ValidationUtils.getLocationString(previous));
     }
 
     /**
@@ -127,9 +131,5 @@ public class JoinedLocationOrderValidation implements Validation {
             }
         }
         return false;
-    }
-
-    private String location(GFF3Feature feature) {
-        return "%d..%d".formatted(feature.getStart(), feature.getEnd());
     }
 }

@@ -89,8 +89,8 @@ public class FeatureOverlapValidation implements Validation {
                         representative.getName(),
                         formatMultipleFeatureSpan(segments),
                         representative.accession(),
-                        formatFeatureSpan(overlapping[0]),
-                        formatFeatureSpan(overlapping[1])));
+                        ValidationUtils.getLocationString(overlapping[0]),
+                        ValidationUtils.getLocationString(overlapping[1])));
             }
         }
 
@@ -175,8 +175,8 @@ public class FeatureOverlapValidation implements Validation {
                 otherLabel,
                 formatMultipleFeatureSpan(other),
                 overlapping[0].accession(),
-                formatFeatureSpan(overlapping[0]),
-                formatFeatureSpan(overlapping[1])));
+                ValidationUtils.getLocationString(overlapping[0]),
+                ValidationUtils.getLocationString(overlapping[1])));
     }
 
     private GFF3Feature[] firstOverlappingPair(List<GFF3Feature> left, List<GFF3Feature> right, boolean sameGroup) {
@@ -222,10 +222,6 @@ public class FeatureOverlapValidation implements Validation {
                 .findTermByNameOrSynonym(feature.getName())
                 .map(soId -> ontologyClient.isSelfOrDescendantOf(soId, ontologyId))
                 .orElse(false);
-    }
-
-    private String formatFeatureSpan(GFF3Feature feature) {
-        return feature.getStart() + ".." + feature.getEnd();
     }
 
     private String formatMultipleFeatureSpan(List<GFF3Feature> segments) {

@@ -119,4 +119,9 @@ public class ValidationUtils {
                 .min(Comparator.comparingLong(GFF3Feature::getStart))
                 .orElseThrow();
     }
+
+    /** A feature's coordinates as messages report them, {@code start..end}. */
+    public static String getLocationString(GFF3Feature feature) {
+        return "%d..%d".formatted(feature.getStart(), feature.getEnd());
+    }
 }
