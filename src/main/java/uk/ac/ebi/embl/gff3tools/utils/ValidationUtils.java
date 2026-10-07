@@ -19,6 +19,9 @@ import java.util.stream.Collectors;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 public class ValidationUtils {
@@ -88,5 +91,26 @@ public class ValidationUtils {
         return segments.stream()
                 .min(Comparator.comparingLong(GFF3Feature::getStart))
                 .orElseThrow();
+    }
+
+    /**
+     * Topology is only known when a FASTA header source is registered for the run. An absent or
+     * unrecognised topology is treated as non-circular: circular is always explicitly declared, and
+     * a missing mandatory topology is reported by {@code FastaHeaderFormatValidation}.
+     */
+    public static boolean isCircularSequence(String accession, ValidationContext context) {
+        if (!context.contains(FastaHeaderProvider.class)) {
+            return false;
+        }
+        return context.get(FastaHeaderProvider.class)
+                .getHeader(accession)
+                .map(FastaHeader::getTopology)
+                // Canonicalise rather than matching the raw value: FastaHeaderNormalisationFix is
+                // annotation-scoped and runs only after this annotation's features are validated.
+                .flatMap(topology ->
+                        ControlledVocabularyUtils.canonicalise(ControlledVocabularyUtils.Topology.class, topology))
+                .flatMap(ControlledVocabularyUtils.Topology::fromValue)
+                .map(ControlledVocabularyUtils.Topology.CIRCULAR::equals)
+                .orElse(false);
     }
 }

@@ -15,9 +15,6 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
@@ -79,7 +76,8 @@ public class LocationValidation implements Validation {
 
         // Circular molecules may carry origin-spanning features whose end is expressed as
         // "physical end + sequence length", so the end legitimately exceeds the sequence length.
-        boolean isCircular = hasCircularAttribute(feature) || isCircularSequence(feature.accession());
+        boolean isCircular =
+                hasCircularAttribute(feature) || ValidationUtils.isCircularSequence(feature.accession(), context);
         if (!isCircular && feature.getEnd() > lastBaseIndex) {
             throw new ValidationException(
                     RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH,
@@ -193,26 +191,5 @@ public class LocationValidation implements Validation {
                 .toString()
                 .equalsIgnoreCase(
                         feature.getAttribute(GFF3Attributes.CIRCULAR_RNA).orElse("false"));
-    }
-
-    /**
-     * Topology is only known when a FASTA header source is registered for the run. An absent or
-     * unrecognised topology is treated as non-circular: circular is always explicitly declared, and
-     * a missing mandatory topology is reported by {@link FastaHeaderFormatValidation}.
-     */
-    private boolean isCircularSequence(String accession) {
-        if (!context.contains(FastaHeaderProvider.class)) {
-            return false;
-        }
-        return context.get(FastaHeaderProvider.class)
-                .getHeader(accession)
-                .map(FastaHeader::getTopology)
-                // Canonicalise rather than matching the raw value: FastaHeaderNormalisationFix is
-                // annotation-scoped and runs only after this annotation's features are validated.
-                .flatMap(topology ->
-                        ControlledVocabularyUtils.canonicalise(ControlledVocabularyUtils.Topology.class, topology))
-                .flatMap(ControlledVocabularyUtils.Topology::fromValue)
-                .map(ControlledVocabularyUtils.Topology.CIRCULAR::equals)
-                .orElse(false);
     }
 }
