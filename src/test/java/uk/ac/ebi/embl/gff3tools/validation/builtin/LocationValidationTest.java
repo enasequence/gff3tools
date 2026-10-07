@@ -32,7 +32,7 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
-public class LocationValidationTest {
+class LocationValidationTest {
 
     private static final String SEQ_ID = "chr1";
 
@@ -43,7 +43,7 @@ public class LocationValidationTest {
     private GFF3Annotation gff3Annotation;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         locationValidation = new LocationValidation();
         TestUtils.injectContext(locationValidation);
         gff3Annotation = new GFF3Annotation();
