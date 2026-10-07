@@ -111,6 +111,15 @@ public class GFF3Annotation implements IGFF3Feature {
         }
     }
 
+    /**
+     * Whether this annotation holds any feature. An annotation without features still carries its
+     * sequence region, e.g. a {@code ##sequence-region} no feature referenced, or a FASTA sequence
+     * with no gaps.
+     */
+    public boolean hasFeatures() {
+        return !features.isEmpty();
+    }
+
     public void removeFeature(GFF3Feature feature) {
         features.remove(feature);
     }

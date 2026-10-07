@@ -98,6 +98,14 @@ public class CompositeSequenceProvider implements ContextProvider<SequenceLookup
                 }
 
                 @Override
+                public boolean hasSequence(String seqId) {
+                    for (SequenceSource source : sources) {
+                        if (source.hasSequence(seqId)) return true;
+                    }
+                    return false;
+                }
+
+                @Override
                 public Set<String> knownSeqIds() {
                     Set<String> all = new LinkedHashSet<>();
                     for (SequenceSource source : sources) {
