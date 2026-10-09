@@ -80,15 +80,25 @@ repositories {
 
 dependencies {
     // gff3tools exposes fastareader types in its API
-    api("uk.ac.ebi.ena:fastareader:1.2.0")
-    implementation("org.projectlombok:lombok:1.18.30")
+    api("uk.ac.ebi.ena:fastareader:1.2.0") {
+        // fastareader leaks Lombok as a runtime dependency; it is only needed at compile time.
+        exclude group: 'org.projectlombok'
+    }
+    // Lombok is compile-time only, so keep it out of the runtime classpath, shadow jar and published POM.
+    compileOnly("org.projectlombok:lombok:1.18.30")
     annotationProcessor("org.projectlombok:lombok:1.18.30")
-    implementation('uk.ac.ebi.ena.sequence:sequencetools:2.+')
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.18.6")
+    implementation('uk.ac.ebi.ena.sequence:sequencetools:2.+') {
+        // Spring: used only by webin-cli-validator's sample/BioSamples services.
+        exclude group: 'org.springframework'
+        exclude group: 'org.springframework.retry'
+        // mapdb: used only by the submission file validation checks. Brings in kotlin-stdlib 1.2.71
+        exclude group: 'org.mapdb'
+    }
+    implementation platform("com.fasterxml.jackson:jackson-bom:2.22.3")
+    implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation "io.vavr:vavr:0.10.5"
-    implementation "org.jgrapht:jgrapht-core:1.5.2"
     implementation("info.picocli:picocli:4.7.6")
-    implementation 'ch.qos.logback:logback-classic:1.5.31'
+    implementation 'ch.qos.logback:logback-classic:1.5.38'
     implementation 'org.slf4j:slf4j-api:2.0.17'
     implementation 'net.sourceforge.owlapi:owlapi-distribution:5.1.20'
     implementation("io.github.classgraph:classgraph:4.8.181")
@@ -96,6 +106,26 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.mockito:mockito-core:5.12.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.12.0'
+
+    // Security: raise vulnerable transitive dependencies to patched versions.
+    constraints {
+        // Via sequencetools.
+        implementation("org.apache.commons:commons-compress:1.28.0") {
+            because "CVE-2021-35515, CVE-2021-35516, CVE-2021-35517, CVE-2021-36090, CVE-2024-25710"
+        }
+        // Via owlapi.
+        implementation("com.google.guava:guava:33.7.2-jre") {
+            because "CVE-2020-8908, CVE-2023-2976"
+        }
+        // Via owlapi.
+        implementation("commons-io:commons-io:2.22.0") {
+            because "CVE-2024-47554"
+        }
+        // Via sequencetools.
+        implementation("org.apache.commons:commons-lang3:3.21.0") {
+            because "CVE-2025-48924"
+        }
+    }
 }
 
 remotes {
