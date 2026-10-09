@@ -19,6 +19,7 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
@@ -64,7 +65,7 @@ public class JoinedLocationOrderValidation implements Validation {
             return;
         }
 
-        boolean circular = ValidationUtils.isCircularSequence(annotation.getAccession(), context);
+        boolean circular = TopologyUtils.isCircularSequence(annotation.getAccession(), context);
         for (Map.Entry<String, List<GFF3Feature>> joinedFeature : joinedFeaturesById.entrySet()) {
             String violation = detectRuleViolation(joinedFeature.getKey(), joinedFeature.getValue(), circular);
             if (violation != null) {

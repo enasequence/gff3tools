@@ -57,6 +57,7 @@ import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 import uk.ac.ebi.ena.taxonomy.taxon.TaxonFactory;
@@ -81,6 +82,7 @@ public class GFF3Mapper {
     private final MasterMetadataProvider metadataProvider;
     private final FastaHeaderProvider headerProvider;
     private final SequenceLookup sequenceLookup;
+    private final ValidationContext context;
 
     public GFF3Mapper(GFF3FileReader gff3FileReader, ValidationContext context) {
         this(gff3FileReader, context, null);
@@ -96,6 +98,7 @@ public class GFF3Mapper {
         this.headerProvider =
                 context.contains(FastaHeaderProvider.class) ? context.get(FastaHeaderProvider.class) : null;
         this.sequenceLookup = sequenceLookup;
+        this.context = context;
     }
 
     public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) throws ValidationException, ReadException {
@@ -123,6 +126,7 @@ public class GFF3Mapper {
 
         applyMasterMetadata(sequenceRegion, entry, sequence, sourceFeature);
         applyFastaHeader(sequenceRegion, entry, sequence, sourceFeature);
+        applyTopology(sequenceRegion, sequence);
 
         for (GFF3Feature gff3Feature : gff3Annotation.getFeatures()) {
             if (gff3Feature.getId().isPresent()) {
@@ -360,7 +364,7 @@ public class GFF3Mapper {
     }
 
     /**
-     * Applies FASTA header metadata (description, molecule type, topology, chromosome) to the EMBL
+     * Applies FASTA header metadata (description, molecule type, chromosome) to the EMBL
      * entry, sequence, and source feature. Master metadata takes precedence: fields already set by
      * {@link #applyMasterMetadata} are left untouched and the header only fills the gaps.
      */
@@ -386,11 +390,6 @@ public class GFF3Mapper {
         if (h.getMoleculeType() != null && sequence.getMoleculeType() == null) {
             sequence.setMoleculeType(h.getMoleculeType());
             sourceFt.addQualifier("mol_type", h.getMoleculeType());
-        }
-
-        // Topology: ID line field 3
-        if (h.getTopology() != null && sequence.getTopology() == null) {
-            mapTopology(h.getTopology(), sequence);
         }
 
         // Chromosome type and name -> /chromosome, /plasmid, etc.
@@ -456,11 +455,6 @@ public class GFF3Mapper {
         if (m.getMoleculeType() != null) {
             sequence.setMoleculeType(m.getMoleculeType());
             sourceFt.addQualifier("mol_type", m.getMoleculeType());
-        }
-
-        // Topology: ID line field 3 (defaults to LINEAR when absent)
-        if (m.getTopology() != null) {
-            mapTopology(m.getTopology(), sequence);
         }
 
         // Chromosome type and name
@@ -1005,17 +999,19 @@ public class GFF3Mapper {
     }
 
     /**
-     * Maps topology string to {@link Sequence.Topology} enum.
-     * Case-insensitive; logs a warning and skips on unrecognised values (FR-8).
+     * ID line field 3. Resolved in one place for master entry, FASTA header and flat file alike, so
+     * the topology written here is the one validation checked against. Left unset when no source
+     * declares a recognised topology.
      */
-    private void mapTopology(String topology, Sequence sequence) {
-        if ("linear".equalsIgnoreCase(topology)) {
-            sequence.setTopology(Sequence.Topology.LINEAR);
-        } else if ("circular".equalsIgnoreCase(topology)) {
-            sequence.setTopology(Sequence.Topology.CIRCULAR);
-        } else {
-            LOGGER.warn("Unrecognised topology value '{}'; skipping topology mapping", topology);
+    private void applyTopology(GFF3SequenceRegion sequenceRegion, Sequence sequence) {
+        if (sequenceRegion == null) {
+            return;
         }
+        TopologyUtils.resolveTopology(sequenceRegion.accessionId(), context)
+                .map(topology -> topology == ControlledVocabularyUtils.Topology.CIRCULAR
+                        ? Sequence.Topology.CIRCULAR
+                        : Sequence.Topology.LINEAR)
+                .ifPresent(sequence::setTopology);
     }
 
     /**
