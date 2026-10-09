@@ -13,7 +13,6 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 import java.util.*;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -76,8 +75,7 @@ public class LocationValidation implements Validation {
 
         // Circular molecules may carry origin-spanning features whose end is expressed as
         // "physical end + sequence length", so the end legitimately exceeds the sequence length.
-        boolean isCircular =
-                hasCircularAttribute(feature) || ValidationUtils.isCircularSequence(feature.accession(), context);
+        boolean isCircular = ValidationUtils.isCircularSequence(feature.accession(), context);
         if (!isCircular && feature.getEnd() > lastBaseIndex) {
             throw new ValidationException(
                     RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH,
@@ -184,12 +182,5 @@ public class LocationValidation implements Validation {
 
     private static String location(GFF3Feature feature) {
         return feature.getStart() + ".." + feature.getEnd();
-    }
-
-    private static boolean hasCircularAttribute(GFF3Feature feature) {
-        return Boolean.TRUE
-                .toString()
-                .equalsIgnoreCase(
-                        feature.getAttribute(GFF3Attributes.CIRCULAR_RNA).orElse("false"));
     }
 }
