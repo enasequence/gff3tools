@@ -57,6 +57,7 @@ import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 import uk.ac.ebi.ena.taxonomy.taxon.TaxonFactory;
@@ -81,6 +82,10 @@ public class GFF3Mapper {
     private final MasterMetadataProvider metadataProvider;
     private final FastaHeaderProvider headerProvider;
     private final SequenceLookup sequenceLookup;
+    private final ValidationContext context;
+    // Length of the current entry's sequence when it is circular, so origin-spanning features can be
+    // unwrapped; null for a linear or undeclared topology, or when there is no sequence region.
+    private Long circularSequenceLength;
 
     public GFF3Mapper(GFF3FileReader gff3FileReader, ValidationContext context) {
         this(gff3FileReader, context, null);
@@ -96,6 +101,7 @@ public class GFF3Mapper {
         this.headerProvider =
                 context.contains(FastaHeaderProvider.class) ? context.get(FastaHeaderProvider.class) : null;
         this.sequenceLookup = sequenceLookup;
+        this.context = context;
     }
 
     public Entry mapGFF3ToEntry(GFF3Annotation gff3Annotation) throws ValidationException, ReadException {
@@ -123,6 +129,10 @@ public class GFF3Mapper {
 
         applyMasterMetadata(sequenceRegion, entry, sequence, sourceFeature);
         applyFastaHeader(sequenceRegion, entry, sequence, sourceFeature);
+        applyTopology(sequenceRegion, sequence);
+        circularSequenceLength = sequenceRegion != null && sequence.getTopology() == Sequence.Topology.CIRCULAR
+                ? sequenceRegion.end()
+                : null;
 
         for (GFF3Feature gff3Feature : gff3Annotation.getFeatures()) {
             if (gff3Feature.getId().isPresent()) {
@@ -140,11 +150,19 @@ public class GFF3Mapper {
 
     private void mapGFF3Feature(GFF3Feature gff3Feature, Map<String, OffsetRange> translationMap)
             throws ValidationException {
+        // An origin-spanning feature maps to two segments, joined exactly as two GFF3 lines sharing
+        // an ID would be.
+        for (Location location : mapGFF3Location(gff3Feature)) {
+            mapGFF3Feature(gff3Feature, location, translationMap);
+        }
+    }
+
+    private void mapGFF3Feature(GFF3Feature gff3Feature, Location location, Map<String, OffsetRange> translationMap)
+            throws ValidationException {
 
         String existingID = gff3Feature.getAttribute("ID").orElse(null);
         String featureHashId = existingID == null ? gff3Feature.hashCodeString() : existingID;
 
-        Location location = mapGFF3Location(gff3Feature);
         Feature ffFeature = joinableFeatureMap.get(featureHashId);
         if (ffFeature != null) {
             CompoundLocation<Location> parentFeatureLocation = ffFeature.getLocations();
@@ -267,22 +285,39 @@ public class GFF3Mapper {
         }
     }
 
-    private Location mapGFF3Location(GFF3Feature gff3Feature) {
+    /**
+     * The feature's location as one range, or as two when it spans the origin of a circular
+     * sequence. GFF3 writes such a feature with {@code end = physical end + sequence length}; the
+     * flat file needs {@code start..seqLen} followed by {@code 1..(end - seqLen)}. The start
+     * partiality stays with the segment holding the start and the end partiality with the one
+     * holding the end, as if the feature had been written as those two lines.
+     *
+     * <p>An end that wraps past its own start is not a valid origin span and is left as a single
+     * range for validation to report.
+     */
+    private List<Location> mapGFF3Location(GFF3Feature gff3Feature) {
 
         long start = gff3Feature.getStart();
         long end = gff3Feature.getEnd();
         List<String> partials = gff3Feature.getAttributeList("partial").orElse(new ArrayList<>());
+        boolean fivePrimePartial = partials.contains("start");
+        boolean threePrimePartial = partials.contains("end");
 
         boolean isComplement = gff3Feature.getStrand().equals("-");
-        Location location = this.locationFactory.createLocalRange(start, end, isComplement);
 
-        // Set location partiality
-        if (partials.contains("start")) {
-            location.setFivePrimePartial(true);
+        if (circularSequenceLength != null && end > circularSequenceLength && end - circularSequenceLength < start) {
+            return List.of(
+                    createRange(start, circularSequenceLength, isComplement, fivePrimePartial, false),
+                    createRange(1L, end - circularSequenceLength, isComplement, false, threePrimePartial));
         }
-        if (partials.contains("end")) {
-            location.setThreePrimePartial(true);
-        }
+        return List.of(createRange(start, end, isComplement, fivePrimePartial, threePrimePartial));
+    }
+
+    private Location createRange(
+            long start, long end, boolean isComplement, boolean fivePrimePartial, boolean threePrimePartial) {
+        Location location = this.locationFactory.createLocalRange(start, end, isComplement);
+        location.setFivePrimePartial(fivePrimePartial);
+        location.setThreePrimePartial(threePrimePartial);
         return location;
     }
 
@@ -360,7 +395,7 @@ public class GFF3Mapper {
     }
 
     /**
-     * Applies FASTA header metadata (description, molecule type, topology, chromosome) to the EMBL
+     * Applies FASTA header metadata (description, molecule type, chromosome) to the EMBL
      * entry, sequence, and source feature. Master metadata takes precedence: fields already set by
      * {@link #applyMasterMetadata} are left untouched and the header only fills the gaps.
      */
@@ -386,11 +421,6 @@ public class GFF3Mapper {
         if (h.getMoleculeType() != null && sequence.getMoleculeType() == null) {
             sequence.setMoleculeType(h.getMoleculeType());
             sourceFt.addQualifier("mol_type", h.getMoleculeType());
-        }
-
-        // Topology: ID line field 3
-        if (h.getTopology() != null && sequence.getTopology() == null) {
-            mapTopology(h.getTopology(), sequence);
         }
 
         // Chromosome type and name -> /chromosome, /plasmid, etc.
@@ -456,11 +486,6 @@ public class GFF3Mapper {
         if (m.getMoleculeType() != null) {
             sequence.setMoleculeType(m.getMoleculeType());
             sourceFt.addQualifier("mol_type", m.getMoleculeType());
-        }
-
-        // Topology: ID line field 3 (defaults to LINEAR when absent)
-        if (m.getTopology() != null) {
-            mapTopology(m.getTopology(), sequence);
         }
 
         // Chromosome type and name
@@ -1005,17 +1030,19 @@ public class GFF3Mapper {
     }
 
     /**
-     * Maps topology string to {@link Sequence.Topology} enum.
-     * Case-insensitive; logs a warning and skips on unrecognised values (FR-8).
+     * ID line field 3. Resolved in one place for master entry, FASTA header and flat file alike, so
+     * the topology written here is the one validation checked against. Left unset when no source
+     * declares a recognised topology.
      */
-    private void mapTopology(String topology, Sequence sequence) {
-        if ("linear".equalsIgnoreCase(topology)) {
-            sequence.setTopology(Sequence.Topology.LINEAR);
-        } else if ("circular".equalsIgnoreCase(topology)) {
-            sequence.setTopology(Sequence.Topology.CIRCULAR);
-        } else {
-            LOGGER.warn("Unrecognised topology value '{}'; skipping topology mapping", topology);
+    private void applyTopology(GFF3SequenceRegion sequenceRegion, Sequence sequence) {
+        if (sequenceRegion == null) {
+            return;
         }
+        TopologyUtils.resolveTopology(sequenceRegion.accessionId(), context)
+                .map(topology -> topology == ControlledVocabularyUtils.Topology.CIRCULAR
+                        ? Sequence.Topology.CIRCULAR
+                        : Sequence.Topology.LINEAR)
+                .ifPresent(sequence::setTopology);
     }
 
     /**

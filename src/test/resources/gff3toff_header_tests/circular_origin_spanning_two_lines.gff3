@@ -1,0 +1,13 @@
+##gff-version 3.1.26
+##sequence-region SEQID1 1 1000
+SEQID1	.	gene	901	1000	.	+	.	ID=gene1;gene=plusWrap;
+SEQID1	.	gene	1	100	.	+	.	ID=gene1;gene=plusWrap;
+SEQID1	.	gene	901	1000	.	-	.	ID=gene2;gene=minusWrap;
+SEQID1	.	gene	1	100	.	-	.	ID=gene2;gene=minusWrap;
+SEQID1	.	gene	951	1000	.	+	.	ID=gene3;gene=plusPartial;partial=start;
+SEQID1	.	gene	1	50	.	+	.	ID=gene3;gene=plusPartial;partial=end;
+SEQID1	.	gene	951	1000	.	-	.	ID=gene4;gene=minusPartial;partial=start;
+SEQID1	.	gene	1	50	.	-	.	ID=gene4;gene=minusPartial;partial=end;
+SEQID1	.	sequence_feature	801	850	.	+	.	ID=feature1;note=wraps on its second line;
+SEQID1	.	sequence_feature	951	1000	.	+	.	ID=feature1;note=wraps on its second line;
+SEQID1	.	sequence_feature	1	20	.	+	.	ID=feature1;note=wraps on its second line;

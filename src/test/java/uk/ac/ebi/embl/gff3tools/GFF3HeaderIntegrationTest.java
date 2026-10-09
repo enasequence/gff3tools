@@ -55,7 +55,24 @@ class GFF3HeaderIntegrationTest {
                         "gff3toff_header_tests/fasta_header_plasmid_mito.gff3",
                         "sequence/fasta/header_plasmid_mito.json",
                         "gff3toff_header_tests/fasta_header_plasmid_mito.embl",
-                        "plasmid + mitochondrion header"));
+                        "plasmid + mitochondrion header"),
+                Arguments.of(
+                        "gff3toff_header_tests/circular_origin_spanning.gff3",
+                        "sequence/fasta/header_circular.json",
+                        "gff3toff_header_tests/circular_origin_spanning.embl",
+                        "origin-spanning features written past the sequence end"),
+                // The same features as flat file to GFF3 writes them, one line per segment: both
+                // forms must map to the same flat file.
+                Arguments.of(
+                        "gff3toff_header_tests/circular_origin_spanning_two_lines.gff3",
+                        "sequence/fasta/header_circular.json",
+                        "gff3toff_header_tests/circular_origin_spanning.embl",
+                        "origin-spanning features written as one line per segment"),
+                Arguments.of(
+                        "gff3toff_header_tests/circular_origin_lapping_start.gff3",
+                        "sequence/fasta/header_circular.json",
+                        "gff3toff_header_tests/circular_origin_lapping_start.embl",
+                        "feature lapping its own start is not split"));
     }
 
     @ParameterizedTest(name = "{3}")
