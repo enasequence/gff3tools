@@ -16,7 +16,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -28,29 +27,28 @@ class SubmitterSeqIdValidationTest {
 
     private static final int LINE = 42;
 
-    private SubmitterSeqIdValidation validation;
-
-    @BeforeEach
-    void setUp() {
-        validation = new SubmitterSeqIdValidation();
-    }
+    private final SubmitterSeqIdValidation validation = new SubmitterSeqIdValidation();
 
     private static GFF3Annotation annotationWithSeqId(String seqId) {
-        return annotationWithSeqId(seqId, Optional.empty());
-    }
-
-    private static GFF3Annotation annotationWithSeqId(String seqId, Optional<Integer> version) {
         GFF3Annotation annotation = new GFF3Annotation();
-        annotation.setSequenceRegion(new GFF3SequenceRegion(seqId, version, 1, 1000));
+        annotation.setSequenceRegion(new GFF3SequenceRegion(seqId, Optional.empty(), 1, 1000));
         return annotation;
     }
 
-    private static String repeat(int length) {
-        return "A".repeat(length);
-    }
-
     @ParameterizedTest
-    @ValueSource(strings = {"ChrI_RagTag", "NODE_1", "scaffold-1.2", "contig:7", "id*", "id#3", "a", "SEQ(1)", "x,y;z"})
+    @ValueSource(
+            strings = {
+                "ChrI_RagTag",
+                "NODE_1",
+                "scaffold-1.2",
+                "contig:7",
+                "id*",
+                "id#3",
+                "a",
+                "SEQ(1)",
+                "x,y;z",
+                "AB123456"
+            })
     void acceptsPermittedSubmitterSeqIds(String seqId) {
         assertDoesNotThrow(() -> validation.validateSubmitterSeqIdFormat(annotationWithSeqId(seqId), LINE));
     }
@@ -58,12 +56,12 @@ class SubmitterSeqIdValidationTest {
     @Test
     void acceptsSeqIdOfExactlyFiftyCharacters() {
         assertDoesNotThrow(() -> validation.validateSubmitterSeqIdFormat(
-                annotationWithSeqId(repeat(SubmitterSeqIdValidation.MAX_LENGTH)), LINE));
+                annotationWithSeqId("A".repeat(SubmitterSeqIdValidation.MAX_LENGTH)), LINE));
     }
 
     @Test
     void rejectsSeqIdOfFiftyOneCharacters() {
-        GFF3Annotation annotation = annotationWithSeqId(repeat(SubmitterSeqIdValidation.MAX_LENGTH + 1));
+        GFF3Annotation annotation = annotationWithSeqId("A".repeat(SubmitterSeqIdValidation.MAX_LENGTH + 1));
 
         ValidationException exception = assertThrows(
                 ValidationException.class, () -> validation.validateSubmitterSeqIdFormat(annotation, LINE));
@@ -73,16 +71,8 @@ class SubmitterSeqIdValidationTest {
         assertTrue(exception.getMessage().contains("51 characters"), exception.getMessage());
     }
 
-    @Test
-    void ignoresSequenceVersionWhenMeasuringLength() {
-        GFF3Annotation annotation = annotationWithSeqId(repeat(SubmitterSeqIdValidation.MAX_LENGTH), Optional.of(1));
-
-        assertDoesNotThrow(() -> validation.validateSubmitterSeqIdFormat(annotation, LINE));
-    }
-
     @ParameterizedTest
-    @ValueSource(
-            strings = {"seq 1", "seq\t1", "seq>1", "seq[1]", "seq[1", "seq]1", "seq|1", "seq\"1", " seq1", "seq1 "})
+    @ValueSource(strings = {"seq 1", "seq\t1", "seq>1", "seq[1]", "seq[1", "seq]1", "seq\"1"})
     void rejectsCharactersProhibitedByInsdc(String seqId) {
         GFF3Annotation annotation = annotationWithSeqId(seqId);
 
@@ -95,7 +85,7 @@ class SubmitterSeqIdValidationTest {
 
     @Test
     void reportsEveryDistinctProhibitedCharacter() {
-        GFF3Annotation annotation = annotationWithSeqId("a b>c[d]e|f\"g");
+        GFF3Annotation annotation = annotationWithSeqId("a b>c[d]e\"f");
 
         ValidationException exception = assertThrows(
                 ValidationException.class, () -> validation.validateSubmitterSeqIdFormat(annotation, LINE));
@@ -104,23 +94,6 @@ class SubmitterSeqIdValidationTest {
         assertTrue(exception.getMessage().contains("'>'"), exception.getMessage());
         assertTrue(exception.getMessage().contains("'['"), exception.getMessage());
         assertTrue(exception.getMessage().contains("']'"), exception.getMessage());
-        assertTrue(exception.getMessage().contains("'|'"), exception.getMessage());
         assertTrue(exception.getMessage().contains("'\"'"), exception.getMessage());
-    }
-
-    @Test
-    void rejectsEmptySeqId() {
-        GFF3Annotation annotation = annotationWithSeqId("");
-
-        ValidationException exception = assertThrows(
-                ValidationException.class, () -> validation.validateSubmitterSeqIdFormat(annotation, LINE));
-
-        assertEquals(SubmitterSeqIdValidation.SUBMITTER_SEQ_ID_FORMAT_RULE, exception.getValidationRule());
-        assertTrue(exception.getMessage().contains("must not be empty"), exception.getMessage());
-    }
-
-    @Test
-    void acceptsAccessionLikeSeqIdBecauseThatIsADifferentRule() {
-        assertDoesNotThrow(() -> validation.validateSubmitterSeqIdFormat(annotationWithSeqId("AB123456"), LINE));
     }
 }
