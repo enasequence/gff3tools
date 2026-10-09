@@ -1,0 +1,4 @@
+##gff-version 3
+##species http://example.org?name=Homo sapiens
+##sequence-region ACC1.1 1 1000
+ACC1.1	.	not_a_sequence_ontology_term	1	99	.	+	.	ID=FEATURE_1;locus_tag=lower_case_tag;

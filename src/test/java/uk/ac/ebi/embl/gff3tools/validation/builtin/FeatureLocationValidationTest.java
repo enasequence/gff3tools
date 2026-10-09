@@ -17,7 +17,6 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
@@ -54,15 +53,13 @@ class FeatureLocationValidationTest {
 
     private void injectLookupReturning(String seqId, long len) throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getSequenceLength(seqId, SequenceRangeOption.WHOLE_SEQUENCE))
-                .thenReturn(len);
+        when(mockLookup.getSequenceLength(seqId)).thenReturn(len);
         injectLookup(mockLookup);
     }
 
     private void injectLookupThrowing(String seqId) throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getSequenceLength(seqId, SequenceRangeOption.WHOLE_SEQUENCE))
-                .thenThrow(new RuntimeException("seqId not found"));
+        when(mockLookup.getSequenceLength(seqId)).thenThrow(new RuntimeException("seqId not found"));
         injectLookup(mockLookup);
     }
 

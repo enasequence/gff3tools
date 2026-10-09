@@ -14,15 +14,23 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationStateProvider;
 
 public class LengthValidationTest {
 
@@ -113,6 +121,49 @@ public class LengthValidationTest {
     }
 
     @Test
+    public void testCdsIntronValidationReportsTheViolatingFeatureLineNotTheAnnotationLine() {
+
+        GFF3Feature cds1 = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
+        cds1.setLine(42);
+
+        GFF3Feature cds2 = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(), 102L, 200L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
+        cds2.setLine(99);
+
+        gff3Annotation.addFeature(cds1);
+        gff3Annotation.addFeature(cds2);
+
+        // 7777 is the line the reader had reached when it flushed this whole annotation (e.g. the
+        // next accession's first feature); the violation must be reported at cds2's own line (99),
+        // not at this annotation-level line.
+        ValidationException ex = assertThrows(
+                ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 7777));
+
+        assertEquals(99, ex.getLine());
+    }
+
+    @Test
+    public void testCdsIntronValidationFallsBackToTheAnnotationLineWhenFeatureLineIsUnset() {
+        // GFF3Feature.line defaults to -1 on the flat file to GFF3 conversion path, which has no
+        // source GFF3 line to report.
+
+        GFF3Feature cds1 = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(), 1L, 100L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
+
+        GFF3Feature cds2 = TestUtils.createGFF3Feature(
+                OntologyTerm.CDS.name(), 102L, 200L, Map.of(GFF3Attributes.ATTRIBUTE_ID, List.of("CDS1")));
+
+        gff3Annotation.addFeature(cds1);
+        gff3Annotation.addFeature(cds2);
+
+        ValidationException ex = assertThrows(
+                ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 7777));
+
+        assertEquals(7777, ex.getLine());
+    }
+
+    @Test
     public void testIntronValidationForCDSSuccessWithPseudo() {
         feature = TestUtils.createGFF3Feature(
                 OntologyTerm.CDS.name(), 1L, 5L, Map.of(GFF3Attributes.PSEUDO, List.of("pseudo")));
@@ -185,5 +236,685 @@ public class LengthValidationTest {
     public void testPropetideValidationInvalidName() {
         feature = TestUtils.createGFF3Feature(OntologyTerm.CDS.name(), 1L, 180L);
         Assertions.assertDoesNotThrow(() -> lengthValidation.validatePropeptideLength(feature, 1));
+    }
+
+    /** Exception values the ticket lists, spelled as the ticket writes them. */
+    static List<String> exemptExceptionValues() {
+        return List.of(
+                "ribosomal_slippage",
+                "trans_splicing",
+                "low-quality sequence region",
+                "heterogeneous population sequenced",
+                "RNA editing",
+                "reasons given in citation",
+                "rearrangement required for product",
+                "annotated by transcript or proteomic data",
+                "circular_RNA");
+    }
+
+    @Nested
+    class CdsIntronLengthValidation {
+
+        private static final String SEQ_ID = "seq1";
+
+        @Test
+        void failsWhenTheIntronIsOneBelowTheMinimum() {
+            // 101..109 is 9 nt.
+            addFeatures(cds("cds1", 1L, 100L), cds("cds1", 110L, 200L));
+
+            assertThrows(ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void passesWhenTheIntronIsExactlyTheMinimum() {
+            // 101..110 is 10 nt.
+            addFeatures(cds("cds1", 1L, 100L), cds("cds1", 111L, 200L));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void failsWhenSegmentsAreAdjacent() {
+            addFeatures(cds("cds1", 1L, 100L), cds("cds1", 101L, 200L));
+
+            assertThrows(ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void ignoresOverlappingSegments() {
+            addFeatures(cds("cds1", 1L, 100L), cds("cds1", 90L, 200L));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void measuresSegmentsInLocationOrderRegardlessOfFileOrder() {
+            addFeatures(cds("cds1", 105L, 200L), cds("cds1", 1L, 100L));
+
+            assertThrows(ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @ParameterizedTest
+        @MethodSource("uk.ac.ebi.embl.gff3tools.validation.builtin.LengthValidationTest#exemptExceptionValues")
+        void skipsCdsWithAnExemptException(String exception) {
+            addFeatures(
+                    cds("cds1", 1L, 100L, Map.of(GFF3Attributes.EXCEPTION, List.of(exception))),
+                    cds("cds1", 105L, 200L, Map.of(GFF3Attributes.EXCEPTION, List.of(exception))));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @ParameterizedTest
+        @ValueSource(
+                strings = {
+                    "trans-splicing",
+                    "ribosomal slippage",
+                    "Low-Quality Sequence Region",
+                    "low quality sequence region",
+                    "rna editing",
+                    "RNA  editing",
+                    "  RNA editing  ",
+                    "circular RNA"
+                })
+        void matchesExemptExceptionsIgnoringCaseSeparatorsAndSurroundingWhitespace(String exception) {
+            addFeatures(
+                    cds("cds1", 1L, 100L, Map.of(GFF3Attributes.EXCEPTION, List.of(exception))),
+                    cds("cds1", 105L, 200L, Map.of(GFF3Attributes.EXCEPTION, List.of(exception))));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void failsWhenTheExceptionIsNotAnExemptValue() {
+            addFeatures(
+                    cds("cds1", 1L, 100L, Map.of(GFF3Attributes.EXCEPTION, List.of("something else"))),
+                    cds("cds1", 105L, 200L, Map.of(GFF3Attributes.EXCEPTION, List.of("something else"))));
+
+            assertThrows(ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsWhenAnyOfSeveralExceptionValuesIsExempt() {
+            List<String> exceptions = List.of("something else", "RNA editing");
+            addFeatures(
+                    cds("cds1", 1L, 100L, Map.of(GFF3Attributes.EXCEPTION, exceptions)),
+                    cds("cds1", 105L, 200L, Map.of(GFF3Attributes.EXCEPTION, exceptions)));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsTheWholeCdsWhenOnlyOneSegmentCarriesTheException() {
+            addFeatures(
+                    cds("cds1", 1L, 100L),
+                    cds("cds1", 105L, 200L),
+                    cds("cds1", 205L, 300L, Map.of(GFF3Attributes.EXCEPTION, List.of("RNA editing"))));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {GFF3Attributes.RIBOSOMAL_SLIPPAGE, GFF3Attributes.TRANS_SPLICING})
+        void skipsCdsWithAnExemptAttribute(String attribute) {
+            addFeatures(cds("cds1", 1L, 100L, Map.of(attribute, List.of("true"))), cds("cds1", 105L, 200L));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void anExemptCdsDoesNotStopLaterCdsFromBeingChecked() {
+            addFeatures(
+                    cds("cds1", 1L, 100L, Map.of(GFF3Attributes.EXCEPTION, List.of("RNA editing"))),
+                    cds("cds1", 105L, 200L, Map.of(GFF3Attributes.EXCEPTION, List.of("RNA editing"))),
+                    cds("cds2", 300L, 400L),
+                    cds("cds2", 405L, 500L));
+
+            assertThrows(ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void aSingleSegmentCdsDoesNotStopLaterCdsFromBeingChecked() {
+            addFeatures(cds("cds1", 1L, 100L), cds("cds2", 300L, 400L), cds("cds2", 405L, 500L));
+
+            assertThrows(ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void doesNotMeasureUnrelatedCdsThatHaveNoIdAsOne() {
+            addFeatures(cdsWithoutId(1L, 100L), cdsWithoutId(105L, 200L));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void measuresCdsTypedWithASynonym() {
+            addFeatures(
+                    feature("coding_sequence", Optional.of("cds1"), 1L, 100L, Map.of()),
+                    feature("coding_sequence", Optional.of("cds1"), 105L, 200L, Map.of()));
+
+            assertThrows(ValidationException.class, () -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void ignoresFeaturesThatAreNotCds() {
+            addFeatures(
+                    feature("exon", Optional.of("exon1"), 1L, 100L, Map.of()),
+                    feature("exon", Optional.of("exon1"), 105L, 200L, Map.of()));
+
+            assertDoesNotThrow(() -> lengthValidation.validateCdsIntronLength(gff3Annotation, 1));
+        }
+
+        private void addFeatures(GFF3Feature... features) {
+            for (GFF3Feature f : features) {
+                gff3Annotation.addFeature(f);
+            }
+        }
+
+        private GFF3Feature cds(String id, long start, long end) {
+            return cds(id, start, end, Map.of());
+        }
+
+        private GFF3Feature cds(String id, long start, long end, Map<String, List<String>> attributes) {
+            return feature(OntologyTerm.CDS.name(), Optional.of(id), start, end, attributes);
+        }
+
+        private GFF3Feature cdsWithoutId(long start, long end) {
+            return feature(OntologyTerm.CDS.name(), Optional.empty(), start, end, Map.of());
+        }
+
+        private GFF3Feature feature(
+                String name, Optional<String> id, long start, long end, Map<String, List<String>> attributes) {
+            GFF3Feature f = new GFF3Feature(
+                    id, Optional.empty(), SEQ_ID, Optional.empty(), ".", name, start, end, ".", "+", "0");
+            f.addAttributes(attributes);
+            return f;
+        }
+    }
+
+    @Nested
+    class IntronLengthValidation {
+
+        @ParameterizedTest
+        @MethodSource("uk.ac.ebi.embl.gff3tools.validation.builtin.LengthValidationTest#exemptExceptionValues")
+        void skipsShortIntronWithAnExemptException(String exception) {
+            feature = shortIntron(Map.of(GFF3Attributes.EXCEPTION, List.of(exception)));
+
+            assertDoesNotThrow(() -> lengthValidation.validateIntronLength(feature, 1));
+        }
+
+        @Test
+        void matchesExemptExceptionsIgnoringCaseAndSeparators() {
+            feature = shortIntron(Map.of(GFF3Attributes.EXCEPTION, List.of("Trans-Splicing")));
+
+            assertDoesNotThrow(() -> lengthValidation.validateIntronLength(feature, 1));
+        }
+
+        @Test
+        void failsWhenTheExceptionIsNotAnExemptValue() {
+            feature = shortIntron(Map.of(GFF3Attributes.EXCEPTION, List.of("something else")));
+
+            assertThrows(ValidationException.class, () -> lengthValidation.validateIntronLength(feature, 1));
+        }
+
+        @ParameterizedTest
+        @ValueSource(
+                strings = {
+                    GFF3Attributes.PSEUDO,
+                    GFF3Attributes.PSEUDOGENE,
+                    GFF3Attributes.RIBOSOMAL_SLIPPAGE,
+                    GFF3Attributes.TRANS_SPLICING
+                })
+        void skipsShortIntronWithAnExemptAttribute(String attribute) {
+            feature = shortIntron(Map.of(attribute, List.of("true")));
+
+            assertDoesNotThrow(() -> lengthValidation.validateIntronLength(feature, 1));
+        }
+
+        private GFF3Feature shortIntron(Map<String, List<String>> attributes) {
+            return TestUtils.createGFF3Feature(OntologyTerm.SPLICEOSOMAL_INTRON.name(), 1L, 9L, attributes);
+        }
+    }
+
+    @Nested
+    class CdsLengthValidation {
+
+        private static final String SEQ_ID = "seq1";
+
+        private LengthValidation validation;
+        private TranslationState translationState;
+
+        @BeforeEach
+        void setUp() {
+            validation = new LengthValidation();
+            ValidationContext context = TestUtils.createTestContext();
+            context.register(TranslationState.class, new TranslationStateProvider());
+            translationState = context.get(TranslationState.class);
+            TestUtils.injectContext(validation, context);
+            gff3Annotation = new GFF3Annotation();
+        }
+
+        @Test
+        void failsWhenCompleteCdsIsShorterThanTheMinimum() {
+            addFeatures(cds("cds1", 1L, 9L));
+
+            ValidationException exception =
+                    assertThrows(ValidationException.class, () -> validation.validateCdsLength(gff3Annotation, 1));
+
+            assertTrue(exception.getMessage().contains("Complete coding regions must be at least"));
+            assertTrue(exception.getMessage().contains(SEQ_ID));
+        }
+
+        @Test
+        void passesWhenCompleteCdsIsLongEnough() {
+            addFeatures(cds("cds1", 1L, 300L));
+
+            assertDoesNotThrow(() -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void passesAtExactlyTheMinimumNucleotideLength() {
+            // 25 amino acids plus the terminal stop codon that INSDC includes in the coding region.
+            addFeatures(cds("cds1", 1L, 78L));
+
+            assertDoesNotThrow(() -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void failsOneNucleotideBelowTheMinimum() {
+            addFeatures(cds("cds1", 1L, 77L));
+
+            assertThrows(ValidationException.class, () -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void sumsSegmentsOfASplicedCdsRatherThanMeasuringItsSpan() {
+            // The segments span 1-230 but encode only 61 nucleotides.
+            addFeatures(cds("cds1", 1L, 30L), cds("cds1", 200L, 230L));
+
+            assertThrows(ValidationException.class, () -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void passesWhenSegmentsOfASplicedCdsSumToTheMinimum() {
+            addFeatures(cds("cds1", 1L, 40L), cds("cds1", 200L, 238L));
+
+            assertDoesNotThrow(() -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsFivePrimePartialCds() {
+            addFeatures(cds("cds1", 1L, 9L, Map.of(GFF3Attributes.PARTIAL, List.of("start"))));
+
+            assertDoesNotThrow(() -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsThreePrimePartialCds() {
+            addFeatures(cds("cds1", 1L, 9L, Map.of(GFF3Attributes.PARTIAL, List.of("end"))));
+
+            assertDoesNotThrow(() -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsPartialityDeclaredOnABoundarySegmentOnly() {
+            addFeatures(cds("cds1", 1L, 30L), cds("cds1", 200L, 230L, Map.of(GFF3Attributes.PARTIAL, List.of("end"))));
+
+            assertDoesNotThrow(() -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsPseudoCds() {
+            addFeatures(cds("cds1", 1L, 9L, Map.of(GFF3Attributes.PSEUDO, List.of("true"))));
+
+            assertDoesNotThrow(() -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsShortCdsWithExperimentEvidence() {
+            addFeatures(cds("cds1", 1L, 9L, Map.of(GFF3Attributes.EXPERIMENT, List.of("northern blot"))));
+
+            assertDoesNotThrow(() -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsShortCdsWithInferenceEvidence() {
+            addFeatures(cds(
+                    "cds1",
+                    1L,
+                    9L,
+                    Map.of(GFF3Attributes.INFERENCE, List.of("similar to AA sequence:UniProtKB:P0001"))));
+
+            assertDoesNotThrow(() -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsTranslExceptCdsWhenNoTranslationWasComputed() {
+            // A one or two base stop codon leaves a complete coding region short of a multiple of
+            // three, so the nucleotide measure cannot be trusted for these features.
+            addFeatures(cds("cds1", 1L, 9L, Map.of(GFF3Attributes.TRANSL_EXCEPT, List.of("(pos:8..9,aa:TERM)"))));
+
+            assertDoesNotThrow(() -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void countsRecordedAminoAcidsInPreferenceToNucleotides() {
+            // Long enough in nucleotides, but the computed protein is one amino acid short.
+            addFeatures(cds("cds1", 1L, 300L));
+            recordTranslation("cds1", "M".repeat(24));
+
+            assertThrows(ValidationException.class, () -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void passesWhenTheRecordedTranslationMeetsTheMinimum() {
+            // Too short in nucleotides, but the computed protein is long enough.
+            addFeatures(cds("cds1", 1L, 9L));
+            recordTranslation("cds1", "M".repeat(25));
+
+            assertDoesNotThrow(() -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void fallsBackToNucleotidesWhenTheRecordedTranslationIsEmpty() {
+            addFeatures(cds("cds1", 1L, 9L));
+            recordTranslation("cds1", "");
+
+            assertThrows(ValidationException.class, () -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void ignoresFeaturesThatAreNotCds() {
+            addFeatures(feature("gene", "gene1", 1L, 9L, Map.of()));
+
+            assertDoesNotThrow(() -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void ignoresCdsSynonymsAndCdsExtensions() {
+            // Neither is translated, so neither is measured here.
+            addFeatures(
+                    feature("coding_sequence", "syn1", 1L, 9L, Map.of()),
+                    feature("CDS_extension", "ext1", 20L, 28L, Map.of()));
+
+            assertDoesNotThrow(() -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void measuresEachCodingRegionSeparately() {
+            addFeatures(cds("cds1", 1L, 300L), cds("cds2", 400L, 408L));
+
+            assertThrows(ValidationException.class, () -> validation.validateCdsLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void reportsTheViolatingFeatureLineNotTheAnnotationLine() {
+            GFF3Feature cds1 = cds("cds1", 1L, 9L);
+            cds1.setLine(42);
+            addFeatures(cds1);
+
+            // 7777 is the line the reader had reached when it flushed this whole annotation (e.g.
+            // the next accession's first feature); the violation must be reported at cds1's own
+            // line (42), not at this annotation-level line.
+            ValidationException ex =
+                    assertThrows(ValidationException.class, () -> validation.validateCdsLength(gff3Annotation, 7777));
+
+            assertEquals(42, ex.getLine());
+        }
+
+        @Test
+        void fallsBackToTheAnnotationLineWhenFeatureLineIsUnset() {
+            // GFF3Feature.line defaults to -1 on the flat file to GFF3 conversion path, which has no
+            // source GFF3 line to report.
+            addFeatures(cds("cds1", 1L, 9L));
+
+            ValidationException ex =
+                    assertThrows(ValidationException.class, () -> validation.validateCdsLength(gff3Annotation, 7777));
+
+            assertEquals(7777, ex.getLine());
+        }
+
+        private void addFeatures(GFF3Feature... features) {
+            for (GFF3Feature f : features) {
+                gff3Annotation.addFeature(f);
+            }
+        }
+
+        private void recordTranslation(String featureId, String translation) {
+            translationState.record(TranslationState.buildKey(SEQ_ID, featureId), null, translation);
+        }
+
+        private GFF3Feature cds(String id, long start, long end) {
+            return cds(id, start, end, Map.of());
+        }
+
+        private GFF3Feature cds(String id, long start, long end, Map<String, List<String>> attributes) {
+            return feature(OntologyTerm.CDS.name(), id, start, end, attributes);
+        }
+
+        private GFF3Feature feature(
+                String name, String id, long start, long end, Map<String, List<String>> attributes) {
+            GFF3Feature f = new GFF3Feature(
+                    Optional.of(id), Optional.empty(), SEQ_ID, Optional.empty(), ".", name, start, end, ".", "+", "0");
+            f.addAttributes(attributes);
+            return f;
+        }
+    }
+
+    @Nested
+    class TrnaLengthValidation {
+
+        private static final String SEQ_ID = "seq1";
+
+        private LengthValidation validation;
+
+        @BeforeEach
+        void setUp() {
+            validation = new LengthValidation();
+            TestUtils.injectContext(validation);
+            gff3Annotation = new GFF3Annotation();
+        }
+
+        @Test
+        void failsWhenCompleteTrnaIsShorterThanTheMinimum() {
+            addFeatures(trna("trna1", 1L, 49L));
+
+            ValidationException exception =
+                    assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+
+            assertTrue(exception.getMessage().contains("Complete tRNA features must be between 50 and 150 bp long"));
+            assertTrue(exception.getMessage().contains(SEQ_ID));
+        }
+
+        @Test
+        void failsWhenCompleteTrnaIsLongerThanTheMaximum() {
+            addFeatures(trna("trna1", 1L, 151L));
+
+            assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void passesAtExactlyTheMinimumLength() {
+            addFeatures(trna("trna1", 1L, 50L));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void passesAtExactlyTheMaximumLength() {
+            addFeatures(trna("trna1", 1L, 150L));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void reportsTheMeasuredLength() {
+            addFeatures(trna("trna1", 1L, 49L));
+
+            ValidationException exception =
+                    assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+
+            assertTrue(exception.getMessage().contains("49 bp"));
+        }
+
+        @Test
+        void sumsSegmentsOfASplicedTrnaRatherThanMeasuringItsSpan() {
+            // The segments span 1-235 but encode a valid 76 base tRNA.
+            addFeatures(trna("trna1", 1L, 40L), trna("trna1", 200L, 235L));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void failsWhenSegmentsOfASplicedTrnaSumBelowTheMinimum() {
+            addFeatures(trna("trna1", 1L, 20L), trna("trna1", 200L, 219L));
+
+            assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsFivePrimePartialTrna() {
+            addFeatures(trna("trna1", 1L, 49L, Map.of(GFF3Attributes.PARTIAL, List.of("start"))));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsThreePrimePartialTrna() {
+            addFeatures(trna("trna1", 1L, 49L, Map.of(GFF3Attributes.PARTIAL, List.of("end"))));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsPartialityDeclaredOnABoundarySegmentOnly() {
+            addFeatures(
+                    trna("trna1", 1L, 20L), trna("trna1", 200L, 219L, Map.of(GFF3Attributes.PARTIAL, List.of("end"))));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsPartialityOnAMinusStrandTrna() {
+            // On the minus strand "end" is the 5' boundary, so this feature is incomplete.
+            addFeatures(feature("tRNA", "trna1", 1L, 49L, Map.of(GFF3Attributes.PARTIAL, List.of("end")), "-"));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void measuresACompleteMinusStrandTrna() {
+            addFeatures(feature("tRNA", "trna1", 1L, 49L, Map.of(), "-"));
+
+            assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void skipsPseudoTrna() {
+            addFeatures(trna("trna1", 1L, 49L, Map.of(GFF3Attributes.PSEUDO, List.of("true"))));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void measuresAminoAcidSpecificTrnaTerms() {
+            // alanyl_tRNA is a descendant of tRNA in the ontology, and is a genuine tRNA.
+            addFeatures(feature("alanyl_tRNA", "trna1", 1L, 49L, Map.of()));
+
+            assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void ignoresPseudogenicTrna() {
+            // pseudogenic_tRNA sits under pseudogenic_transcript, not under tRNA.
+            addFeatures(feature("pseudogenic_tRNA", "trna1", 1L, 49L, Map.of()));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void ignoresFeaturesThatAreNotTrna() {
+            addFeatures(feature("gene", "gene1", 1L, 49L, Map.of()));
+
+            assertDoesNotThrow(() -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void measuresEachTrnaSeparately() {
+            addFeatures(trna("trna1", 1L, 76L), trna("trna2", 200L, 229L));
+
+            assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void doesNotSumUnrelatedTrnaFeaturesThatHaveNoId() {
+            // Two 30 base features would pass the minimum if wrongly grouped together.
+            addFeatures(feature("tRNA", null, 1L, 30L, Map.of()), feature("tRNA", null, 200L, 229L, Map.of()));
+
+            assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 1));
+        }
+
+        @Test
+        void reportsTheViolatingFeatureLineNotTheAnnotationLine() {
+            GFF3Feature trna1 = trna("trna1", 1L, 49L);
+            trna1.setLine(42);
+            addFeatures(trna1);
+
+            // 7777 is the line the reader had reached when it flushed this whole annotation (e.g.
+            // the next accession's first feature); the violation must be reported at trna1's own
+            // line (42), not at this annotation-level line.
+            ValidationException ex =
+                    assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 7777));
+
+            assertEquals(42, ex.getLine());
+        }
+
+        @Test
+        void fallsBackToTheAnnotationLineWhenFeatureLineIsUnset() {
+            // GFF3Feature.line defaults to -1 on the flat file to GFF3 conversion path, which has no
+            // source GFF3 line to report.
+            addFeatures(trna("trna1", 1L, 49L));
+
+            ValidationException ex =
+                    assertThrows(ValidationException.class, () -> validation.validateTrnaLength(gff3Annotation, 7777));
+
+            assertEquals(7777, ex.getLine());
+        }
+
+        private void addFeatures(GFF3Feature... features) {
+            for (GFF3Feature f : features) {
+                gff3Annotation.addFeature(f);
+            }
+        }
+
+        private GFF3Feature trna(String id, long start, long end) {
+            return trna(id, start, end, Map.of());
+        }
+
+        private GFF3Feature trna(String id, long start, long end, Map<String, List<String>> attributes) {
+            return feature("tRNA", id, start, end, attributes);
+        }
+
+        private GFF3Feature feature(
+                String name, String id, long start, long end, Map<String, List<String>> attributes) {
+            return feature(name, id, start, end, attributes, "+");
+        }
+
+        private GFF3Feature feature(
+                String name, String id, long start, long end, Map<String, List<String>> attributes, String strand) {
+            GFF3Feature f = new GFF3Feature(
+                    Optional.ofNullable(id),
+                    Optional.empty(),
+                    SEQ_ID,
+                    Optional.empty(),
+                    ".",
+                    name,
+                    start,
+                    end,
+                    ".",
+                    strand,
+                    "0");
+            f.addAttributes(attributes);
+            return f;
+        }
     }
 }

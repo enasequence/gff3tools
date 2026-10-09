@@ -141,7 +141,7 @@ public class GFF3AnnotationFactory {
 
         geneName.ifPresent(v -> baseAttributes.put("gene", List.of(v)));
         id.ifPresent(v -> baseAttributes.put("ID", List.of(v)));
-        parentId.ifPresent(v -> baseAttributes.put("Parent", List.of(v)));
+        parentId.ifPresent(v -> baseAttributes.put(GFF3Attributes.ATTRIBUTE_PARENT, List.of(v)));
 
         // Translation attribute is left on the feature; TranslationFix captures it
         // into TranslationState during validation, and GFF3File writes the FASTA section.
@@ -270,7 +270,7 @@ public class GFF3AnnotationFactory {
             root.removeAttributeList("gene");
         } else {
             // Child cleanup
-            root.removeAttributeList("Parent");
+            root.removeAttributeList(GFF3Attributes.ATTRIBUTE_PARENT);
         }
     }
 
