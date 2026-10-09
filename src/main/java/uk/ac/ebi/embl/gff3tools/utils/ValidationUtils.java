@@ -25,6 +25,7 @@ import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils.MolType;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 public class ValidationUtils {
@@ -47,6 +48,27 @@ public class ValidationUtils {
             }
         }
         return null;
+    }
+
+    /**
+     * Topology is only known when a FASTA header source is registered for the run. An absent or
+     * unrecognised topology is treated as non-circular: circular is always explicitly declared, and
+     * a missing mandatory topology is reported by {@code FastaHeaderFormatValidation}.
+     */
+    public static boolean isCircularSequence(String accession, ValidationContext context) {
+        if (!context.contains(FastaHeaderProvider.class)) {
+            return false;
+        }
+        return context.get(FastaHeaderProvider.class)
+                .getHeader(accession)
+                .map(FastaHeader::getTopology)
+                // Canonicalise rather than matching the raw value: FastaHeaderNormalisationFix is
+                // annotation-scoped and runs only after this annotation's features are validated.
+                .flatMap(topology ->
+                        ControlledVocabularyUtils.canonicalise(ControlledVocabularyUtils.Topology.class, topology))
+                .flatMap(ControlledVocabularyUtils.Topology::fromValue)
+                .map(ControlledVocabularyUtils.Topology.CIRCULAR::equals)
+                .orElse(false);
     }
 
     /**
@@ -88,10 +110,25 @@ public class ValidationUtils {
      */
     public static Map<String, List<GFF3Feature>> groupFeaturesById(
             GFF3Annotation annotation, Predicate<GFF3Feature> selector) {
-        return annotation.getFeatures().stream()
+        return groupFeaturesById(annotation, selector, group -> true);
+    }
+
+    /**
+     * Groups as above, keeping only the whole features {@code groupSelector} accepts. A group is only
+     * complete once every feature has been placed, so the groups a rule cannot use are dropped after
+     * the grouping rather than during it.
+     *
+     * @param selector chooses the features to group, by name or through the ontology
+     * @param groupSelector chooses the whole features to keep, by a property of the group itself
+     */
+    public static Map<String, List<GFF3Feature>> groupFeaturesById(
+            GFF3Annotation annotation, Predicate<GFF3Feature> selector, Predicate<List<GFF3Feature>> groupSelector) {
+        Map<String, List<GFF3Feature>> groups = annotation.getFeatures().stream()
                 .filter(feature -> feature != null && selector.test(feature))
                 .collect(Collectors.groupingBy(
                         ValidationUtils::featureGroupKey, LinkedHashMap::new, Collectors.toList()));
+        groups.values().removeIf(group -> !groupSelector.test(group));
+        return groups;
     }
 
     /**
@@ -111,5 +148,10 @@ public class ValidationUtils {
         return segments.stream()
                 .min(Comparator.comparingLong(GFF3Feature::getStart))
                 .orElseThrow();
+    }
+
+    /** A feature's coordinates as messages report them, {@code start..end}. */
+    public static String getLocationString(GFF3Feature feature) {
+        return "%d..%d".formatted(feature.getStart(), feature.getEnd());
     }
 }

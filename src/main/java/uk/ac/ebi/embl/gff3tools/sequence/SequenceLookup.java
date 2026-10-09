@@ -64,6 +64,13 @@ public interface SequenceLookup {
      */
     List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase) throws Exception;
 
+    /**
+     * Whether any of the underlying sources can supply this sequence.
+     *
+     * @param seqId the sequence id
+     */
+    boolean hasSequence(String seqId);
+
     /** All seqIds currently known to this lookup. */
     Set<String> knownSeqIds();
 

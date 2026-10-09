@@ -65,12 +65,39 @@ public class FastaToGff3Converter implements Converter {
             throws ReadException, WriteException, ValidationException {
 
         // The BufferedReader is intentionally unused: the sequence is read exactly once via the
-        // shared FileSequenceSource. Triggering initialisation here is a no-op when the engine's
-        // providers have already opened the source.
+        // shared FileSequenceSource.
+        List<GFF3Annotation> annotations = buildAnnotations();
+
+        GFF3Header header = new GFF3Header(GFF3Header.DEFAULT_VERSION);
+        GFF3File file =
+                GFF3File.builder().header(header).annotations(annotations).build();
+
+        file.writeGFF3String(writer);
+
+        // Surface any non-fail-fast errors collected while validating the generated GFF3.
+        validationEngine.throwIfErrorsCollected();
+    }
+
+    /**
+     * Builds and validates one annotation per sequence, in sequence order, without writing
+     * anything. Every sequence gets an annotation, including those left with no features because
+     * the sequence has no gaps; callers that must not keep those can filter on
+     * {@link GFF3Annotation#hasFeatures()} before writing.
+     *
+     * <p>Errors collected by non-fail-fast rules are not thrown here: a caller that writes the
+     * annotations itself must call {@link ValidationEngine#throwIfErrorsCollected()} afterwards,
+     * as {@link #convert} does.
+     *
+     * @return the validated annotations, one per sequence
+     * @throws ReadException if a sequence cannot be read
+     * @throws ValidationException if a fail-fast rule rejects an annotation
+     */
+    public List<GFF3Annotation> buildAnnotations() throws ReadException, ValidationException {
+        // Triggering initialisation here is a no-op when the engine's providers have already
+        // opened the source.
         source.getSeqIdToHeader();
         SequenceFormatReader formatReader = source.getFormatReader();
 
-        GFF3Header header = new GFF3Header(GFF3Header.DEFAULT_VERSION);
         List<GFF3Annotation> annotations = new ArrayList<>();
 
         // Build the ordinal -> seqId lookup once (O(n)) instead of scanning the map per ordinal.
@@ -101,19 +128,12 @@ public class FastaToGff3Converter implements Converter {
             annotations.add(annotation);
         }
 
-        if (annotations.isEmpty()
-                || annotations.stream().allMatch(a -> a.getFeatures().isEmpty())) {
+        if (annotations.stream().noneMatch(GFF3Annotation::hasFeatures)) {
             log.warn("No gap features were generated for any sequence. If the input does contain runs of N"
                     + " bases, check that the GAP_GENERATION fix is enabled.");
         }
 
-        GFF3File file =
-                GFF3File.builder().header(header).annotations(annotations).build();
-
-        file.writeGFF3String(writer);
-
-        // Surface any non-fail-fast errors collected while validating the generated GFF3.
-        validationEngine.throwIfErrorsCollected();
+        return annotations;
     }
 
     private Map<Long, String> buildOrdinalToSeqId() {

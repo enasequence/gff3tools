@@ -13,11 +13,7 @@ package uk.ac.ebi.embl.gff3tools.validation.provider;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.fastareader.SequenceFileFormat;
@@ -65,9 +61,9 @@ public class FileSequenceSource implements SequenceSource {
     private SequenceFormatReader formatReader;
 
     @Getter
-    private final Map<String, Long> seqIdToOrdinal = new HashMap<>();
+    private final Map<String, Long> seqIdToOrdinal = new TreeMap<>();
 
-    private final Map<String, FastaHeader> seqIdToHeader = new HashMap<>();
+    private final Map<String, FastaHeader> seqIdToHeader = new TreeMap<>();
 
     @Getter
     private volatile Path decompressedPath;

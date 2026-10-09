@@ -10,6 +10,8 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3;
 
+import java.util.Set;
+
 /**
  * Shared key format for identifying translations by accession and feature ID.
  *
@@ -29,5 +31,33 @@ public final class TranslationKey {
      */
     public static String of(String accession, String featureId) {
         return accession + "|" + GFF3Annotation.urlEncode(featureId);
+    }
+
+    /**
+     * The accession part of a translation key, or {@code null} when the key is not in the expected
+     * format.
+     *
+     * <p>Split on the first separator: an accession never contains {@code |}, and feature IDs are
+     * URL-encoded by {@link #of}, so the first one always delimits the two parts.
+     */
+    public static String accessionOf(String key) {
+        if (key == null) {
+            return null;
+        }
+        int separator = key.indexOf('|');
+        return separator > 0 ? key.substring(0, separator) : null;
+    }
+
+    /**
+     * Whether a translation key belongs to any of the given accessions.
+     *
+     * <p>Matching is exact rather than by prefix: {@code AB123.1} must not claim the translations
+     * of {@code AB123.10}. An accession recorded without its version therefore matches nothing
+     * rather than matching every version — a missing translation is a visible failure, a
+     * misattributed one is not.
+     */
+    public static boolean belongsToAny(String key, Set<String> accessions) {
+        String accession = accessionOf(key);
+        return accession != null && accessions.contains(accession);
     }
 }

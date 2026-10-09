@@ -149,11 +149,14 @@ public class CdsMrnaLocationValidation implements Validation {
         int offset = indexOfContainingSegment(cdsSegments.get(0), mrnaSegments);
         if (offset < 0) {
             return "the coding segment %s is not contained within any segment of the mRNA"
-                    .formatted(location(cdsSegments.get(0)));
+                    .formatted(ValidationUtils.getLocationString(cdsSegments.get(0)));
         }
         if (offset + cdsSegments.size() > mrnaSegments.size()) {
             return "the coding region has %d segments from %s onwards, more than the %d the mRNA has there"
-                    .formatted(cdsSegments.size(), location(mrnaSegments.get(offset)), mrnaSegments.size() - offset);
+                    .formatted(
+                            cdsSegments.size(),
+                            ValidationUtils.getLocationString(mrnaSegments.get(offset)),
+                            mrnaSegments.size() - offset);
         }
 
         for (int i = 0; i < cdsSegments.size(); i++) {
@@ -162,16 +165,16 @@ public class CdsMrnaLocationValidation implements Validation {
 
             if (!isContainedWithin(cds, mrna)) {
                 return "the coding segment %s is not contained within the mRNA segment %s"
-                        .formatted(location(cds), location(mrna));
+                        .formatted(ValidationUtils.getLocationString(cds), ValidationUtils.getLocationString(mrna));
             }
             // Every boundary between two CDS segments is a splice site the mRNA must share.
             if (i > 0 && cds.getStart() != mrna.getStart()) {
                 return "the coding segment %s does not start where the mRNA segment %s starts"
-                        .formatted(location(cds), location(mrna));
+                        .formatted(ValidationUtils.getLocationString(cds), ValidationUtils.getLocationString(mrna));
             }
             if (i < cdsSegments.size() - 1 && cds.getEnd() != mrna.getEnd()) {
                 return "the coding segment %s does not end where the mRNA segment %s ends"
-                        .formatted(location(cds), location(mrna));
+                        .formatted(ValidationUtils.getLocationString(cds), ValidationUtils.getLocationString(mrna));
             }
         }
         return null;
@@ -182,7 +185,7 @@ public class CdsMrnaLocationValidation implements Validation {
         for (GFF3Feature cds : cdsSegments) {
             if (!isContainedWithin(cds, mrna)) {
                 return "the coding segment %s is not contained within the mRNA %s"
-                        .formatted(location(cds), location(mrna));
+                        .formatted(ValidationUtils.getLocationString(cds), ValidationUtils.getLocationString(mrna));
             }
         }
         return null;
@@ -232,10 +235,6 @@ public class CdsMrnaLocationValidation implements Validation {
         List<GFF3Feature> sorted = new ArrayList<>(segments);
         sorted.sort(Comparator.comparingLong(GFF3Feature::getStart));
         return sorted;
-    }
-
-    private String location(GFF3Feature feature) {
-        return "%d..%d".formatted(feature.getStart(), feature.getEnd());
     }
 
     /** The outermost coordinates a group of segments covers, for reporting the feature as a whole. */

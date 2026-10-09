@@ -62,6 +62,13 @@ public class GFF3Feature {
      */
     GFF3Feature parent;
 
+    /**
+     * The line this feature was read from in the source GFF3 file, set only by
+     * {@code GFF3FileReader} on the GFF3-reading path. Left at {@code -1} on the flat file to GFF3
+     * path, where there is no source GFF3 line to report.
+     */
+    int line = -1;
+
     // Methods
     public void addChild(GFF3Feature child) {
         children.add(child);

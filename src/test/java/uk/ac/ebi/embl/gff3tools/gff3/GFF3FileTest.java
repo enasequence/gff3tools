@@ -18,41 +18,40 @@ import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 public class GFF3FileTest {
 
+    /** A minimal annotation, so the file these tests build is a document that could exist. */
+    private static GFF3Annotation annotationOn(String accession) {
+        GFF3Annotation annotation = new GFF3Annotation();
+        annotation.setSequenceRegion(new GFF3SequenceRegion(accession, Optional.empty(), 1, 100));
+        return annotation;
+    }
+
     @Test
     void testWriteTranslation() throws Exception {
 
-        String input = "##FASTA\n" + ">geneB\n" + "GGTTAA\n" + ">geneA\n" + "ATGC\n";
-        String expectedOutput = "##FASTA\n" + input;
-
-        // Inject cdsTranslationMap
-        Map<String, String> testMap = new HashMap<>();
-        testMap.put("geneA", "ATGC");
-        testMap.put("geneB", "GGTTAA");
+        String input = ">acc1|cds-1\n" + "GGTTAA\n" + ">acc2|cds-2\n" + "ATGC\n";
+        String expectedOutput = "##FASTA\n" + ">acc1|cds-1\n" + "GGTTAA\n";
 
         Files.writeString(Path.of("translation.fasta"), input, Charset.defaultCharset());
         GFF3File obj =
                 GFF3File.builder().fastaFilePath(Path.of("translation.fasta")).build();
 
-        // obj.cdsTranslationMap = testMap;
-
         StringWriter writer = new StringWriter();
 
         // Access private method via reflection
-        Method method = GFF3File.class.getDeclaredMethod("writeFastaFromExistingFile", Writer.class);
+        Method method = GFF3File.class.getDeclaredMethod("writeFastaFromExistingFile", Writer.class, Set.class);
         method.setAccessible(true);
 
-        // call method
-        method.invoke(obj, writer);
+        method.invoke(obj, writer, Set.of("acc1"));
 
-        // Assert
         String output = writer.toString();
         assertEquals(expectedOutput, output);
         Files.deleteIfExists(Path.of("translation.fasta"));
@@ -64,8 +63,9 @@ public class GFF3FileTest {
         state.record("acc1|cds-1", "OLD", "MKTRANS");
 
         GFF3File file = GFF3File.builder()
-                .annotations(List.of())
+                .annotations(List.of(annotationOn("acc1")))
                 .translationState(state)
+                .writeAnnotationFasta(true)
                 .build();
 
         StringWriter writer = new StringWriter();
@@ -110,8 +110,9 @@ public class GFF3FileTest {
         state.record("acc1|cds-1", "MKOLD", null);
 
         GFF3File file = GFF3File.builder()
-                .annotations(List.of())
+                .annotations(List.of(annotationOn("acc1")))
                 .translationState(state)
+                .writeAnnotationFasta(true)
                 .build();
 
         StringWriter writer = new StringWriter();

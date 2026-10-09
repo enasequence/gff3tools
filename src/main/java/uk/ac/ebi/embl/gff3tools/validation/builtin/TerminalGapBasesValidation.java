@@ -14,9 +14,7 @@ import uk.ac.ebi.embl.fastareader.SequenceStats;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
+import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
@@ -54,7 +52,7 @@ public class TerminalGapBasesValidation implements Validation {
 
         String seqId = annotation.getAccession();
         // A circular sequence has no first or last base, so terminal gaps are not meaningful for it.
-        if (isCircularSequence(seqId)) {
+        if (ValidationUtils.isCircularSequence(seqId, context)) {
             return;
         }
 
@@ -74,27 +72,6 @@ public class TerminalGapBasesValidation implements Validation {
             throw new ValidationException(
                     NO_TERMINAL_GAPS_RULE, line, MESSAGE_TERMINAL_GAPS.formatted(seqId, leadingNs, trailingNs));
         }
-    }
-
-    /**
-     * Topology is only known when a FASTA header source is registered for the run. An absent or
-     * unrecognised topology is treated as non-circular: circular is always explicitly declared, and
-     * a missing mandatory topology is reported by {@link FastaHeaderFormatValidation}.
-     */
-    private boolean isCircularSequence(String accession) {
-        if (!context.contains(FastaHeaderProvider.class)) {
-            return false;
-        }
-        return context.get(FastaHeaderProvider.class)
-                .getHeader(accession)
-                .map(FastaHeader::getTopology)
-                // Canonicalise rather than matching the raw value: FastaHeaderNormalisationFix is
-                // annotation-scoped and runs only after this annotation's features are validated.
-                .flatMap(topology ->
-                        ControlledVocabularyUtils.canonicalise(ControlledVocabularyUtils.Topology.class, topology))
-                .flatMap(ControlledVocabularyUtils.Topology::fromValue)
-                .map(ControlledVocabularyUtils.Topology.CIRCULAR::equals)
-                .orElse(false);
     }
 
     private SequenceStats resolveStats(SequenceLookup lookup, String seqId) {

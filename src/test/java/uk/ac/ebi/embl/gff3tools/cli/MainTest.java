@@ -88,6 +88,49 @@ public class MainTest {
     }
 
     @Test
+    void testParseFixes() {
+        for (String key : new String[] {"PROTEIN_ID_REMOVE", "GAP_GENERATION"}) {
+            for (boolean value : new boolean[] {true, false}) {
+                String keyName = key.toLowerCase();
+                String valueName = value ? "on" : "off";
+                String[] args = new String[] {"--fixes=" + keyName + ":" + valueName};
+
+                FileConversionCommand cc = new FileConversionCommand();
+                CommandLine commandLine =
+                        new CommandLine(cc).registerConverter(CliFixesOption.class, new FixesConverter());
+                commandLine.parseArgs(args);
+
+                assertEquals(value, cc.fixes.fixes().get(key), "Failed for fix: " + key + " with value: " + valueName);
+            }
+        }
+    }
+
+    @Test
+    void testParseFixes_InvalidFixValue() {
+        String[] args = new String[] {"--fixes=gap_generation:maybe"};
+        FileConversionCommand cc = new FileConversionCommand();
+        CommandLine commandLine = new CommandLine(cc).registerConverter(CliFixesOption.class, new FixesConverter());
+        CommandLine.ParameterException exception = org.junit.jupiter.api.Assertions.assertThrows(
+                CommandLine.ParameterException.class, () -> commandLine.parseArgs(args));
+        assertTrue(exception.getMessage().contains("maybe"), "Exception message should contain the invalid fix value");
+    }
+
+    @Test
+    void testParseFixes_MultipleFixes() {
+        String[] args = new String[] {"--fixes=gap_generation:on,protein_id_remove:off"};
+        FileConversionCommand cc = new FileConversionCommand();
+        CommandLine commandLine = new CommandLine(cc).registerConverter(CliFixesOption.class, new FixesConverter());
+        commandLine.parseArgs(args);
+
+        assertEquals(
+                Boolean.TRUE, cc.fixes.fixes().get("GAP_GENERATION"), "Failed for fix: GAP_GENERATION with value: ON");
+        assertEquals(
+                Boolean.FALSE,
+                cc.fixes.fixes().get("PROTEIN_ID_REMOVE"),
+                "Failed for fix: PROTEIN_ID_REMOVE with value: OFF");
+    }
+
+    @Test
     public void testValidateFileType() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         FileConversionCommand command = new FileConversionCommand();
         Method method = FileConversionCommand.class.getDeclaredMethod(
