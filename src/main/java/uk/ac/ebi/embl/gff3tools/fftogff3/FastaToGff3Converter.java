@@ -27,6 +27,8 @@ import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.builtin.SubmitterSeqIdValidation;
+import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 
 /**
@@ -57,6 +59,8 @@ public class FastaToGff3Converter implements Converter {
 
     public FastaToGff3Converter(ValidationEngine validationEngine, FileSequenceSource source) {
         this.validationEngine = validationEngine;
+        // Declared OFF elsewhere: the FASTA header id is the submitter's own sequence identifier.
+        validationEngine.enableRuleIfUnset(SubmitterSeqIdValidation.SUBMITTER_SEQ_ID_FORMAT_RULE, RuleSeverity.ERROR);
         this.source = source;
     }
 
