@@ -27,7 +27,9 @@ import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.provider.FlatfileSequenceTopologyProvider;
 
 public class GFF3AnnotationFactory {
 
@@ -62,6 +64,7 @@ public class GFF3AnnotationFactory {
         String accession = ConversionUtils.getEffectiveAccession(entry);
         LOG.info("Converting entry: {}", accession);
         GFF3SequenceRegion sequenceRegion = directivesFactory.createSequenceRegion(entry);
+        recordTopology(sequenceRegion, entry);
 
         for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
 
@@ -91,6 +94,15 @@ public class GFF3AnnotationFactory {
         validationEngine.validate(annotation, -1);
 
         return annotation;
+    }
+
+    /** Makes the entry's declared topology visible to the topology-aware rules that validate it. */
+    private void recordTopology(GFF3SequenceRegion sequenceRegion, Entry entry) {
+        ValidationContext context = validationEngine.getContext();
+        if (context.contains(FlatfileSequenceTopologyProvider.class)) {
+            context.get(FlatfileSequenceTopologyProvider.class)
+                    .record(sequenceRegion.accession(), entry.getSequence().getTopology());
+        }
     }
 
     private boolean lacksCircularAttribute() {

@@ -14,6 +14,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -23,6 +24,7 @@ import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.FlatfileSequenceTopologyProvider;
 
 public class ValidationUtils {
 
@@ -56,13 +58,23 @@ public class ValidationUtils {
     }
 
     /**
-     * Topology is only known when a FASTA header source is registered for the run. An absent or
+     * Topology is only known when a FASTA header source is registered for the run, or when the
+     * sequence comes from a flat file entry that declares it on its ID line. A FASTA header takes
+     * precedence; the flat file is consulted only for an accession no header covers. An absent or
      * unrecognised topology is treated as non-circular: circular is always explicitly declared, and
      * a missing mandatory topology is reported by {@code FastaHeaderFormatValidation}.
      */
     public static boolean isCircularSequence(String accession, ValidationContext context) {
+        return headerTopology(accession, context)
+                .or(() -> flatfileTopology(accession, context))
+                .map(ControlledVocabularyUtils.Topology.CIRCULAR::equals)
+                .orElse(false);
+    }
+
+    private static Optional<ControlledVocabularyUtils.Topology> headerTopology(
+            String accession, ValidationContext context) {
         if (!context.contains(FastaHeaderProvider.class)) {
-            return false;
+            return Optional.empty();
         }
         return context.get(FastaHeaderProvider.class)
                 .getHeader(accession)
@@ -71,9 +83,15 @@ public class ValidationUtils {
                 // annotation-scoped and runs only after this annotation's features are validated.
                 .flatMap(topology ->
                         ControlledVocabularyUtils.canonicalise(ControlledVocabularyUtils.Topology.class, topology))
-                .flatMap(ControlledVocabularyUtils.Topology::fromValue)
-                .map(ControlledVocabularyUtils.Topology.CIRCULAR::equals)
-                .orElse(false);
+                .flatMap(ControlledVocabularyUtils.Topology::fromValue);
+    }
+
+    private static Optional<ControlledVocabularyUtils.Topology> flatfileTopology(
+            String accession, ValidationContext context) {
+        if (!context.contains(FlatfileSequenceTopologyProvider.class)) {
+            return Optional.empty();
+        }
+        return context.get(FlatfileSequenceTopologyProvider.class).getTopology(accession);
     }
 
     /**
