@@ -28,23 +28,10 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
 @Gff3Validation(name = "SUBMITTER_SEQ_ID")
 public class SubmitterSeqIdValidation implements Validation {
     public static final String SUBMITTER_SEQ_ID_FORMAT_RULE = "SUBMITTER_SEQ_ID_FORMAT";
-    public static final String SUBMITTER_SEQ_ID_NOT_ACCESSION_RULE = "SUBMITTER_SEQ_ID_NOT_ACCESSION";
 
     static final int MAX_LENGTH = 50;
 
     private static final Pattern ILLEGAL_CHARACTER = Pattern.compile("[\\s>\\[\\]|\"]");
-
-    private static final Pattern ENA_SEQUENCE_ACCESSION = Pattern.compile(
-            String.join(
-                    "|",
-                    "[A-Z][0-9]{5}(\\.[0-9]+)?",
-                    "[A-Z]{2}[0-9]{6}(\\.[0-9]+)?",
-                    "[A-Z]{2}[0-9]{8}(\\.[0-9]+)?",
-                    "[A-Z]{4}[0-9]{2}S?[0-9]{6,8}(\\.[0-9]+)?",
-                    "[A-Z]{6}[0-9]{2}S?[0-9]{7,9}(\\.[0-9]+)?",
-                    "[A-Z]{3}[0-9]{5}(\\.[0-9]+)?",
-                    "[A-Z]{3}[0-9]{7}(\\.[0-9]+)?"),
-            Pattern.CASE_INSENSITIVE);
 
     @ValidationMethod(
             rule = SUBMITTER_SEQ_ID_FORMAT_RULE,
@@ -75,28 +62,6 @@ public class SubmitterSeqIdValidation implements Validation {
                     line,
                     "Sequence name '%s' contains characters not permitted by INSDC: %s. The submitter's sequence identifier must not contain spaces, '>', '[', ']', '|' or '\"'."
                             .formatted(seqId, String.join(", ", illegalCharacters)));
-        }
-    }
-
-    @ValidationMethod(
-            rule = SUBMITTER_SEQ_ID_NOT_ACCESSION_RULE,
-            description =
-                    "Check that the submitter's sequence identifier does not match the pattern of an ENA sequence accession number",
-            type = ANNOTATION,
-            severity = RuleSeverity.OFF,
-            priority = ValidationPriority.CRITICAL)
-    public void validateSubmitterSeqIdIsNotAccession(GFF3Annotation annotation, int line) throws ValidationException {
-        String seqId = submitterSeqId(annotation);
-        if (seqId == null || seqId.isEmpty()) {
-            return;
-        }
-
-        if (ENA_SEQUENCE_ACCESSION.matcher(seqId).matches()) {
-            throw new ValidationException(
-                    SUBMITTER_SEQ_ID_NOT_ACCESSION_RULE,
-                    line,
-                    "Sequence name '%s' matches the pattern of an accession number used by ENA for sequences. The submitter's sequence identifier must not look like an ENA accession number."
-                            .formatted(seqId));
         }
     }
 

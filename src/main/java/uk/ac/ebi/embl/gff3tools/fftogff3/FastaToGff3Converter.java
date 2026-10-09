@@ -61,8 +61,6 @@ public class FastaToGff3Converter implements Converter {
         this.validationEngine = validationEngine;
         // Declared OFF elsewhere: the FASTA header id is the submitter's own sequence identifier.
         validationEngine.enableRuleIfUnset(SubmitterSeqIdValidation.SUBMITTER_SEQ_ID_FORMAT_RULE, RuleSeverity.ERROR);
-        validationEngine.enableRuleIfUnset(
-                SubmitterSeqIdValidation.SUBMITTER_SEQ_ID_NOT_ACCESSION_RULE, RuleSeverity.ERROR);
         this.source = source;
     }
 
