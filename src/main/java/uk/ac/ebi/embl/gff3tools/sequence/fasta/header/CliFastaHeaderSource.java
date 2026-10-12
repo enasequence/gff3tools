@@ -30,4 +30,9 @@ public class CliFastaHeaderSource implements FastaHeaderSource {
     public Optional<FastaHeader> getHeader(String seqId) {
         return Optional.of(header);
     }
+
+    @Override
+    public boolean isCatchAll() {
+        return true;
+    }
 }

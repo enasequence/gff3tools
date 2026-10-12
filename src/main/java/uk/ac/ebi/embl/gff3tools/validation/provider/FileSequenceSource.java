@@ -99,9 +99,14 @@ public class FileSequenceSource implements SequenceSource {
             return false;
         }
         if (formatReader.getSequenceFileFormat() == SequenceFileFormat.PLAIN_SEQUENCE) {
-            return sequenceKey == null || sequenceKey.equals(seqId);
+            return sequenceKey == null || matchesKey(seqId);
         }
-        return SeqIdVariants.variants(seqId).stream().anyMatch(seqIdToOrdinal::containsKey);
+        return seqIdToOrdinal.containsKey(seqId);
+    }
+
+    /** A keyless plain sequence serves any seqId; a keyed one matches any candidate id form. */
+    private boolean matchesKey(String seqId) {
+        return SeqIdVariants.variants(seqId).stream().anyMatch(sequenceKey::equals);
     }
 
     @Override
@@ -270,15 +275,10 @@ public class FileSequenceSource implements SequenceSource {
         if (formatReader.getSequenceFileFormat() == SequenceFileFormat.PLAIN_SEQUENCE) {
             return formatReader.getOrderedIds().get(0);
         }
-        // Sources are keyed by the FASTA submission id, which usually carries a version, while
-        // callers may query with either id form; try each candidate form in turn and fail loudly
-        // with the requested id when none matches.
-        for (String candidate : SeqIdVariants.variants(seqId)) {
-            Long ordinal = seqIdToOrdinal.get(candidate);
-            if (ordinal != null) {
-                return ordinal;
-            }
+        Long ordinal = seqIdToOrdinal.get(seqId);
+        if (ordinal == null) {
+            throw new IllegalArgumentException("No sequence found for seqId: " + seqId);
         }
-        throw new IllegalArgumentException("No sequence found for seqId: " + seqId);
+        return ordinal;
     }
 }

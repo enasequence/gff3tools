@@ -82,4 +82,93 @@ class FastaHeaderProviderTest {
         // seq2 only in second source -> second source
         assertEquals("Source 2", provider.getHeader("seq2").orElseThrow().getDescription());
     }
+
+    // --- version-tolerant resolution (TTENA-317) ---
+
+    @Test
+    void unversionedQueryResolvesVersionedKey() {
+        // FASTA headers are usually keyed by the versioned submission id while the mapper queries
+        // the unversioned accession id.
+        FastaHeader h = createHeader("From FASTA");
+        FastaHeaderProvider provider = new FastaHeaderProvider();
+        provider.addSource(new FileFastaHeaderSource(Map.of("OZ375371.1", h)));
+
+        assertEquals("From FASTA", provider.getHeader("OZ375371").orElseThrow().getDescription());
+    }
+
+    @Test
+    void versionedQueryResolvesUnversionedKey() {
+        FastaHeader h = createHeader("From FASTA");
+        FastaHeaderProvider provider = new FastaHeaderProvider();
+        provider.addSource(new FileFastaHeaderSource(Map.of("OZ375371", h)));
+
+        assertEquals("From FASTA", provider.getHeader("OZ375371.1").orElseThrow().getDescription());
+    }
+
+    @Test
+    void versionedQueryAboveNineResolvesExactKey() {
+        // The mapper queries the versioned accession, so versions of 10 and above must resolve
+        // without any tolerance.
+        FastaHeader h = createHeader("From FASTA");
+        FastaHeaderProvider provider = new FastaHeaderProvider();
+        provider.addSource(new FileFastaHeaderSource(Map.of("X.10", h)));
+
+        assertEquals("From FASTA", provider.getHeader("X.10").orElseThrow().getDescription());
+        assertTrue(provider.getHeader("X").isEmpty());
+    }
+
+    @Test
+    void exactMatchInLaterSourceWinsOverVariantInEarlierSource() {
+        FastaHeader h1 = createHeader("Source 1");
+        FastaHeader h2 = createHeader("Source 2");
+
+        FastaHeaderProvider provider = new FastaHeaderProvider();
+        provider.addSource(new FileFastaHeaderSource(Map.of("X.1", h1)));
+        provider.addSource(new FileFastaHeaderSource(Map.of("X", h2)));
+
+        // The exact match in the second source wins over the X.1 variant in the first.
+        assertEquals("Source 2", provider.getHeader("X").orElseThrow().getDescription());
+        assertEquals("Source 1", provider.getHeader("X.1").orElseThrow().getDescription());
+    }
+
+    @Test
+    void ambiguousVariantAcrossSourcesIsSkipped() {
+        FastaHeader h1 = createHeader("Source 1");
+        FastaHeader h2 = createHeader("Source 2");
+
+        FastaHeaderProvider provider = new FastaHeaderProvider();
+        provider.addSource(new FileFastaHeaderSource(Map.of("X.1", h1)));
+        provider.addSource(new FileFastaHeaderSource(Map.of("X.2", h2)));
+
+        // Neither X.1 nor X.2 may silently win for a query of X.
+        assertTrue(provider.getHeader("X").isEmpty());
+        assertEquals("Source 1", provider.getHeader("X.1").orElseThrow().getDescription());
+        assertEquals("Source 2", provider.getHeader("X.2").orElseThrow().getDescription());
+    }
+
+    @Test
+    void catchAllSourceDoesNotShadowKeyedSources() {
+        FastaHeader fileHeader = createHeader("From FASTA");
+        FastaHeader cliHeader = createHeader("From CLI");
+
+        FastaHeaderProvider provider = new FastaHeaderProvider();
+        provider.addSource(new FileFastaHeaderSource(Map.of("X.1", fileHeader)));
+        provider.addSource(new CliFastaHeaderSource(cliHeader));
+
+        // The versioned FASTA key must resolve before the catch-all CLI header is consulted,
+        // for the exact query (X.1) and the variant query (X) alike.
+        assertEquals("From FASTA", provider.getHeader("X.1").orElseThrow().getDescription());
+        assertEquals("From FASTA", provider.getHeader("X").orElseThrow().getDescription());
+        // Unknown ids fall through to the catch-all.
+        assertEquals("From CLI", provider.getHeader("unknown").orElseThrow().getDescription());
+    }
+
+    @Test
+    void nullSeqIdReturnsEmpty() {
+        FastaHeaderProvider provider = new FastaHeaderProvider();
+        provider.addSource(new FileFastaHeaderSource(Map.of("X", createHeader("From FASTA"))));
+        provider.addSource(new CliFastaHeaderSource(createHeader("From CLI")));
+
+        assertTrue(provider.getHeader(null).isEmpty());
+    }
 }

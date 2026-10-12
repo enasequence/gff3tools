@@ -11,6 +11,8 @@
 package uk.ac.ebi.embl.gff3tools.gff3toff;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.io.StringWriter;
@@ -34,6 +36,7 @@ import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.metadata.ReferenceData;
 import uk.ac.ebi.embl.gff3tools.metadata.SubmissionAccount;
 import uk.ac.ebi.embl.gff3tools.metadata.SubmitterDetails;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FileFastaHeaderSource;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
@@ -102,8 +105,8 @@ class GFF3MapperTest {
     @Test
     void headerKeyedByVersionedSubmissionIdResolvesUnversionedAccession() throws Exception {
         // TTENA-317: webin-cli FASTA headers are keyed by the versioned submission id
-        // ("OZ375371.1") while the mapper queries the header provider with the unversioned
-        // accession id; the header must still resolve instead of being silently dropped.
+        // ("OZ375371.1") while the mapper queries with an unversioned region; the header must
+        // still resolve instead of being silently dropped.
         FastaHeader header = new FastaHeader();
         header.setDescription("Test description");
         FastaHeaderProvider headerProvider = new FastaHeaderProvider();
@@ -117,6 +120,40 @@ class GFF3MapperTest {
 
         assertNotNull(entry.getDescription());
         assertEquals("Test description", entry.getDescription().getText());
+    }
+
+    @Test
+    void headerResolvesForVersionsAboveNine() throws Exception {
+        // The mapper queries with the versioned accession, so versions of 10 and above resolve
+        // exactly; before, the mapper stripped the version and only tried .1 to .9.
+        FastaHeader header = new FastaHeader();
+        header.setDescription("v10 header");
+        FastaHeaderProvider headerProvider = new FastaHeaderProvider();
+        headerProvider.addSource(new FileFastaHeaderSource(Map.of("X.10", header)));
+
+        ValidationContext context = contextWith(new MasterMetadataProvider());
+        context.register(FastaHeaderProvider.class, headerProvider);
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), context);
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("X.10", 1, 1000));
+
+        assertEquals("v10 header", entry.getDescription().getText());
+    }
+
+    @Test
+    void sequenceLookupReceivesTheVersionedAccession() throws Exception {
+        // The mapper must query the sequence lookup with the versioned accession, matching the
+        // validators, so a lookup keyed by the versioned id resolves without tolerance.
+        SequenceLookup lookup = mock(SequenceLookup.class);
+        when(lookup.getSequenceSlice(eq("X.2"), anyLong(), anyLong()))
+                .thenReturn("ACGTACGTAA");
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(new MasterMetadataProvider()), lookup);
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("X.2", 1, 10));
+
+        assertEquals("X.2", entry.getSequence().getAccession());
+        assertEquals(10, entry.getSequence().getLength());
+        verify(lookup).getSequenceSlice(eq("X.2"), eq(1L), eq(10L));
     }
 
     @Test

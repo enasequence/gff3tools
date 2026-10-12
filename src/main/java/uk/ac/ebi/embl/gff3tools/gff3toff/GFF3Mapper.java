@@ -330,9 +330,9 @@ public class GFF3Mapper {
         }
         try {
             String nucleotides = sequenceLookup.getSequenceSlice(
-                    sequenceRegion.accessionId(), sequenceRegion.start(), sequenceRegion.end());
+                    sequenceRegion.accession(), sequenceRegion.start(), sequenceRegion.end());
             if (nucleotides == null || nucleotides.isEmpty()) {
-                throw new ReadException("No sequence data returned for '" + sequenceRegion.accessionId() + "'");
+                throw new ReadException("No sequence data returned for '" + sequenceRegion.accession() + "'");
             }
             // Convert to lowercase bytes in a single pass to avoid an intermediate
             // String allocation from toLowerCase() (saves ~2N bytes of peak memory).
@@ -370,7 +370,7 @@ public class GFF3Mapper {
             return;
         }
 
-        Optional<FastaHeader> opt = headerProvider.getHeader(sequenceRegion.accessionId());
+        Optional<FastaHeader> opt = headerProvider.getHeader(sequenceRegion.accession());
         if (opt.isEmpty()) {
             return;
         }
@@ -429,7 +429,7 @@ public class GFF3Mapper {
             return;
         }
 
-        String seqId = sequenceRegion.accessionId();
+        String seqId = sequenceRegion.accession();
         Optional<MasterMetadata> opt = metadataProvider.getMetadata(seqId);
         if (opt.isEmpty()) {
             LOGGER.debug("No master metadata found for seqId '{}'; skipping metadata mapping", seqId);

@@ -11,17 +11,16 @@
 package uk.ac.ebi.embl.gff3tools.sequence.fasta.header;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
-import uk.ac.ebi.embl.gff3tools.utils.SeqIdVariants;
 
 /**
  * A {@link FastaHeaderSource} backed by the parsed header map from a FASTA file.
  *
- * <p>Returns headers only for seqIds found in the FASTA file; the seqId is resolved
- * version-tolerantly (see {@link SeqIdVariants}), because FASTA headers are usually keyed by the
- * versioned submission id while the mapper and validators query with either id form.
+ * <p>Returns headers only for seqIds found in the FASTA file;
+ * returns {@code Optional.empty()} for unknown seqIds. Version-tolerant resolution across
+ * candidate seqId forms (see {@code SeqIdVariants}) is done by {@link FastaHeaderProvider},
+ * not by this source, so that exact matches are preferred across sources.
  */
 public class FileFastaHeaderSource implements FastaHeaderSource {
 
@@ -33,9 +32,9 @@ public class FileFastaHeaderSource implements FastaHeaderSource {
 
     @Override
     public Optional<FastaHeader> getHeader(String seqId) {
-        return SeqIdVariants.variants(seqId).stream()
-                .map(seqIdToHeader::get)
-                .filter(Objects::nonNull)
-                .findFirst();
+        if (seqId == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(seqIdToHeader.get(seqId));
     }
 }

@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.utils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Candidate seqId forms for version-tolerant id resolution.
@@ -36,6 +37,10 @@ public class SeqIdVariants {
     /**
      * Returns the candidate forms of the given seqId in resolution order, starting with the
      * seqId as given. Returns an empty list for a null seqId.
+     *
+     * <p>Versioned ids are parsed the same way as the GFF3 reader parses column 1: only a digit
+     * run after the first dot counts as a version, so "X.1.2" carries no version. Versions are
+     * appended only to ids that carry none.
      */
     public static List<String> variants(String seqId) {
         if (seqId == null) {
@@ -43,24 +48,50 @@ public class SeqIdVariants {
         }
         List<String> variants = new ArrayList<>();
         variants.add(seqId);
-        // Versioned query over an unversioned key: strip the trailing .version.
-        int dot = seqId.lastIndexOf('.');
-        if (dot > 0 && isDigits(seqId.substring(dot + 1))) {
-            variants.add(seqId.substring(0, dot));
+        strippedVariant(seqId).ifPresent(variants::add);
+        variants.addAll(appendedVariants(seqId));
+        return variants;
+    }
+
+    /**
+     * Returns the seqId with its trailing version stripped, e.g. "OZ375371.1" → "OZ375371", or
+     * empty when the seqId carries no version. Versioned ids are parsed the same way as the GFF3
+     * reader parses column 1: only a digit run after the first dot counts as a version.
+     */
+    public static Optional<String> strippedVariant(String seqId) {
+        if (seqId == null) {
+            return Optional.empty();
         }
-        // Unversioned query over a versioned key: try versions 1..9.
+        int dot = seqId.indexOf('.');
+        if (dot > 0 && isDigits(seqId.substring(dot + 1))) {
+            return Optional.of(seqId.substring(0, dot));
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Returns the versioned forms "X.1" to "X.9" of an unversioned seqId, or an empty list when
+     * the seqId already carries a dot.
+     */
+    public static List<String> appendedVariants(String seqId) {
+        if (seqId == null || seqId.indexOf('.') >= 0) {
+            return List.of();
+        }
+        List<String> variants = new ArrayList<>();
         for (int version = 1; version <= MAX_SINGLE_DIGIT_VERSION; version++) {
             variants.add(seqId + "." + version);
         }
         return variants;
     }
 
+    /** Returns true when s is a non-empty ASCII digit run. */
     private static boolean isDigits(String s) {
         if (s.isEmpty()) {
             return false;
         }
         for (int i = 0; i < s.length(); i++) {
-            if (!Character.isDigit(s.charAt(i))) {
+            char c = s.charAt(i);
+            if (c < '0' || c > '9') {
                 return false;
             }
         }
