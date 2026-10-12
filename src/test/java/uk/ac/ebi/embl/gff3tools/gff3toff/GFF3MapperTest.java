@@ -37,8 +37,8 @@ import uk.ac.ebi.embl.gff3tools.metadata.ReferenceData;
 import uk.ac.ebi.embl.gff3tools.metadata.SubmissionAccount;
 import uk.ac.ebi.embl.gff3tools.metadata.SubmitterDetails;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FileFastaHeaderSource;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FileFastaHeaderSource;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
@@ -145,8 +145,7 @@ class GFF3MapperTest {
         // The mapper must query the sequence lookup with the versioned accession, matching the
         // validators, so a lookup keyed by the versioned id resolves without tolerance.
         SequenceLookup lookup = mock(SequenceLookup.class);
-        when(lookup.getSequenceSlice(eq("X.2"), anyLong(), anyLong()))
-                .thenReturn("ACGTACGTAA");
+        when(lookup.getSequenceSlice(eq("X.2"), anyLong(), anyLong())).thenReturn("ACGTACGTAA");
 
         GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(new MasterMetadataProvider()), lookup);
         Entry entry = mapper.mapGFF3ToEntry(createAnnotation("X.2", 1, 10));

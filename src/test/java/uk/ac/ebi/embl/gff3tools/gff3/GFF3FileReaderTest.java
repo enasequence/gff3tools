@@ -408,8 +408,7 @@ public class GFF3FileReaderTest {
     void testVersionTooLargeKeepsSeqIdVerbatim() throws Exception {
         // A digit run that does not fit an int is not a version, so the seq id is kept verbatim
         // and reported through the usual undefined seq id handling instead of crashing.
-        String gff3Content = "##gff-version 3.2.1\n"
-                + "X.99999999999\tsource\tgene\t1\t100\t.\t+\t.\tID=feat1\n";
+        String gff3Content = "##gff-version 3.2.1\n" + "X.99999999999\tsource\tgene\t1\t100\t.\t+\t.\tID=feat1\n";
 
         ValidationEngine validationEngine = getValidationEngineFailFast();
 

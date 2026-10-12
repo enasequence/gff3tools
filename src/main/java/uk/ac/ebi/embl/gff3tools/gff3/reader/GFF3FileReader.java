@@ -291,9 +291,7 @@ public class GFF3FileReader implements AutoCloseable {
             // that fits an int; otherwise the seq id is kept verbatim, e.g. "X.1.1", "X.abc" or
             // "X.99999999999".
             Optional<Integer> accessionVersion = Optional.ofNullable(
-                            accessionParts.length > 1 && isIntDigits(accessionParts[1])
-                                    ? accessionParts[1]
-                                    : null)
+                            accessionParts.length > 1 && isIntDigits(accessionParts[1]) ? accessionParts[1] : null)
                     .map(Integer::parseInt);
             String seqId = accessionVersion.isPresent() ? accessionParts[0] : accession;
             // The version belongs to the accession rather than the seq id, so an unversioned
@@ -330,7 +328,8 @@ public class GFF3FileReader implements AutoCloseable {
     private Optional<Integer> getVersionedRegionVersion(String seqId) {
         // '/' is the character after '.', so the range holds exactly the keys that start with
         // seqId + ".".
-        NavigableMap<String, GFF3SequenceRegion> candidates = ((TreeMap<String, GFF3SequenceRegion>) accessionSequenceRegionMap)
+        NavigableMap<String, GFF3SequenceRegion> candidates = ((TreeMap<String, GFF3SequenceRegion>)
+                        accessionSequenceRegionMap)
                 .subMap(seqId + ".", true, seqId + ((char) ('.' + 1)), true);
         Set<Integer> versions = candidates.keySet().stream()
                 .map(accession -> accession.substring(seqId.length() + 1))

@@ -86,8 +86,10 @@ public class FastaHeaderProvider implements ContextProvider<FastaHeaderProvider>
         if (seqId == null) {
             return Optional.empty();
         }
-        List<FastaHeaderSource> keyed = sources.stream().filter(s -> !s.isCatchAll()).toList();
-        List<FastaHeaderSource> catchAlls = sources.stream().filter(FastaHeaderSource::isCatchAll).toList();
+        List<FastaHeaderSource> keyed =
+                sources.stream().filter(s -> !s.isCatchAll()).toList();
+        List<FastaHeaderSource> catchAlls =
+                sources.stream().filter(FastaHeaderSource::isCatchAll).toList();
 
         // Pass 1: the seqId as given — declared source priority wins.
         for (FastaHeaderSource source : keyed) {

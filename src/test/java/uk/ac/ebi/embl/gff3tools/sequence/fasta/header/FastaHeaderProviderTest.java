@@ -102,7 +102,8 @@ class FastaHeaderProviderTest {
         FastaHeaderProvider provider = new FastaHeaderProvider();
         provider.addSource(new FileFastaHeaderSource(Map.of("OZ375371", h)));
 
-        assertEquals("From FASTA", provider.getHeader("OZ375371.1").orElseThrow().getDescription());
+        assertEquals(
+                "From FASTA", provider.getHeader("OZ375371.1").orElseThrow().getDescription());
     }
 
     @Test

@@ -122,12 +122,15 @@ public class CompositeSequenceProvider implements ContextProvider<SequenceLookup
                 @Override
                 public String getSequenceSlice(String seqId, long fromBase, long toBase) throws Exception {
                     return withSource(
-                            seqId, (source, id) -> source.getSequenceSlice(id, fromBase, toBase, SequenceRangeOption.WHOLE_SEQUENCE));
+                            seqId,
+                            (source, id) ->
+                                    source.getSequenceSlice(id, fromBase, toBase, SequenceRangeOption.WHOLE_SEQUENCE));
                 }
 
                 @Override
                 public long getSequenceLength(String seqId) throws Exception {
-                    return withSource(seqId, (source, id) -> source.getSequenceLength(id, SequenceRangeOption.WHOLE_SEQUENCE));
+                    return withSource(
+                            seqId, (source, id) -> source.getSequenceLength(id, SequenceRangeOption.WHOLE_SEQUENCE));
                 }
 
                 @Override
@@ -137,7 +140,8 @@ public class CompositeSequenceProvider implements ContextProvider<SequenceLookup
 
                 @Override
                 public List<GapRegion> getGapRegions(String seqId) throws Exception {
-                    return withSource(seqId, (source, id) -> source.getGapRegions(id, SequenceRangeOption.WHOLE_SEQUENCE));
+                    return withSource(
+                            seqId, (source, id) -> source.getGapRegions(id, SequenceRangeOption.WHOLE_SEQUENCE));
                 }
 
                 @Override
@@ -161,7 +165,8 @@ public class CompositeSequenceProvider implements ContextProvider<SequenceLookup
                 public Reader getSequenceSliceReader(String seqId, long fromBase, long toBase) throws Exception {
                     return withSource(
                             seqId,
-                            (source, id) -> source.getSequenceSliceReader(id, fromBase, toBase, SequenceRangeOption.WHOLE_SEQUENCE));
+                            (source, id) -> source.getSequenceSliceReader(
+                                    id, fromBase, toBase, SequenceRangeOption.WHOLE_SEQUENCE));
                 }
             };
         }
