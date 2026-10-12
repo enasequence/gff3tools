@@ -29,6 +29,7 @@ import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.JsonHeaderParser;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ParsedHeader;
 import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
+import uk.ac.ebi.embl.gff3tools.utils.SeqIdVariants;
 
 /**
  * A {@link SequenceSource} backed by a single file (FASTA or plain sequence).
@@ -98,9 +99,14 @@ public class FileSequenceSource implements SequenceSource {
             return false;
         }
         if (formatReader.getSequenceFileFormat() == SequenceFileFormat.PLAIN_SEQUENCE) {
-            return sequenceKey == null || sequenceKey.equals(seqId);
+            return sequenceKey == null || matchesKey(seqId);
         }
         return seqIdToOrdinal.containsKey(seqId);
+    }
+
+    /** A keyless plain sequence serves any seqId; a keyed one matches any candidate id form. */
+    private boolean matchesKey(String seqId) {
+        return SeqIdVariants.variants(seqId).stream().anyMatch(sequenceKey::equals);
     }
 
     @Override

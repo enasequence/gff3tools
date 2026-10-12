@@ -42,4 +42,22 @@ class FileFastaHeaderSourceTest {
         FileFastaHeaderSource source = new FileFastaHeaderSource(Map.of());
         assertTrue(source.getHeader("any").isEmpty());
     }
+
+    @Test
+    void sourceMatchesExactKeysOnly() {
+        // Version-tolerant resolution lives in FastaHeaderProvider, not in this source, so that
+        // exact matches are preferred across sources.
+        FastaHeader h = new FastaHeader();
+        h.setDescription("Test");
+        FileFastaHeaderSource source = new FileFastaHeaderSource(Map.of("OZ375371.1", h));
+
+        assertTrue(source.getHeader("OZ375371.1").isPresent());
+        assertTrue(source.getHeader("OZ375371").isEmpty());
+    }
+
+    @Test
+    void nullSeqIdReturnsEmpty() {
+        FileFastaHeaderSource source = new FileFastaHeaderSource(Map.of("X", new FastaHeader()));
+        assertTrue(source.getHeader(null).isEmpty());
+    }
 }

@@ -354,6 +354,45 @@ class FileSequenceSourceTest {
         assertSame(expected, source.getSequenceSliceReader("seq1", 1L, 6L, SequenceRangeOption.WITHOUT_EDGE_N_BASES));
     }
 
+    // --- plain-sequence key resolution (TTENA-317) ---
+
+    @Test
+    void plainSequenceKeyMatchesCandidateForms() {
+        SequenceFormatReader mockReader = mockPlainReader();
+        // A key of "X.1" must serve queries in either id form.
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.plain, "X.1");
+
+        assertTrue(source.hasSequence("X.1"));
+        assertTrue(source.hasSequence("X"));
+        assertFalse(source.hasSequence("Y"));
+    }
+
+    @Test
+    void fastaSourceMatchesExactIdsOnly() {
+        // Version-tolerant resolution lives in the composites, so a single source only matches
+        // the exact key; this keeps exact matches preferred across sources.
+        SequenceFormatReader mockReader = mockFastaReader("OZ375371.1");
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+
+        assertTrue(source.hasSequence("OZ375371.1"));
+        assertFalse(source.hasSequence("OZ375371"));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> source.getSequenceSlice("OZ375371", 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE));
+    }
+
+    @Test
+    void unknownSeqIdStillFailsLoudly() throws Exception {
+        SequenceFormatReader mockReader = mockFastaReader("seq1");
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+
+        assertFalse(source.hasSequence("unknown"));
+        assertFalse(source.hasSequence("unknown.1"));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> source.getSequenceSlice("unknown.1", 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE));
+    }
+
     /** Creates a mock plain sequence reader with a single ordinal 0. */
     private SequenceFormatReader mockPlainReader() {
         SequenceFormatReader reader = mock(SequenceFormatReader.class);
