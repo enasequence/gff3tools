@@ -287,18 +287,20 @@ public class GFF3FileReader implements AutoCloseable {
 
             String[] accessionParts = accession.split("\\.", 2);
 
-            // The part of the seq id after the first dot is a version only when it is a pure
-            // digit run; otherwise the seq id is kept verbatim, e.g. "X.1.1" or "X.abc".
+            // The part of the seq id after the first dot is a version only when it is a digit run
+            // that fits an int; otherwise the seq id is kept verbatim, e.g. "X.1.1", "X.abc" or
+            // "X.99999999999".
             Optional<Integer> accessionVersion = Optional.ofNullable(
-                            accessionParts.length > 1 && accessionParts[1].matches("\\d+")
+                            accessionParts.length > 1 && isIntDigits(accessionParts[1])
                                     ? accessionParts[1]
                                     : null)
                     .map(Integer::parseInt);
             String seqId = accessionVersion.isPresent() ? accessionParts[0] : accession;
             // The version belongs to the accession rather than the seq id, so an unversioned
             // seq id inherits the version of a matching versioned sequence region, e.g. the
-            // seq id "X" with the region "X.1" is read as the accession "X.1".
-            if (accessionVersion.isEmpty()) {
+            // seq id "X" with the region "X.1" is read as the accession "X.1". An exact
+            // (unversioned) region match always wins and is never versioned up.
+            if (accessionVersion.isEmpty() && !accessionSequenceRegionMap.containsKey(seqId)) {
                 accessionVersion = getVersionedRegionVersion(seqId);
             }
 
@@ -321,16 +323,35 @@ public class GFF3FileReader implements AutoCloseable {
      * Returns the version of a versioned sequence region whose accession matches the given seq
      * id, e.g. the seq id "X" matches the region accession "X.1". Returns an empty optional when
      * there is no match or when more than one versioned region matches, in which case the seq id
-     * version is left unresolved so the usual undefined seq id handling applies.
+     * version is left unresolved so the usual undefined seq id handling applies. Only the keys
+     * between "X." and "X0" are inspected, so the lookup does not scale with the number of
+     * sequence regions.
      */
     private Optional<Integer> getVersionedRegionVersion(String seqId) {
-        Set<Integer> versions = accessionSequenceRegionMap.keySet().stream()
-                .filter(accession -> accession.startsWith(seqId + "."))
+        // '/' is the character after '.', so the range holds exactly the keys that start with
+        // seqId + ".".
+        NavigableMap<String, GFF3SequenceRegion> candidates = ((TreeMap<String, GFF3SequenceRegion>) accessionSequenceRegionMap)
+                .subMap(seqId + ".", true, seqId + ((char) ('.' + 1)), true);
+        Set<Integer> versions = candidates.keySet().stream()
                 .map(accession -> accession.substring(seqId.length() + 1))
-                .filter(version -> version.matches("\\d+"))
+                .filter(GFF3FileReader::isIntDigits)
                 .map(Integer::parseInt)
                 .collect(Collectors.toSet());
         return versions.size() == 1 ? Optional.of(versions.iterator().next()) : Optional.empty();
+    }
+
+    /** Returns true when s is a non-empty ASCII digit run that fits an int. */
+    private static boolean isIntDigits(String s) {
+        if (s.isEmpty() || s.length() > 9) {
+            return false;
+        }
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c < '0' || c > '9') {
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean isValidNumber(String n) {

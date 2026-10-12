@@ -375,6 +375,56 @@ public class GFF3FileReaderTest {
     }
 
     @Test
+    void testExactRegionMatchWinsOverVersionedRegion() throws Exception {
+        // When both the unversioned and a versioned region exist, the unversioned region is the
+        // canonical accession for the unversioned seq id; it is never versioned up.
+        String gff3Content = "##gff-version 3.2.1\n"
+                + "##sequence-region X 1 200\n"
+                + "##sequence-region X.1 1 200\n"
+                + "X\tsource\tgene\t1\t100\t.\t+\t.\tID=feat1\n";
+
+        ValidationEngine validationEngine = getValidationEngineFailFast();
+        try (GFF3FileReader gff3Reader =
+                new GFF3FileReader(validationEngine, new StringReader(gff3Content), Path.of("input.gff3"))) {
+            gff3Reader.readHeader();
+            GFF3Annotation annotation = gff3Reader.readAnnotation();
+
+            Assertions.assertNotNull(annotation);
+            GFF3Feature feature = annotation.getFeatures().get(0);
+            assertEquals("X", feature.getSeqId());
+            Assertions.assertTrue(feature.getSeqIdVersion().isEmpty());
+            assertEquals("X", feature.accession());
+            assertEquals("X", annotation.getAccession());
+            // The unused versioned region X.1 is still emitted as a region-only annotation.
+            GFF3Annotation regionOnly = gff3Reader.readAnnotation();
+            Assertions.assertNotNull(regionOnly);
+            assertEquals("X.1", regionOnly.getAccession());
+            Assertions.assertTrue(regionOnly.getFeatures().isEmpty());
+            Assertions.assertNull(gff3Reader.readAnnotation());
+        }
+    }
+
+    @Test
+    void testVersionTooLargeKeepsSeqIdVerbatim() throws Exception {
+        // A digit run that does not fit an int is not a version, so the seq id is kept verbatim
+        // and reported through the usual undefined seq id handling instead of crashing.
+        String gff3Content = "##gff-version 3.2.1\n"
+                + "X.99999999999\tsource\tgene\t1\t100\t.\t+\t.\tID=feat1\n";
+
+        ValidationEngine validationEngine = getValidationEngineFailFast();
+
+        try (GFF3FileReader gff3Reader =
+                new GFF3FileReader(validationEngine, new StringReader(gff3Content), Path.of("input.gff3"))) {
+            gff3Reader.readHeader();
+            gff3Reader.readAnnotation();
+        } catch (UndefinedSeqIdException e) {
+            Assertions.assertTrue(e.getMessage().contains("X.99999999999"));
+            return;
+        }
+        fail("Expected UndefinedSeqIdException to be thrown.");
+    }
+
+    @Test
     void testReadSpecies_noSpecies() throws Exception {
         // GFF3 with species
         String input = "##gff-version 3\n" + "##species http://example.org?name=Homo sapiens\n"
