@@ -18,12 +18,11 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
-import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
+import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3File;
-import uk.ac.ebi.embl.gff3tools.metadata.EmblEntryMetadataSource;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 
@@ -112,20 +111,9 @@ class FFToGFF3ConverterTest {
 
     private static MasterMetadataProvider buildMetadataProvider(Path masterFile) {
         if (masterFile == null) return null;
-        ReaderOptions readerOptions = new ReaderOptions();
-        readerOptions.setIgnoreSequence(true);
-        try (BufferedReader reader = Files.newBufferedReader(masterFile)) {
-            EmblEntryReader entryReader =
-                    new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "master_reader", readerOptions);
-            Entry masterEntry = null;
-            while (entryReader.read() != null && entryReader.isEntry()) {
-                masterEntry = entryReader.getEntry();
-            }
-            if (masterEntry == null) return null;
-            MasterMetadataProvider provider = new MasterMetadataProvider();
-            provider.addSource(new EmblEntryMetadataSource(masterEntry));
-            return provider;
-        } catch (IOException e) {
+        try {
+            return Gff3ProviderFactory.buildMetadataProvider(masterFile);
+        } catch (ExitException e) {
             throw new RuntimeException(e);
         }
     }

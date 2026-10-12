@@ -124,6 +124,10 @@ $GFF3TOOLS conversion -m master.json OZ026791.embl OZ026791.gff3
 $GFF3TOOLS conversion -m master.embl OZ026791.embl OZ026791.gff3
 ```
 
+An EMBL master with a `WGS  <first>-<last>` line is treated as a WGS set master: each converted
+contig gets data class `WGS`, `KW WGS.` and `DR ENA; ...; SET.` cross-references, as with a JSON
+master carrying `contigDataclass=WGS`.
+
 ### Sequence sources (`--sequence`)
 
 Sequence data is required for validations that check nucleotide content (e.g. translation
