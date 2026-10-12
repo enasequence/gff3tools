@@ -96,4 +96,17 @@ class SubmitterSeqIdValidationTest {
         assertTrue(exception.getMessage().contains("']'"), exception.getMessage());
         assertTrue(exception.getMessage().contains("'\"'"), exception.getMessage());
     }
+
+    @Test
+    void reportsLengthAndProhibitedCharactersInOneException() {
+        GFF3Annotation annotation = annotationWithSeqId("seq 1" + "A".repeat(SubmitterSeqIdValidation.MAX_LENGTH));
+
+        ValidationException exception = assertThrows(
+                ValidationException.class, () -> validation.validateSubmitterSeqIdFormat(annotation, LINE));
+
+        assertEquals(SubmitterSeqIdValidation.SUBMITTER_SEQ_ID_FORMAT_RULE, exception.getValidationRule());
+        assertEquals(LINE, exception.getLine());
+        assertTrue(exception.getMessage().contains("51 characters"), exception.getMessage());
+        assertTrue(exception.getMessage().contains("not permitted by INSDC"), exception.getMessage());
+    }
 }
