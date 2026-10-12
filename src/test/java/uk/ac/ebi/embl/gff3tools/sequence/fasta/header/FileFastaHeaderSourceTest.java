@@ -42,4 +42,46 @@ class FileFastaHeaderSourceTest {
         FileFastaHeaderSource source = new FileFastaHeaderSource(Map.of());
         assertTrue(source.getHeader("any").isEmpty());
     }
+
+    @Test
+    void unversionedQueryResolvesVersionedKey() {
+        // FASTA headers are usually keyed by the versioned submission id while the mapper queries
+        // the unversioned accession id.
+        FastaHeader h = new FastaHeader();
+        h.setDescription("Test");
+        FileFastaHeaderSource source = new FileFastaHeaderSource(Map.of("OZ375371.1", h));
+
+        assertTrue(source.getHeader("OZ375371").isPresent());
+        assertEquals("Test", source.getHeader("OZ375371").get().getDescription());
+        // The exact key still wins.
+        assertTrue(source.getHeader("OZ375371.1").isPresent());
+    }
+
+    @Test
+    void versionedQueryResolvesUnversionedKey() {
+        FastaHeader h = new FastaHeader();
+        h.setDescription("Test");
+        FileFastaHeaderSource source = new FileFastaHeaderSource(Map.of("OZ375371", h));
+
+        assertTrue(source.getHeader("OZ375371.1").isPresent());
+        assertEquals("Test", source.getHeader("OZ375371.1").get().getDescription());
+    }
+
+    @Test
+    void resolutionPrefersTheExactKey() {
+        FastaHeader versioned = new FastaHeader();
+        versioned.setDescription("versioned");
+        FastaHeader unversioned = new FastaHeader();
+        unversioned.setDescription("unversioned");
+        FileFastaHeaderSource source = new FileFastaHeaderSource(Map.of("X", unversioned, "X.1", versioned));
+
+        assertEquals("versioned", source.getHeader("X.1").get().getDescription());
+        assertEquals("unversioned", source.getHeader("X").get().getDescription());
+    }
+
+    @Test
+    void nullSeqIdReturnsEmpty() {
+        FileFastaHeaderSource source = new FileFastaHeaderSource(Map.of("X", new FastaHeader()));
+        assertTrue(source.getHeader(null).isEmpty());
+    }
 }

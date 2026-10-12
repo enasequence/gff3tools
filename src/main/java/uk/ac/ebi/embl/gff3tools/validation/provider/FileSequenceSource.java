@@ -29,6 +29,7 @@ import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.JsonHeaderParser;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ParsedHeader;
 import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
+import uk.ac.ebi.embl.gff3tools.utils.SeqIdVariants;
 
 /**
  * A {@link SequenceSource} backed by a single file (FASTA or plain sequence).
@@ -100,7 +101,7 @@ public class FileSequenceSource implements SequenceSource {
         if (formatReader.getSequenceFileFormat() == SequenceFileFormat.PLAIN_SEQUENCE) {
             return sequenceKey == null || sequenceKey.equals(seqId);
         }
-        return seqIdToOrdinal.containsKey(seqId);
+        return SeqIdVariants.variants(seqId).stream().anyMatch(seqIdToOrdinal::containsKey);
     }
 
     @Override
@@ -269,10 +270,15 @@ public class FileSequenceSource implements SequenceSource {
         if (formatReader.getSequenceFileFormat() == SequenceFileFormat.PLAIN_SEQUENCE) {
             return formatReader.getOrderedIds().get(0);
         }
-        Long ordinal = seqIdToOrdinal.get(seqId);
-        if (ordinal == null) {
-            throw new IllegalArgumentException("No sequence found for seqId: " + seqId);
+        // Sources are keyed by the FASTA submission id, which usually carries a version, while
+        // callers may query with either id form; try each candidate form in turn and fail loudly
+        // with the requested id when none matches.
+        for (String candidate : SeqIdVariants.variants(seqId)) {
+            Long ordinal = seqIdToOrdinal.get(candidate);
+            if (ordinal != null) {
+                return ordinal;
+            }
         }
-        return ordinal;
+        throw new IllegalArgumentException("No sequence found for seqId: " + seqId);
     }
 }

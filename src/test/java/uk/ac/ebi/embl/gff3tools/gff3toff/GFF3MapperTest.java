@@ -34,6 +34,9 @@ import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.metadata.ReferenceData;
 import uk.ac.ebi.embl.gff3tools.metadata.SubmissionAccount;
 import uk.ac.ebi.embl.gff3tools.metadata.SubmitterDetails;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FileFastaHeaderSource;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 class GFF3MapperTest {
@@ -94,6 +97,26 @@ class GFF3MapperTest {
 
         assertNotNull(entry.getDescription());
         assertEquals("Homo sapiens genome assembly", entry.getDescription().getText());
+    }
+
+    @Test
+    void headerKeyedByVersionedSubmissionIdResolvesUnversionedAccession() throws Exception {
+        // TTENA-317: webin-cli FASTA headers are keyed by the versioned submission id
+        // ("OZ375371.1") while the mapper queries the header provider with the unversioned
+        // accession id; the header must still resolve instead of being silently dropped.
+        FastaHeader header = new FastaHeader();
+        header.setDescription("Test description");
+        FastaHeaderProvider headerProvider = new FastaHeaderProvider();
+        headerProvider.addSource(new FileFastaHeaderSource(Map.of("OZ375371.1", header)));
+
+        ValidationContext context = contextWith(new MasterMetadataProvider());
+        context.register(FastaHeaderProvider.class, headerProvider);
+
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), context);
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("OZ375371", 1, 1000));
+
+        assertNotNull(entry.getDescription());
+        assertEquals("Test description", entry.getDescription().getText());
     }
 
     @Test

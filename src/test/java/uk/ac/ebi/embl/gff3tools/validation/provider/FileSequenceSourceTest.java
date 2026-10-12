@@ -354,6 +354,67 @@ class FileSequenceSourceTest {
         assertSame(expected, source.getSequenceSliceReader("seq1", 1L, 6L, SequenceRangeOption.WITHOUT_EDGE_N_BASES));
     }
 
+    // --- version-tolerant seqId resolution (TTENA-317) ---
+
+    @Test
+    void unversionedQueryResolvesVersionedFastaKey() throws Exception {
+        // FASTA headers are usually keyed by the versioned submission id ("OZ375371.1") while the
+        // mapper and validators query the unversioned accession id.
+        SequenceFormatReader mockReader = mockFastaReader("OZ375371.1");
+        when(mockReader.getSequenceSlice(0L, 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("ATGAAATAA");
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+
+        assertTrue(source.hasSequence("OZ375371"));
+        assertTrue(source.hasSequence("OZ375371.1"));
+        assertEquals(
+                "ATGAAATAA", source.getSequenceSlice("OZ375371", 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE));
+    }
+
+    @Test
+    void versionedQueryResolvesUnversionedFastaKey() throws Exception {
+        SequenceFormatReader mockReader = mockFastaReader("OZ375371");
+        when(mockReader.getSequenceSlice(0L, 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn("ATGAAATAA");
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+
+        assertTrue(source.hasSequence("OZ375371.1"));
+        assertEquals(
+                "ATGAAATAA",
+                source.getSequenceSlice("OZ375371.1", 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE));
+    }
+
+    @Test
+    void unknownSeqIdStillFailsLoudly() throws Exception {
+        // Normalisation only bridges the version form; a genuinely unknown seqId must still fail
+        // loudly rather than silently resolving.
+        SequenceFormatReader mockReader = mockFastaReader("seq1");
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+
+        assertFalse(source.hasSequence("unknown"));
+        assertFalse(source.hasSequence("unknown.1"));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> source.getSequenceSlice("unknown.1", 1L, 9L, SequenceRangeOption.WHOLE_SEQUENCE));
+    }
+
+    @Test
+    void versionToleranceAppliesAcrossAllLookups() throws Exception {
+        SequenceFormatReader mockReader = mockFastaReader("OZ375371.1");
+        when(mockReader.getStats(0L))
+                .thenReturn(new uk.ac.ebi.embl.fastareader.SequenceStats(9L, 9L, 0L, 0L, Map.of()));
+        when(mockReader.getGapRegions(0L, uk.ac.ebi.embl.fastareader.SequenceRangeOption.WHOLE_SEQUENCE))
+                .thenReturn(List.of());
+
+        FileSequenceSource source = new FileSequenceSource(mockReader, SequenceFormat.fasta, null);
+
+        assertEquals(9L, source.getSequenceLength("OZ375371", SequenceRangeOption.WHOLE_SEQUENCE));
+        assertEquals(new SequenceStats(9L, 9L, 0L, 0L, Map.of()), source.getSequenceStats("OZ375371"));
+        assertEquals(
+                List.of(), source.getGapRegions("OZ375371", SequenceRangeOption.WHOLE_SEQUENCE));
+        assertEquals(Set.of("OZ375371.1"), source.knownSeqIds());
+    }
+
     /** Creates a mock plain sequence reader with a single ordinal 0. */
     private SequenceFormatReader mockPlainReader() {
         SequenceFormatReader reader = mock(SequenceFormatReader.class);
