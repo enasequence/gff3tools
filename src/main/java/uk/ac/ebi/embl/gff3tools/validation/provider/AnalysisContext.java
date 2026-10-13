@@ -11,7 +11,10 @@
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
 import java.util.Objects;
+import java.util.Optional;
 import lombok.Getter;
+import uk.ac.ebi.embl.api.entry.genomeassembly.AssemblyType;
+import uk.ac.ebi.embl.gff3tools.utils.AssemblyTypeValidator;
 import uk.ac.ebi.embl.gff3tools.utils.GapOptionsValidator;
 
 /**
@@ -32,6 +35,10 @@ public final class AnalysisContext {
     @Getter
     private final AnalysisType analysisType;
 
+    /*** Only available when supplied for {@link AnalysisType}.{@code SEQUENCE_ASSEMBLY} */
+    @Getter
+    private final Optional<AssemblyType> assemblyType;
+
     @Getter
     private final int minGapSize;
 
@@ -50,7 +57,21 @@ public final class AnalysisContext {
      * @throws IllegalArgumentException if {@code minGapSize} is not greater than zero
      */
     public AnalysisContext(AnalysisType analysisType, int minGapSize) {
-        this(analysisType, minGapSize, null, null);
+        this(analysisType, minGapSize, null, null, null);
+    }
+
+    /**
+     * @param analysisType the analysis type (must not be {@code null})
+     * @param minGapSize   the minimum gap size (must be greater than zero)
+     * @throws NullPointerException     if {@code analysisType} is {@code null}
+     * @throws IllegalArgumentException  if {@code minGapSize} is not greater than zero, or if the
+     *                                 gap_type / linkage_evidence combination is not valid INSDC, or if if
+     *                                       {@code assemblyType} is supplied for an analysis type other
+     *                              than {@link AnalysisType#SEQUENCE_ASSEMBLY}, or if it does
+     *                               not match a known assembly type
+     */
+    public AnalysisContext(AnalysisType analysisType, int minGapSize, String gapType, String linkageEvidence) {
+        this(analysisType, minGapSize, gapType, linkageEvidence, null);
     }
 
     /**
@@ -59,11 +80,16 @@ public final class AnalysisContext {
      * @param gapType         optional gap_type for generated gaps; blank is treated as not supplied
      * @param linkageEvidence optional linkage_evidence for generated gaps; blank is treated as not
      *                        supplied
+     * @param assemblyType the raw assembly type, or {@code null}/blank when unavailable
      * @throws NullPointerException     if {@code analysisType} is {@code null}
      * @throws IllegalArgumentException if {@code minGapSize} is not greater than zero, or if the
-     *                                  gap_type / linkage_evidence combination is not valid INSDC
+     *                                  gap_type / linkage_evidence combination is not valid INSDC, or if
+     *                                 {@code assemblyType} is supplied for an analysis type other
+     *                               than {@link AnalysisType#SEQUENCE_ASSEMBLY}, or if it does
+     *                                  not match a known assembly type
      */
-    public AnalysisContext(AnalysisType analysisType, int minGapSize, String gapType, String linkageEvidence) {
+    public AnalysisContext(
+            AnalysisType analysisType, int minGapSize, String gapType, String linkageEvidence, String assemblyType) {
         this.analysisType = Objects.requireNonNull(analysisType, "analysisType must not be null");
         if (minGapSize <= 0) {
             throw new IllegalArgumentException("minGapSize must be greater than 0, but was " + minGapSize);
@@ -79,5 +105,6 @@ public final class AnalysisContext {
         // onto a feature as an INSDC value that does not exist.
         this.gapType = GapOptionsValidator.normaliseGapType(gapType);
         this.linkageEvidence = GapOptionsValidator.normaliseLinkageEvidence(linkageEvidence);
+        this.assemblyType = AssemblyTypeValidator.parseAndValidate(analysisType, assemblyType);
     }
 }
