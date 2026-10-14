@@ -23,10 +23,14 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.fastareader.SequenceStats;
 import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
+import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationRegistry;
@@ -492,6 +496,132 @@ class TranslationFixTest {
 
         assertTrue(seg1.isThreePrimePartial());
         assertFalse(seg2.isThreePrimePartial());
+    }
+
+    // ---- circular sequences: virtual coordinates past the origin ------------------------
+
+    // CDS ATG AAA CCC GGG TAA (MKPG) on a 30 bp circular sequence, crossing the origin:
+    // bases 25..30 hold its first 6 bases, bases 1..9 the remaining 9.
+    private static final String CDS = "ATGAAACCCGGGTAA";
+    private static final String FILLER = "TTTTTTTTTTTTTTT";
+    private static final long CIRCLE = 30;
+
+    @Test
+    void translatesSingleLineCdsCrossingTheOrigin() throws Exception {
+        circularSequence(CDS.substring(6) + FILLER + CDS.substring(0, 6));
+
+        GFF3Feature cds = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 25, 39, "+");
+        fix.fixAnnotation(circularAnnotation(cds), 1);
+
+        assertEquals("MKPG", translationOf(cds));
+        assertNoPartials(cds);
+    }
+
+    @Test
+    void translatesCdsWithSegmentsInVirtualSpace() throws Exception {
+        circularSequence(CDS.substring(6) + FILLER + CDS.substring(0, 6));
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 25, 30, "+");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 31, 39, "+");
+        fix.fixAnnotation(circularAnnotation(seg1, seg2), 1);
+
+        assertEquals("MKPG", translationOf(seg1));
+        assertNoPartials(seg1, seg2);
+    }
+
+    /** An intron right after the origin: the second exon lies wholly past it (bases 4..12). */
+    @Test
+    void translatesCdsWithSegmentWhollyPastTheOrigin() throws Exception {
+        circularSequence("CCC" + CDS.substring(6) + "TTTTTTTTTTTT" + CDS.substring(0, 6));
+
+        GFF3Feature exon1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 25, 30, "+");
+        GFF3Feature exon2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 34, 42, "+");
+        fix.fixAnnotation(circularAnnotation(exon1, exon2), 1);
+
+        assertEquals("MKPG", translationOf(exon1));
+        assertNoPartials(exon1, exon2);
+    }
+
+    @Test
+    void translatesMinusStrandCdsCrossingTheOrigin() throws Exception {
+        // Read along the plus strand, 25..30 then 1..9 is the reverse complement of the CDS.
+        String reverseComplement = reverseComplement(CDS);
+        circularSequence(reverseComplement.substring(6) + FILLER + reverseComplement.substring(0, 6));
+
+        GFF3Feature cds = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 25, 39, "-");
+        fix.fixAnnotation(circularAnnotation(cds), 1);
+
+        assertEquals("MKPG", translationOf(cds));
+        assertNoPartials(cds);
+    }
+
+    /** Without a circular topology the end past the sequence length is not unwrapped. */
+    @Test
+    void doesNotUnwrapOnLinearSequence() throws Exception {
+        sequence(CDS.substring(6) + FILLER + CDS.substring(0, 6));
+
+        GFF3Feature cds = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 25, 39, "+");
+        GFF3Annotation annotation = createAnnotation(cds);
+        annotation.setSequenceRegion(new GFF3SequenceRegion("seq1", Optional.empty(), 1, CIRCLE));
+
+        ValidationException exception = assertThrows(ValidationException.class, () -> fix.fixAnnotation(annotation, 1));
+        assertTrue(exception.getMessage().contains("bad base range"));
+    }
+
+    /** Backs the lookup with a real sequence, failing like the real lookup past its end. */
+    private void sequence(String bases) throws Exception {
+        assertEquals(CIRCLE, bases.length());
+        when(mockLookup.getSequenceSlice(eq("seq1"), anyLong(), anyLong())).thenAnswer(invocation -> {
+            long from = invocation.getArgument(1);
+            long to = invocation.getArgument(2);
+            if (from < 1 || to > bases.length()) {
+                throw new IllegalArgumentException("bad base range: " + from + ".." + to);
+            }
+            return bases.substring((int) from - 1, (int) to);
+        });
+    }
+
+    private void circularSequence(String bases) throws Exception {
+        sequence(bases);
+        FastaHeader header = new FastaHeader();
+        header.setTopology("circular");
+        FastaHeaderProvider headers = new FastaHeaderProvider();
+        headers.addSource(seqId -> "seq1".equals(seqId) ? Optional.of(header) : Optional.empty());
+        context.register(FastaHeaderProvider.class, headers);
+    }
+
+    private GFF3Annotation circularAnnotation(GFF3Feature... features) {
+        GFF3Annotation annotation = createAnnotation(features);
+        annotation.setSequenceRegion(new GFF3SequenceRegion("seq1", Optional.empty(), 1, CIRCLE));
+        return annotation;
+    }
+
+    private String translationOf(GFF3Feature feature) {
+        return translationState
+                .get(TranslationState.buildKey(
+                        feature.accession(), feature.getId().orElseThrow()))
+                .newTranslation();
+    }
+
+    private static void assertNoPartials(GFF3Feature... segments) {
+        for (GFF3Feature segment : segments) {
+            assertFalse(segment.isFivePrimePartial(), "no 5' partial at the origin");
+            assertFalse(segment.isThreePrimePartial(), "no 3' partial at the origin");
+        }
+    }
+
+    private static String reverseComplement(String bases) {
+        StringBuilder complement = new StringBuilder();
+        for (char base : bases.toCharArray()) {
+            complement.append(
+                    switch (base) {
+                        case 'A' -> 'T';
+                        case 'T' -> 'A';
+                        case 'C' -> 'G';
+                        default -> 'C';
+                    });
+        }
+        return complement.reverse().toString();
     }
 
     private GFF3Annotation createAnnotation(GFF3Feature... features) {
