@@ -82,6 +82,13 @@ class GFF3HeaderIntegrationTest {
                         "sequence/fasta/header_circular.json",
                         "gff3toff_header_tests/circular_virtual_space_round_trip.embl",
                         "flat file to GFF3 virtual space maps back to the original locations"),
+                // Features may start in virtual space: a later interval of a join, a child of a parent
+                // crossing the origin, or a feature on its own. Each maps back to 1..L numbering.
+                Arguments.of(
+                        "gff3toff_header_tests/circular_starting_in_virtual_space.gff3",
+                        "sequence/fasta/header_circular.json",
+                        "gff3toff_header_tests/circular_starting_in_virtual_space.embl",
+                        "features starting in virtual space"),
                 Arguments.of(
                         "gff3toff_header_tests/circular_origin_lapping_start.gff3",
                         "sequence/fasta/header_circular.json",
