@@ -23,21 +23,22 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.FlatfileSequenceTopologyProv
 public class TopologyUtils {
 
     /**
-     * The topology declared for a sequence, from the first source that declares one: the master
-     * entry, then the sequence's FASTA header, then the flat file entry's ID line. Validation and
-     * the GFF3 to flat file mapper both resolve topology here, so the topology a rule checks against
-     * is the one the ID line is written with. An absent or unrecognised value in one source falls
-     * through to the next; a missing mandatory header topology is reported by
-     * {@code FastaHeaderFormatValidation}.
+     * The topology declared for a sequence, from the first source that declares one. The sequence
+     * record is authoritative (INSDC GFF3), so the record itself comes first: the flat file entry's
+     * ID line, then the sequence's FASTA header. The master entry, which declares one topology for
+     * the whole submission, is the last fallback. Validation and the GFF3 to flat file mapper both
+     * resolve topology here, so the topology a rule checks against is the one the ID line is written
+     * with. An absent or unrecognised value in one source falls through to the next; a missing
+     * mandatory header topology is reported by {@code FastaHeaderFormatValidation}.
      *
      * @param accession the key the caller looks the sequence up by
      * @return the declared topology, or empty when no source declares a recognised one
      */
     public static Optional<ControlledVocabularyUtils.Topology> resolveTopology(
             String accession, ValidationContext context) {
-        return masterTopology(accession, context)
+        return flatfileTopology(accession, context)
                 .or(() -> headerTopology(accession, context))
-                .or(() -> flatfileTopology(accession, context));
+                .or(() -> masterTopology(accession, context));
     }
 
     /** Circular only when declared so; see {@link #resolveTopology} for where topology comes from. */
