@@ -1,0 +1,30 @@
+ID   TST01; SV 1; circular; genomic DNA; STD; PRO; 1000 BP.
+XX
+AC   TST01;
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..1000
+FT                   /organism="Escherichia coli"
+FT                   /mol_type="genomic DNA"
+FT                   /db_xref="taxon:562"
+FT   misc_feature    join(901..1000,1..100)
+FT                   /note="plus, continuous through the origin"
+FT   misc_feature    join(851..900,51..100)
+FT                   /note="plus, gap after the origin"
+FT   misc_feature    complement(join(801..1000,1..50))
+FT                   /note="minus, whole join complemented"
+FT   misc_feature    join(complement(1..50),complement(801..1000))
+FT                   /note="minus, each piece complemented"
+FT   misc_feature    join(<951..1000,1..>30)
+FT                   /note="partial ends across the origin"
+FT   gene            join(701..1000,1..150)
+FT                   /gene="wrapGene"
+FT   CDS             61..150
+FT                   /gene="wrapGene"
+FT                   /codon_start=1
+FT   gene            join(601..650,complement(10..20))
+FT                   /gene="transSplicedGene"
+FT                   /trans_splicing
+XX
+//

@@ -22,6 +22,7 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
@@ -172,14 +173,29 @@ class JoinedLocationOrderValidationTest {
 
     // ---- circular topology ---------------------------------------------------
 
-    /** A feature crossing the origin of a circular sequence steps back once, legitimately. */
+    /** Past the origin a circular sequence continues in virtual space, so the segments still ascend. */
     @Test
-    void originSpanningJoinOnCircularSequenceIsValid() {
+    void originSpanningJoinInVirtualSpaceOnCircularSequenceIsValid() {
         injectTopology("circular");
+        sequenceRegion(1000);
+        segment("gene1", 900, 1000);
+        segment("gene1", 1001, 1200);
+
+        assertDoesNotThrow(() -> validation.validateJoinedLocationOrder(annotation, 1));
+    }
+
+    /** Restarting at 1 past the origin is not allowed; the message says how to write it instead. */
+    @Test
+    void restartingAtOneOnCircularSequenceIsReported() {
+        injectTopology("circular");
+        sequenceRegion(1000);
         segment("gene1", 900, 1000);
         segment("gene1", 1, 200);
 
-        assertDoesNotThrow(() -> validation.validateJoinedLocationOrder(annotation, 1));
+        ValidationException exception =
+                assertThrows(ValidationException.class, () -> validation.validateJoinedLocationOrder(annotation, 1));
+        assertTrue(exception.getMessage().contains("segment 1..200 starts before the preceding segment 900..1000"));
+        assertTrue(exception.getMessage().contains("write 1..200 as 1001..1200"));
     }
 
     @Test
@@ -193,28 +209,39 @@ class JoinedLocationOrderValidationTest {
         assertTrue(exception.getMessage().contains("segment 1..200 starts before the preceding segment 900..1000"));
     }
 
-    /** One step back is the origin; a second one is a scrambled join whatever the topology. */
+    /** Segments on both sides of the origin, stopping short of where the feature began. */
     @Test
-    void secondBackwardStepOnCircularSequenceIsReported() {
+    void multiSegmentOriginSpanningJoinInVirtualSpaceOnCircularSequenceIsValid() {
         injectTopology("circular");
+        sequenceRegion(1000);
+        segment("gene1", 800, 850);
         segment("gene1", 900, 1000);
-        segment("gene1", 1, 200);
-        segment("gene1", 400, 500);
-        segment("gene1", 300, 350);
+        segment("gene1", 1001, 1200);
+        segment("gene1", 1300, 1400);
+
+        assertDoesNotThrow(() -> validation.validateJoinedLocationOrder(annotation, 1));
+    }
+
+    /** A joined feature longer than the circular sequence would lap its own start. */
+    @Test
+    void joinLongerThanCircularSequenceIsReported() {
+        injectTopology("circular");
+        sequenceRegion(1000);
+        segment("gene1", 100, 200);
+        segment("gene1", 900, 1000);
+        segment("gene1", 1001, 1150);
 
         ValidationException exception =
                 assertThrows(ValidationException.class, () -> validation.validateJoinedLocationOrder(annotation, 1));
-        assertTrue(exception.getMessage().contains("segment 300..350 starts before the preceding segment 400..500"));
+        assertTrue(exception.getMessage().contains("span 1051 bases, more than the circular sequence length (1000)"));
     }
 
-    /** Segments on both sides of the origin, stopping short of where the feature began. */
     @Test
-    void multiSegmentOriginSpanningJoinOnCircularSequenceIsValid() {
+    void joinExactlyAsLongAsCircularSequenceIsValid() {
         injectTopology("circular");
-        segment("gene1", 800, 850);
-        segment("gene1", 900, 1000);
-        segment("gene1", 1, 200);
-        segment("gene1", 300, 400);
+        sequenceRegion(1000);
+        segment("gene1", 501, 1000);
+        segment("gene1", 1001, 1500);
 
         assertDoesNotThrow(() -> validation.validateJoinedLocationOrder(annotation, 1));
     }
@@ -267,6 +294,10 @@ class JoinedLocationOrderValidationTest {
         ValidationContext context = TestUtils.createTestContext();
         context.register(FastaHeaderProvider.class, provider);
         TestUtils.injectContext(validation, context);
+    }
+
+    private void sequenceRegion(long length) {
+        annotation.setSequenceRegion(new GFF3SequenceRegion(ACCESSION, Optional.empty(), 1, length));
     }
 
     private GFF3Feature segment(String id, long start, long end) {

@@ -27,6 +27,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
+import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.provider.FlatfileSequenceTopologyProvider;
@@ -51,6 +52,16 @@ public class GFF3AnnotationFactory {
     GFF3DirectivesFactory directivesFactory;
     ValidationEngine validationEngine;
 
+    // Length of the current entry's sequence when it is circular, so origin-crossing joins can be
+    // written in virtual space; null for a linear or undeclared topology.
+    Long circularSequenceLength;
+    // Per gene name, how far the gene's origin-crossing features continue past the origin (in
+    // 1..L numbering). Its other features lying wholly in that stretch are shifted with them.
+    Map<String, Long> wrappedEndByGene = new HashMap<>();
+
+    /** One GFF3 line of a feature: its span, partiality and strand. */
+    private record Segment(long start, long end, List<String> partiality, String strand) {}
+
     public GFF3AnnotationFactory(ValidationEngine validationEngine, GFF3DirectivesFactory directivesFactory) {
         this.validationEngine = validationEngine;
         this.directivesFactory = directivesFactory;
@@ -65,6 +76,13 @@ public class GFF3AnnotationFactory {
         LOG.info("Converting entry: {}", accession);
         GFF3SequenceRegion sequenceRegion = directivesFactory.createSequenceRegion(entry);
         recordTopology(sequenceRegion, entry);
+        // The topology validation checks against, so virtual coordinates are written exactly
+        // when they are accepted.
+        circularSequenceLength =
+                TopologyUtils.isCircularSequence(sequenceRegion.accession(), validationEngine.getContext())
+                        ? sequenceRegion.end()
+                        : null;
+        recordWrappedGenes(entry);
 
         for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
 
@@ -158,13 +176,11 @@ public class GFF3AnnotationFactory {
         // Translation attribute is left on the feature; TranslationFix captures it
         // into TranslationState during validation, and GFF3File writes the FASTA section.
 
-        CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
-        for (Location location : compoundLocation.getLocations()) {
+        for (Segment segment : getSegments(ffFeature, geneName)) {
             Map<String, List<String>> attributes = new LinkedHashMap<>(baseAttributes);
 
-            List<String> partiality = getPartiality(location);
-            if (!partiality.isEmpty()) {
-                attributes.put("partial", partiality);
+            if (!segment.partiality().isEmpty()) {
+                attributes.put("partial", segment.partiality());
             }
 
             GFF3Feature gff3Feature = new GFF3Feature(
@@ -174,10 +190,10 @@ public class GFF3AnnotationFactory {
                     sequenceRegion.accessionVersion(),
                     source,
                     featureName,
-                    location.getBeginPosition(),
-                    location.getEndPosition(),
+                    segment.start(),
+                    segment.end(),
                     score,
-                    getStrand(location, compoundLocation),
+                    segment.strand(),
                     getPhase(ffFeature));
             gff3Feature.addAttributes(attributes);
             validationEngine.validate(gff3Feature, -1);
@@ -284,6 +300,143 @@ public class GFF3AnnotationFactory {
             // Child cleanup
             root.removeAttributeList(GFF3Attributes.ATTRIBUTE_PARENT);
         }
+    }
+
+    /**
+     * The GFF3 lines of a feature: one per flat file location, as written, unless the sequence is
+     * circular and the locations form a plain path along it. Then they are numbered the INSDC GFF3
+     * way: ascending, with everything past the origin in virtual space ({@code + L}), and a stretch
+     * that runs straight through the origin written as one line. A feature of a gene that lies
+     * wholly in the part of the gene past the origin is shifted with it, so children and parents
+     * share one numbering.
+     */
+    private List<Segment> getSegments(Feature ffFeature, Optional<String> geneName) {
+        CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
+        List<Segment> segments = new ArrayList<>();
+        for (Location location : compoundLocation.getLocations()) {
+            segments.add(new Segment(
+                    location.getBeginPosition(),
+                    location.getEndPosition(),
+                    getPartiality(location),
+                    getStrand(location, compoundLocation)));
+        }
+        if (circularSequenceLength == null) {
+            return segments;
+        }
+        List<Segment> path = plusStrandPath(ffFeature, segments);
+        if (path == null) {
+            return segments;
+        }
+
+        long length = circularSequenceLength;
+        List<TopologyUtils.Span> spans = path.stream()
+                .map(s -> new TopologyUtils.Span(s.start(), s.end()))
+                .toList();
+        List<TopologyUtils.Span> virtual = TopologyUtils.toVirtualSpace(spans, length);
+        if (virtual.equals(spans) && liesPastOriginOfGene(spans, geneName)) {
+            virtual = spans.stream()
+                    .map(s -> new TopologyUtils.Span(s.start() + length, s.end() + length))
+                    .toList();
+        }
+
+        List<Segment> result = new ArrayList<>();
+        for (int i = 0; i < path.size(); i++) {
+            Segment segment = path.get(i);
+            TopologyUtils.Span span = virtual.get(i);
+            Segment shifted = new Segment(span.start(), span.end(), segment.partiality(), segment.strand());
+            Segment previous = result.isEmpty() ? null : result.get(result.size() - 1);
+            if (previous != null
+                    && TopologyUtils.continuesAcrossOrigin(
+                            new TopologyUtils.Span(previous.start(), previous.end()), span, length)) {
+                result.set(result.size() - 1, mergeAcrossOrigin(previous, shifted));
+            } else {
+                result.add(shifted);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * The feature's locations in order along the plus strand, or null when they are not one path
+     * along the sequence. {@code complement(join(a,b))} already lists them that way;
+     * {@code join(complement(b),complement(a))} lists them in minus-strand reading order, so they
+     * are reversed. A trans-spliced feature, one mixing strands, or one with a remote location is
+     * stitched in biological order rather than along the sequence, so a drop in start there is a
+     * jump between pieces, not the origin.
+     */
+    private List<Segment> plusStrandPath(Feature ffFeature, List<Segment> segments) {
+        CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
+        if (!ffFeature.getQualifiers(Qualifier.TRANS_SPLICING).isEmpty() || compoundLocation.hasRemoteLocation()) {
+            return null;
+        }
+        long complemented = compoundLocation.getLocations().stream()
+                .filter(Location::isComplement)
+                .count();
+        if (complemented == 0) {
+            return segments;
+        }
+        if (complemented == segments.size() && !compoundLocation.isComplement()) {
+            List<Segment> reversed = new ArrayList<>(segments);
+            Collections.reverse(reversed);
+            return reversed;
+        }
+        return null;
+    }
+
+    /** One line for a stretch running straight through the origin: start side from the first piece, end side from the second. */
+    private Segment mergeAcrossOrigin(Segment first, Segment second) {
+        List<String> partiality = new ArrayList<>();
+        if (first.partiality().contains("start")) {
+            partiality.add("start");
+        }
+        if (second.partiality().contains("end")) {
+            partiality.add("end");
+        }
+        return new Segment(first.start(), second.end(), partiality, first.strand());
+    }
+
+    /**
+     * Records, per gene name, how far the gene's origin-crossing features run past the origin, so
+     * {@link #getSegments} can shift the gene's other features lying in that stretch.
+     */
+    private void recordWrappedGenes(Entry entry) {
+        wrappedEndByGene.clear();
+        if (circularSequenceLength == null) {
+            return;
+        }
+        long length = circularSequenceLength;
+        for (Feature feature : entry.getFeatures()) {
+            List<Qualifier> genes = feature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
+            if (genes.isEmpty() || feature.getLocations() == null) {
+                continue;
+            }
+            List<Segment> segments = new ArrayList<>();
+            for (Location location : feature.getLocations().getLocations()) {
+                segments.add(new Segment(location.getBeginPosition(), location.getEndPosition(), List.of(), ""));
+            }
+            List<Segment> path = plusStrandPath(feature, segments);
+            if (path == null) {
+                continue;
+            }
+            List<TopologyUtils.Span> spans = path.stream()
+                    .map(s -> new TopologyUtils.Span(s.start(), s.end()))
+                    .toList();
+            List<TopologyUtils.Span> virtual = TopologyUtils.toVirtualSpace(spans, length);
+            if (virtual.equals(spans)) {
+                continue;
+            }
+            long wrappedEnd =
+                    virtual.stream().mapToLong(TopologyUtils.Span::end).max().orElse(length) - length;
+            for (Qualifier gene : genes) {
+                wrappedEndByGene.merge(gene.getValue(), wrappedEnd, Math::max);
+            }
+        }
+    }
+
+    /** Whether the spans lie wholly in the part of their gene that runs past the origin. */
+    private boolean liesPastOriginOfGene(List<TopologyUtils.Span> spans, Optional<String> geneName) {
+        Long wrappedEnd = geneName.map(wrappedEndByGene::get).orElse(null);
+        return wrappedEnd != null && spans.stream().allMatch(s -> s.end() <= wrappedEnd);
     }
 
     private String getStrand(Location location, CompoundLocation<Location> compoundLocation) {

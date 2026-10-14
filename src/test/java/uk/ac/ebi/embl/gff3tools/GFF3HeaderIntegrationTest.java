@@ -74,6 +74,14 @@ class GFF3HeaderIntegrationTest {
                         "sequence/fasta/header_circular.json",
                         "gff3toff_header_tests/circular_origin_spanning_figure3.embl",
                         "multi-exon CDS whose last segment lies wholly past the origin"),
+                // Round trip: the GFF3 that flat file to GFF3 writes for fftogff3_rules/circular_virtual_space.embl
+                // maps back to the original locations. The one difference is notation: a join of
+                // complemented pieces comes back as the equivalent complement(join(...)).
+                Arguments.of(
+                        "fftogff3_rules/circular_virtual_space.gff3",
+                        "sequence/fasta/header_circular.json",
+                        "gff3toff_header_tests/circular_virtual_space_round_trip.embl",
+                        "flat file to GFF3 virtual space maps back to the original locations"),
                 Arguments.of(
                         "gff3toff_header_tests/circular_origin_lapping_start.gff3",
                         "sequence/fasta/header_circular.json",

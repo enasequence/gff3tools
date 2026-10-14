@@ -33,6 +33,9 @@ public class LocationValidation implements Validation {
     private static final String RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH = "FEATURE_END_EXCEEDS_SEQUENCE_LENGTH";
     private static final String FEATURE_END_EXCEEDS_SEQUENCE_LENGTH =
             "The end position of the location \"%s\" for accession \"%s\" is greater than the length of the sequence (\"%d\").";
+    private static final String RULE_FEATURE_LONGER_THAN_CIRCULAR_SEQUENCE = "FEATURE_LONGER_THAN_CIRCULAR_SEQUENCE";
+    private static final String FEATURE_LONGER_THAN_CIRCULAR_SEQUENCE =
+            "The location \"%s\" for accession \"%s\" spans %d bases, more than the length of the circular sequence (\"%d\").";
 
     private static final String RULE_FEATURE_END_BELOW_ONE = "FEATURE_END_BELOW_ONE";
     private static final String FEATURE_END_BELOW_ONE =
@@ -76,6 +79,7 @@ public class LocationValidation implements Validation {
 
         // Circular molecules may carry origin-spanning features whose end is expressed as
         // "physical end + sequence length", so the end legitimately exceeds the sequence length.
+        // How far it may exceed it is FEATURE_LONGER_THAN_CIRCULAR_SEQUENCE's concern.
         boolean isCircular = TopologyUtils.isCircularSequence(feature.accession(), context);
         if (!isCircular && feature.getEnd() > lastBaseIndex) {
             throw new ValidationException(
@@ -83,6 +87,30 @@ public class LocationValidation implements Validation {
                     line,
                     FEATURE_END_EXCEEDS_SEQUENCE_LENGTH.formatted(
                             location(feature), feature.accession(), lastBaseIndex));
+        }
+    }
+
+    /**
+     * On a circular sequence a feature may run past the origin in virtual space (end past the
+     * sequence length), but it must still be shorter than the sequence, or it would lap its own
+     * start. A single GFF3 line only; segments sharing an ID are checked by JOINED_LOCATION_ORDER.
+     */
+    @ValidationMethod(
+            rule = RULE_FEATURE_LONGER_THAN_CIRCULAR_SEQUENCE,
+            description = "A feature on a circular sequence must not be longer than the sequence",
+            type = ValidationType.FEATURE,
+            priority = ValidationPriority.LOW)
+    public void validateFeatureWithinCircularSequence(GFF3Feature feature, int line) throws ValidationException {
+        Long lastBaseIndex = ValidationUtils.resolveSequenceLength(feature.accession(), sequenceLengthCache, context);
+        if (lastBaseIndex == null || !TopologyUtils.isCircularSequence(feature.accession(), context)) {
+            return;
+        }
+        if (feature.getLength() > lastBaseIndex) {
+            throw new ValidationException(
+                    RULE_FEATURE_LONGER_THAN_CIRCULAR_SEQUENCE,
+                    line,
+                    FEATURE_LONGER_THAN_CIRCULAR_SEQUENCE.formatted(
+                            location(feature), feature.accession(), feature.getLength(), lastBaseIndex));
         }
     }
 

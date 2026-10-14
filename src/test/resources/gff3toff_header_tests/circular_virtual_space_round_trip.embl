@@ -1,0 +1,32 @@
+ID   TST01; SV 1; circular; genomic DNA; XXX; XXX; 0 BP.
+XX
+AC   TST01;
+XX
+DE   Plasmid pBR322 complete sequence
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..1000
+FT                   /mol_type="genomic DNA"
+FT   gene            join(701..1000,1..150)
+FT                   /gene="wrapGene"
+FT   misc_feature    join(901..1000,1..100)
+FT                   /note="plus, continuous through the origin"
+FT   misc_feature    complement(join(801..1000,1..50))
+FT                   /note="minus, whole join complemented"
+FT   misc_feature    complement(join(801..1000,1..50))
+FT                   /note="minus, each piece complemented"
+FT   misc_feature    join(<951..1000,1..>30)
+FT                   /note="partial ends across the origin"
+FT   gene            join(601..650,complement(10..20))
+FT                   /trans_splicing
+FT                   /gene="transSplicedGene"
+FT   misc_feature    join(851..900,51..100)
+FT                   /note="plus, gap after the origin"
+FT   CDS             61..150
+FT                   /codon_start=1
+FT                   /gene="wrapGene"
+XX
+//

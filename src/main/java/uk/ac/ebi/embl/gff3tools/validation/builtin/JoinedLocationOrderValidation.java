@@ -32,6 +32,11 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
  * {@code GFF3Mapper} builds the flat file {@code join()} by appending same-ID segments in the order
  * their lines appear, so segments listed out of coordinate order produce a backwards {@code join()}.
  * Overlap and transcript alignment are separate rules.
+ *
+ * <p>This holds on circular sequences too: INSDC GFF3 numbers everything past the origin in virtual
+ * space (past the sequence length), so a feature crossing the origin still ascends (e.g. {@code 901
+ * 1000} then {@code 1001 1200}). Restarting at 1 ({@code 1 200}) is not allowed. On a circular
+ * sequence a joined feature must also be shorter than the sequence, or it would lap its own start.
  */
 @Gff3Validation(
         name = "JOINED_LOCATION_ORDER",
@@ -45,6 +50,13 @@ public class JoinedLocationOrderValidation implements Validation {
 
     private static final String VIOLATION_MESSAGE =
             "\nFeature %s \"%s\" on accession \"%s\": segment %s starts before the preceding segment %s";
+
+    private static final String CIRCULAR_HINT =
+            " (on a circular sequence, segments past the origin continue past the sequence length: write %s as %d..%d)";
+
+    private static final String LONGER_THAN_SEQUENCE_MESSAGE =
+            "\nFeature %s \"%s\" on accession \"%s\": segments %s to %s span %d bases, more than the circular"
+                    + " sequence length (%d)";
 
     @InjectContext
     private ValidationContext context;
@@ -65,9 +77,13 @@ public class JoinedLocationOrderValidation implements Validation {
             return;
         }
 
-        boolean circular = TopologyUtils.isCircularSequence(annotation.getAccession(), context);
+        Long circularSequenceLength = TopologyUtils.isCircularSequence(annotation.getAccession(), context)
+                        && annotation.getSequenceRegion() != null
+                ? annotation.getSequenceRegion().end()
+                : null;
         for (Map.Entry<String, List<GFF3Feature>> joinedFeature : joinedFeaturesById.entrySet()) {
-            String violation = detectRuleViolation(joinedFeature.getKey(), joinedFeature.getValue(), circular);
+            String violation =
+                    detectRuleViolation(joinedFeature.getKey(), joinedFeature.getValue(), circularSequenceLength);
             if (violation != null) {
                 violations.add(violation);
             }
@@ -79,46 +95,55 @@ public class JoinedLocationOrderValidation implements Validation {
     }
 
     /**
-     * The first segment starting before its predecessor in file order, or null where the feature is
-     * in order. A circular sequence allows one step back, which is the feature crossing the origin -
-     * provided it then stops short of where it began, so a step back elsewhere in the join is still
-     * reported.
+     * The first segment starting before its predecessor in file order, or, on a circular sequence
+     * ({@code circularSequenceLength} not null), a feature longer than the sequence; null where the
+     * feature is in order.
      */
-    private String detectRuleViolation(String id, List<GFF3Feature> joinedFeature, boolean circular) {
-        int allowance = circular ? 1 : 0;
-        int wrap = -1;
-
+    private String detectRuleViolation(String id, List<GFF3Feature> joinedFeature, Long circularSequenceLength) {
         for (int i = 1; i < joinedFeature.size(); i++) {
             GFF3Feature previous = joinedFeature.get(i - 1);
             GFF3Feature current = joinedFeature.get(i);
 
-            if (current.getStart() >= previous.getStart()) {
-                continue;
+            if (current.getStart() < previous.getStart()) {
+                return violation(id, current, previous, circularSequenceLength);
             }
-            if (allowance > 0) {
-                allowance--;
-                wrap = i;
-                continue;
-            }
-            return violation(id, current, previous);
         }
 
-        // Past the origin the last segment must start before the first, or the feature laps its own start.
-        GFF3Feature first = joinedFeature.get(0);
-        GFF3Feature last = joinedFeature.get(joinedFeature.size() - 1);
-        if (wrap > 0 && last.getStart() >= first.getStart()) {
-            return violation(id, joinedFeature.get(wrap), joinedFeature.get(wrap - 1));
+        if (circularSequenceLength != null) {
+            GFF3Feature first = joinedFeature.get(0);
+            GFF3Feature last = joinedFeature.get(joinedFeature.size() - 1);
+            long end =
+                    joinedFeature.stream().mapToLong(GFF3Feature::getEnd).max().orElse(last.getEnd());
+            long span = end - first.getStart() + 1;
+            if (span > circularSequenceLength) {
+                return LONGER_THAN_SEQUENCE_MESSAGE.formatted(
+                        first.getName(),
+                        id,
+                        first.accession(),
+                        ValidationUtils.getLocationString(first),
+                        ValidationUtils.getLocationString(last),
+                        span,
+                        circularSequenceLength);
+            }
         }
         return null;
     }
 
-    private String violation(String id, GFF3Feature current, GFF3Feature previous) {
-        return VIOLATION_MESSAGE.formatted(
+    private String violation(String id, GFF3Feature current, GFF3Feature previous, Long circularSequenceLength) {
+        String violation = VIOLATION_MESSAGE.formatted(
                 current.getName(),
                 id,
                 current.accession(),
                 ValidationUtils.getLocationString(current),
                 ValidationUtils.getLocationString(previous));
+        if (circularSequenceLength == null) {
+            return violation;
+        }
+        return violation
+                + CIRCULAR_HINT.formatted(
+                        ValidationUtils.getLocationString(current),
+                        current.getStart() + circularSequenceLength,
+                        current.getEnd() + circularSequenceLength);
     }
 
     /**

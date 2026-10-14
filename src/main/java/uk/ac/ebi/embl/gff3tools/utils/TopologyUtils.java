@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.utils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
@@ -55,6 +56,43 @@ public class TopologyUtils {
             return List.of(new Span(start, length), new Span(1, end - length));
         }
         return List.of(new Span(start, end));
+    }
+
+    /**
+     * The reverse of {@link #unwrapOriginSpan}: flat file pieces of one feature, in plus-strand path
+     * order, numbered the INSDC GFF3 way. From the first piece that starts below the previous one,
+     * the path has crossed the origin, so that piece and every later one move into virtual space
+     * ({@code + L}). One span per piece; {@link #continuesAcrossOrigin} tells which neighbours are
+     * one continuous stretch.
+     *
+     * <p>A second drop means the feature laps itself, which is not a valid origin span: the pieces
+     * come back unchanged for validation to report.
+     */
+    public static List<Span> toVirtualSpace(List<Span> plusStrandPath, long circularSequenceLength) {
+        List<Span> virtual = new ArrayList<>();
+        boolean crossedOrigin = false;
+        for (int i = 0; i < plusStrandPath.size(); i++) {
+            Span span = plusStrandPath.get(i);
+            if (i > 0 && span.start() < plusStrandPath.get(i - 1).start()) {
+                if (crossedOrigin) {
+                    return plusStrandPath;
+                }
+                crossedOrigin = true;
+            }
+            virtual.add(
+                    crossedOrigin
+                            ? new Span(span.start() + circularSequenceLength, span.end() + circularSequenceLength)
+                            : span);
+        }
+        return virtual;
+    }
+
+    /**
+     * Whether two consecutive spans in virtual space are one continuous stretch across the origin:
+     * the first ends on the last base and the next starts on the first base again.
+     */
+    public static boolean continuesAcrossOrigin(Span previous, Span next, long circularSequenceLength) {
+        return previous.end() == circularSequenceLength && next.start() == circularSequenceLength + 1;
     }
 
     /**
