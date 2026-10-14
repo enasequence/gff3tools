@@ -61,13 +61,19 @@ class GFF3HeaderIntegrationTest {
                         "sequence/fasta/header_circular.json",
                         "gff3toff_header_tests/circular_origin_spanning.embl",
                         "origin-spanning features written past the sequence end"),
-                // The same features as flat file to GFF3 writes them, one line per segment: both
-                // forms must map to the same flat file.
+                // The same features with one line per segment, segments after the origin in virtual
+                // space (INSDC GFF3): both forms must map to the same flat file.
                 Arguments.of(
-                        "gff3toff_header_tests/circular_origin_spanning_two_lines.gff3",
+                        "gff3toff_header_tests/circular_origin_spanning_virtual_segments.gff3",
                         "sequence/fasta/header_circular.json",
                         "gff3toff_header_tests/circular_origin_spanning.embl",
-                        "origin-spanning features written as one line per segment"),
+                        "origin-spanning features written as one line per segment in virtual space"),
+                // INSDC GFF3 specification, Figure 3: the last segment lies wholly past the origin.
+                Arguments.of(
+                        "gff3toff_header_tests/circular_origin_spanning_figure3.gff3",
+                        "sequence/fasta/header_circular.json",
+                        "gff3toff_header_tests/circular_origin_spanning_figure3.embl",
+                        "multi-exon CDS whose last segment lies wholly past the origin"),
                 Arguments.of(
                         "gff3toff_header_tests/circular_origin_lapping_start.gff3",
                         "sequence/fasta/header_circular.json",

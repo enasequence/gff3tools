@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.utils;
 
+import java.util.List;
 import java.util.Optional;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
@@ -21,6 +22,40 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.FlatfileSequenceTopologyProv
 
 /** Where a sequence's topology comes from, shared by validation and conversion. */
 public class TopologyUtils {
+
+    /** A stretch of sequence, {@code start..end}, 1-based and inclusive. */
+    public record Span(long start, long end) {}
+
+    /**
+     * The stretches of the real sequence a GFF3 segment covers, in reading order. On a circular
+     * sequence INSDC GFF3 numbers everything after the origin in virtual space, continuing past the
+     * sequence length L instead of restarting at 1, so a segment is one of:
+     *
+     * <ul>
+     *   <li>within the sequence ({@code end <= L}): unchanged;
+     *   <li>crossing the origin ({@code start <= L < end}): {@code start..L} then {@code 1..(end - L)};
+     *   <li>wholly past the origin ({@code start > L}): shifted back to {@code (start - L)..(end - L)}.
+     * </ul>
+     *
+     * <p>A segment on a linear or undeclared sequence ({@code circularSequenceLength} is null) comes
+     * back unchanged. So does one that would lap its own start (crossing with {@code end - L >=
+     * start}, or wholly past with {@code end > 2L}): that is not a valid origin span and is left for
+     * validation to report.
+     */
+    public static List<Span> unwrapOriginSpan(long start, long end, Long circularSequenceLength) {
+        Long length = circularSequenceLength;
+        if (length == null || end <= length) {
+            return List.of(new Span(start, end));
+        }
+        if (start > length) {
+            if (end <= 2 * length) {
+                return List.of(new Span(start - length, end - length));
+            }
+        } else if (end - length < start) {
+            return List.of(new Span(start, length), new Span(1, end - length));
+        }
+        return List.of(new Span(start, end));
+    }
 
     /**
      * The topology declared for a sequence, from the first source that declares one. The sequence

@@ -287,30 +287,31 @@ public class GFF3Mapper {
 
     /**
      * The feature's location as one range, or as two when it spans the origin of a circular
-     * sequence. GFF3 writes such a feature with {@code end = physical end + sequence length}; the
-     * flat file needs {@code start..seqLen} followed by {@code 1..(end - seqLen)}. The start
-     * partiality stays with the segment holding the start and the end partiality with the one
-     * holding the end, as if the feature had been written as those two lines.
-     *
-     * <p>An end that wraps past its own start is not a valid origin span and is left as a single
-     * range for validation to report.
+     * sequence (see {@link TopologyUtils#unwrapOriginSpan}): the flat file cannot run a range past
+     * the sequence length. The start partiality stays with the segment holding the start and the end
+     * partiality with the one holding the end, as if the feature had been written as those two lines.
      */
     private List<Location> mapGFF3Location(GFF3Feature gff3Feature) {
 
-        long start = gff3Feature.getStart();
-        long end = gff3Feature.getEnd();
         List<String> partials = gff3Feature.getAttributeList("partial").orElse(new ArrayList<>());
         boolean fivePrimePartial = partials.contains("start");
         boolean threePrimePartial = partials.contains("end");
 
         boolean isComplement = gff3Feature.getStrand().equals("-");
 
-        if (circularSequenceLength != null && end > circularSequenceLength && end - circularSequenceLength < start) {
-            return List.of(
-                    createRange(start, circularSequenceLength, isComplement, fivePrimePartial, false),
-                    createRange(1L, end - circularSequenceLength, isComplement, false, threePrimePartial));
+        List<TopologyUtils.Span> spans =
+                TopologyUtils.unwrapOriginSpan(gff3Feature.getStart(), gff3Feature.getEnd(), circularSequenceLength);
+        List<Location> locations = new ArrayList<>();
+        for (int i = 0; i < spans.size(); i++) {
+            TopologyUtils.Span span = spans.get(i);
+            locations.add(createRange(
+                    span.start(),
+                    span.end(),
+                    isComplement,
+                    i == 0 && fivePrimePartial,
+                    i == spans.size() - 1 && threePrimePartial));
         }
-        return List.of(createRange(start, end, isComplement, fivePrimePartial, threePrimePartial));
+        return locations;
     }
 
     private Location createRange(
