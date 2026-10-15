@@ -173,7 +173,12 @@ public class GFF3AnnotationFactory {
         // Translation attribute is left on the feature; TranslationFix captures it
         // into TranslationState during validation, and GFF3File writes the FASTA section.
 
-        for (Segment segment : getSegments(ffFeature, geneName)) {
+        VirtualLayout layout = virtualLayout(ffFeature, geneName);
+        if (layout != null) {
+            shiftPositions(baseAttributes, layout);
+        }
+
+        for (Segment segment : getSegments(ffFeature, layout)) {
             Map<String, List<String>> attributes = new LinkedHashMap<>(baseAttributes);
 
             if (!segment.partiality().isEmpty()) {
@@ -303,39 +308,15 @@ public class GFF3AnnotationFactory {
      * The GFF3 lines of a feature, one per location. On a circular sequence a plain path is written in
      * virtual space, merged where it runs straight through the origin, and shifted with its gene.
      */
-    private List<Segment> getSegments(Feature ffFeature, Optional<String> geneName) {
-        CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
-        List<Segment> segments = new ArrayList<>();
-        for (Location location : compoundLocation.getLocations()) {
-            segments.add(new Segment(
-                    location.getBeginPosition(),
-                    location.getEndPosition(),
-                    getPartiality(location),
-                    getStrand(location, compoundLocation)));
+    private List<Segment> getSegments(Feature ffFeature, VirtualLayout layout) {
+        if (layout == null) {
+            return locationSegments(ffFeature);
         }
-        if (circularSequenceLength == null) {
-            return segments;
-        }
-        List<Segment> path = plusStrandPath(ffFeature, segments);
-        if (path == null) {
-            return segments;
-        }
-
         long length = circularSequenceLength;
-        List<TopologyUtils.Span> spans = path.stream()
-                .map(s -> new TopologyUtils.Span(s.start(), s.end()))
-                .toList();
-        List<TopologyUtils.Span> virtual = TopologyUtils.toVirtualSpace(spans, length);
-        if (virtual.equals(spans) && liesPastOriginOfGene(spans, geneName)) {
-            virtual = spans.stream()
-                    .map(s -> new TopologyUtils.Span(s.start() + length, s.end() + length))
-                    .toList();
-        }
-
         List<Segment> result = new ArrayList<>();
-        for (int i = 0; i < path.size(); i++) {
-            Segment segment = path.get(i);
-            TopologyUtils.Span span = virtual.get(i);
+        for (int i = 0; i < layout.path().size(); i++) {
+            Segment segment = layout.path().get(i);
+            TopologyUtils.Span span = layout.virtual().get(i);
             Segment shifted = new Segment(span.start(), span.end(), segment.partiality(), segment.strand());
             Segment previous = result.isEmpty() ? null : result.get(result.size() - 1);
             if (previous != null
@@ -347,6 +328,65 @@ public class GFF3AnnotationFactory {
             }
         }
         return result;
+    }
+
+    /** A plain path's locations in plus-strand order, with where each lands in virtual space. */
+    private record VirtualLayout(
+            List<Segment> path, List<TopologyUtils.Span> pieces, List<TopologyUtils.Span> virtual) {}
+
+    /**
+     * Where the feature's locations land in virtual space, or null when they are written as they are
+     * (sequence not circular, or not a plain path).
+     */
+    private VirtualLayout virtualLayout(Feature ffFeature, Optional<String> geneName) {
+        if (circularSequenceLength == null) {
+            return null;
+        }
+        List<Segment> path = plusStrandPath(ffFeature, locationSegments(ffFeature));
+        if (path == null) {
+            return null;
+        }
+        long length = circularSequenceLength;
+        List<TopologyUtils.Span> pieces = path.stream()
+                .map(s -> new TopologyUtils.Span(s.start(), s.end()))
+                .toList();
+        List<TopologyUtils.Span> virtual = TopologyUtils.toVirtualSpace(pieces, length);
+        if (virtual.equals(pieces) && liesPastOriginOfGene(pieces, geneName)) {
+            virtual = pieces.stream()
+                    .map(s -> new TopologyUtils.Span(s.start() + length, s.end() + length))
+                    .toList();
+        }
+        return new VirtualLayout(path, pieces, virtual);
+    }
+
+    private List<Segment> locationSegments(Feature ffFeature) {
+        CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
+        List<Segment> segments = new ArrayList<>();
+        for (Location location : compoundLocation.getLocations()) {
+            segments.add(new Segment(
+                    location.getBeginPosition(),
+                    location.getEndPosition(),
+                    getPartiality(location),
+                    getStrand(location, compoundLocation)));
+        }
+        return segments;
+    }
+
+    /** Anticodon and transl_except positions take the shift of the location they lie in. */
+    private void shiftPositions(Map<String, List<String>> attributes, VirtualLayout layout) {
+        for (String key : List.of(GFF3Attributes.ANTI_CODON, GFF3Attributes.TRANSL_EXCEPT)) {
+            List<String> values = attributes.get(key);
+            if (values != null) {
+                attributes.put(
+                        key,
+                        values.stream()
+                                .map(value -> TopologyUtils.mapPosition(
+                                        value,
+                                        position -> TopologyUtils.toVirtualPosition(
+                                                position, layout.pieces(), layout.virtual())))
+                                .toList());
+            }
+        }
     }
 
     /**

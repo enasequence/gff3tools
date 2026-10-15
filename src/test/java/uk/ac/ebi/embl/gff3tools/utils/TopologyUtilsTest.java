@@ -61,4 +61,63 @@ class TopologyUtilsTest {
     void touchingSpansAwayFromTheOriginAreNotAcrossIt() {
         assertFalse(TopologyUtils.continuesAcrossOrigin(new Span(100, 200), new Span(201, 300), LENGTH));
     }
+
+    @Test
+    void flatFilePositionPastTheOriginIsShiftedBack() {
+        assertEquals("10..12", TopologyUtils.toFlatFilePosition("1010..1012", LENGTH));
+        assertEquals("10", TopologyUtils.toFlatFilePosition("1010", LENGTH));
+    }
+
+    @Test
+    void flatFilePositionAcrossTheOriginBecomesAJoin() {
+        assertEquals("join(999..1000,1)", TopologyUtils.toFlatFilePosition("999..1001", LENGTH));
+        assertEquals(
+                "complement(join(999..1000,1))", TopologyUtils.toFlatFilePosition("complement(999..1001)", LENGTH));
+    }
+
+    @Test
+    void flatFilePositionWithinTheSequenceIsUnchanged() {
+        assertEquals("10 .. 12", TopologyUtils.toFlatFilePosition("10 .. 12", LENGTH));
+        assertEquals("complement(10..12)", TopologyUtils.toFlatFilePosition("complement(10..12)", LENGTH));
+        assertEquals("not a position", TopologyUtils.toFlatFilePosition("not a position", LENGTH));
+    }
+
+    private static final List<Span> PIECES = List.of(new Span(951, 1000), new Span(1, 50));
+    private static final List<Span> VIRTUAL_PIECES = List.of(new Span(951, 1000), new Span(1001, 1050));
+
+    @Test
+    void virtualPositionAfterTheOriginTakesItsPiecesShift() {
+        assertEquals("1010..1012", TopologyUtils.toVirtualPosition("10..12", PIECES, VIRTUAL_PIECES));
+        assertEquals(
+                "complement(1010..1012)",
+                TopologyUtils.toVirtualPosition("complement(10..12)", PIECES, VIRTUAL_PIECES));
+    }
+
+    @Test
+    void virtualPositionBeforeTheOriginIsUnchanged() {
+        assertEquals("960..962", TopologyUtils.toVirtualPosition("960..962", PIECES, VIRTUAL_PIECES));
+    }
+
+    @Test
+    void virtualPositionAcrossTheOriginBecomesOneRange() {
+        assertEquals("999..1001", TopologyUtils.toVirtualPosition("join(999..1000,1)", PIECES, VIRTUAL_PIECES));
+        assertEquals(
+                "complement(999..1001)",
+                TopologyUtils.toVirtualPosition("complement(join(999..1000,1))", PIECES, VIRTUAL_PIECES));
+    }
+
+    @Test
+    void virtualPositionOutsideTheFeatureIsUnchanged() {
+        assertEquals("500..502", TopologyUtils.toVirtualPosition("500..502", PIECES, VIRTUAL_PIECES));
+    }
+
+    @Test
+    void positionIsMappedInsideAnAttributeValue() {
+        assertEquals(
+                "(pos:join(999..1000,1),aa:Glu,seq:cgt)",
+                TopologyUtils.mapPosition(
+                        "(pos:999..1001,aa:Glu,seq:cgt)",
+                        position -> TopologyUtils.toFlatFilePosition(position, LENGTH)));
+        assertEquals("(aa:Glu)", TopologyUtils.mapPosition("(aa:Glu)", position -> "changed"));
+    }
 }

@@ -20,6 +20,14 @@ FT   misc_feature    complement(join(801..1000,1..50))
 FT                   /note="minus, each piece complemented"
 FT   misc_feature    join(<951..1000,1..>30)
 FT                   /note="partial ends across the origin"
+FT   tRNA            join(951..1000,1..50)
+FT                   /gene="wrapGene"
+FT                   /product="tRNA-Glu"
+FT                   /anticodon="(pos:10..12,aa:Glu,seq:cgt)"
+FT   tRNA            complement(join(961..1000,1..40))
+FT                   /gene="wrapGene"
+FT                   /product="tRNA-Gln"
+FT                   /anticodon="(pos:complement(join(999..1000,1)),aa:Gln,seq:ttg)"
 FT   gene            join(601..650,complement(10..20))
 FT                   /trans_splicing
 FT                   /gene="transSplicedGene"
@@ -27,6 +35,7 @@ FT   misc_feature    join(851..900,51..100)
 FT                   /note="plus, gap after the origin"
 FT   CDS             61..150
 FT                   /codon_start=1
+FT                   /transl_except=(pos:100..102,aa:Sec)
 FT                   /gene="wrapGene"
 XX
 //

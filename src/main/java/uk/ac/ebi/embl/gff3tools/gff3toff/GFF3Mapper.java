@@ -19,8 +19,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,8 +66,6 @@ import uk.ac.ebi.ena.taxonomy.taxon.TaxonFactory;
 public class GFF3Mapper {
 
     private final Map<String, String> qmap = ConversionUtils.getGFF32FFQualifierMap();
-    private static final Pattern POSITION_PART =
-            Pattern.compile("(pos\\s*:\\s*)([^,]+?)(\\s*,)", Pattern.CASE_INSENSITIVE);
     private final EntryFactory entryFactory = new EntryFactory();
     private final FeatureFactory featureFactory = new FeatureFactory();
     private final QualifierFactory qualifierFactory = new QualifierFactory();
@@ -328,13 +324,8 @@ public class GFF3Mapper {
         if (circularSequenceLength == null) {
             return value;
         }
-        Matcher matcher = POSITION_PART.matcher(value);
-        if (!matcher.find()) {
-            return value;
-        }
-        return value.substring(0, matcher.start(2))
-                + TopologyUtils.toFlatFilePosition(matcher.group(2), circularSequenceLength)
-                + value.substring(matcher.end(2));
+        long length = circularSequenceLength;
+        return TopologyUtils.mapPosition(value, position -> TopologyUtils.toFlatFilePosition(position, length));
     }
 
     private Collection<Qualifier> mapGFF3Attributes(String attributeKey, List<String> attributes) {

@@ -2,13 +2,15 @@
 ##species https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=562
 ##sequence-region TST01.1 1 1000
 TST01.1	.	gene	701	1150	.	+	.	ID=gene_wrapGene;gene=wrapGene;
-TST01.1	.	CDS	1061	1150	.	+	0	ID=CDS_wrapGene;Parent=gene_wrapGene;codon_start=1;gene=wrapGene;
+TST01.1	.	CDS	1061	1150	.	+	0	ID=CDS_wrapGene;Parent=gene_wrapGene;codon_start=1;gene=wrapGene;transl_except=%28pos%3A1100..1102%2Caa%3ASec%29;
 TST01.1	.	gene	601	650	.	+	.	ID=gene_transSplicedGene;gene=transSplicedGene;trans_splicing=true;
 TST01.1	.	gene	10	20	.	-	.	ID=gene_transSplicedGene;gene=transSplicedGene;trans_splicing=true;
 TST01.1	.	sequence_feature	901	1100	.	+	.	ID=sequence_feature;note=plus%2C continuous through the origin;
 TST01.1	.	sequence_feature	801	1050	.	-	.	ID=sequence_feature_1;note=minus%2C whole join complemented;
 TST01.1	.	sequence_feature	801	1050	.	-	.	ID=sequence_feature_2;note=minus%2C each piece complemented;
 TST01.1	.	sequence_feature	951	1030	.	+	.	ID=sequence_feature_3;note=partial ends across the origin;partial=start,end;
+TST01.1	.	tRNA	951	1050	.	+	.	ID=tRNA;anticodon=%28pos%3A1010..1012%2Caa%3AGlu%2Cseq%3Acgt%29;gene=wrapGene;product=tRNA-Glu;
+TST01.1	.	tRNA	961	1040	.	-	.	ID=tRNA_1;anticodon=%28pos%3Acomplement%28999..1001%29%2Caa%3AGln%2Cseq%3Attg%29;gene=wrapGene;product=tRNA-Gln;
 TST01.1	.	sequence_feature	851	900	.	+	.	ID=sequence_feature_4;note=plus%2C gap after the origin;
 TST01.1	.	sequence_feature	1051	1100	.	+	.	ID=sequence_feature_4;note=plus%2C gap after the origin;
 TST01.1	.	region	1	1000	.	+	.	ID=TST01.1;Is_circular=true;

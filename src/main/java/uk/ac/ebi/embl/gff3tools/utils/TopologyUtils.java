@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.utils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -98,6 +99,89 @@ public class TopologyUtils {
                 ? range(spans.get(0))
                 : "join(" + spans.stream().map(TopologyUtils::range).collect(Collectors.joining(",")) + ")";
         return matcher.group("complement") != null ? "complement(" + body + ")" : body;
+    }
+
+    private static final Pattern COMPLEMENT =
+            Pattern.compile("^complement\\(\\s*(.+?)\\s*\\)$", Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern JOIN = Pattern.compile("^join\\(\\s*(.+?)\\s*\\)$", Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern RANGE = Pattern.compile("^(\\d+)(?:\\s*\\.\\.\\s*(\\d+))?$");
+
+    /**
+     * The reverse of {@link #toFlatFilePosition}: a flat file position ({@code a..b} or {@code a}, or a
+     * {@code join} of those, optionally in {@code complement(...)}) moved into virtual space with the
+     * piece of its feature that contains it. {@code pieces} are the feature's pieces in {@code 1..L},
+     * {@code virtualPieces} where each lands. Ranges meeting at the origin become one. Unchanged when
+     * a range lies outside every piece or the position has another form.
+     */
+    public static String toVirtualPosition(String position, List<Span> pieces, List<Span> virtualPieces) {
+        String text = position.trim();
+        Matcher complement = COMPLEMENT.matcher(text);
+        boolean complemented = complement.matches();
+        if (complemented) {
+            text = complement.group(1);
+        }
+        Matcher join = JOIN.matcher(text);
+        String[] parts = join.matches() ? join.group(1).split(",") : new String[] {text};
+
+        List<Span> shifted = new ArrayList<>();
+        boolean changed = false;
+        for (String part : parts) {
+            Matcher range = RANGE.matcher(part.trim());
+            if (!range.matches()) {
+                return position;
+            }
+            long start = Long.parseLong(range.group(1));
+            long end = range.group(2) != null ? Long.parseLong(range.group(2)) : start;
+            Long shift = shiftOfPieceContaining(start, end, pieces, virtualPieces);
+            if (shift == null) {
+                return position;
+            }
+            changed |= shift != 0;
+            Span span = new Span(start + shift, end + shift);
+            Span previous = shifted.isEmpty() ? null : shifted.get(shifted.size() - 1);
+            if (previous != null && previous.end() + 1 == span.start()) {
+                shifted.set(shifted.size() - 1, new Span(previous.start(), span.end()));
+                changed = true;
+            } else {
+                shifted.add(span);
+            }
+        }
+        if (!changed) {
+            return position;
+        }
+        String body = shifted.size() == 1
+                ? range(shifted.get(0))
+                : "join(" + shifted.stream().map(TopologyUtils::range).collect(Collectors.joining(",")) + ")";
+        return complemented ? "complement(" + body + ")" : body;
+    }
+
+    private static Long shiftOfPieceContaining(long start, long end, List<Span> pieces, List<Span> virtualPieces) {
+        for (int i = 0; i < pieces.size(); i++) {
+            Span piece = pieces.get(i);
+            if (piece.start() <= start && end <= piece.end()) {
+                return virtualPieces.get(i).start() - piece.start();
+            }
+        }
+        return null;
+    }
+
+    private static final Pattern POSITION_PART =
+            Pattern.compile("(pos\\s*:\\s*)(.+?)(\\s*,\\s*aa\\s*:)", Pattern.CASE_INSENSITIVE);
+
+    /**
+     * An {@code anticodon} or {@code transl_except} value ({@code (pos:<position>,aa:...)}) with its
+     * position converted; unchanged when it has no position.
+     */
+    public static String mapPosition(String attributeValue, UnaryOperator<String> convert) {
+        Matcher matcher = POSITION_PART.matcher(attributeValue);
+        if (!matcher.find()) {
+            return attributeValue;
+        }
+        return attributeValue.substring(0, matcher.start(2))
+                + convert.apply(matcher.group(2))
+                + attributeValue.substring(matcher.end(2));
     }
 
     private static String range(Span span) {

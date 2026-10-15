@@ -23,6 +23,13 @@ FT                   /gene="wrapGene"
 FT   CDS             61..150
 FT                   /gene="wrapGene"
 FT                   /codon_start=1
+FT                   /transl_except=(pos:100..102,aa:Sec)
+FT   tRNA            join(951..1000,1..50)
+FT                   /anticodon=(pos:10..12,aa:Glu,seq:cgt)
+FT                   /product="tRNA-Glu"
+FT   tRNA            complement(join(961..1000,1..40))
+FT                   /anticodon=(pos:complement(join(999..1000,1)),aa:Gln,seq:ttg)
+FT                   /product="tRNA-Gln"
 FT   gene            join(601..650,complement(10..20))
 FT                   /gene="transSplicedGene"
 FT                   /trans_splicing
