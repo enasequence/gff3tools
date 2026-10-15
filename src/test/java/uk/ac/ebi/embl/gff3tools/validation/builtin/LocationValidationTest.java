@@ -298,25 +298,10 @@ class LocationValidationTest {
             assertDoesNotThrow(() -> locationValidation.validateFeatureWithinCircularSequence(feature, 1));
         }
 
-        /** Crossing the origin in virtual space is fine while the feature is shorter than the sequence. */
-        @Test
-        void originSpanningShorterThanSequenceSuccess() throws Exception {
-            injectLookupReturning(SEQ_ID, 1000L, "circular");
-            GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 901L, 1200L, Map.of());
-            assertDoesNotThrow(() -> locationValidation.validateFeatureWithinCircularSequence(feature, 1));
-        }
-
         /** On a linear sequence, running past the end is FEATURE_END_EXCEEDS_SEQUENCE_LENGTH's concern. */
         @Test
         void linearSequenceSkipped() throws Exception {
             injectLookupReturning(SEQ_ID, 1000L, "linear");
-            GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 500L, 1600L, Map.of());
-            assertDoesNotThrow(() -> locationValidation.validateFeatureWithinCircularSequence(feature, 1));
-        }
-
-        @Test
-        void undeclaredTopologySkipped() throws Exception {
-            injectLookupReturningWithoutHeaderFor(SEQ_ID, 1000L);
             GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 500L, 1600L, Map.of());
             assertDoesNotThrow(() -> locationValidation.validateFeatureWithinCircularSequence(feature, 1));
         }

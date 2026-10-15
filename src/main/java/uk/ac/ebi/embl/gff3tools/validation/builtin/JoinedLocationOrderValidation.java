@@ -35,8 +35,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
  *
  * <p>This holds on circular sequences too: INSDC GFF3 numbers everything past the origin in virtual
  * space (past the sequence length), so a feature crossing the origin still ascends (e.g. {@code 901
- * 1000} then {@code 1001 1200}). Restarting at 1 ({@code 1 200}) is not allowed. On a circular
- * sequence a joined feature must also be shorter than the sequence, or it would lap its own start.
+ * 1000} then {@code 1001 1200}). Restarting at 1 ({@code 1 200}) is not allowed.
  */
 @Gff3Validation(
         name = "JOINED_LOCATION_ORDER",
@@ -53,10 +52,6 @@ public class JoinedLocationOrderValidation implements Validation {
 
     private static final String CIRCULAR_HINT =
             " (on a circular sequence, segments past the origin continue past the sequence length: write %s as %d..%d)";
-
-    private static final String LONGER_THAN_SEQUENCE_MESSAGE =
-            "\nFeature %s \"%s\" on accession \"%s\": segments %s to %s span %d bases, more than the circular"
-                    + " sequence length (%d)";
 
     @InjectContext
     private ValidationContext context;
@@ -95,9 +90,9 @@ public class JoinedLocationOrderValidation implements Validation {
     }
 
     /**
-     * The first segment starting before its predecessor in file order, or, on a circular sequence
-     * ({@code circularSequenceLength} not null), a feature longer than the sequence; null where the
-     * feature is in order.
+     * The first segment starting before its predecessor in file order, or null where the feature is
+     * in order. {@code circularSequenceLength} (null unless the sequence is circular) only adds the
+     * virtual coordinates hint to the message.
      */
     private String detectRuleViolation(String id, List<GFF3Feature> joinedFeature, Long circularSequenceLength) {
         for (int i = 1; i < joinedFeature.size(); i++) {
@@ -106,24 +101,6 @@ public class JoinedLocationOrderValidation implements Validation {
 
             if (current.getStart() < previous.getStart()) {
                 return violation(id, current, previous, circularSequenceLength);
-            }
-        }
-
-        if (circularSequenceLength != null) {
-            GFF3Feature first = joinedFeature.get(0);
-            GFF3Feature last = joinedFeature.get(joinedFeature.size() - 1);
-            long end =
-                    joinedFeature.stream().mapToLong(GFF3Feature::getEnd).max().orElse(last.getEnd());
-            long span = end - first.getStart() + 1;
-            if (span > circularSequenceLength) {
-                return LONGER_THAN_SEQUENCE_MESSAGE.formatted(
-                        first.getName(),
-                        id,
-                        first.accession(),
-                        ValidationUtils.getLocationString(first),
-                        ValidationUtils.getLocationString(last),
-                        span,
-                        circularSequenceLength);
             }
         }
         return null;

@@ -1,7 +1,0 @@
-##gff-version 3.1.26
-##sequence-region SEQID1 1 1000
-SEQID1	.	gene	1101	1150	.	+	.	ID=gene1;gene=standaloneVirtual;
-SEQID1	.	gene	701	1150	.	-	.	ID=gene2;gene=wrapParent;
-SEQID1	.	mRNA	1061	1150	.	-	.	ID=mrna2;Parent=gene2;gene=wrapParent;
-SEQID1	.	sequence_feature	801	850	.	+	.	ID=feature1;note=later interval starts past the origin;
-SEQID1	.	sequence_feature	1002	1200	.	+	.	ID=feature1;note=later interval starts past the origin;

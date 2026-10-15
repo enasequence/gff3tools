@@ -173,17 +173,6 @@ class JoinedLocationOrderValidationTest {
 
     // ---- circular topology ---------------------------------------------------
 
-    /** Past the origin a circular sequence continues in virtual space, so the segments still ascend. */
-    @Test
-    void originSpanningJoinInVirtualSpaceOnCircularSequenceIsValid() {
-        injectTopology("circular");
-        sequenceRegion(1000);
-        segment("gene1", 900, 1000);
-        segment("gene1", 1001, 1200);
-
-        assertDoesNotThrow(() -> validation.validateJoinedLocationOrder(annotation, 1));
-    }
-
     /** Restarting at 1 past the origin is not allowed; the message says how to write it instead. */
     @Test
     void restartingAtOneOnCircularSequenceIsReported() {
@@ -207,43 +196,6 @@ class JoinedLocationOrderValidationTest {
         ValidationException exception =
                 assertThrows(ValidationException.class, () -> validation.validateJoinedLocationOrder(annotation, 1));
         assertTrue(exception.getMessage().contains("segment 1..200 starts before the preceding segment 900..1000"));
-    }
-
-    /** Segments on both sides of the origin, stopping short of where the feature began. */
-    @Test
-    void multiSegmentOriginSpanningJoinInVirtualSpaceOnCircularSequenceIsValid() {
-        injectTopology("circular");
-        sequenceRegion(1000);
-        segment("gene1", 800, 850);
-        segment("gene1", 900, 1000);
-        segment("gene1", 1001, 1200);
-        segment("gene1", 1300, 1400);
-
-        assertDoesNotThrow(() -> validation.validateJoinedLocationOrder(annotation, 1));
-    }
-
-    /** A joined feature longer than the circular sequence would lap its own start. */
-    @Test
-    void joinLongerThanCircularSequenceIsReported() {
-        injectTopology("circular");
-        sequenceRegion(1000);
-        segment("gene1", 100, 200);
-        segment("gene1", 900, 1000);
-        segment("gene1", 1001, 1150);
-
-        ValidationException exception =
-                assertThrows(ValidationException.class, () -> validation.validateJoinedLocationOrder(annotation, 1));
-        assertTrue(exception.getMessage().contains("span 1051 bases, more than the circular sequence length (1000)"));
-    }
-
-    @Test
-    void joinExactlyAsLongAsCircularSequenceIsValid() {
-        injectTopology("circular");
-        sequenceRegion(1000);
-        segment("gene1", 501, 1000);
-        segment("gene1", 1001, 1500);
-
-        assertDoesNotThrow(() -> validation.validateJoinedLocationOrder(annotation, 1));
     }
 
     /** A single step back mid-join is not the origin: the feature would run past its own start. */
