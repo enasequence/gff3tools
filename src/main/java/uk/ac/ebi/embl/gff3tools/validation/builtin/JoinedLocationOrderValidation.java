@@ -33,9 +33,8 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
  * their lines appear, so segments listed out of coordinate order produce a backwards {@code join()}.
  * Overlap and transcript alignment are separate rules.
  *
- * <p>This holds on circular sequences too: INSDC GFF3 numbers everything past the origin in virtual
- * space (past the sequence length), so a feature crossing the origin still ascends (e.g. {@code 901
- * 1000} then {@code 1001 1200}). Restarting at 1 ({@code 1 200}) is not allowed.
+ * <p>On circular sequences too: past the origin GFF3 continues in virtual space ({@code 1001 1200}),
+ * never restarting at 1.
  */
 @Gff3Validation(
         name = "JOINED_LOCATION_ORDER",
@@ -91,8 +90,7 @@ public class JoinedLocationOrderValidation implements Validation {
 
     /**
      * The first segment starting before its predecessor in file order, or null where the feature is
-     * in order. {@code circularSequenceLength} (null unless the sequence is circular) only adds the
-     * virtual coordinates hint to the message.
+     * in order. {@code circularSequenceLength} only adds the virtual coordinates hint.
      */
     private String detectRuleViolation(String id, List<GFF3Feature> joinedFeature, Long circularSequenceLength) {
         for (int i = 1; i < joinedFeature.size(); i++) {

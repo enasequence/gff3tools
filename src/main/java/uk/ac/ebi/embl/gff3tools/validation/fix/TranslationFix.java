@@ -109,9 +109,8 @@ public class TranslationFix {
         boolean isTransSpliced = features.stream().anyMatch(s -> s.hasAttribute(GFF3Attributes.TRANS_SPLICING));
 
         List<GFF3Feature> sortedFeatures = new ArrayList<>(features);
-        // Sort features by genomic start position when they are not trans-spliced. On a circular
-        // sequence segments after the origin are in virtual space (past the sequence length), so
-        // this is the reading order there too.
+        // Sort features by genomic start position when they are not trans-spliced (in virtual
+        // space this is also the reading order across the origin).
         if (!isTransSpliced) {
             sortedFeatures.sort(Comparator.comparingLong(GFF3Feature::getStart));
         }

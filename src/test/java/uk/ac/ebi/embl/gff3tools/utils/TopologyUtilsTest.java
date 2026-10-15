@@ -51,7 +51,6 @@ class TopologyUtilsTest {
         assertTrue(TopologyUtils.continuesAcrossOrigin(virtual.get(0), virtual.get(1), LENGTH));
     }
 
-    /** A second drop means the feature laps itself: left as it was, for validation to report. */
     @Test
     void secondDropLeavesThePathUnchanged() {
         List<Span> path = List.of(new Span(901, 1000), new Span(1, 100), new Span(500, 600), new Span(300, 400));

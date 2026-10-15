@@ -63,22 +63,16 @@ class GFF3HeaderIntegrationTest {
                         "sequence/fasta/header_circular.json",
                         "gff3toff_header_tests/circular_origin_spanning.embl",
                         "origin-spanning features written past the sequence end"),
-                // The same features with one line per segment, segments after the origin in virtual
-                // space (INSDC GFF3): both forms must map to the same flat file.
                 Arguments.of(
                         "gff3toff_header_tests/circular_origin_spanning_virtual_segments.gff3",
                         "sequence/fasta/header_circular.json",
                         "gff3toff_header_tests/circular_origin_spanning.embl",
                         "origin-spanning features written as one line per segment in virtual space"),
-                // INSDC GFF3 specification, Figure 3: the last segment lies wholly past the origin.
                 Arguments.of(
                         "gff3toff_header_tests/circular_origin_spanning_figure3.gff3",
                         "sequence/fasta/header_circular.json",
                         "gff3toff_header_tests/circular_origin_spanning_figure3.embl",
                         "multi-exon CDS whose last segment lies wholly past the origin"),
-                // Round trip: the GFF3 that flat file to GFF3 writes for fftogff3_rules/circular_virtual_space.embl
-                // maps back to the original locations. The one difference is notation: a join of
-                // complemented pieces comes back as the equivalent complement(join(...)).
                 Arguments.of(
                         "fftogff3_rules/circular_virtual_space.gff3",
                         "sequence/fasta/header_circular.json",
@@ -120,11 +114,6 @@ class GFF3HeaderIntegrationTest {
         }
     }
 
-    // ---- CDS translation on a circular sequence, end to end -------------------------------
-
-    // Two 120 bp circular sequences (topology from the FASTA's embedded headers), each with a 26 aa
-    // CDS (M + 25 A) crossing the origin: on SEQID1 a single line 91..171 (+); on SEQID2 two lines
-    // 91..120 and 133..183 (-), the second wholly past the origin after a 12 nt intron.
     private static final String CIRCULAR_CDS_GFF3 = "gff3toff_header_tests/circular_cds_translation.gff3";
     private static final String CIRCULAR_CDS_FASTA = "gff3toff_header_tests/circular_cds_translation.fasta";
     private static final String CIRCULAR_CDS_PROTEIN = "M" + "A".repeat(25);
@@ -147,10 +136,6 @@ class GFF3HeaderIntegrationTest {
         }
     }
 
-    /**
-     * The protein translated from the sequence is compared with a translation attribute, so a wrong
-     * one fails the conversion: the CDSs are read straight through the origin.
-     */
     @ParameterizedTest(name = "translation {0} accepted: {1}")
     @CsvSource({"MAAAAAAAAAAAAAAAAAAAAAAAAA, true", "MAAAAAAAAAAAAAAAAAAAAAAAAG, false"})
     void comparesTranslationOfOriginSpanningCds(String translation, boolean accepted) throws Exception {

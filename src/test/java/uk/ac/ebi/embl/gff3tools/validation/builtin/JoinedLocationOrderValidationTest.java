@@ -173,7 +173,6 @@ class JoinedLocationOrderValidationTest {
 
     // ---- circular topology ---------------------------------------------------
 
-    /** Restarting at 1 past the origin is not allowed; the message says how to write it instead. */
     @Test
     void restartingAtOneOnCircularSequenceIsReported() {
         injectTopology("circular");

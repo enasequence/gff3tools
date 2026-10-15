@@ -27,14 +27,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import picocli.CommandLine;
 
-/**
- * Flat file to GFF3 conversion of a circular entry, whose topology is declared only on the ID line.
- * The sequence is supplied as plain sequence, so no FASTA header can declare the topology instead.
- *
- * <p>Each case runs the circular entry, then the same entry declared linear: the linear run must fail,
- * and pass again with the rule under test switched off, so the rule under test is the only reason the
- * linear run fails and the circular run has nothing else to trip on.
- */
 class FFToGFF3CircularityIntegrationTest {
 
     private static final String ACCESSION = "TST01.1";

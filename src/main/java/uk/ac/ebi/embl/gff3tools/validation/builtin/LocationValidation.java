@@ -77,9 +77,7 @@ public class LocationValidation implements Validation {
             return;
         }
 
-        // Circular molecules may carry origin-spanning features whose end is expressed as
-        // "physical end + sequence length", so the end legitimately exceeds the sequence length.
-        // How far it may exceed it is FEATURE_LONGER_THAN_CIRCULAR_SEQUENCE's concern.
+        // On a circular sequence an end past the length is virtual (end + L) and allowed.
         boolean isCircular = TopologyUtils.isCircularSequence(feature.accession(), context);
         if (!isCircular && feature.getEnd() > lastBaseIndex) {
             throw new ValidationException(
@@ -90,11 +88,7 @@ public class LocationValidation implements Validation {
         }
     }
 
-    /**
-     * On a circular sequence a feature may run past the origin in virtual space (end past the
-     * sequence length), but it must still be shorter than the sequence, or it would lap its own
-     * start. A single GFF3 line only; segments sharing an ID are checked by JOINED_LOCATION_ORDER.
-     */
+    /** A single GFF3 line on a circular sequence must not be longer than the sequence. */
     @ValidationMethod(
             rule = RULE_FEATURE_LONGER_THAN_CIRCULAR_SEQUENCE,
             description = "A feature on a circular sequence must not be longer than the sequence",

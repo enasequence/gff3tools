@@ -28,20 +28,9 @@ public class TopologyUtils {
     public record Span(long start, long end) {}
 
     /**
-     * The stretches of the real sequence a GFF3 segment covers, in reading order. On a circular
-     * sequence INSDC GFF3 numbers everything after the origin in virtual space, continuing past the
-     * sequence length L instead of restarting at 1, so a segment is one of:
-     *
-     * <ul>
-     *   <li>within the sequence ({@code end <= L}): unchanged;
-     *   <li>crossing the origin ({@code start <= L < end}): {@code start..L} then {@code 1..(end - L)};
-     *   <li>wholly past the origin ({@code start > L}): shifted back to {@code (start - L)..(end - L)}.
-     * </ul>
-     *
-     * <p>A segment on a linear or undeclared sequence ({@code circularSequenceLength} is null) comes
-     * back unchanged. So does one that would lap its own start (crossing with {@code end - L >=
-     * start}, or wholly past with {@code end > 2L}): that is not a valid origin span and is left for
-     * validation to report.
+     * A GFF3 segment in virtual coordinates as ranges within {@code 1..L}, in reading order: crossing
+     * the origin splits into {@code start..L} and {@code 1..(end - L)}, wholly past it shifts by
+     * {@code -L}. Unchanged when not circular ({@code null}) or when it would lap its own start.
      */
     public static List<Span> unwrapOriginSpan(long start, long end, Long circularSequenceLength) {
         Long length = circularSequenceLength;
@@ -59,14 +48,8 @@ public class TopologyUtils {
     }
 
     /**
-     * The reverse of {@link #unwrapOriginSpan}: flat file pieces of one feature, in plus-strand path
-     * order, numbered the INSDC GFF3 way. From the first piece that starts below the previous one,
-     * the path has crossed the origin, so that piece and every later one move into virtual space
-     * ({@code + L}). One span per piece; {@link #continuesAcrossOrigin} tells which neighbours are
-     * one continuous stretch.
-     *
-     * <p>A second drop means the feature laps itself, which is not a valid origin span: the pieces
-     * come back unchanged for validation to report.
+     * The reverse of {@link #unwrapOriginSpan}: plus-strand pieces from the first step down onwards
+     * move into virtual space ({@code + L}). Unchanged on a second step down (the feature laps itself).
      */
     public static List<Span> toVirtualSpace(List<Span> plusStrandPath, long circularSequenceLength) {
         List<Span> virtual = new ArrayList<>();
@@ -87,25 +70,14 @@ public class TopologyUtils {
         return virtual;
     }
 
-    /**
-     * Whether two consecutive spans in virtual space are one continuous stretch across the origin:
-     * the first ends on the last base and the next starts on the first base again.
-     */
+    /** Whether two consecutive virtual spans run straight through the origin. */
     public static boolean continuesAcrossOrigin(Span previous, Span next, long circularSequenceLength) {
         return previous.end() == circularSequenceLength && next.start() == circularSequenceLength + 1;
     }
 
     /**
-     * The topology declared for a sequence, from the first source that declares one. The sequence
-     * record is authoritative (INSDC GFF3), so the record itself comes first: the flat file entry's
-     * ID line, then the sequence's FASTA header. The master entry, which declares one topology for
-     * the whole submission, is the last fallback. Validation and the GFF3 to flat file mapper both
-     * resolve topology here, so the topology a rule checks against is the one the ID line is written
-     * with. An absent or unrecognised value in one source falls through to the next; a missing
-     * mandatory header topology is reported by {@code FastaHeaderFormatValidation}.
-     *
-     * @param accession the key the caller looks the sequence up by
-     * @return the declared topology, or empty when no source declares a recognised one
+     * The first recognised topology from the flat file ID line, the FASTA header, then the master
+     * entry (the sequence record is authoritative). Shared by validation and conversion.
      */
     public static Optional<ControlledVocabularyUtils.Topology> resolveTopology(
             String accession, ValidationContext context) {
@@ -114,7 +86,7 @@ public class TopologyUtils {
                 .or(() -> masterTopology(accession, context));
     }
 
-    /** Circular only when declared so; see {@link #resolveTopology} for where topology comes from. */
+    /** Circular only when declared so ({@link #resolveTopology}). */
     public static boolean isCircularSequence(String accession, ValidationContext context) {
         return resolveTopology(accession, context)
                 .map(ControlledVocabularyUtils.Topology.CIRCULAR::equals)

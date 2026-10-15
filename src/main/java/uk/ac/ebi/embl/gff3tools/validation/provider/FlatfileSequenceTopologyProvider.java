@@ -19,12 +19,8 @@ import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 /**
- * The topology each flat file entry declares on its ID line, keyed by the accession its annotation
- * is validated under. Filled in as entries are read, so an entry's topology is known by the time its
- * annotation is validated.
- *
- * <p>Only a declared topology is recorded: the reader leaves a missing or placeholder topology
- * ({@code XXX}) unset, and that stays unknown here rather than becoming linear.
+ * Each flat file entry's ID-line topology, by accession, recorded before the entry is validated. An
+ * undeclared topology ({@code XXX}) is not recorded, so it stays unknown rather than linear.
  */
 public class FlatfileSequenceTopologyProvider implements ContextProvider<FlatfileSequenceTopologyProvider> {
 
@@ -40,16 +36,13 @@ public class FlatfileSequenceTopologyProvider implements ContextProvider<Flatfil
         return FlatfileSequenceTopologyProvider.class;
     }
 
-    /**
-     * An empty provider knows no topology, so the classpath-scanned instance is kept off the context.
-     * Flat file conversion registers its own instance directly.
-     */
+    /** Kept off the context while empty; flat file conversion registers its own instance. */
     @Override
     public boolean isActive() {
         return !topologies.isEmpty();
     }
 
-    /** Records the topology an entry declares; a {@code null} (undeclared) topology is not recorded. */
+    /** A {@code null} (undeclared) topology is not recorded. */
     public void record(String accession, Sequence.Topology topology) {
         if (topology == null) {
             return;
@@ -57,7 +50,7 @@ public class FlatfileSequenceTopologyProvider implements ContextProvider<Flatfil
         topologies.put(accession, topology == Sequence.Topology.CIRCULAR ? Topology.CIRCULAR : Topology.LINEAR);
     }
 
-    /** The topology recorded for the accession, or empty when its entry declared none. */
+    /** Empty when the entry declared none. */
     public Optional<Topology> getTopology(String accession) {
         return Optional.ofNullable(topologies.get(accession));
     }

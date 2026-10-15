@@ -52,11 +52,9 @@ public class GFF3AnnotationFactory {
     GFF3DirectivesFactory directivesFactory;
     ValidationEngine validationEngine;
 
-    // Length of the current entry's sequence when it is circular, so origin-crossing joins can be
-    // written in virtual space; null for a linear or undeclared topology.
+    // Sequence length when circular, for writing virtual coordinates; otherwise null.
     Long circularSequenceLength;
-    // Per gene name, how far the gene's origin-crossing features continue past the origin (in
-    // 1..L numbering). Its other features lying wholly in that stretch are shifted with them.
+    // Per gene, how far its origin-crossing features run past the origin (1..L numbering).
     Map<String, Long> wrappedEndByGene = new HashMap<>();
 
     /** One GFF3 line of a feature: its span, partiality and strand. */
@@ -76,8 +74,7 @@ public class GFF3AnnotationFactory {
         LOG.info("Converting entry: {}", accession);
         GFF3SequenceRegion sequenceRegion = directivesFactory.createSequenceRegion(entry);
         recordTopology(sequenceRegion, entry);
-        // The topology validation checks against, so virtual coordinates are written exactly
-        // when they are accepted.
+        // Same topology as validation, so virtual coordinates are written only where accepted.
         circularSequenceLength =
                 TopologyUtils.isCircularSequence(sequenceRegion.accession(), validationEngine.getContext())
                         ? sequenceRegion.end()
@@ -303,12 +300,8 @@ public class GFF3AnnotationFactory {
     }
 
     /**
-     * The GFF3 lines of a feature: one per flat file location, as written, unless the sequence is
-     * circular and the locations form a plain path along it. Then they are numbered the INSDC GFF3
-     * way: ascending, with everything past the origin in virtual space ({@code + L}), and a stretch
-     * that runs straight through the origin written as one line. A feature of a gene that lies
-     * wholly in the part of the gene past the origin is shifted with it, so children and parents
-     * share one numbering.
+     * The GFF3 lines of a feature, one per location. On a circular sequence a plain path is written in
+     * virtual space, merged where it runs straight through the origin, and shifted with its gene.
      */
     private List<Segment> getSegments(Feature ffFeature, Optional<String> geneName) {
         CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
@@ -357,12 +350,8 @@ public class GFF3AnnotationFactory {
     }
 
     /**
-     * The feature's locations in order along the plus strand, or null when they are not one path
-     * along the sequence. {@code complement(join(a,b))} already lists them that way;
-     * {@code join(complement(b),complement(a))} lists them in minus-strand reading order, so they
-     * are reversed. A trans-spliced feature, one mixing strands, or one with a remote location is
-     * stitched in biological order rather than along the sequence, so a drop in start there is a
-     * jump between pieces, not the origin.
+     * The locations in plus-strand order ({@code join(complement(..),..)} reversed), or null for a
+     * trans-spliced, mixed-strand or remote feature, whose order is biological, not a path.
      */
     private List<Segment> plusStrandPath(Feature ffFeature, List<Segment> segments) {
         CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
@@ -383,7 +372,7 @@ public class GFF3AnnotationFactory {
         return null;
     }
 
-    /** One line for a stretch running straight through the origin: start side from the first piece, end side from the second. */
+    /** Start partiality from the first piece, end partiality from the second. */
     private Segment mergeAcrossOrigin(Segment first, Segment second) {
         List<String> partiality = new ArrayList<>();
         if (first.partiality().contains("start")) {
@@ -395,10 +384,7 @@ public class GFF3AnnotationFactory {
         return new Segment(first.start(), second.end(), partiality, first.strand());
     }
 
-    /**
-     * Records, per gene name, how far the gene's origin-crossing features run past the origin, so
-     * {@link #getSegments} can shift the gene's other features lying in that stretch.
-     */
+    /** Fills {@link #wrappedEndByGene} for the entry. */
     private void recordWrappedGenes(Entry entry) {
         wrappedEndByGene.clear();
         if (circularSequenceLength == null) {

@@ -498,10 +498,6 @@ class TranslationFixTest {
         assertFalse(seg2.isThreePrimePartial());
     }
 
-    // ---- circular sequences: virtual coordinates past the origin ------------------------
-
-    // CDS ATG AAA CCC GGG TAA (MKPG) on a 30 bp circular sequence, crossing the origin:
-    // bases 25..30 hold its first 6 bases, bases 1..9 the remaining 9.
     private static final String CDS = "ATGAAACCCGGGTAA";
     private static final String FILLER = "TTTTTTTTTTTTTTT";
     private static final long CIRCLE = 30;
@@ -529,7 +525,6 @@ class TranslationFixTest {
         assertNoPartials(seg1, seg2);
     }
 
-    /** An intron right after the origin: the second exon lies wholly past it (bases 4..12). */
     @Test
     void translatesCdsWithSegmentWhollyPastTheOrigin() throws Exception {
         circularSequence("CCC" + CDS.substring(6) + "TTTTTTTTTTTT" + CDS.substring(0, 6));
@@ -544,7 +539,6 @@ class TranslationFixTest {
 
     @Test
     void translatesMinusStrandCdsCrossingTheOrigin() throws Exception {
-        // Read along the plus strand, 25..30 then 1..9 is the reverse complement of the CDS.
         String reverseComplement = reverseComplement(CDS);
         circularSequence(reverseComplement.substring(6) + FILLER + reverseComplement.substring(0, 6));
 
@@ -555,7 +549,6 @@ class TranslationFixTest {
         assertNoPartials(cds);
     }
 
-    /** Without a circular topology the end past the sequence length is not unwrapped. */
     @Test
     void doesNotUnwrapOnLinearSequence() throws Exception {
         sequence(CDS.substring(6) + FILLER + CDS.substring(0, 6));
@@ -568,7 +561,6 @@ class TranslationFixTest {
         assertTrue(exception.getMessage().contains("bad base range"));
     }
 
-    /** Backs the lookup with a real sequence, failing like the real lookup past its end. */
     private void sequence(String bases) throws Exception {
         assertEquals(CIRCLE, bases.length());
         when(mockLookup.getSequenceSlice(eq("seq1"), anyLong(), anyLong())).thenAnswer(invocation -> {

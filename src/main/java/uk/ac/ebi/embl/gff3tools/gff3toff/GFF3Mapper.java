@@ -83,8 +83,7 @@ public class GFF3Mapper {
     private final FastaHeaderProvider headerProvider;
     private final SequenceLookup sequenceLookup;
     private final ValidationContext context;
-    // Length of the current entry's sequence when it is circular, so origin-spanning features can be
-    // unwrapped; null for a linear or undeclared topology, or when there is no sequence region.
+    // Sequence length when circular, for unwrapping virtual coordinates; otherwise null.
     private Long circularSequenceLength;
 
     public GFF3Mapper(GFF3FileReader gff3FileReader, ValidationContext context) {
@@ -150,8 +149,7 @@ public class GFF3Mapper {
 
     private void mapGFF3Feature(GFF3Feature gff3Feature, Map<String, OffsetRange> translationMap)
             throws ValidationException {
-        // An origin-spanning feature maps to two segments, joined exactly as two GFF3 lines sharing
-        // an ID would be.
+        // A segment crossing the origin maps to two, joined like two lines sharing an ID.
         for (Location location : mapGFF3Location(gff3Feature)) {
             mapGFF3Feature(gff3Feature, location, translationMap);
         }
@@ -286,10 +284,8 @@ public class GFF3Mapper {
     }
 
     /**
-     * The feature's location as one range, or as two when it spans the origin of a circular
-     * sequence (see {@link TopologyUtils#unwrapOriginSpan}): the flat file cannot run a range past
-     * the sequence length. The start partiality stays with the segment holding the start and the end
-     * partiality with the one holding the end, as if the feature had been written as those two lines.
+     * The feature's location as one range, or two when it crosses the origin of a circular sequence
+     * ({@link TopologyUtils#unwrapOriginSpan}); partials stay on the outer ends.
      */
     private List<Location> mapGFF3Location(GFF3Feature gff3Feature) {
 
@@ -1030,11 +1026,7 @@ public class GFF3Mapper {
         return null;
     }
 
-    /**
-     * ID line field 3. Resolved in one place for master entry, FASTA header and flat file alike, so
-     * the topology written here is the one validation checked against. Left unset when no source
-     * declares a recognised topology.
-     */
+    /** ID line field 3, resolved as validation resolves it; unset when no source declares one. */
     private void applyTopology(GFF3SequenceRegion sequenceRegion, Sequence sequence) {
         if (sequenceRegion == null) {
             return;

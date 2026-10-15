@@ -298,7 +298,6 @@ class LocationValidationTest {
             assertDoesNotThrow(() -> locationValidation.validateFeatureWithinCircularSequence(feature, 1));
         }
 
-        /** On a linear sequence, running past the end is FEATURE_END_EXCEEDS_SEQUENCE_LENGTH's concern. */
         @Test
         void linearSequenceSkipped() throws Exception {
             injectLookupReturning(SEQ_ID, 1000L, "linear");
