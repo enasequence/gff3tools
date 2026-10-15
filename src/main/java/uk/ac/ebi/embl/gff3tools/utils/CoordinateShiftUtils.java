@@ -86,14 +86,12 @@ public class CoordinateShiftUtils {
         String text = position.trim();
         Matcher complement = COMPLEMENT.matcher(text);
         boolean complemented = complement.matches();
-        Matcher range = RANGE.matcher(complemented ? complement.group(1) : text);
-        if (!range.matches()) {
+        Span range = parseRange(complemented ? complement.group(1) : text);
+        if (range == null) {
             return position;
         }
-        long start = Long.parseLong(range.group(1));
-        long end = range.group(2) != null ? Long.parseLong(range.group(2)) : start;
-        List<Span> spans = unwrapOriginSpan(start, end, circularSequenceLength);
-        return spans.equals(List.of(new Span(start, end))) ? position : location(spans, complemented);
+        List<Span> spans = unwrapOriginSpan(range.start(), range.end(), circularSequenceLength);
+        return spans.equals(List.of(range)) ? position : location(spans, complemented);
     }
 
     /**
@@ -114,18 +112,16 @@ public class CoordinateShiftUtils {
         List<Span> shifted = new ArrayList<>();
         boolean changed = false;
         for (String part : parts) {
-            Matcher range = RANGE.matcher(part.trim());
-            if (!range.matches()) {
+            Span range = parseRange(part.trim());
+            if (range == null) {
                 return position;
             }
-            long start = Long.parseLong(range.group(1));
-            long end = range.group(2) != null ? Long.parseLong(range.group(2)) : start;
-            Long shift = shiftOfPieceContaining(start, end, pieces, virtualPieces);
+            Long shift = shiftOfPieceContaining(range.start(), range.end(), pieces, virtualPieces);
             if (shift == null) {
                 return position;
             }
             changed |= shift != 0;
-            Span span = new Span(start + shift, end + shift);
+            Span span = new Span(range.start() + shift, range.end() + shift);
             Span previous = shifted.isEmpty() ? null : shifted.get(shifted.size() - 1);
             if (previous != null && previous.end() + 1 == span.start()) {
                 shifted.set(shifted.size() - 1, new Span(previous.start(), span.end()));
@@ -144,6 +140,20 @@ public class CoordinateShiftUtils {
             bases.append(lookup.getSequenceSlice(accession, span.start(), span.end()));
         }
         return bases.toString();
+    }
+
+    /** {@code a..b} or {@code a}; null otherwise, including numbers too large for a long. */
+    private static Span parseRange(String text) {
+        Matcher range = RANGE.matcher(text);
+        if (!range.matches()) {
+            return null;
+        }
+        try {
+            long start = Long.parseLong(range.group(1));
+            return new Span(start, range.group(2) != null ? Long.parseLong(range.group(2)) : start);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private static String location(List<Span> spans, boolean complemented) {
