@@ -13,12 +13,14 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
@@ -31,6 +33,9 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
  * {@code GFF3Mapper} builds the flat file {@code join()} by appending same-ID segments in the order
  * their lines appear, so segments listed out of coordinate order produce a backwards {@code join()}.
  * Overlap and transcript alignment are separate rules.
+ *
+ * <p>On circular sequences too: past the origin GFF3 continues in virtual space ({@code 1001 1200}),
+ * never restarting at 1.
  */
 @Gff3Validation(
         name = "JOINED_LOCATION_ORDER",
@@ -45,8 +50,13 @@ public class JoinedLocationOrderValidation implements Validation {
     private static final String VIOLATION_MESSAGE =
             "\nFeature %s \"%s\" on accession \"%s\": segment %s starts before the preceding segment %s";
 
+    private static final String CIRCULAR_HINT =
+            " (on a circular sequence, segments past the origin continue past the sequence length: write %s as %d..%d)";
+
     @InjectContext
     private ValidationContext context;
+
+    private final Map<String, Long> sequenceLengthCache = new HashMap<>();
 
     @ValidationMethod(
             rule = RULE,
@@ -64,9 +74,13 @@ public class JoinedLocationOrderValidation implements Validation {
             return;
         }
 
-        boolean circular = ValidationUtils.isCircularSequence(annotation.getAccession(), context);
+        Long circularSequenceLength = TopologyUtils.isCircularSequence(annotation.getAccession(), context)
+                ? ValidationUtils.resolveSequenceLength(
+                        annotation.getSequenceRegion(), annotation.getAccession(), sequenceLengthCache, context)
+                : null;
         for (Map.Entry<String, List<GFF3Feature>> joinedFeature : joinedFeaturesById.entrySet()) {
-            String violation = detectRuleViolation(joinedFeature.getKey(), joinedFeature.getValue(), circular);
+            String violation =
+                    detectRuleViolation(joinedFeature.getKey(), joinedFeature.getValue(), circularSequenceLength);
             if (violation != null) {
                 violations.add(violation);
             }
@@ -79,45 +93,35 @@ public class JoinedLocationOrderValidation implements Validation {
 
     /**
      * The first segment starting before its predecessor in file order, or null where the feature is
-     * in order. A circular sequence allows one step back, which is the feature crossing the origin -
-     * provided it then stops short of where it began, so a step back elsewhere in the join is still
-     * reported.
+     * in order. {@code circularSequenceLength} only adds the virtual coordinates hint.
      */
-    private String detectRuleViolation(String id, List<GFF3Feature> joinedFeature, boolean circular) {
-        int allowance = circular ? 1 : 0;
-        int wrap = -1;
-
+    private String detectRuleViolation(String id, List<GFF3Feature> joinedFeature, Long circularSequenceLength) {
         for (int i = 1; i < joinedFeature.size(); i++) {
             GFF3Feature previous = joinedFeature.get(i - 1);
             GFF3Feature current = joinedFeature.get(i);
 
-            if (current.getStart() >= previous.getStart()) {
-                continue;
+            if (current.getStart() < previous.getStart()) {
+                return violation(id, current, previous, circularSequenceLength);
             }
-            if (allowance > 0) {
-                allowance--;
-                wrap = i;
-                continue;
-            }
-            return violation(id, current, previous);
-        }
-
-        // Past the origin the last segment must start before the first, or the feature laps its own start.
-        GFF3Feature first = joinedFeature.get(0);
-        GFF3Feature last = joinedFeature.get(joinedFeature.size() - 1);
-        if (wrap > 0 && last.getStart() >= first.getStart()) {
-            return violation(id, joinedFeature.get(wrap), joinedFeature.get(wrap - 1));
         }
         return null;
     }
 
-    private String violation(String id, GFF3Feature current, GFF3Feature previous) {
-        return VIOLATION_MESSAGE.formatted(
+    private String violation(String id, GFF3Feature current, GFF3Feature previous, Long circularSequenceLength) {
+        String violation = VIOLATION_MESSAGE.formatted(
                 current.getName(),
                 id,
                 current.accession(),
                 ValidationUtils.getLocationString(current),
                 ValidationUtils.getLocationString(previous));
+        if (circularSequenceLength == null) {
+            return violation;
+        }
+        return violation
+                + CIRCULAR_HINT.formatted(
+                        ValidationUtils.getLocationString(current),
+                        current.getStart() + circularSequenceLength,
+                        current.getEnd() + circularSequenceLength);
     }
 
     /**

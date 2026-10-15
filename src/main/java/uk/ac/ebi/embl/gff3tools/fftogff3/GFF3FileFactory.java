@@ -26,6 +26,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.provider.FlatfileSequenceTopologyProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 /**
@@ -71,6 +72,9 @@ public class GFF3FileFactory {
         List<GFF3Annotation> annotations = new ArrayList<>();
         GFF3DirectivesFactory directivesFactory = new GFF3DirectivesFactory();
         GFF3AnnotationFactory annotationFactory = new GFF3AnnotationFactory(engine, directivesFactory);
+        // Registered directly, bypassing isActive(): it starts empty and fills as entries are read.
+        FlatfileSequenceTopologyProvider topologyProvider = new FlatfileSequenceTopologyProvider();
+        engine.getContext().register(FlatfileSequenceTopologyProvider.class, topologyProvider);
         try {
             while (entryReader.read() != null && entryReader.isEntry()) {
                 Entry entry = entryReader.getEntry();
