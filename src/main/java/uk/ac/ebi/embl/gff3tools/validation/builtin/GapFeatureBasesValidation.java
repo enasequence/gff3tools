@@ -56,9 +56,16 @@ public class GapFeatureBasesValidation implements Validation {
         long start = feature.getStart();
         long end = feature.getEnd();
         try {
+            long sequenceLength = lookup.getSequenceLength(feature.accession());
+            boolean circular = TopologyUtils.isCircularSequence(feature.accession(), context);
+            // No bases past the end of a non-circular sequence: FEATURE_END_EXCEEDS_SEQUENCE_LENGTH
+            // (LocationValidation) reports it instead.
+            if (!circular && end > sequenceLength) {
+                return;
+            }
             // Virtual coordinates (past the end of a circular sequence) are checked from base 1.
             for (TopologyUtils.Span span :
-                    TopologyUtils.unwrapOriginSpan(start, end, circularSequenceLength(feature, lookup))) {
+                    TopologyUtils.unwrapOriginSpan(start, end, circular ? sequenceLength : null)) {
                 List<GapRegion> gapRegions = lookup.getGapRegions(feature.accession(), span.start(), span.end());
                 boolean covered =
                         gapRegions.stream().anyMatch(g -> g.startBase <= span.start() && g.endBase >= span.end());
@@ -72,12 +79,5 @@ public class GapFeatureBasesValidation implements Validation {
             throw new IllegalStateException(
                     "Unable to retrieve gap regions for locations %d-%d: %s".formatted(start, end, e.getMessage()), e);
         }
-    }
-
-    private Long circularSequenceLength(GFF3Feature feature, SequenceLookup lookup) throws Exception {
-        if (!TopologyUtils.isCircularSequence(feature.accession(), context)) {
-            return null;
-        }
-        return lookup.getSequenceLength(feature.accession());
     }
 }

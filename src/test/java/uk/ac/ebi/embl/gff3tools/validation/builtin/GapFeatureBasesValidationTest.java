@@ -41,6 +41,7 @@ class GapFeatureBasesValidationTest {
 
     private void injectWithGapRegions(String seqId, long start, long end, List<GapRegion> regions) throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
+        when(mockLookup.getSequenceLength(seqId)).thenReturn(1000L);
         when(mockLookup.getGapRegions(seqId, start, end)).thenReturn(regions);
 
         ValidationContext context = TestUtils.createTestContext();
@@ -116,8 +117,8 @@ class GapFeatureBasesValidationTest {
     }
 
     @Test
-    void gapPastTheEndOfLinearSequenceIsNotUnwrapped() throws Exception {
-        injectWithGapRegions(SEQ_ID, 991L, 1010L, List.of(new GapRegion(991L, 1010L)));
+    void gapPastTheEndOfLinearSequenceIsLeftToTheLocationRule() throws Exception {
+        injectWithGapRegions(SEQ_ID, 991L, 1010L, List.of());
         GFF3Feature gap = TestUtils.createGFF3Feature("gap", SEQ_ID, 991L, 1010L, Map.of());
         assertDoesNotThrow(() -> check.validateGapBases(gap, 1));
     }
@@ -157,6 +158,7 @@ class GapFeatureBasesValidationTest {
     @Test
     public void testValidateGapBasesLookupFailureThrows() throws Exception {
         SequenceLookup mockLookup = mock(SequenceLookup.class);
+        when(mockLookup.getSequenceLength(SEQ_ID)).thenReturn(1000L);
         when(mockLookup.getGapRegions(SEQ_ID, 1L, 5L)).thenThrow(new RuntimeException("boom"));
 
         ValidationContext context = TestUtils.createTestContext();
