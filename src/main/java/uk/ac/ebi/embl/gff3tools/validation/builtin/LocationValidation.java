@@ -70,7 +70,7 @@ public class LocationValidation implements Validation {
             rule = RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH,
             description = "Feature end position must not exceed the sequence length",
             type = ValidationType.FEATURE,
-            priority = ValidationPriority.LOW)
+            priority = ValidationPriority.HIGH)
     public void validateFeatureEndWithinSequence(GFF3Feature feature, int line) throws ValidationException {
         Long lastBaseIndex = ValidationUtils.resolveSequenceLength(feature.accession(), sequenceLengthCache, context);
         if (lastBaseIndex == null) {
@@ -93,7 +93,7 @@ public class LocationValidation implements Validation {
             rule = RULE_FEATURE_LONGER_THAN_CIRCULAR_SEQUENCE,
             description = "A feature on a circular sequence must not be longer than the sequence",
             type = ValidationType.FEATURE,
-            priority = ValidationPriority.LOW)
+            priority = ValidationPriority.HIGH)
     public void validateFeatureWithinCircularSequence(GFF3Feature feature, int line) throws ValidationException {
         Long lastBaseIndex = ValidationUtils.resolveSequenceLength(feature.accession(), sequenceLengthCache, context);
         if (lastBaseIndex == null || !TopologyUtils.isCircularSequence(feature.accession(), context)) {
@@ -112,7 +112,7 @@ public class LocationValidation implements Validation {
             rule = RULE_FEATURE_END_BELOW_ONE,
             description = "Feature end position must be at least 1",
             type = ValidationType.FEATURE,
-            priority = ValidationPriority.LOW)
+            priority = ValidationPriority.HIGH)
     public void validateFeatureEndAboveZero(GFF3Feature feature, int line) throws ValidationException {
         if (feature.getEnd() < 1) {
             throw new ValidationException(
@@ -126,7 +126,7 @@ public class LocationValidation implements Validation {
             rule = RULE_FEATURE_START_BELOW_ONE,
             description = "Feature start position must be at least 1",
             type = ValidationType.FEATURE,
-            priority = ValidationPriority.LOW)
+            priority = ValidationPriority.HIGH)
     public void validateFeatureStartAboveZero(GFF3Feature feature, int line) throws ValidationException {
         if (feature.getStart() < 1) {
             throw new ValidationException(

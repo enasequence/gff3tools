@@ -18,6 +18,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
@@ -54,16 +55,29 @@ public class GapFeatureBasesValidation implements Validation {
         }
         long start = feature.getStart();
         long end = feature.getEnd();
-        List<GapRegion> gapRegions;
         try {
-            gapRegions = lookup.getGapRegions(feature.accession(), start, end);
+            // Virtual coordinates (past the end of a circular sequence) are checked from base 1.
+            for (TopologyUtils.Span span :
+                    TopologyUtils.unwrapOriginSpan(start, end, circularSequenceLength(feature, lookup))) {
+                List<GapRegion> gapRegions = lookup.getGapRegions(feature.accession(), span.start(), span.end());
+                boolean covered =
+                        gapRegions.stream().anyMatch(g -> g.startBase <= span.start() && g.endBase >= span.end());
+                if (!covered) {
+                    throw new ValidationException(RULE_GAP_BASES, line, GAP_BASES_MESSAGE.formatted(start, end));
+                }
+            }
+        } catch (ValidationException e) {
+            throw e;
         } catch (Exception e) {
             throw new IllegalStateException(
                     "Unable to retrieve gap regions for locations %d-%d: %s".formatted(start, end, e.getMessage()), e);
         }
-        boolean covered = gapRegions.stream().anyMatch(g -> g.startBase <= start && g.endBase >= end);
-        if (!covered) {
-            throw new ValidationException(RULE_GAP_BASES, line, GAP_BASES_MESSAGE.formatted(start, end));
+    }
+
+    private Long circularSequenceLength(GFF3Feature feature, SequenceLookup lookup) throws Exception {
+        if (!TopologyUtils.isCircularSequence(feature.accession(), context)) {
+            return null;
         }
+        return lookup.getSequenceLength(feature.accession());
     }
 }

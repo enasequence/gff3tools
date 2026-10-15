@@ -22,6 +22,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.translation.Translator;
+import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
@@ -90,10 +91,16 @@ public class AnticodonAttributeFix implements Fix {
 
     private record Position(boolean hasComplementWrapper, long start, long end) {}
 
-    private record SequenceReader(SequenceLookup lookup, String accession, int line) {
+    private record SequenceReader(SequenceLookup lookup, String accession, int line, Long circularSequenceLength) {
 
+        /** Virtual coordinates (past the end of a circular sequence) are read from base 1. */
         String read(Position position) throws Exception {
-            return lookup.getSequenceSlice(accession, position.start(), position.end());
+            StringBuilder bases = new StringBuilder();
+            for (TopologyUtils.Span span :
+                    TopologyUtils.unwrapOriginSpan(position.start(), position.end(), circularSequenceLength)) {
+                bases.append(lookup.getSequenceSlice(accession, span.start(), span.end()));
+            }
+            return bases.toString();
         }
     }
 
@@ -191,7 +198,11 @@ public class AnticodonAttributeFix implements Fix {
             return;
         }
 
-        SequenceReader reader = new SequenceReader(sequenceLookup, accession, line);
+        Long circularSequenceLength =
+                TopologyUtils.isCircularSequence(accession, context) && annotation.getSequenceRegion() != null
+                        ? annotation.getSequenceRegion().end()
+                        : null;
+        SequenceReader reader = new SequenceReader(sequenceLookup, accession, line, circularSequenceLength);
         for (List<GFF3Feature> rows : rowsByFeature.values()) {
             addSequenceToFeature(rows, reader);
         }

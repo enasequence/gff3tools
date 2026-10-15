@@ -15,6 +15,7 @@ import static org.mockito.Mockito.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
@@ -22,6 +23,8 @@ import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
@@ -57,6 +60,66 @@ class GapFeatureBasesValidationTest {
 
     private void injectNoLookup() {
         TestUtils.injectContext(check);
+    }
+
+    private SequenceLookup injectCircular(long length) throws Exception {
+        SequenceLookup mockLookup = mock(SequenceLookup.class);
+        when(mockLookup.getSequenceLength(SEQ_ID)).thenReturn(length);
+
+        FastaHeader header = new FastaHeader();
+        header.setTopology("circular");
+        FastaHeaderProvider headers = new FastaHeaderProvider();
+        headers.addSource(seqId -> SEQ_ID.equals(seqId) ? Optional.of(header) : Optional.empty());
+
+        ValidationContext context = TestUtils.createTestContext();
+        context.register(SequenceLookup.class, new ContextProvider<>() {
+            @Override
+            public SequenceLookup get(ValidationContext ctx) {
+                return mockLookup;
+            }
+
+            @Override
+            public Class<SequenceLookup> type() {
+                return SequenceLookup.class;
+            }
+        });
+        context.register(FastaHeaderProvider.class, headers);
+        TestUtils.injectContext(check, context);
+        return mockLookup;
+    }
+
+    @Test
+    void gapAcrossTheOriginOfCircularSequenceSuccess() throws Exception {
+        SequenceLookup lookup = injectCircular(1000L);
+        when(lookup.getGapRegions(SEQ_ID, 991L, 1000L)).thenReturn(List.of(new GapRegion(991L, 1000L)));
+        when(lookup.getGapRegions(SEQ_ID, 1L, 10L)).thenReturn(List.of(new GapRegion(1L, 10L)));
+        GFF3Feature gap = TestUtils.createGFF3Feature("gap", SEQ_ID, 991L, 1010L, Map.of());
+        assertDoesNotThrow(() -> check.validateGapBases(gap, 1));
+    }
+
+    @Test
+    void gapPastTheOriginOfCircularSequenceSuccess() throws Exception {
+        SequenceLookup lookup = injectCircular(1000L);
+        when(lookup.getGapRegions(SEQ_ID, 101L, 150L)).thenReturn(List.of(new GapRegion(101L, 150L)));
+        GFF3Feature gap = TestUtils.createGFF3Feature("gap", SEQ_ID, 1101L, 1150L, Map.of());
+        assertDoesNotThrow(() -> check.validateGapBases(gap, 1));
+    }
+
+    @Test
+    void gapAcrossTheOriginNotAllNFailure() throws Exception {
+        SequenceLookup lookup = injectCircular(1000L);
+        when(lookup.getGapRegions(SEQ_ID, 991L, 1000L)).thenReturn(List.of(new GapRegion(991L, 1000L)));
+        when(lookup.getGapRegions(SEQ_ID, 1L, 10L)).thenReturn(List.of());
+        GFF3Feature gap = TestUtils.createGFF3Feature("gap", SEQ_ID, 991L, 1010L, Map.of());
+        ValidationException ex = assertThrows(ValidationException.class, () -> check.validateGapBases(gap, 1));
+        assertTrue(ex.getMessage().contains("991-1010"));
+    }
+
+    @Test
+    void gapPastTheEndOfLinearSequenceIsNotUnwrapped() throws Exception {
+        injectWithGapRegions(SEQ_ID, 991L, 1010L, List.of(new GapRegion(991L, 1010L)));
+        GFF3Feature gap = TestUtils.createGFF3Feature("gap", SEQ_ID, 991L, 1010L, Map.of());
+        assertDoesNotThrow(() -> check.validateGapBases(gap, 1));
     }
 
     @Test
