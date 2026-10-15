@@ -22,6 +22,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.translation.TranslationResult;
 import uk.ac.ebi.embl.gff3tools.translation.Translator;
+import uk.ac.ebi.embl.gff3tools.utils.CoordinateShiftUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
@@ -146,8 +147,8 @@ public class TranslationFix {
             for (GFF3Feature segment : sortedFeatures) {
                 // Virtual coordinates (past the end of a circular sequence) continue from base 1.
                 StringBuilder segmentBases = new StringBuilder();
-                for (TopologyUtils.Span span :
-                        TopologyUtils.unwrapOriginSpan(segment.getStart(), segment.getEnd(), circularSequenceLength)) {
+                for (CoordinateShiftUtils.Span span : CoordinateShiftUtils.unwrapOriginSpan(
+                        segment.getStart(), segment.getEnd(), circularSequenceLength)) {
                     segmentBases.append(sequenceLookup.getSequenceSlice(segment.accession(), span.start(), span.end()));
                 }
                 String slice = segmentBases.toString();

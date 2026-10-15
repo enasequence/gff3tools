@@ -22,6 +22,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.translation.Translator;
+import uk.ac.ebi.embl.gff3tools.utils.CoordinateShiftUtils;
 import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
@@ -103,13 +104,13 @@ public class AnticodonAttributeFix implements Fix {
          * reports it instead.
          */
         String read(Position position) throws Exception {
-            List<TopologyUtils.Span> spans =
-                    TopologyUtils.unwrapOriginSpan(position.start(), position.end(), circular ? sequenceLength : null);
+            List<CoordinateShiftUtils.Span> spans = CoordinateShiftUtils.unwrapOriginSpan(
+                    position.start(), position.end(), circular ? sequenceLength : null);
             if (sequenceLength != null && spans.stream().anyMatch(span -> span.end() > sequenceLength)) {
                 return null;
             }
             StringBuilder bases = new StringBuilder();
-            for (TopologyUtils.Span span : spans) {
+            for (CoordinateShiftUtils.Span span : spans) {
                 bases.append(lookup.getSequenceSlice(accession, span.start(), span.end()));
             }
             return bases.toString();

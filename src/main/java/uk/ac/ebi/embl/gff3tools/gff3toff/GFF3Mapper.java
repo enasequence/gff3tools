@@ -57,6 +57,7 @@ import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabulary
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionEntry;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
+import uk.ac.ebi.embl.gff3tools.utils.CoordinateShiftUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
@@ -286,7 +287,7 @@ public class GFF3Mapper {
 
     /**
      * The feature's location as one range, or two when it crosses the origin of a circular sequence
-     * ({@link TopologyUtils#unwrapOriginSpan}); partials stay on the outer ends.
+     * ({@link CoordinateShiftUtils#unwrapOriginSpan}); partials stay on the outer ends.
      */
     private List<Location> mapGFF3Location(GFF3Feature gff3Feature) {
 
@@ -296,11 +297,11 @@ public class GFF3Mapper {
 
         boolean isComplement = gff3Feature.getStrand().equals("-");
 
-        List<TopologyUtils.Span> spans =
-                TopologyUtils.unwrapOriginSpan(gff3Feature.getStart(), gff3Feature.getEnd(), circularSequenceLength);
+        List<CoordinateShiftUtils.Span> spans = CoordinateShiftUtils.unwrapOriginSpan(
+                gff3Feature.getStart(), gff3Feature.getEnd(), circularSequenceLength);
         List<Location> locations = new ArrayList<>();
         for (int i = 0; i < spans.size(); i++) {
-            TopologyUtils.Span span = spans.get(i);
+            CoordinateShiftUtils.Span span = spans.get(i);
             locations.add(createRange(
                     span.start(),
                     span.end(),
@@ -325,7 +326,8 @@ public class GFF3Mapper {
             return value;
         }
         long length = circularSequenceLength;
-        return TopologyUtils.mapPosition(value, position -> TopologyUtils.toFlatFilePosition(position, length));
+        return CoordinateShiftUtils.mapPosition(
+                value, position -> CoordinateShiftUtils.toFlatFilePosition(position, length));
     }
 
     private Collection<Qualifier> mapGFF3Attributes(String attributeKey, List<String> attributes) {

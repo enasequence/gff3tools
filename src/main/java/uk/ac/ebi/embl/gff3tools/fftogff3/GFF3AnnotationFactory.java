@@ -26,6 +26,7 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
+import uk.ac.ebi.embl.gff3tools.utils.CoordinateShiftUtils;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
 import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
@@ -316,12 +317,12 @@ public class GFF3AnnotationFactory {
         List<Segment> result = new ArrayList<>();
         for (int i = 0; i < layout.path().size(); i++) {
             Segment segment = layout.path().get(i);
-            TopologyUtils.Span span = layout.virtual().get(i);
+            CoordinateShiftUtils.Span span = layout.virtual().get(i);
             Segment shifted = new Segment(span.start(), span.end(), segment.partiality(), segment.strand());
             Segment previous = result.isEmpty() ? null : result.get(result.size() - 1);
             if (previous != null
-                    && TopologyUtils.continuesAcrossOrigin(
-                            new TopologyUtils.Span(previous.start(), previous.end()), span, length)) {
+                    && CoordinateShiftUtils.continuesAcrossOrigin(
+                            new CoordinateShiftUtils.Span(previous.start(), previous.end()), span, length)) {
                 result.set(result.size() - 1, mergeAcrossOrigin(previous, shifted));
             } else {
                 result.add(shifted);
@@ -332,7 +333,7 @@ public class GFF3AnnotationFactory {
 
     /** A plain path's locations in plus-strand order, with where each lands in virtual space. */
     private record VirtualLayout(
-            List<Segment> path, List<TopologyUtils.Span> pieces, List<TopologyUtils.Span> virtual) {}
+            List<Segment> path, List<CoordinateShiftUtils.Span> pieces, List<CoordinateShiftUtils.Span> virtual) {}
 
     /**
      * Where the feature's locations land in virtual space, or null when they are written as they are
@@ -347,13 +348,13 @@ public class GFF3AnnotationFactory {
             return null;
         }
         long length = circularSequenceLength;
-        List<TopologyUtils.Span> pieces = path.stream()
-                .map(s -> new TopologyUtils.Span(s.start(), s.end()))
+        List<CoordinateShiftUtils.Span> pieces = path.stream()
+                .map(s -> new CoordinateShiftUtils.Span(s.start(), s.end()))
                 .toList();
-        List<TopologyUtils.Span> virtual = TopologyUtils.toVirtualSpace(pieces, length);
+        List<CoordinateShiftUtils.Span> virtual = CoordinateShiftUtils.toVirtualSpace(pieces, length);
         if (virtual.equals(pieces) && liesPastOriginOfGene(pieces, geneName)) {
             virtual = pieces.stream()
-                    .map(s -> new TopologyUtils.Span(s.start() + length, s.end() + length))
+                    .map(s -> new CoordinateShiftUtils.Span(s.start() + length, s.end() + length))
                     .toList();
         }
         return new VirtualLayout(path, pieces, virtual);
@@ -380,9 +381,9 @@ public class GFF3AnnotationFactory {
                 attributes.put(
                         key,
                         values.stream()
-                                .map(value -> TopologyUtils.mapPosition(
+                                .map(value -> CoordinateShiftUtils.mapPosition(
                                         value,
-                                        position -> TopologyUtils.toVirtualPosition(
+                                        position -> CoordinateShiftUtils.toVirtualPosition(
                                                 position, layout.pieces(), layout.virtual())))
                                 .toList());
             }
@@ -444,15 +445,18 @@ public class GFF3AnnotationFactory {
             if (path == null) {
                 continue;
             }
-            List<TopologyUtils.Span> spans = path.stream()
-                    .map(s -> new TopologyUtils.Span(s.start(), s.end()))
+            List<CoordinateShiftUtils.Span> spans = path.stream()
+                    .map(s -> new CoordinateShiftUtils.Span(s.start(), s.end()))
                     .toList();
-            List<TopologyUtils.Span> virtual = TopologyUtils.toVirtualSpace(spans, length);
+            List<CoordinateShiftUtils.Span> virtual = CoordinateShiftUtils.toVirtualSpace(spans, length);
             if (virtual.equals(spans)) {
                 continue;
             }
-            long wrappedEnd =
-                    virtual.stream().mapToLong(TopologyUtils.Span::end).max().orElse(length) - length;
+            long wrappedEnd = virtual.stream()
+                            .mapToLong(CoordinateShiftUtils.Span::end)
+                            .max()
+                            .orElse(length)
+                    - length;
             for (Qualifier gene : genes) {
                 wrappedEndByGene.merge(gene.getValue(), wrappedEnd, Math::max);
             }
@@ -460,7 +464,7 @@ public class GFF3AnnotationFactory {
     }
 
     /** Whether the spans lie wholly in the part of their gene that runs past the origin. */
-    private boolean liesPastOriginOfGene(List<TopologyUtils.Span> spans, Optional<String> geneName) {
+    private boolean liesPastOriginOfGene(List<CoordinateShiftUtils.Span> spans, Optional<String> geneName) {
         Long wrappedEnd = geneName.map(wrappedEndByGene::get).orElse(null);
         return wrappedEnd != null && spans.stream().allMatch(s -> s.end() <= wrappedEnd);
     }

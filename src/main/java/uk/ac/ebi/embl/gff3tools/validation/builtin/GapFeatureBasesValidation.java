@@ -18,6 +18,7 @@ import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.utils.CoordinateShiftUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
@@ -70,8 +71,8 @@ public class GapFeatureBasesValidation implements Validation {
                 return;
             }
             // Virtual coordinates (past the end of a circular sequence) are checked from base 1.
-            for (TopologyUtils.Span span :
-                    TopologyUtils.unwrapOriginSpan(start, end, circular ? sequenceLength : null)) {
+            for (CoordinateShiftUtils.Span span :
+                    CoordinateShiftUtils.unwrapOriginSpan(start, end, circular ? sequenceLength : null)) {
                 List<GapRegion> gapRegions = lookup.getGapRegions(feature.accession(), span.start(), span.end());
                 boolean covered =
                         gapRegions.stream().anyMatch(g -> g.startBase <= span.start() && g.endBase >= span.end());
