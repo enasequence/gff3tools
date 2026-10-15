@@ -98,22 +98,14 @@ public class AnticodonAttributeFix implements Fix {
     private record SequenceReader(
             SequenceLookup lookup, String accession, int line, Long sequenceLength, boolean circular) {
 
-        /**
-         * Virtual coordinates (past the end of a circular sequence) are read from base 1. Null when the
-         * position still runs past the end: ANTI_CODON_LOCATION or FEATURE_END_EXCEEDS_SEQUENCE_LENGTH
-         * reports it instead.
-         */
+        /** Null when the position runs past the end: ANTI_CODON_LOCATION or FEATURE_END_EXCEEDS_SEQUENCE_LENGTH reports it. */
         String read(Position position) throws Exception {
             List<CoordinateShiftUtils.Span> spans = CoordinateShiftUtils.unwrapOriginSpan(
                     position.start(), position.end(), circular ? sequenceLength : null);
             if (sequenceLength != null && spans.stream().anyMatch(span -> span.end() > sequenceLength)) {
                 return null;
             }
-            StringBuilder bases = new StringBuilder();
-            for (CoordinateShiftUtils.Span span : spans) {
-                bases.append(lookup.getSequenceSlice(accession, span.start(), span.end()));
-            }
-            return bases.toString();
+            return CoordinateShiftUtils.readBases(lookup, accession, spans);
         }
     }
 

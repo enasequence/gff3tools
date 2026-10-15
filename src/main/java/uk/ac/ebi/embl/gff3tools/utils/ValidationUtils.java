@@ -24,14 +24,7 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 public class ValidationUtils {
 
-    /**
-     * The sequence length for an annotation's sequence, from the first source that has it: the
-     * {@code ##sequence-region} end, then the sequence reader
-     * ({@link #resolveSequenceLength(String, Map, ValidationContext)}).
-     *
-     * @param sequenceRegion the annotation's sequence region, or null when it has none
-     * @return the length, or null when neither source has it
-     */
+    /** The {@code ##sequence-region} end, else the sequence reader's length; null when neither has it. */
     public static Long resolveSequenceLength(
             GFF3SequenceRegion sequenceRegion,
             String seqId,

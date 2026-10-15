@@ -70,7 +70,6 @@ public class GapFeatureBasesValidation implements Validation {
             if (!circular && sequenceLength != null && end > sequenceLength) {
                 return;
             }
-            // Virtual coordinates (past the end of a circular sequence) are checked from base 1.
             for (CoordinateShiftUtils.Span span :
                     CoordinateShiftUtils.unwrapOriginSpan(start, end, circular ? sequenceLength : null)) {
                 List<GapRegion> gapRegions = lookup.getGapRegions(feature.accession(), span.start(), span.end());

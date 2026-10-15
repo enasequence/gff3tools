@@ -331,14 +331,10 @@ public class GFF3AnnotationFactory {
         return result;
     }
 
-    /** A plain path's locations in plus-strand order, with where each lands in virtual space. */
-    private record VirtualLayout(
-            List<Segment> path, List<CoordinateShiftUtils.Span> pieces, List<CoordinateShiftUtils.Span> virtual) {}
+    /** A plain path's locations in plus-strand order and where each lands in virtual space. */
+    private record VirtualLayout(List<Segment> path, List<CoordinateShiftUtils.Span> virtual) {}
 
-    /**
-     * Where the feature's locations land in virtual space, or null when they are written as they are
-     * (sequence not circular, or not a plain path).
-     */
+    /** Null when the locations are written as they are (sequence not circular, or not a plain path). */
     private VirtualLayout virtualLayout(Feature ffFeature, Optional<String> geneName) {
         if (circularSequenceLength == null) {
             return null;
@@ -357,7 +353,7 @@ public class GFF3AnnotationFactory {
                     .map(s -> new CoordinateShiftUtils.Span(s.start() + length, s.end() + length))
                     .toList();
         }
-        return new VirtualLayout(path, pieces, virtual);
+        return new VirtualLayout(path, virtual);
     }
 
     private List<Segment> locationSegments(Feature ffFeature) {
@@ -375,6 +371,9 @@ public class GFF3AnnotationFactory {
 
     /** Anticodon and transl_except positions take the shift of the location they lie in. */
     private void shiftPositions(Map<String, List<String>> attributes, VirtualLayout layout) {
+        List<CoordinateShiftUtils.Span> pieces = layout.path().stream()
+                .map(segment -> new CoordinateShiftUtils.Span(segment.start(), segment.end()))
+                .toList();
         for (String key : List.of(GFF3Attributes.ANTI_CODON, GFF3Attributes.TRANSL_EXCEPT)) {
             List<String> values = attributes.get(key);
             if (values != null) {
@@ -384,7 +383,7 @@ public class GFF3AnnotationFactory {
                                 .map(value -> CoordinateShiftUtils.mapPosition(
                                         value,
                                         position -> CoordinateShiftUtils.toVirtualPosition(
-                                                position, layout.pieces(), layout.virtual())))
+                                                position, pieces, layout.virtual())))
                                 .toList());
             }
         }

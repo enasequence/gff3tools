@@ -16,6 +16,7 @@ import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 
 /**
  * Coordinate shifts between INSDC GFF3 virtual coordinates (past the length L of a circular
@@ -69,33 +70,6 @@ public class CoordinateShiftUtils {
         return virtual;
     }
 
-    private static final Pattern POSITION = Pattern.compile(
-            "^(?<complement>complement\\(\\s*)?(?<start>\\d+)(?:\\s*\\.\\.\\s*(?<end>\\d+))?(?<close>\\s*\\))?$",
-            Pattern.CASE_INSENSITIVE);
-
-    /**
-     * A GFF3 position ({@code start..end} or {@code start}, optionally in {@code complement(...)}) in
-     * flat file numbering ({@code 1..L}): virtual coordinates are unwrapped as by {@link
-     * #unwrapOriginSpan}, and a position crossing the origin becomes a {@code join}. Anything else is
-     * returned unchanged.
-     */
-    public static String toFlatFilePosition(String position, long circularSequenceLength) {
-        Matcher matcher = POSITION.matcher(position.trim());
-        if (!matcher.matches() || (matcher.group("complement") == null) != (matcher.group("close") == null)) {
-            return position;
-        }
-        long start = Long.parseLong(matcher.group("start"));
-        long end = matcher.group("end") != null ? Long.parseLong(matcher.group("end")) : start;
-        List<Span> spans = unwrapOriginSpan(start, end, circularSequenceLength);
-        if (spans.equals(List.of(new Span(start, end)))) {
-            return position;
-        }
-        String body = spans.size() == 1
-                ? range(spans.get(0))
-                : "join(" + spans.stream().map(CoordinateShiftUtils::range).collect(Collectors.joining(",")) + ")";
-        return matcher.group("complement") != null ? "complement(" + body + ")" : body;
-    }
-
     private static final Pattern COMPLEMENT =
             Pattern.compile("^complement\\(\\s*(.+?)\\s*\\)$", Pattern.CASE_INSENSITIVE);
 
@@ -104,11 +78,28 @@ public class CoordinateShiftUtils {
     private static final Pattern RANGE = Pattern.compile("^(\\d+)(?:\\s*\\.\\.\\s*(\\d+))?$");
 
     /**
-     * The reverse of {@link #toFlatFilePosition}: a flat file position ({@code a..b} or {@code a}, or a
-     * {@code join} of those, optionally in {@code complement(...)}) moved into virtual space with the
-     * piece of its feature that contains it. {@code pieces} are the feature's pieces in {@code 1..L},
-     * {@code virtualPieces} where each lands. Ranges meeting at the origin become one. Unchanged when
-     * a range lies outside every piece or the position has another form.
+     * A GFF3 position ({@code start..end} or {@code start}, optionally in {@code complement(...)}) in
+     * flat file numbering ({@code 1..L}), a {@code join} when it crosses the origin. Anything else is
+     * returned unchanged.
+     */
+    public static String toFlatFilePosition(String position, long circularSequenceLength) {
+        String text = position.trim();
+        Matcher complement = COMPLEMENT.matcher(text);
+        boolean complemented = complement.matches();
+        Matcher range = RANGE.matcher(complemented ? complement.group(1) : text);
+        if (!range.matches()) {
+            return position;
+        }
+        long start = Long.parseLong(range.group(1));
+        long end = range.group(2) != null ? Long.parseLong(range.group(2)) : start;
+        List<Span> spans = unwrapOriginSpan(start, end, circularSequenceLength);
+        return spans.equals(List.of(new Span(start, end))) ? position : location(spans, complemented);
+    }
+
+    /**
+     * The reverse of {@link #toFlatFilePosition}: a flat file position (a range, or a {@code join} of
+     * ranges, optionally in {@code complement(...)}) shifted with the feature piece containing it;
+     * {@code virtualPieces} are where {@code pieces} land. Unchanged when a range lies outside them.
      */
     public static String toVirtualPosition(String position, List<Span> pieces, List<Span> virtualPieces) {
         String text = position.trim();
@@ -143,12 +134,22 @@ public class CoordinateShiftUtils {
                 shifted.add(span);
             }
         }
-        if (!changed) {
-            return position;
+        return changed ? location(shifted, complemented) : position;
+    }
+
+    /** The bases of the spans, read in order. */
+    public static String readBases(SequenceLookup lookup, String accession, List<Span> spans) throws Exception {
+        StringBuilder bases = new StringBuilder();
+        for (Span span : spans) {
+            bases.append(lookup.getSequenceSlice(accession, span.start(), span.end()));
         }
-        String body = shifted.size() == 1
-                ? range(shifted.get(0))
-                : "join(" + shifted.stream().map(CoordinateShiftUtils::range).collect(Collectors.joining(",")) + ")";
+        return bases.toString();
+    }
+
+    private static String location(List<Span> spans, boolean complemented) {
+        String body = spans.size() == 1
+                ? range(spans.get(0))
+                : "join(" + spans.stream().map(CoordinateShiftUtils::range).collect(Collectors.joining(",")) + ")";
         return complemented ? "complement(" + body + ")" : body;
     }
 

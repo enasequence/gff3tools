@@ -146,12 +146,11 @@ public class TranslationFix {
             StringBuilder concatenated = new StringBuilder();
             for (GFF3Feature segment : sortedFeatures) {
                 // Virtual coordinates (past the end of a circular sequence) continue from base 1.
-                StringBuilder segmentBases = new StringBuilder();
-                for (CoordinateShiftUtils.Span span : CoordinateShiftUtils.unwrapOriginSpan(
-                        segment.getStart(), segment.getEnd(), circularSequenceLength)) {
-                    segmentBases.append(sequenceLookup.getSequenceSlice(segment.accession(), span.start(), span.end()));
-                }
-                String slice = segmentBases.toString();
+                String slice = CoordinateShiftUtils.readBases(
+                        sequenceLookup,
+                        segment.accession(),
+                        CoordinateShiftUtils.unwrapOriginSpan(
+                                segment.getStart(), segment.getEnd(), circularSequenceLength));
                 if (hasMixedStrands && segment.isComplement()) {
                     slice = new String(Translator.reverseComplement(slice.getBytes()));
                 }

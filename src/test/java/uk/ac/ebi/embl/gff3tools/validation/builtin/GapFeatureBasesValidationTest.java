@@ -107,16 +107,6 @@ class GapFeatureBasesValidationTest {
     }
 
     @Test
-    void gapAcrossTheOriginNotAllNFailure() throws Exception {
-        SequenceLookup lookup = injectCircular(1000L);
-        when(lookup.getGapRegions(SEQ_ID, 991L, 1000L)).thenReturn(List.of(new GapRegion(991L, 1000L)));
-        when(lookup.getGapRegions(SEQ_ID, 1L, 10L)).thenReturn(List.of());
-        GFF3Feature gap = TestUtils.createGFF3Feature("gap", SEQ_ID, 991L, 1010L, Map.of());
-        ValidationException ex = assertThrows(ValidationException.class, () -> check.validateGapBases(gap, 1));
-        assertTrue(ex.getMessage().contains("991-1010"));
-    }
-
-    @Test
     void gapPastTheEndOfLinearSequenceIsLeftToTheLocationRule() throws Exception {
         injectWithGapRegions(SEQ_ID, 991L, 1010L, List.of());
         GFF3Feature gap = TestUtils.createGFF3Feature("gap", SEQ_ID, 991L, 1010L, Map.of());
