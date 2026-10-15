@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -48,11 +49,12 @@ class AnticodonAttributeFixTest {
     private SequenceLookup lookup;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         fix = new AnticodonAttributeFix();
         annotation = new GFF3Annotation();
         lookup = mock(SequenceLookup.class);
         when(lookup.hasSequence(anyString())).thenReturn(true);
+        when(lookup.getSequenceLength(anyString())).thenReturn(5000L);
         ValidationRegistry.injectContext(fix, contextWith(lookup));
     }
 
@@ -442,14 +444,14 @@ class AnticodonAttributeFixTest {
     }
 
     @Test
-    void doesNotUnwrapAnticodonOnLinearSequence() throws Exception {
-        stubSlice("TTA");
+    void skipsAnticodonPastTheEndOfLinearSequence() throws Exception {
         annotation.setSequenceRegion(new GFF3SequenceRegion(SEQ_ID, Optional.empty(), 1, 1000));
-        tRna("t1", 951, 1050, PLUS, "(pos:1010..1012,aa:Glu)");
+        GFF3Feature feature = tRna("t1", 951, 1050, PLUS, "(pos:1010..1012,aa:Glu)");
 
-        fix.addSequence(annotation, 1);
+        assertDoesNotThrow(() -> fix.addSequence(annotation, 1));
 
-        verify(lookup).getSequenceSlice(SEQ_ID, 1010L, 1012L);
+        verify(lookup, never()).getSequenceSlice(anyString(), anyLong(), anyLong());
+        assertEquals(List.of("(pos:1010..1012,aa:Glu)"), anticodon(feature));
     }
 
     // --- helpers --------------------------------------------------------

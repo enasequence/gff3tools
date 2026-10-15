@@ -10,7 +10,9 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -19,6 +21,7 @@ import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
+import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
@@ -39,6 +42,8 @@ public class GapFeatureBasesValidation implements Validation {
     @InjectContext
     private ValidationContext context;
 
+    private final Map<String, Long> sequenceLengthCache = new HashMap<>();
+
     @ValidationMethod(
             rule = RULE_GAP_BASES,
             description = "Gap feature span must contain only N/n bases",
@@ -56,11 +61,12 @@ public class GapFeatureBasesValidation implements Validation {
         long start = feature.getStart();
         long end = feature.getEnd();
         try {
-            long sequenceLength = lookup.getSequenceLength(feature.accession());
+            Long sequenceLength =
+                    ValidationUtils.resolveSequenceLength(feature.accession(), sequenceLengthCache, context);
             boolean circular = TopologyUtils.isCircularSequence(feature.accession(), context);
             // No bases past the end of a non-circular sequence: FEATURE_END_EXCEEDS_SEQUENCE_LENGTH
             // (LocationValidation) reports it instead.
-            if (!circular && end > sequenceLength) {
+            if (!circular && sequenceLength != null && end > sequenceLength) {
                 return;
             }
             // Virtual coordinates (past the end of a circular sequence) are checked from base 1.

@@ -13,6 +13,9 @@ package uk.ac.ebi.embl.gff3tools.utils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
@@ -68,6 +71,37 @@ public class TopologyUtils {
                             : span);
         }
         return virtual;
+    }
+
+    private static final Pattern POSITION = Pattern.compile(
+            "^(?<complement>complement\\(\\s*)?(?<start>\\d+)(?:\\s*\\.\\.\\s*(?<end>\\d+))?(?<close>\\s*\\))?$",
+            Pattern.CASE_INSENSITIVE);
+
+    /**
+     * A GFF3 position ({@code start..end} or {@code start}, optionally in {@code complement(...)}) in
+     * flat file numbering ({@code 1..L}): virtual coordinates are unwrapped as by {@link
+     * #unwrapOriginSpan}, and a position crossing the origin becomes a {@code join}. Anything else is
+     * returned unchanged.
+     */
+    public static String toFlatFilePosition(String position, long circularSequenceLength) {
+        Matcher matcher = POSITION.matcher(position.trim());
+        if (!matcher.matches() || (matcher.group("complement") == null) != (matcher.group("close") == null)) {
+            return position;
+        }
+        long start = Long.parseLong(matcher.group("start"));
+        long end = matcher.group("end") != null ? Long.parseLong(matcher.group("end")) : start;
+        List<Span> spans = unwrapOriginSpan(start, end, circularSequenceLength);
+        if (spans.equals(List.of(new Span(start, end)))) {
+            return position;
+        }
+        String body = spans.size() == 1
+                ? range(spans.get(0))
+                : "join(" + spans.stream().map(TopologyUtils::range).collect(Collectors.joining(",")) + ")";
+        return matcher.group("complement") != null ? "complement(" + body + ")" : body;
+    }
+
+    private static String range(Span span) {
+        return span.start() == span.end() ? String.valueOf(span.start()) : span.start() + ".." + span.end();
     }
 
     /** Whether two consecutive virtual spans run straight through the origin. */

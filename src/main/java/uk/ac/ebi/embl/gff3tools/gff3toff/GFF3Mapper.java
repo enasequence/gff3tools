@@ -19,6 +19,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +40,7 @@ import uk.ac.ebi.embl.api.entry.sequence.SequenceFactory;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
+import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
@@ -65,6 +68,8 @@ import uk.ac.ebi.ena.taxonomy.taxon.TaxonFactory;
 public class GFF3Mapper {
 
     private final Map<String, String> qmap = ConversionUtils.getGFF32FFQualifierMap();
+    private static final Pattern POSITION_PART =
+            Pattern.compile("(pos\\s*:\\s*)([^,]+?)(\\s*,)", Pattern.CASE_INSENSITIVE);
     private final EntryFactory entryFactory = new EntryFactory();
     private final FeatureFactory featureFactory = new FeatureFactory();
     private final QualifierFactory qualifierFactory = new QualifierFactory();
@@ -318,8 +323,24 @@ public class GFF3Mapper {
         return location;
     }
 
+    /** The {@code pos:} of an anticodon or transl_except value, renumbered from virtual coordinates. */
+    private String toFlatFilePosition(String value) {
+        if (circularSequenceLength == null) {
+            return value;
+        }
+        Matcher matcher = POSITION_PART.matcher(value);
+        if (!matcher.find()) {
+            return value;
+        }
+        return value.substring(0, matcher.start(2))
+                + TopologyUtils.toFlatFilePosition(matcher.group(2), circularSequenceLength)
+                + value.substring(matcher.end(2));
+    }
+
     private Collection<Qualifier> mapGFF3Attributes(String attributeKey, List<String> attributes) {
         Collection<Qualifier> qualifierList = new ArrayList<>();
+        boolean hasPosition =
+                GFF3Attributes.ANTI_CODON.equals(attributeKey) || GFF3Attributes.TRANSL_EXCEPT.equals(attributeKey);
 
         if (qmap.containsKey(attributeKey)) {
             attributeKey = qmap.get(attributeKey);
@@ -327,7 +348,7 @@ public class GFF3Mapper {
 
         if (!attributeKey.isBlank()) {
             for (String val : attributes) {
-                qualifierList.add(createQualifier(attributeKey, val));
+                qualifierList.add(createQualifier(attributeKey, hasPosition ? toFlatFilePosition(val) : val));
             }
         }
 

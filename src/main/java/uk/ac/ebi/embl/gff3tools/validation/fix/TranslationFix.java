@@ -48,6 +48,8 @@ public class TranslationFix {
     @InjectContext
     private ValidationContext context;
 
+    private final Map<String, Long> sequenceLengthCache = new HashMap<>();
+
     @FixMethod(
             rule = "REMOVE_TRANSLATION_ATTRIBUTE",
             description = "Capture existing translation attribute into TranslationState and remove it from the feature",
@@ -91,10 +93,9 @@ public class TranslationFix {
         Map<String, List<GFF3Feature>> cdsGroups = ValidationUtils.groupFeaturesById(
                 annotation, f -> OntologyTerm.CDS.name().equals(f.getName()));
 
-        // The same length the GFF3 to flat file mapper unwraps virtual coordinates against.
         Long circularSequenceLength = TopologyUtils.isCircularSequence(annotation.getAccession(), context)
-                        && annotation.getSequenceRegion() != null
-                ? annotation.getSequenceRegion().end()
+                ? ValidationUtils.resolveSequenceLength(
+                        annotation.getSequenceRegion(), annotation.getAccession(), sequenceLengthCache, context)
                 : null;
 
         for (List<GFF3Feature> segments : cdsGroups.values()) {

@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -55,6 +56,8 @@ public class JoinedLocationOrderValidation implements Validation {
     @InjectContext
     private ValidationContext context;
 
+    private final Map<String, Long> sequenceLengthCache = new HashMap<>();
+
     @ValidationMethod(
             rule = RULE,
             description = "The segments making up a joined feature must appear in ascending coordinate order",
@@ -72,8 +75,8 @@ public class JoinedLocationOrderValidation implements Validation {
         }
 
         Long circularSequenceLength = TopologyUtils.isCircularSequence(annotation.getAccession(), context)
-                        && annotation.getSequenceRegion() != null
-                ? annotation.getSequenceRegion().end()
+                ? ValidationUtils.resolveSequenceLength(
+                        annotation.getSequenceRegion(), annotation.getAccession(), sequenceLengthCache, context)
                 : null;
         for (Map.Entry<String, List<GFF3Feature>> joinedFeature : joinedFeaturesById.entrySet()) {
             String violation =

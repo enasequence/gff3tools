@@ -18,10 +18,30 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 public class ValidationUtils {
+
+    /**
+     * The sequence length for an annotation's sequence, from the first source that has it: the
+     * {@code ##sequence-region} end, then the sequence reader
+     * ({@link #resolveSequenceLength(String, Map, ValidationContext)}).
+     *
+     * @param sequenceRegion the annotation's sequence region, or null when it has none
+     * @return the length, or null when neither source has it
+     */
+    public static Long resolveSequenceLength(
+            GFF3SequenceRegion sequenceRegion,
+            String seqId,
+            Map<String, Long> sequenceLengthCache,
+            ValidationContext context) {
+        if (sequenceRegion != null) {
+            return sequenceRegion.end();
+        }
+        return resolveSequenceLength(seqId, sequenceLengthCache, context);
+    }
 
     /**
      * Resolves sequence length from sequence length cache and sequenceLookup as the fallback
