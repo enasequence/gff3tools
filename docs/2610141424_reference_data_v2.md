@@ -218,8 +218,8 @@ which the existing `RXWriter` then emits. `referencePosition` continues to flow 
 | 0 | (this doc) | agree schema | — |
 | 1 | `gff3tools` (implemented on this branch) | widen `ReferenceData`/`CrossReference`, dispatch in `mapReference`, fixtures + tests | 0 |
 | 2 | `webin-master-service` | widen model, drop `@JsonIgnore` on xrefs | 0 |
-| 3 | `webin-gff3-stages` | read PUBLICATION/JOURNALARTICLE/ACCEPTED/BOOK/THESIS/PATENT from **ENAPRO (`DATALIB`)**, not ERAPRO; build one ReferenceData per publication with `type`; extend `ReferenceConverter` | 0, 1, 2 |
-| 4 | e2e | prod-smoke on accessions with known journal/book/thesis refs; diff vs `ena/browser/api/embl` | 1–3 |
+| 3 | `webin-gff3-stages` (implemented, PR https://github.com/enasequence/webin-gff3-stages/pull/39) | emit `type: SUBMISSION` + `submission` block + structured `authors[]` (manifest AUTHORS parsed; initials split from surname), keeping v1 fields alongside | 0, 1, 2 |
+| 4 | (not needed) | e2e smoke: v1 and v2 render identically for submission-only references | 1–3 |
 
 Steps 1/2 are independently shippable (additive, dormant until data arrives).
 Step 3 is the activation switch and must not land before 1 and 2 are deployed.
@@ -238,7 +238,7 @@ Step 3 is the activation switch and must not land before 1 and 2 are deployed.
    mapper, the fixtures, and both consumer paths run through it).
 6. **`editors` as structured people** — BOOK needs editors (`(in) X. (Eds.)`); confirm
    producers can supply them from ERA (legacy `Book` model has them).
-7. **Producer source and timing** — publications live in ENAPRO keyed by the entry's bioseq, so they exist only once an entry is loaded. New submissions carry only their submitter reference (from ERA); journal/book/thesis references for existing records may need a backfill rather than the per-analysis path. Confirm with the pipeline owners.
+7. **Producer source and timing** — resolved by measurement (ENAPRO week samples, 2022-03 / 2024-03 / 2026-03): every Webin assembly carries only the PUBTYPE-0 submission reference at load and never gains a journal reference afterwards (0 article/book/thesis/patent references on 1,794 and 46,152-assembly samples, and on the chromosome entries of the 2022/2024 samples). No enrichment/backfill path is justified today. If non-submission references are ever needed, the preferred mechanism is to enrich in the **webin-master-service read path** (read PUBLICATION/JOURNALARTICLE/ACCEPTED from ENAPRO `DATALIB` on GET, cached) — not a pipeline change. For context: ~20% of 2024-03 assemblies have a `PUBMED` link in their ERA project XML, but all point to a shared study citation (one PMID across 18 projects), not a per-entry paper.
 
 # References
 
