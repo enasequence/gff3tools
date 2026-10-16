@@ -21,10 +21,16 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.XRef;
+import uk.ac.ebi.embl.api.entry.location.LocalRange;
+import uk.ac.ebi.embl.api.entry.location.LocationFactory;
+import uk.ac.ebi.embl.api.entry.location.Order;
 import uk.ac.ebi.embl.api.entry.reference.*;
 import uk.ac.ebi.embl.gff3tools.metadata.AuthorData;
 import uk.ac.ebi.embl.gff3tools.metadata.ReferenceData;
@@ -41,12 +47,16 @@ import uk.ac.ebi.embl.gff3tools.metadata.SubmitterDetails;
  * <p>Dispatches on the v2 {@code type}. Records without a {@code type} keep the v1
  * behaviour: a Submission when nested submitter details contain a valid submitted date,
  * otherwise Unpublished. An unknown {@code type}, or a typed record missing its block,
- * logs a warning and is mapped as Unpublished. RP (locations) is the caller's concern.
+ * logs a warning and is mapped as Unpublished, as is a typed record whose block lacks the
+ * fields its RL line needs. {@code referencePosition} ("1-100" or "1-100,200-300") becomes the
+ * RP locations; callers may override them (GFF3Mapper does for WGS contigs).
  */
 public final class ReferenceMapper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReferenceMapper.class);
     private static final ReferenceFactory referenceFactory = new ReferenceFactory();
+    private static final LocationFactory locationFactory = new LocationFactory();
+    private static final Pattern RANGE = Pattern.compile("\\s*(\\d+)\\s*-\\s*(\\d+)\\s*");
 
     private ReferenceMapper() {}
 
@@ -80,10 +90,42 @@ public final class ReferenceMapper {
         if (refData.getReferenceComment() != null) {
             reference.setComment(refData.getReferenceComment());
         }
+
+        Order<LocalRange> locations = parseReferencePosition(refData.getReferencePosition());
+        if (locations != null) {
+            reference.setLocations(locations);
+        }
         return reference;
     }
 
-    private static void addPersons(List<AuthorData> people, java.util.function.Consumer<Person> sink) {
+    /** Parses "1-100" or "1-100,200-300" into RP locations; null (with a WARN) when it is not that shape. */
+    private static Order<LocalRange> parseReferencePosition(String position) {
+        if (isBlank(position)) {
+            return null;
+        }
+        Order<LocalRange> locations = new Order<>();
+        for (String part : position.split(",")) {
+            Matcher m = RANGE.matcher(part);
+            if (!m.matches()) {
+                LOGGER.warn("Unparseable referencePosition '{}'; RP line omitted", position);
+                return null;
+            }
+            long begin = Long.parseLong(m.group(1));
+            long end = Long.parseLong(m.group(2));
+            if (begin < 1 || end < begin) {
+                LOGGER.warn("Invalid referencePosition '{}'; RP line omitted", position);
+                return null;
+            }
+            locations.addLocation(locationFactory.createLocalRange(begin, end));
+        }
+        return locations;
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private static void addPersons(List<AuthorData> people, Consumer<Person> sink) {
         if (people == null) return;
         for (AuthorData person : people) {
             if (person == null) continue;
@@ -104,9 +146,9 @@ public final class ReferenceMapper {
             Publication legacy = createSubmissionPublication(refData);
             return legacy != null ? legacy : referenceFactory.createUnpublished();
         }
-        switch (type.trim().toUpperCase(java.util.Locale.ROOT)) {
+        switch (type.trim().toUpperCase(Locale.ROOT)) {
             case "SUBMISSION":
-                return createV2Submission(refData);
+                return createReferenceSubmission(refData);
             case "ARTICLE":
                 return createArticle(refData);
             case "BOOK":
@@ -125,22 +167,29 @@ public final class ReferenceMapper {
         }
     }
 
-    private static Publication createV2Submission(ReferenceData refData) {
-        ReferenceData.Submission block = refData.getSubmission();
-        if (block == null) {
+    private static Publication createReferenceSubmission(ReferenceData refData) {
+        ReferenceData.ReferenceSubmission referenceSubmission = refData.getSubmission();
+        if (referenceSubmission == null) {
             // tolerate v1-shaped submitter details under an explicit SUBMISSION type
             Publication legacy = createSubmissionPublication(refData);
             return legacy != null ? legacy : referenceFactory.createUnpublished();
         }
-        Date day = block.getSubmittedDate() == null ? null : parseDate(block.getSubmittedDate());
+        Date day = referenceSubmission.getSubmittedDate() == null
+                ? null
+                : parseDate(referenceSubmission.getSubmittedDate());
         if (day == null) {
+            // date falls back to submitterDetails, then to unpublished
+            Publication legacy = createSubmissionPublication(refData);
+            if (legacy != null) {
+                return legacy;
+            }
             LOGGER.warn("Submission reference has no valid submittedDate; mapping as unpublished");
             return referenceFactory.createUnpublished();
         }
         Submission submission = referenceFactory.createSubmission();
         submission.setDay(day);
-        if (block.getSubmitterAddress() != null && !block.getSubmitterAddress().isBlank()) {
-            submission.setSubmitterAddress(block.getSubmitterAddress());
+        if (!isBlank(referenceSubmission.getSubmitterAddress())) {
+            submission.setSubmitterAddress(referenceSubmission.getSubmitterAddress());
         }
         return submission;
     }
@@ -148,6 +197,10 @@ public final class ReferenceMapper {
     private static Publication createArticle(ReferenceData refData) {
         ReferenceData.Article block = refData.getArticle();
         if (block == null) return missingBlock(refData);
+        if (isBlank(block.getJournal())) {
+            LOGGER.warn("Reference type '{}' has no journal; mapping as unpublished", refData.getType());
+            return referenceFactory.createUnpublished();
+        }
         Article article = referenceFactory.createArticle();
         article.setJournal(block.getJournal());
         article.setVolume(block.getVolume());
@@ -161,6 +214,15 @@ public final class ReferenceMapper {
     private static Publication createBook(ReferenceData refData) {
         ReferenceData.Book block = refData.getBook();
         if (block == null) return missingBlock(refData);
+        // A book RL line needs title, publisher and year (sequencetools RL.16/RL.19/RL.20); without
+        // a year the writer drops "(year)" and the line no longer parses as a book. Pages may be
+        // absent: the writer renders them as 0-0.
+        if (isBlank(block.getBookTitle()) || isBlank(block.getPublisher()) || block.getYear() == null) {
+            LOGGER.warn(
+                    "Reference type '{}' needs bookTitle, publisher and year; mapping as unpublished",
+                    refData.getType());
+            return referenceFactory.createUnpublished();
+        }
         Book book = referenceFactory.createBook();
         book.setBookTitle(block.getBookTitle());
         book.setPublisher(block.getPublisher());
@@ -174,6 +236,10 @@ public final class ReferenceMapper {
     private static Publication createThesis(ReferenceData refData) {
         ReferenceData.Thesis block = refData.getThesis();
         if (block == null) return missingBlock(refData);
+        if (isBlank(block.getInstitute())) {
+            LOGGER.warn("Reference type '{}' has no institute; mapping as unpublished", refData.getType());
+            return referenceFactory.createUnpublished();
+        }
         Thesis thesis = referenceFactory.createThesis();
         thesis.setInstitute(block.getInstitute());
         thesis.setYear(yearToDate(block.getYear()));
@@ -183,14 +249,25 @@ public final class ReferenceMapper {
     private static Publication createPatent(ReferenceData refData) {
         ReferenceData.Patent block = refData.getPatent();
         if (block == null) return missingBlock(refData);
+        Date day = block.getDay() == null ? null : parseDate(block.getDay());
+        if (block.getPatentOffice() == null
+                || !block.getPatentOffice().trim().matches("[A-Za-z]{2}")
+                || isBlank(block.getPatentNumber())
+                || isBlank(block.getPatentType())
+                || block.getSequenceNumber() == null
+                || day == null) {
+            LOGGER.warn(
+                    "Reference type '{}' needs patentOffice (2 letters), patentNumber, patentType, "
+                            + "sequenceNumber and a valid day; mapping as unpublished",
+                    refData.getType());
+            return referenceFactory.createUnpublished();
+        }
         Patent patent = referenceFactory.createPatent();
         patent.setPatentOffice(block.getPatentOffice());
         patent.setPatentNumber(block.getPatentNumber());
         patent.setPatentType(block.getPatentType());
         patent.setSequenceNumber(block.getSequenceNumber());
-        if (block.getDay() != null) {
-            patent.setDay(parseDate(block.getDay()));
-        }
+        patent.setDay(day);
         if (block.getApplicants() != null) {
             block.getApplicants().stream().filter(Objects::nonNull).forEach(patent::addApplicant);
         }
@@ -200,6 +277,10 @@ public final class ReferenceMapper {
     private static Publication createElectronic(ReferenceData refData) {
         ReferenceData.Electronic block = refData.getElectronic();
         if (block == null) return missingBlock(refData);
+        if (isBlank(block.getText())) {
+            LOGGER.warn("Reference type '{}' has no text; mapping as unpublished", refData.getType());
+            return referenceFactory.createUnpublished();
+        }
         ElectronicReference electronic = referenceFactory.createElectronicReference();
         electronic.setText(block.getText());
         return electronic;
@@ -217,7 +298,7 @@ public final class ReferenceMapper {
         LOGGER.warn(
                 "Reference type '{}' has no '{}' block; mapping as unpublished",
                 refData.getType(),
-                refData.getType().trim().toLowerCase(java.util.Locale.ROOT));
+                refData.getType().trim().toLowerCase(Locale.ROOT));
         return referenceFactory.createUnpublished();
     }
 

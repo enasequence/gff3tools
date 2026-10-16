@@ -62,7 +62,7 @@ public class ReferenceData {
     /** v2 cross-references (RX), e.g. DOI / PUBMED / AGRICOLA. */
     private List<Xref> xrefs;
 
-    private Submission submission;
+    private ReferenceSubmission submission;
     private Article article;
     private Book book;
     private Thesis thesis;
@@ -82,7 +82,7 @@ public class ReferenceData {
     @Getter
     @Setter
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class Submission {
+    public static class ReferenceSubmission {
         private String submittedDate;
         private String submitterAddress;
     }
