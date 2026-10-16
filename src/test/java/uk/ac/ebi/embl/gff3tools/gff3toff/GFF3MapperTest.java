@@ -1331,4 +1331,17 @@ class GFF3MapperTest {
         assertTrue(out.contains("RL   Submitted (03-APR-2025) to the INSDC."), out);
         assertTrue(out.contains("RA   Doe J.;"), out);
     }
+
+    @Test
+    void v1FreeTextAuthorsStringIsToleratedAndSubmitterDetailsAuthorsUsed() throws Exception {
+        // v1 master-service JSON carried "authors" as a plain string; it must neither fail
+        // deserialization nor shadow submitterDetails.authors
+        String out = embl(
+                """
+                {"referenceNumber": 1, "authors": "Doe J.", "address": "Somewhere",
+                 "submitterDetails": {"submittedDate": "2025-04-03T13:30:22.000+00:00",
+                                      "authors": [{"surname": "Roe", "firstName": "R."}]}}
+                """);
+        assertTrue(out.contains("RA   Roe R.;"), out);
+    }
 }

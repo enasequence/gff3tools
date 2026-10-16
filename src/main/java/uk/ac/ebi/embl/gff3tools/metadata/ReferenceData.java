@@ -12,6 +12,13 @@ package uk.ac.ebi.embl.gff3tools.metadata;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.io.IOException;
 import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
@@ -45,7 +52,11 @@ public class ReferenceData {
     /** v2 discriminator: SUBMISSION, UNPUBLISHED, ARTICLE, BOOK, THESIS, PATENT or ELECTRONIC. */
     private String type;
 
-    /** v2 structured authors (RA); preferred over {@code submitterDetails.authors}. */
+    /**
+     * v2 structured authors (RA); preferred over {@code submitterDetails.authors}. v1 producers
+     * emitted {@code authors} as a free-text string; that is tolerated and ignored (empty list).
+     */
+    @JsonDeserialize(using = AuthorsDeserializer.class)
     private List<AuthorData> authors;
 
     /** v2 cross-references (RX), e.g. DOI / PUBMED / AGRICOLA. */
@@ -135,5 +146,16 @@ public class ReferenceData {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Unpublished {
         private String journalBlock;
+    }
+
+    static class AuthorsDeserializer extends JsonDeserializer<List<AuthorData>> {
+        @Override
+        public List<AuthorData> deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+            JsonNode node = p.readValueAsTree();
+            if (node == null || !node.isArray()) {
+                return List.of();
+            }
+            return p.getCodec().readValue(node.traverse(p.getCodec()), new TypeReference<List<AuthorData>>() {});
+        }
     }
 }
