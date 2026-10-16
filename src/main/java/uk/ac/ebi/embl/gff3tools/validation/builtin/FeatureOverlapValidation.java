@@ -173,7 +173,7 @@ public class FeatureOverlapValidation implements Validation {
     private void collectOverlap(
             List<GFF3Feature> rrna, List<GFF3Feature> other, String otherLabel, List<String> violations) {
         GFF3Feature[] overlapping = firstOverlappingPair(
-                rrna, other, false, (left, right) -> overlaps(left, right) && mayShareStrand(left, right));
+                rrna, other, false, (left, right) -> mayShareStrand(left, right) && overlaps(left, right));
         if (overlapping == null) {
             return;
         }
