@@ -1205,4 +1205,130 @@ class GFF3MapperTest {
                 .count();
         assertEquals(1, wgsCount, "WGS keyword should appear exactly once even when pre-populated");
     }
+
+    // ---- ReferenceData v2: typed references (docs/2610141424_reference_data_v2.md) ----
+
+    private static final com.fasterxml.jackson.databind.ObjectMapper REF_MAPPER =
+            com.fasterxml.jackson.databind.json.JsonMapper.builder()
+                    .enable(com.fasterxml.jackson.databind.MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
+                    .build();
+
+    private String embl(String referenceJson) throws Exception {
+        ReferenceData ref = REF_MAPPER.readValue(referenceJson, ReferenceData.class);
+        MasterMetadata meta = new MasterMetadata();
+        meta.setReferences(List.of(ref));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
+        StringWriter writer = new StringWriter();
+        EmblEntryWriter entryWriter = new EmblEntryWriter(entry);
+        entryWriter.setShowAcStartLine(false);
+        entryWriter.write(writer);
+        return writer.toString();
+    }
+
+    @Test
+    void v2ArticleIsMappedWithXrefsAndStructuredAuthors() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "ARTICLE", "title": "Complete nucleotide sequence",
+                 "authors": [{"surname": "Sugita", "firstName": "C."}, {"surname": "Doe", "firstName": "Jane", "middleName": "Q."}],
+                 "xrefs": [{"source": "DOI", "primaryId": "10.1007/s11120-006-9122-4"},
+                           {"source": "PUBMED", "primaryId": "17211581"}],
+                 "article": {"journal": "Photosyn. Res.", "volume": "93", "issue": "1-3",
+                             "firstPage": "55", "lastPage": "67", "year": 2007, "accepted": false}}
+                """);
+        assertTrue(out.contains("RX   DOI; 10.1007/s11120-006-9122-4."), out);
+        assertTrue(out.contains("RX   PUBMED; 17211581."), out);
+        assertTrue(out.contains("RA   Sugita C., Doe J.Q.;"), out);
+        assertTrue(out.contains("RL   Photosyn. Res. 93(1-3):55-67(2007)."), out);
+    }
+
+    @Test
+    void v2AcceptedArticleRendersLikeAnyOtherArticle() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "ARTICLE", "title": "In press",
+                 "article": {"journal": "Photosyn. Res.", "year": 2007, "accepted": true}}
+                """);
+        assertTrue(out.contains("RL   Photosyn. Res."), out);
+        assertFalse(out.contains("Submitted"), out);
+    }
+
+    @Test
+    void v2BookThesisPatentElectronicAreMapped() throws Exception {
+        String book = embl(
+                """
+                {"referenceNumber": 1, "type": "BOOK", "title": "t",
+                 "book": {"bookTitle": "PS2001 Proceedings", "publisher": "CSIRO Publishing",
+                          "firstPage": "40", "lastPage": "49", "year": 2001,
+                          "editors": [{"surname": "Roe", "firstName": "R."}]}}
+                """);
+        assertTrue(book.contains("RL   (in) Roe R. (Eds.);"), book);
+        assertTrue(book.contains("PS2001 Proceedings:40-49;"), book);
+        assertTrue(book.contains("CSIRO Publishing (2001)"), book);
+
+        String thesis = embl(
+                """
+                {"referenceNumber": 1, "type": "THESIS", "thesis": {"institute": "IPK Gatersleben", "year": 2008}}
+                """);
+        assertTrue(thesis.contains("RL   Thesis (2008), IPK Gatersleben"), thesis);
+
+        String patent = embl(
+                """
+                {"referenceNumber": 1, "type": "PATENT",
+                 "patent": {"patentOffice": "US", "patentNumber": "1234567", "patentType": "A1",
+                            "sequenceNumber": 1, "day": "2001-01-01", "applicants": ["ACME"]}}
+                """);
+        assertTrue(patent.contains("RL   Patent number US1234567-A1/1, 01-JAN-2001."), patent);
+
+        String electronic = embl(
+                """
+                {"referenceNumber": 1, "type": "ELECTRONIC", "electronic": {"text": "https://example.org/x"}}
+                """);
+        assertTrue(electronic.contains("https://example.org/x"), electronic);
+    }
+
+    @Test
+    void v2SubmissionUsesSubmissionBlock() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "SUBMISSION",
+                 "authors": [{"surname": "Doe", "firstName": "J."}],
+                 "submission": {"submittedDate": "2012-05-25", "submitterAddress": "Molecular Genetics, GERMANY."}}
+                """);
+        assertTrue(out.contains("RL   Submitted (25-MAY-2012) to the INSDC."), out);
+        assertTrue(out.contains("Molecular Genetics, GERMANY."), out);
+    }
+
+    @Test
+    void unknownReferenceTypeFallsBackToUnpublished() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "HOLOGRAM", "title": "t",
+                 "authors": [{"surname": "Doe", "firstName": "J."}]}
+                """);
+        assertTrue(out.contains("RL   Unpublished."), out);
+    }
+
+    @Test
+    void typedReferenceWithoutItsBlockFallsBackToUnpublished() throws Exception {
+        String out =
+                embl("""
+                {"referenceNumber": 1, "type": "ARTICLE", "title": "t"}
+                """);
+        assertTrue(out.contains("RL   Unpublished."), out);
+    }
+
+    @Test
+    void referenceWithoutTypeKeepsV1Behaviour() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1,
+                 "submitterDetails": {"submittedDate": "2025-04-03T13:30:22.000+00:00",
+                                      "authors": [{"surname": "Doe", "firstName": "J."}]}}
+                """);
+        assertTrue(out.contains("RL   Submitted (03-APR-2025) to the INSDC."), out);
+        assertTrue(out.contains("RA   Doe J.;"), out);
+    }
 }

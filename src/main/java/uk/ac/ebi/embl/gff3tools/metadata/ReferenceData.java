@@ -12,12 +12,17 @@ package uk.ac.ebi.embl.gff3tools.metadata;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 
 /**
  * Represents a literature reference from MasterEntry JSON.
- * Maps to RN/RG/RA/RT/RL lines in EMBL output.
+ * Maps to RN/RG/RA/RT/RL/RX lines in EMBL output.
+ *
+ * <p>v2 records carry a {@code type} discriminator and one type-specific block named
+ * {@code lower(type)} (see docs/2610141424_reference_data_v2.md). v1 records have no
+ * {@code type} and keep their submission data in {@link #submitterDetails}.
  */
 @Getter
 @Setter
@@ -34,5 +39,101 @@ public class ReferenceData {
     @JsonAlias("group")
     private String consortium;
 
+    /** v1 submission data; superseded by {@code type=SUBMISSION} + {@link #submission}. */
     private SubmitterDetails submitterDetails;
+
+    /** v2 discriminator: SUBMISSION, UNPUBLISHED, ARTICLE, BOOK, THESIS, PATENT or ELECTRONIC. */
+    private String type;
+
+    /** v2 structured authors (RA); preferred over {@code submitterDetails.authors}. */
+    private List<AuthorData> authors;
+
+    /** v2 cross-references (RX), e.g. DOI / PUBMED / AGRICOLA. */
+    private List<Xref> xrefs;
+
+    private Submission submission;
+    private Article article;
+    private Book book;
+    private Thesis thesis;
+    private Patent patent;
+    private Electronic electronic;
+    private Unpublished unpublished;
+
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Xref {
+        private String source;
+        private String primaryId;
+        private String secondaryId;
+    }
+
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Submission {
+        private String submittedDate;
+        private String submitterAddress;
+    }
+
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Article {
+        private String journal;
+        private String volume;
+        private String issue;
+        private String firstPage;
+        private String lastPage;
+        private Integer year;
+
+        /** True for in-press articles (ERA PUBTYPE 7); carried for lossless round-trips, not rendered. */
+        private boolean accepted;
+    }
+
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Book {
+        private String bookTitle;
+        private String publisher;
+        private String firstPage;
+        private String lastPage;
+        private Integer year;
+        private List<AuthorData> editors;
+    }
+
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Thesis {
+        private String institute;
+        private Integer year;
+    }
+
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Patent {
+        private String patentOffice;
+        private String patentNumber;
+        private String patentType;
+        private Integer sequenceNumber;
+        private String day;
+        private List<String> applicants;
+    }
+
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Electronic {
+        private String text;
+    }
+
+    @Getter
+    @Setter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Unpublished {
+        private String journalBlock;
+    }
 }

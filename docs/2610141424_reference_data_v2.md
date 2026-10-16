@@ -216,7 +216,7 @@ which the existing `RXWriter` then emits. `referencePosition` continues to flow 
 | # | Repo | Change | Depends on |
 |---|---|---|---|
 | 0 | (this doc) | agree schema | — |
-| 1 | `gff3tools` | widen `ReferenceData`/`CrossReference`, dispatch in `mapReference`, fixtures + tests | 0 |
+| 1 | `gff3tools` (implemented on this branch) | widen `ReferenceData`/`CrossReference`, dispatch in `mapReference`, fixtures + tests | 0 |
 | 1b | `ena-sequence-persistence` | same in `Gff3MasterJsonReader.mapReference` (duplicated mapper) | 0 |
 | 2 | `webin-master-service` | widen model, drop `@JsonIgnore` on xrefs | 0 |
 | 3 | `webin-gff3-stages` | read PUBLICATION/JOURNALARTICLE/ACCEPTED/BOOK/THESIS/PATENT from **ENAPRO (`DATALIB`)**, not ERAPRO; build one ReferenceData per publication with `type`; extend `ReferenceConverter` | 0, 1, 2 |
@@ -227,10 +227,11 @@ Step 3 is the activation switch and must not land before 1 and 2 are deployed.
 
 # Open questions
 
-1. **D1 xref shape** — adopt `{source, primaryId, secondaryId}` repo-wide (proposed) and
-   refactor gff3tools' `{id, source, url}`?
-2. **D2 free-text authors** — keep reading as legacy alias only, or retain as a permanent
-   alternative input?
+1. **D1 xref shape** — resolved: reference `xrefs` use `{source, primaryId, secondaryId}`
+   (`ReferenceData.Xref` in gff3tools). `CrossReference {id, source, url}` is a different
+   concept (entry-level DR lines) and is left unchanged.
+2. **D2 free-text authors** — resolved: structured `authors[]` is canonical; the v1
+   `submitterDetails.authors` is read as a fallback; no free-text input is accepted.
 3. **D4 `ACCEPTED`** — resolved: `ARTICLE` plus `article.accepted`, set from `PUBTYPE = 7` (see above).
 4. **D5 shared model** — single library (e.g. in gff3tools, consumed by the services) vs
    four synced copies. If not now, this change makes the drift worse; budget it.
