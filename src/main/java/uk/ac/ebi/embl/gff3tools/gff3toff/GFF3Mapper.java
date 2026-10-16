@@ -688,16 +688,15 @@ public class GFF3Mapper {
 
     /**
      * Maps a ReferenceData to an EMBL Reference and adds it to the entry.
-     * Creates a {@link Submission} when nested submitter details contain a valid
-     * submitted date; otherwise falls back to {@link Unpublished}. When
-     * {@code contigRpLength} is non-null the resulting Reference is given an RP
-     * range of 1..contigRpLength.
+     *
+     * <p>Dispatches on the v2 {@code type} discriminator. Records without a {@code type}
+     * keep the v1 behaviour: a {@link Submission} when nested submitter details contain a
+     * valid submitted date, otherwise {@link Unpublished}. An unknown {@code type} logs a
+     * warning and is treated as unpublished. When {@code contigRpLength} is non-null the
+     * resulting Reference is given an RP range of 1..contigRpLength.
      */
     private void mapReference(ReferenceData refData, Entry entry, Long contigRpLength) {
-        Publication publication = createSubmissionPublication(refData);
-        if (publication == null) {
-            publication = referenceFactory.createUnpublished();
-        }
+        Publication publication = createPublication(refData);
 
         if (refData.getTitle() != null) {
             publication.setTitle(refData.getTitle());
@@ -707,18 +706,17 @@ public class GFF3Mapper {
             publication.setConsortium(refData.getConsortium());
         }
 
-        SubmitterDetails submitterDetails = refData.getSubmitterDetails();
-        List<AuthorData> authors = submitterDetails == null ? null : submitterDetails.getAuthors();
-        if (authors != null) {
-            for (AuthorData author : authors) {
-                if (author == null) continue;
-                String surname = author.getSurname() == null
-                        ? ""
-                        : author.getSurname().trim().replaceAll("\\s+", " ");
-                String initials = toInitials(author.getFirstName()) + toInitials(author.getMiddleName());
-                if (surname.isEmpty() && initials.isEmpty()) continue;
-                publication.addAuthor(referenceFactory.createPerson(
-                        surname.isEmpty() ? null : surname, initials.isEmpty() ? null : initials));
+        List<AuthorData> authors = refData.getAuthors();
+        if (authors == null) {
+            SubmitterDetails submitterDetails = refData.getSubmitterDetails();
+            authors = submitterDetails == null ? null : submitterDetails.getAuthors();
+        }
+        addPersons(authors, publication::addAuthor);
+
+        if (refData.getXrefs() != null) {
+            for (ReferenceData.Xref xref : refData.getXrefs()) {
+                if (xref == null || xref.getSource() == null || xref.getPrimaryId() == null) continue;
+                publication.addXRef(new XRef(xref.getSource(), xref.getPrimaryId(), xref.getSecondaryId()));
             }
         }
 
@@ -735,6 +733,150 @@ public class GFF3Mapper {
         }
 
         entry.addReference(reference);
+    }
+
+    private void addPersons(List<AuthorData> people, java.util.function.Consumer<Person> sink) {
+        if (people == null) return;
+        for (AuthorData person : people) {
+            if (person == null) continue;
+            String surname = person.getSurname() == null
+                    ? ""
+                    : person.getSurname().trim().replaceAll("\\s+", " ");
+            String initials = toInitials(person.getFirstName()) + toInitials(person.getMiddleName());
+            if (surname.isEmpty() && initials.isEmpty()) continue;
+            sink.accept(referenceFactory.createPerson(
+                    surname.isEmpty() ? null : surname, initials.isEmpty() ? null : initials));
+        }
+    }
+
+    private Publication createPublication(ReferenceData refData) {
+        String type = refData.getType();
+        if (type == null || type.isBlank()) {
+            // v1: submission when submitterDetails carry a valid date, else unpublished
+            Publication legacy = createSubmissionPublication(refData);
+            return legacy != null ? legacy : referenceFactory.createUnpublished();
+        }
+        switch (type.trim().toUpperCase(java.util.Locale.ROOT)) {
+            case "SUBMISSION":
+                return createV2Submission(refData);
+            case "ARTICLE":
+                return createArticle(refData);
+            case "BOOK":
+                return createBook(refData);
+            case "THESIS":
+                return createThesis(refData);
+            case "PATENT":
+                return createPatent(refData);
+            case "ELECTRONIC":
+                return createElectronic(refData);
+            case "UNPUBLISHED":
+                return createUnpublished(refData);
+            default:
+                LOGGER.warn("Unknown reference type '{}'; mapping as unpublished", type);
+                return referenceFactory.createUnpublished();
+        }
+    }
+
+    private Publication createV2Submission(ReferenceData refData) {
+        ReferenceData.Submission block = refData.getSubmission();
+        if (block == null) {
+            // tolerate v1-shaped submitter details under an explicit SUBMISSION type
+            Publication legacy = createSubmissionPublication(refData);
+            return legacy != null ? legacy : referenceFactory.createUnpublished();
+        }
+        Date day = block.getSubmittedDate() == null ? null : parseDate(block.getSubmittedDate());
+        if (day == null) {
+            LOGGER.warn("Submission reference has no valid submittedDate; mapping as unpublished");
+            return referenceFactory.createUnpublished();
+        }
+        Submission submission = referenceFactory.createSubmission();
+        submission.setDay(day);
+        if (block.getSubmitterAddress() != null && !block.getSubmitterAddress().isBlank()) {
+            submission.setSubmitterAddress(block.getSubmitterAddress());
+        }
+        return submission;
+    }
+
+    private Publication createArticle(ReferenceData refData) {
+        ReferenceData.Article block = refData.getArticle();
+        if (block == null) return missingBlock(refData);
+        Article article = referenceFactory.createArticle();
+        article.setJournal(block.getJournal());
+        article.setVolume(block.getVolume());
+        article.setIssue(block.getIssue());
+        article.setFirstPage(block.getFirstPage());
+        article.setLastPage(block.getLastPage());
+        article.setYear(yearToDate(block.getYear()));
+        return article;
+    }
+
+    private Publication createBook(ReferenceData refData) {
+        ReferenceData.Book block = refData.getBook();
+        if (block == null) return missingBlock(refData);
+        Book book = referenceFactory.createBook();
+        book.setBookTitle(block.getBookTitle());
+        book.setPublisher(block.getPublisher());
+        book.setFirstPage(block.getFirstPage());
+        book.setLastPage(block.getLastPage());
+        book.setYear(yearToDate(block.getYear()));
+        addPersons(block.getEditors(), book::addEditor);
+        return book;
+    }
+
+    private Publication createThesis(ReferenceData refData) {
+        ReferenceData.Thesis block = refData.getThesis();
+        if (block == null) return missingBlock(refData);
+        Thesis thesis = referenceFactory.createThesis();
+        thesis.setInstitute(block.getInstitute());
+        thesis.setYear(yearToDate(block.getYear()));
+        return thesis;
+    }
+
+    private Publication createPatent(ReferenceData refData) {
+        ReferenceData.Patent block = refData.getPatent();
+        if (block == null) return missingBlock(refData);
+        Patent patent = referenceFactory.createPatent();
+        patent.setPatentOffice(block.getPatentOffice());
+        patent.setPatentNumber(block.getPatentNumber());
+        patent.setPatentType(block.getPatentType());
+        patent.setSequenceNumber(block.getSequenceNumber());
+        if (block.getDay() != null) {
+            patent.setDay(parseDate(block.getDay()));
+        }
+        if (block.getApplicants() != null) {
+            block.getApplicants().stream().filter(Objects::nonNull).forEach(patent::addApplicant);
+        }
+        return patent;
+    }
+
+    private Publication createElectronic(ReferenceData refData) {
+        ReferenceData.Electronic block = refData.getElectronic();
+        if (block == null) return missingBlock(refData);
+        ElectronicReference electronic = referenceFactory.createElectronicReference();
+        electronic.setText(block.getText());
+        return electronic;
+    }
+
+    private Publication createUnpublished(ReferenceData refData) {
+        Unpublished unpublished = referenceFactory.createUnpublished();
+        if (refData.getUnpublished() != null) {
+            unpublished.setJournalBlock(refData.getUnpublished().getJournalBlock());
+        }
+        return unpublished;
+    }
+
+    private Publication missingBlock(ReferenceData refData) {
+        LOGGER.warn(
+                "Reference type '{}' has no '{}' block; mapping as unpublished",
+                refData.getType(),
+                refData.getType().trim().toLowerCase(java.util.Locale.ROOT));
+        return referenceFactory.createUnpublished();
+    }
+
+    private static Date yearToDate(Integer year) {
+        if (year == null) return null;
+        return Date.from(
+                LocalDate.of(year, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
     private Submission createSubmissionPublication(ReferenceData refData) {
