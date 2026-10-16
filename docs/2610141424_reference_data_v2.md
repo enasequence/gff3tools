@@ -1,6 +1,6 @@
 - Feature Name: `reference_data_v2`
 - Document Date: 2026-10-14
-- Last Updated: 2026-10-14
+- Last Updated: 2026-10-16
 
 # Summary
 
@@ -86,10 +86,11 @@ webin-gff3-stages, ena-sequence-persistence).
       { "source": "PUBMED", "primaryId": "17211581",                  "secondaryId": null }
     ],
 
-    // ---- type-specific RL tail: exactly one block populated, selected by "type" ----
+    // ---- type-specific RL tail: the block whose key is lower(type) ----
     "submission":  { "submittedDate": "2012-05-25", "submitterAddress": "Molecular Genetics ..., GERMANY." },
-    "journal":     { "journal": "Photosyn. Res.", "volume": "93", "issue": "1-3",
-                     "firstPage": "55", "lastPage": "67", "year": 2007 },
+    "article":     { "journal": "Photosyn. Res.", "volume": "93", "issue": "1-3",
+                     "firstPage": "55", "lastPage": "67", "year": 2007,
+                     "accepted": false },   // true = in press (ERA PUBTYPE 7)
     "book":        { "bookTitle": "PS2001 Proceedings ...", "publisher": "CSIRO Publishing ...",
                      "firstPage": "40", "lastPage": "9", "year": 2001, "editors": [] },
     "thesis":      { "institute": "IPK Gatersleben", "year": 2008 },
@@ -107,40 +108,56 @@ webin-gff3-stages, ena-sequence-persistence).
 
 ### `type` values
 
-Exactly the sequencetools publication classes, plus the legacy ERA CV codes they
+The block key is always the lowercase `type` (`ARTICLE` -> `article`, `BOOK` -> `book`, ...). Exactly the sequencetools publication classes, plus the legacy ERA CV codes they
 correspond to:
 
 | `type`        | ERA `PUBTYPE` | sequencetools class   | RL tail emitted by |
 |---------------|---------------|-----------------------|--------------------|
 | `SUBMISSION`  | 0             | `Submission`          | `EmblSubmissionWriter` (`Submitted (DD-MON-YYYY) to the INSDC. <address>`) |
 | `UNPUBLISHED` | 1             | `Unpublished`         | `EmblUnpublishedWriter` |
-| `ARTICLE`     | 2             | `Article`             | `EmblArticleWriter` (journal, volume(issue), firstPage-lastPage(year)) |
-| `ACCEPTED`    | 7             | `Article` (incomplete)| `EmblArticleWriter` (in press form) |
+| `ARTICLE`     | 2 (7 when `article.accepted` is true) | `Article` | `EmblArticleWriter` (journal, volume(issue), firstPage-lastPage(year)) |
 | `BOOK`        | 3             | `Book`                | `BookWriter` ((in) … (Eds.); bookTitle:pages; publisher (year)) |
 | `THESIS`      | 4             | `Thesis`              | `EmblThesisWriter` (Thesis (year), institute) |
 | `PATENT`      | 5             | `Patent`              | `EmblPatentWriter` (Patent number "type": date, office) |
 | `ELECTRONIC`  | —             | `ElectronicReference` | `ElectronicReferenceWriter` |
 
-Note: `ACCEPTED` exists as an ERA `PUBTYPE`, but it is derivable — the legacy
-`EntryPersistenceUtils.getPublicationTypeId` reclassifies an incomplete `ARTICLE`
-(missing volume, pages, year, or title) as `ACCEPTED` on write. v2 keeps it as an
-explicit value for round-tripping ERA data, but consumers may treat an `ARTICLE`
-missing those fields equivalently.
+### `article.accepted` (in-press articles)
+
+ERA stores in-press articles as a distinct `PUBTYPE` 7 (own `ACCEPTED` table), while
+sequencetools has no such class: `EntryPersistenceUtils.getPublicationTypeId`
+reclassifies an `Article` missing volume/pages/year/title as accepted on write. v2
+carries the stored fact as `article.accepted: boolean` (default false) instead of a
+separate `type`:
+
+- it is a flag on `ARTICLE`, so it cannot be combined with another type (it lives
+  inside the `article` block);
+- the EMBL writer does not render accepted articles differently (`EmblArticleWriter`
+  only prints the fields that exist), so consumers may parse and ignore it; it exists
+  so ERA round-trips are lossless;
+- producers set it from `PUBTYPE = 7`, never by inferring from missing fields.
+
+Measured on ENAPRO (2026-10-16): 79,629 `PUBLICATION` rows have `PUBTYPE = 7` (about
+15% of journal-type references); no `PUBTYPE = 2` article lacks volume or pages; at most
+55 type-7 rows have complete volume and pages. Stored type and the derived rule agree
+on all but a handful of rows, which is why the flag is a faithful carry, not a guess.
 
 ### Field validity matrix
 
-| field | SUBMISSION | UNPUBLISHED | ARTICLE | ACCEPTED | BOOK | THESIS | PATENT | ELECTRONIC |
-|---|---|---|---|---|---|---|---|---|
-| referenceNumber | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
-| referencePosition, referenceComment, title, consortium | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
-| authors, xrefs | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
-| submission | ✔ | | | | | | | |
-| journal | | | ✔ | ✔ | | | | |
-| book | | | | | ✔ | | | |
-| thesis | | | | | | ✔ | | |
-| patent | | | | | | | ✔ | |
-| electronic | | | | | | | | ✔ |
-| unpublished | | ✔ | | | | | | |
+| field | SUBMISSION | UNPUBLISHED | ARTICLE | BOOK | THESIS | PATENT | ELECTRONIC |
+|---|---|---|---|---|---|---|---|
+| referenceNumber | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| referencePosition, referenceComment, title, consortium | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| authors, xrefs | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| submission | ✔ | | | | | | |
+| article (incl. `accepted`) | | | ✔ | | | | |
+| book | | | | ✔ | | | |
+| thesis | | | | | ✔ | | |
+| patent | | | | | | ✔ | |
+| electronic | | | | | | | ✔ |
+| unpublished | | ✔ | | | | | |
+
+A record is valid when the block named `lower(type)` is present (an `UNPUBLISHED`
+record may omit its block). Any other type block present is ignored and logged.
 
 ### Dates
 
@@ -180,7 +197,7 @@ consumers (EMBL `RX` lines must use known CVs).
 | `type` | construction |
 |---|---|
 | `SUBMISSION` | `createSubmission()`; `day` = `submission.submittedDate`; address = `submission.submitterAddress` (or legacy `submitterDetails` path) |
-| `ARTICLE`/`ACCEPTED` | `createArticle()`; volume/issue/firstPage/lastPage/journal/year from `journal` |
+| `ARTICLE` | `createArticle()`; journal/volume/issue/firstPage/lastPage/year from `article`; `accepted` is read but not rendered |
 | `BOOK` | `createBook()`; bookTitle/publisher/pages/year (+ `editors` as `Person`s) |
 | `THESIS` | `createThesis()`; institute/year |
 | `PATENT` | `createPatent(...)`; office/number/type/sequenceNumber/day/applicants |
@@ -202,7 +219,7 @@ which the existing `RXWriter` then emits. `referencePosition` continues to flow 
 | 1 | `gff3tools` | widen `ReferenceData`/`CrossReference`, dispatch in `mapReference`, fixtures + tests | 0 |
 | 1b | `ena-sequence-persistence` | same in `Gff3MasterJsonReader.mapReference` (duplicated mapper) | 0 |
 | 2 | `webin-master-service` | widen model, drop `@JsonIgnore` on xrefs | 0 |
-| 3 | `webin-gff3-stages` | ERA SQL for PUBLICATION/JOURNALARTICLE/BOOK/THESIS/PATENT/ACCEPTED; build one ReferenceData per publication with `type`; extend `ReferenceConverter` | 0, 1, 2 |
+| 3 | `webin-gff3-stages` | read PUBLICATION/JOURNALARTICLE/ACCEPTED/BOOK/THESIS/PATENT from **ENAPRO (`DATALIB`)**, not ERAPRO; build one ReferenceData per publication with `type`; extend `ReferenceConverter` | 0, 1, 2 |
 | 4 | e2e | prod-smoke on accessions with known journal/book/thesis refs; diff vs `ena/browser/api/embl` | 1–3 |
 
 Steps 1/1b/2 are independently shippable (additive, dormant until data arrives).
@@ -214,13 +231,14 @@ Step 3 is the activation switch and must not land before 1 and 2 are deployed.
    refactor gff3tools' `{id, source, url}`?
 2. **D2 free-text authors** — keep reading as legacy alias only, or retain as a permanent
    alternative input?
-3. **D4 `ACCEPTED`** — explicit type (proposed, for ERA round-trip) or derived-only?
+3. **D4 `ACCEPTED`** — resolved: `ARTICLE` plus `article.accepted`, set from `PUBTYPE = 7` (see above).
 4. **D5 shared model** — single library (e.g. in gff3tools, consumed by the services) vs
    four synced copies. If not now, this change makes the drift worse; budget it.
 5. **Who owns the schema** — one repo must be normative. Proposal: gff3tools (it has the
    mapper, the fixtures, and both consumer paths run through it).
 6. **`editors` as structured people** — BOOK needs editors (`(in) X. (Eds.)`); confirm
    producers can supply them from ERA (legacy `Book` model has them).
+7. **Producer source and timing** — publications live in ENAPRO keyed by the entry's bioseq, so they exist only once an entry is loaded. New submissions carry only their submitter reference (from ERA); journal/book/thesis references for existing records may need a backfill rather than the per-analysis path. Confirm with the pipeline owners.
 
 # References
 
