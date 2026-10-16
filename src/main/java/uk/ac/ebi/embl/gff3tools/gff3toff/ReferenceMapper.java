@@ -62,7 +62,7 @@ public final class ReferenceMapper {
         }
 
         List<AuthorData> authors = refData.getAuthors();
-        if (authors == null) {
+        if (authors == null || authors.isEmpty()) {
             SubmitterDetails submitterDetails = refData.getSubmitterDetails();
             authors = submitterDetails == null ? null : submitterDetails.getAuthors();
         }
