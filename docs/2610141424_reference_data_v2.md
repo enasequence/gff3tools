@@ -217,12 +217,11 @@ which the existing `RXWriter` then emits. `referencePosition` continues to flow 
 |---|---|---|---|
 | 0 | (this doc) | agree schema | — |
 | 1 | `gff3tools` (implemented on this branch) | widen `ReferenceData`/`CrossReference`, dispatch in `mapReference`, fixtures + tests | 0 |
-| 1b | `ena-sequence-persistence` | same in `Gff3MasterJsonReader.mapReference` (duplicated mapper) | 0 |
 | 2 | `webin-master-service` | widen model, drop `@JsonIgnore` on xrefs | 0 |
 | 3 | `webin-gff3-stages` | read PUBLICATION/JOURNALARTICLE/ACCEPTED/BOOK/THESIS/PATENT from **ENAPRO (`DATALIB`)**, not ERAPRO; build one ReferenceData per publication with `type`; extend `ReferenceConverter` | 0, 1, 2 |
 | 4 | e2e | prod-smoke on accessions with known journal/book/thesis refs; diff vs `ena/browser/api/embl` | 1–3 |
 
-Steps 1/1b/2 are independently shippable (additive, dormant until data arrives).
+Steps 1/2 are independently shippable (additive, dormant until data arrives).
 Step 3 is the activation switch and must not land before 1 and 2 are deployed.
 
 # Open questions
