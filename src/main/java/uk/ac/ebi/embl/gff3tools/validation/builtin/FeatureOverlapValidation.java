@@ -15,6 +15,7 @@ import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BiPredicate;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -35,7 +36,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
  * <ol>
  *   <li>Intervals comprising a feature's location must not overlap, unless the feature carries
  *       {@code ribosomal_slippage}
- *   <li>Ribosomal RNA features must not overlap CDS features or other rRNAs.
+ *   <li>Ribosomal RNA features must not overlap CDS features or other rRNAs on the same strand.
  *   <li>tRNA features must not be completely contained within the exons of a CDS.
  * </ol>
  */
@@ -56,7 +57,7 @@ public class FeatureOverlapValidation implements Validation {
             "\n%s %s on accession \"%s\": interval %s overlaps interval %s";
 
     private static final String RRNA_OVERLAP_MESSAGE =
-            "Ribosomal RNA features must not overlap CDS features or other rRNA features:%s";
+            "Ribosomal RNA features must not overlap CDS features or other rRNA features on the same strand:%s";
     private static final String RRNA_OVERLAP_VIOLATION =
             "\nrRNA %s overlaps %s %s on accession \"%s\": interval %s overlaps interval %s";
 
@@ -82,7 +83,7 @@ public class FeatureOverlapValidation implements Validation {
             if (segments.size() < 2 || hasRibosomalSlippage(segments)) {
                 continue;
             }
-            GFF3Feature[] overlapping = firstOverlappingPair(segments, segments, true);
+            GFF3Feature[] overlapping = firstOverlappingPair(segments, segments, true, this::overlaps);
             if (overlapping != null) {
                 GFF3Feature representative = ValidationUtils.representativeOfFeatureGroup(segments);
                 violations.add(INTERVAL_OVERLAP_VIOLATION.formatted(
@@ -99,9 +100,14 @@ public class FeatureOverlapValidation implements Validation {
         }
     }
 
+    /**
+     * <p>Only segments on the same strand clash. A strand of {@code .} or {@code ?} is unknown, so
+     * it may be either one and the segment is still compared.
+     */
     @ValidationMethod(
             rule = RRNA_OVERLAP_RULE,
-            description = "Ribosomal RNA features must not overlap CDS features or other rRNA features",
+            description =
+                    "Ribosomal RNA features must not overlap CDS features or other rRNA features on the same strand",
             type = ANNOTATION,
             severity = RuleSeverity.ERROR)
     public void validateRrnaOverlap(GFF3Annotation annotation, int line) throws ValidationException {
@@ -166,7 +172,8 @@ public class FeatureOverlapValidation implements Validation {
 
     private void collectOverlap(
             List<GFF3Feature> rrna, List<GFF3Feature> other, String otherLabel, List<String> violations) {
-        GFF3Feature[] overlapping = firstOverlappingPair(rrna, other, false);
+        GFF3Feature[] overlapping = firstOverlappingPair(
+                rrna, other, false, (left, right) -> overlaps(left, right) && mayShareStrand(left, right));
         if (overlapping == null) {
             return;
         }
@@ -179,10 +186,14 @@ public class FeatureOverlapValidation implements Validation {
                 ValidationUtils.getLocationString(overlapping[1])));
     }
 
-    private GFF3Feature[] firstOverlappingPair(List<GFF3Feature> left, List<GFF3Feature> right, boolean sameGroup) {
+    private GFF3Feature[] firstOverlappingPair(
+            List<GFF3Feature> left,
+            List<GFF3Feature> right,
+            boolean sameGroup,
+            BiPredicate<GFF3Feature, GFF3Feature> clashes) {
         for (int i = 0; i < left.size(); i++) {
             for (int j = sameGroup ? i + 1 : 0; j < right.size(); j++) {
-                if (overlaps(left.get(i), right.get(j))) {
+                if (clashes.test(left.get(i), right.get(j))) {
                     return new GFF3Feature[] {left.get(i), right.get(j)};
                 }
             }
@@ -194,6 +205,16 @@ public class FeatureOverlapValidation implements Validation {
         return Objects.equals(left.accession(), right.accession())
                 && left.getStart() <= right.getEnd()
                 && right.getStart() <= left.getEnd();
+    }
+
+    private boolean mayShareStrand(GFF3Feature left, GFF3Feature right) {
+        return !hasKnownStrand(left)
+                || !hasKnownStrand(right)
+                || left.getStrand().equals(right.getStrand());
+    }
+
+    private boolean hasKnownStrand(GFF3Feature feature) {
+        return "+".equals(feature.getStrand()) || "-".equals(feature.getStrand());
     }
 
     private boolean isContainedWithinExons(List<GFF3Feature> segments, List<GFF3Feature> exons) {
