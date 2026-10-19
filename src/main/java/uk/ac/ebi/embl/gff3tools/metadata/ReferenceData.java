@@ -13,15 +13,17 @@ package uk.ac.ebi.embl.gff3tools.metadata;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Represents a literature reference from MasterEntry JSON.
@@ -35,6 +37,8 @@ import lombok.Setter;
 @Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ReferenceData {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReferenceData.class);
 
     @JsonAlias("number")
     private Integer referenceNumber;
@@ -148,6 +152,11 @@ public class ReferenceData {
         private String journalBlock;
     }
 
+    /**
+     * Reads {@code authors} leniently: a non-array (v1 free text) gives an empty list, and array
+     * elements that are not objects (e.g. plain name strings) are skipped with a WARN instead of
+     * failing the whole master JSON.
+     */
     static class AuthorsDeserializer extends JsonDeserializer<List<AuthorData>> {
         @Override
         public List<AuthorData> deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
@@ -155,7 +164,16 @@ public class ReferenceData {
             if (node == null || !node.isArray()) {
                 return List.of();
             }
-            return p.getCodec().readValue(node.traverse(p.getCodec()), new TypeReference<List<AuthorData>>() {});
+            List<AuthorData> authors = new ArrayList<>();
+            for (JsonNode element : node) {
+                if (element.isNull()) continue;
+                if (!element.isObject()) {
+                    LOGGER.warn("Skipping reference author that is not an object: {}", element);
+                    continue;
+                }
+                authors.add(p.getCodec().treeToValue(element, AuthorData.class));
+            }
+            return authors;
         }
     }
 }

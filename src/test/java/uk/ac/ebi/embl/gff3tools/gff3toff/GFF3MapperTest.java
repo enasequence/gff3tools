@@ -1216,12 +1216,14 @@ class GFF3MapperTest {
             .build();
 
     private String embl(String referenceJson) throws Exception {
-        ReferenceData ref = REF_MAPPER.readValue(referenceJson, ReferenceData.class);
-        MasterMetadata meta = new MasterMetadata();
-        meta.setReferences(List.of(ref));
-        MasterMetadataProvider provider = providerFromMetadata(Map.of("seq1", meta));
+        return embl(new MasterMetadata(), "seq1", "[" + referenceJson + "]");
+    }
+
+    private String embl(MasterMetadata meta, String accession, String referencesJson) throws Exception {
+        meta.setReferences(List.of(REF_MAPPER.readValue(referencesJson, ReferenceData[].class)));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of(accession, meta));
         GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
-        Entry entry = mapper.mapGFF3ToEntry(createAnnotation("seq1", 1, 1000));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation(accession, 1, 5000));
         StringWriter writer = new StringWriter();
         EmblEntryWriter entryWriter = new EmblEntryWriter(entry);
         entryWriter.setShowAcStartLine(false);
@@ -1253,8 +1255,8 @@ class GFF3MapperTest {
                 {"referenceNumber": 1, "type": "ARTICLE", "title": "In press",
                  "article": {"journal": "Photosyn. Res.", "year": 2007, "accepted": true}}
                 """);
-        assertTrue(out.contains("RL   Photosyn. Res."), out);
-        assertFalse(out.contains("Submitted"), out);
+        // no volume/issue/pages: this is what the sequencetools article writer emits
+        assertTrue(out.contains("\nRL   Photosyn. Res.:(2007).\n"), out);
     }
 
     @Test
@@ -1360,11 +1362,16 @@ class GFF3MapperTest {
     }
 
     @Test
-    void bookMissingTitlePublisherOrYearFallsBackToUnpublished() throws Exception {
+    void bookMissingEditorTitlePublisherOrYearFallsBackToUnpublished() throws Exception {
+        String editors = "\"editors\": [{\"surname\": \"Roe\", \"firstName\": \"R.\"}]";
         for (String block : List.of(
-                "{\"publisher\": \"CSIRO\", \"year\": 2001}",
-                "{\"bookTitle\": \"PS2001\", \"year\": 2001}",
-                "{\"bookTitle\": \"PS2001\", \"publisher\": \"CSIRO\"}")) {
+                "{\"publisher\": \"CSIRO\", \"year\": 2001, " + editors + "}",
+                "{\"bookTitle\": \"PS2001\", \"year\": 2001, " + editors + "}",
+                "{\"bookTitle\": \"PS2001\", \"publisher\": \"CSIRO\", " + editors + "}",
+                "{\"bookTitle\": \"PS2001\", \"publisher\": \"CSIRO\", \"year\": 2001}",
+                "{\"bookTitle\": \"PS2001\", \"publisher\": \"CSIRO\", \"year\": 2001, \"editors\": []}",
+                "{\"bookTitle\": \"PS2001\", \"publisher\": \"CSIRO\", \"year\": 2001, "
+                        + "\"editors\": [{\"surname\": \" \", \"firstName\": \"\"}]}")) {
             String out = embl("{\"referenceNumber\": 1, \"type\": \"BOOK\", \"book\": " + block + "}");
             assertTrue(out.contains("RL   Unpublished."), block + "\n" + out);
         }
@@ -1372,17 +1379,26 @@ class GFF3MapperTest {
         String ok = embl(
                 """
                 {"referenceNumber": 1, "type": "BOOK",
-                 "book": {"bookTitle": "PS2001", "publisher": "CSIRO", "year": 2001}}
+                 "book": {"bookTitle": "PS2001", "publisher": "CSIRO", "year": 2001,
+                          "editors": [{"surname": "Roe", "firstName": "R."}]}}
                 """);
-        assertFalse(ok.contains("RL   Unpublished."), ok);
-        assertTrue(ok.contains("PS2001"), ok);
+        assertTrue(ok.contains("\nRL   (in) Roe R. (Eds.);\nRL   PS2001:0-0;\nRL   CSIRO (2001)\n"), ok);
     }
 
     @Test
-    void thesisWithoutInstituteFallsBackToUnpublished() throws Exception {
+    void thesisWithoutInstituteOrYearFallsBackToUnpublished() throws Exception {
+        for (String block : List.of("{\"year\": 2008}", "{\"institute\": \"IPK Gatersleben\"}")) {
+            String out = embl("{\"referenceNumber\": 1, \"type\": \"THESIS\", \"thesis\": " + block + "}");
+            assertTrue(out.contains("RL   Unpublished."), block + "\n" + out);
+        }
+    }
+
+    @Test
+    void articleWithoutYearFallsBackToUnpublished() throws Exception {
         String out = embl(
                 """
-                {"referenceNumber": 1, "type": "THESIS", "thesis": {"year": 2008}}
+                {"referenceNumber": 1, "type": "ARTICLE",
+                 "article": {"journal": "Photosyn. Res.", "volume": "93", "firstPage": "55", "lastPage": "67"}}
                 """);
         assertTrue(out.contains("RL   Unpublished."), out);
     }
@@ -1416,9 +1432,44 @@ class GFF3MapperTest {
                 """
                 {"referenceNumber": 1, "type": "SUBMISSION",
                  "submission": {"submitterAddress": "Somewhere"},
-                 "submitterDetails": {"submittedDate": "2025-04-03T13:30:22.000+00:00"}}
+                 "submitterDetails": {"submittedDate": "2025-04-03T13:30:22.000+00:00",
+                                      "submissionAccount": {"centerName": "EBI", "country": "UK"}}}
                 """);
-        assertTrue(out.contains("RL   Submitted (03-APR-2025) to the INSDC."), out);
+        // only the date falls back; the block's address still wins over the account's
+        assertTrue(out.contains("\nRL   Submitted (03-APR-2025) to the INSDC.\nRL   Somewhere\n"), out);
+    }
+
+    @Test
+    void submissionWithoutAddressFallsBackToSubmitterAccountAddress() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "SUBMISSION",
+                 "submission": {"submittedDate": "2012-05-25", "submitterAddress": " "},
+                 "submitterDetails": {"submittedDate": "2025-04-03T13:30:22.000+00:00",
+                                      "submissionAccount": {"centerName": "EBI", "country": "UK"}}}
+                """);
+        assertTrue(out.contains("\nRL   Submitted (25-MAY-2012) to the INSDC.\nRL   EBI, UK\n"), out);
+    }
+
+    @Test
+    void submissionWithoutBlockOrSubmitterDetailsFallsBackToUnpublished() throws Exception {
+        String out = embl("""
+                {"referenceNumber": 1, "type": "SUBMISSION"}
+                """);
+        assertTrue(out.contains("RL   Unpublished."), out);
+    }
+
+    @Test
+    void submitterAddressFollowsLegacyBrokerRule() throws Exception {
+        String account = "\"centerName\": \"Center\", \"laboratoryName\": \"Lab\", "
+                + "\"address\": \"1 Road\", \"country\": \"UK\"";
+        String nonBroker = embl("{\"referenceNumber\": 1, \"submitterDetails\": {\"submittedDate\": \"2012-05-25\", "
+                + "\"submissionAccount\": {" + account + ", \"brokerName\": \" \"}}}");
+        assertTrue(nonBroker.contains("\nRL   Center, Lab, 1 Road, UK\n"), nonBroker);
+
+        String broker = embl("{\"referenceNumber\": 1, \"submitterDetails\": {\"submittedDate\": \"2012-05-25\", "
+                + "\"submissionAccount\": {" + account + ", \"brokerName\": \"Broker Ltd\"}}}");
+        assertTrue(broker.contains("\nRL   Broker Ltd, 1 Road, UK\n"), broker);
     }
 
     @Test
@@ -1428,6 +1479,93 @@ class GFF3MapperTest {
                 {"referenceNumber": 1, "type": "SUBMISSION", "submission": {"submitterAddress": "Somewhere"}}
                 """);
         assertTrue(out.contains("RL   Unpublished."), out);
+    }
+
+    @Test
+    void v1ReferencePositionIsNotRendered() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "referencePosition": "1-500",
+                 "submitterDetails": {"submittedDate": "2004-12-10"}}
+                """);
+        assertFalse(out.contains("RP   "), out);
+        assertTrue(out.contains("RL   Submitted (10-DEC-2004) to the INSDC."), out);
+    }
+
+    @Test
+    void wgsContigLengthOverridesV2ReferencePosition() throws Exception {
+        String out = embl(
+                createWgsSetMasterMetadata(),
+                "CAXMYH010000001",
+                """
+                [{"referenceNumber": 1, "type": "SUBMISSION", "referencePosition": "1-100",
+                  "submission": {"submittedDate": "2004-12-10", "submitterAddress": "Somewhere"}}]
+                """);
+        assertTrue(out.contains("\nRP   1-5000\n"), out);
+        assertFalse(out.contains("RP   1-100"), out);
+    }
+
+    @Test
+    void referencesAreNumberedInOrder() throws Exception {
+        String out = embl(
+                new MasterMetadata(),
+                "seq1",
+                """
+                [{"referenceNumber": 1, "type": "SUBMISSION", "submission": {"submittedDate": "2004-12-10"}},
+                 {"referenceNumber": 2, "type": "ARTICLE", "article": {"journal": "J. Test", "year": 2007}},
+                 {"referenceNumber": 3, "type": "BOOK",
+                  "book": {"bookTitle": "PS2001", "publisher": "CSIRO", "year": 2001,
+                           "editors": [{"surname": "Roe", "firstName": "R."}]}}]
+                """);
+        int rn1 = out.indexOf("RN   [1]");
+        int submitted = out.indexOf("RL   Submitted (10-DEC-2004)");
+        int rn2 = out.indexOf("RN   [2]");
+        int article = out.indexOf("RL   J. Test:(2007).");
+        int rn3 = out.indexOf("RN   [3]");
+        int book = out.indexOf("RL   (in) Roe R. (Eds.);");
+        assertTrue(0 <= rn1 && rn1 < submitted && submitted < rn2 && rn2 < article && article < rn3 && rn3 < book, out);
+    }
+
+    @Test
+    void xrefSourcesAreNormalisedAndBlankIdsSkipped() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "ARTICLE",
+                 "xrefs": [{"source": " doi ", "primaryId": " 10.1/x "},
+                           {"source": "PUBMED", "primaryId": "  "},
+                           {"source": " ", "primaryId": "123"},
+                           {"source": "agricola", "primaryId": "IND1"},
+                           {"source": "EMBL", "primaryId": "AB000001"}],
+                 "article": {"journal": "J. Test", "year": 2007}}
+                """);
+        assertTrue(out.contains("RX   DOI; 10.1/x."), out);
+        assertTrue(out.contains("RX   AGRICOLA; IND1."), out);
+        // unknown sources are rendered (with a WARN)
+        assertTrue(out.contains("RX   EMBL; AB000001."), out);
+        assertFalse(out.contains("PUBMED"), out);
+        assertFalse(out.contains("123"), out);
+    }
+
+    @Test
+    void patentOfficeIsUpperCasedAndBlankApplicantsSkipped() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "PATENT",
+                 "patent": {"patentOffice": " us ", "patentNumber": "1234567", "patentType": "A1",
+                            "sequenceNumber": 1, "day": "2001-01-01", "applicants": ["ACME", " ", null, "Globex"]}}
+                """);
+        assertTrue(out.contains("\nRL   Patent number US1234567-A1/1, 01-JAN-2001.\nRL   ACME;\nRL   Globex.\n"), out);
+    }
+
+    @Test
+    void authorsArrayOfStringsSkipsNonObjectElements() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "UNPUBLISHED",
+                 "authors": ["Doe J.", {"surname": "Roe", "firstName": "R."}, 42, null]}
+                """);
+        assertTrue(out.contains("RA   Roe R.;"), out);
+        assertFalse(out.contains("Doe"), out);
     }
 
     @Test

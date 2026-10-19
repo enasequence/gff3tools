@@ -21,6 +21,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -48,8 +49,9 @@ import uk.ac.ebi.embl.gff3tools.metadata.SubmitterDetails;
  * behaviour: a Submission when nested submitter details contain a valid submitted date,
  * otherwise Unpublished. An unknown {@code type}, or a typed record missing its block,
  * logs a warning and is mapped as Unpublished, as is a typed record whose block lacks the
- * fields its RL line needs. {@code referencePosition} ("1-100" or "1-100,200-300") becomes the
- * RP locations; callers may override them (GFF3Mapper does for WGS contigs).
+ * fields its RL line needs. On v2 records {@code referencePosition} ("1-100" or "1-100,200-300")
+ * becomes the RP locations; v1 records get none. Callers may override them (GFF3Mapper does for
+ * WGS contigs).
  */
 public final class ReferenceMapper {
 
@@ -57,6 +59,8 @@ public final class ReferenceMapper {
     private static final ReferenceFactory referenceFactory = new ReferenceFactory();
     private static final LocationFactory locationFactory = new LocationFactory();
     private static final Pattern RANGE = Pattern.compile("\\s*(\\d+)\\s*-\\s*(\\d+)\\s*");
+    /** RX databases the EMBL flat file defines; others are rendered with a WARN. */
+    private static final Set<String> RX_SOURCES = Set.of("DOI", "PUBMED", "AGRICOLA");
 
     private ReferenceMapper() {}
 
@@ -78,12 +82,7 @@ public final class ReferenceMapper {
         }
         addPersons(authors, publication::addAuthor);
 
-        if (refData.getXrefs() != null) {
-            for (ReferenceData.Xref xref : refData.getXrefs()) {
-                if (xref == null || xref.getSource() == null || xref.getPrimaryId() == null) continue;
-                publication.addXRef(new XRef(xref.getSource(), xref.getPrimaryId(), xref.getSecondaryId()));
-            }
-        }
+        addXrefs(refData.getXrefs(), publication);
 
         Reference reference = referenceFactory.createReference(publication, refData.getReferenceNumber());
 
@@ -91,11 +90,26 @@ public final class ReferenceMapper {
             reference.setComment(refData.getReferenceComment());
         }
 
-        Order<LocalRange> locations = parseReferencePosition(refData.getReferencePosition());
-        if (locations != null) {
-            reference.setLocations(locations);
+        // RP from referencePosition is new in v2; v1 records never rendered it
+        if (!isBlank(refData.getType())) {
+            Order<LocalRange> locations = parseReferencePosition(refData.getReferencePosition());
+            if (locations != null) {
+                reference.setLocations(locations);
+            }
         }
         return reference;
+    }
+
+    private static void addXrefs(List<ReferenceData.Xref> xrefs, Publication publication) {
+        if (xrefs == null) return;
+        for (ReferenceData.Xref xref : xrefs) {
+            if (xref == null || isBlank(xref.getSource()) || isBlank(xref.getPrimaryId())) continue;
+            String source = xref.getSource().trim().toUpperCase(Locale.ROOT);
+            if (!RX_SOURCES.contains(source)) {
+                LOGGER.warn("Reference xref source '{}' is not DOI, PUBMED or AGRICOLA; rendering it anyway", source);
+            }
+            publication.addXRef(new XRef(source, xref.getPrimaryId().trim(), xref.getSecondaryId()));
+        }
     }
 
     /** Parses "1-100" or "1-100,200-300" into RP locations; null (with a WARN) when it is not that shape. */
@@ -168,28 +182,25 @@ public final class ReferenceMapper {
     }
 
     private static Publication createReferenceSubmission(ReferenceData refData) {
-        ReferenceData.ReferenceSubmission referenceSubmission = refData.getSubmission();
-        if (referenceSubmission == null) {
-            // tolerate v1-shaped submitter details under an explicit SUBMISSION type
-            Publication legacy = createSubmissionPublication(refData);
-            return legacy != null ? legacy : referenceFactory.createUnpublished();
+        // merge field by field: the submission block wins, submitterDetails (v1) fills the gaps
+        ReferenceData.ReferenceSubmission block = refData.getSubmission();
+        SubmitterDetails submitterDetails = refData.getSubmitterDetails();
+        Date day = block == null || block.getSubmittedDate() == null ? null : parseDate(block.getSubmittedDate());
+        if (day == null && submitterDetails != null && submitterDetails.getSubmittedDate() != null) {
+            day = parseDate(submitterDetails.getSubmittedDate());
         }
-        Date day = referenceSubmission.getSubmittedDate() == null
-                ? null
-                : parseDate(referenceSubmission.getSubmittedDate());
         if (day == null) {
-            // date falls back to submitterDetails, then to unpublished
-            Publication legacy = createSubmissionPublication(refData);
-            if (legacy != null) {
-                return legacy;
-            }
-            LOGGER.warn("Submission reference has no valid submittedDate; mapping as unpublished");
+            LOGGER.warn("Submission reference has no valid submittedDate in its submission block or "
+                    + "submitterDetails; mapping as unpublished");
             return referenceFactory.createUnpublished();
         }
         Submission submission = referenceFactory.createSubmission();
         submission.setDay(day);
-        if (!isBlank(referenceSubmission.getSubmitterAddress())) {
-            submission.setSubmitterAddress(referenceSubmission.getSubmitterAddress());
+        String address = block == null || isBlank(block.getSubmitterAddress())
+                ? (submitterDetails == null ? null : buildSubmitterAddress(submitterDetails.getSubmissionAccount()))
+                : block.getSubmitterAddress();
+        if (!isBlank(address)) {
+            submission.setSubmitterAddress(address);
         }
         return submission;
     }
@@ -197,8 +208,9 @@ public final class ReferenceMapper {
     private static Publication createArticle(ReferenceData refData) {
         ReferenceData.Article block = refData.getArticle();
         if (block == null) return missingBlock(refData);
-        if (isBlank(block.getJournal())) {
-            LOGGER.warn("Reference type '{}' has no journal; mapping as unpublished", refData.getType());
+        // without a year the writer drops "(year)" and the RL line no longer parses as an article
+        if (isBlank(block.getJournal()) || block.getYear() == null) {
+            LOGGER.warn("Reference type '{}' needs journal and year; mapping as unpublished", refData.getType());
             return referenceFactory.createUnpublished();
         }
         Article article = referenceFactory.createArticle();
@@ -214,9 +226,10 @@ public final class ReferenceMapper {
     private static Publication createBook(ReferenceData refData) {
         ReferenceData.Book block = refData.getBook();
         if (block == null) return missingBlock(refData);
-        // A book RL line needs title, publisher and year (sequencetools RL.16/RL.19/RL.20); without
-        // a year the writer drops "(year)" and the line no longer parses as a book. Pages may be
-        // absent: the writer renders them as 0-0.
+        // A book RL line needs editors, title, publisher and year (sequencetools RL.16/RL.19/RL.20);
+        // without editors the writer emits a bare "(in)" and without a year it drops "(year)", and
+        // either way the line no longer parses as a book. Pages may be absent: the writer renders
+        // them as 0-0.
         if (isBlank(block.getBookTitle()) || isBlank(block.getPublisher()) || block.getYear() == null) {
             LOGGER.warn(
                     "Reference type '{}' needs bookTitle, publisher and year; mapping as unpublished",
@@ -230,14 +243,19 @@ public final class ReferenceMapper {
         book.setLastPage(block.getLastPage());
         book.setYear(yearToDate(block.getYear()));
         addPersons(block.getEditors(), book::addEditor);
+        if (book.getEditors().isEmpty()) {
+            LOGGER.warn("Reference type '{}' has no named editor; mapping as unpublished", refData.getType());
+            return referenceFactory.createUnpublished();
+        }
         return book;
     }
 
     private static Publication createThesis(ReferenceData refData) {
         ReferenceData.Thesis block = refData.getThesis();
         if (block == null) return missingBlock(refData);
-        if (isBlank(block.getInstitute())) {
-            LOGGER.warn("Reference type '{}' has no institute; mapping as unpublished", refData.getType());
+        // without a year the writer emits "Thesis ()", which does not parse
+        if (isBlank(block.getInstitute()) || block.getYear() == null) {
+            LOGGER.warn("Reference type '{}' needs institute and year; mapping as unpublished", refData.getType());
             return referenceFactory.createUnpublished();
         }
         Thesis thesis = referenceFactory.createThesis();
@@ -263,13 +281,13 @@ public final class ReferenceMapper {
             return referenceFactory.createUnpublished();
         }
         Patent patent = referenceFactory.createPatent();
-        patent.setPatentOffice(block.getPatentOffice());
+        patent.setPatentOffice(block.getPatentOffice().trim().toUpperCase(Locale.ROOT));
         patent.setPatentNumber(block.getPatentNumber());
         patent.setPatentType(block.getPatentType());
         patent.setSequenceNumber(block.getSequenceNumber());
         patent.setDay(day);
         if (block.getApplicants() != null) {
-            block.getApplicants().stream().filter(Objects::nonNull).forEach(patent::addApplicant);
+            block.getApplicants().stream().filter(a -> !isBlank(a)).forEach(patent::addApplicant);
         }
         return patent;
     }
@@ -332,36 +350,32 @@ public final class ReferenceMapper {
         return submission;
     }
 
-    private static String buildSubmitterAddress(SubmissionAccount account) {
+    /**
+     * Submitter address from the account, following the legacy rule (sequencetools
+     * ReferenceUtils.getAddressFromSubmissionAccount): a broker account gives "broker, address,
+     * country", any other "center, laboratory, address, country"; blank parts are skipped.
+     */
+    static String buildSubmitterAddress(SubmissionAccount account) {
         if (account == null) {
             return null;
         }
-        String institutionLine = Stream.of(account.getCenterName(), account.getLaboratoryName())
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(part -> !part.isEmpty())
-                .reduce((left, right) -> left + ", " + right)
-                .orElse(null);
-
-        String addressLine = Stream.of(account.getAddress(), account.getCountry())
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(part -> !part.isEmpty())
-                .reduce((left, right) -> left + ", " + right)
-                .orElse(null);
-
-        if (institutionLine == null) {
-            return addressLine;
-        }
-        if (addressLine == null) {
-            return institutionLine;
-        }
+        Stream<String> parts = isBlank(account.getBrokerName())
+                ? Stream.of(
+                        account.getCenterName(),
+                        account.getLaboratoryName(),
+                        account.getAddress(),
+                        account.getCountry())
+                : Stream.of(account.getBrokerName(), account.getAddress(), account.getCountry());
         // Join with a comma so the EMBL RL writer wraps on commas across the
         // whole address (rather than treating institution and address as two
         // separate blocks). The writer collapses any embedded newline to a
         // single space anyway, so a `\n` separator would yield the institution
         // and address running together with no separator.
-        return institutionLine + ", " + addressLine;
+        return parts.filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(part -> !part.isEmpty())
+                .reduce((left, right) -> left + ", " + right)
+                .orElse(null);
     }
 
     /**
