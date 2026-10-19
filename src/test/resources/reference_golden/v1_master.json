@@ -1,0 +1,122 @@
+{
+  "id": "GCA_000001405.29",
+  "accession": "CAXMMS010000001",
+  "secondaryAccessions": [
+    "CAXMMS000000000"
+  ],
+  "description": "Homo sapiens genome assembly",
+  "title": "Human Genome Assembly",
+  "version": 1,
+  "moleculeType": "genomic DNA",
+  "topology": "linear",
+  "division": "HUM",
+  "dataClass": "STD",
+  "project": "PRJEB12345",
+  "sample": "SAMEA12345",
+  "taxon": "9606",
+  "scientificName": "Homo sapiens",
+  "commonName": "human",
+  "lineage": "Eukaryota; Metazoa; Chordata; Mammalia; Primates; Hominidae; Homo.",
+  "keywords": [
+    "WGS",
+    "genome"
+  ],
+  "comment": "This is a test assembly",
+  "chromosomeName": "chr1",
+  "chromosomeType": "Chromosome",
+  "chromosomeLocation": "Nucleus",
+  "firstPublic": "15-JAN-2024",
+  "firstPublicRelease": 144,
+  "lastUpdated": "01-JUN-2024",
+  "lastUpdatedRelease": 144,
+  "assemblyLevel": "chromosome",
+  "assemblyType": "primary metagenome",
+  "publications": [
+    {
+      "pid": "SAMEA12345",
+      "source": "BioSample"
+    }
+  ],
+  "references": [
+    {
+      "number": 1,
+      "group": "Example Sequencing Consortium",
+      "title": "Chromosome-level assembly of an example genome",
+      "referenceComment": "Sequence submitted on behalf of the consortium.",
+      "referencePosition": "1-500",
+      "authors": "Free-text Author A., Other B.",
+      "submitterDetails": {
+        "submittedDate": "2023-11-02T09:15:00.000+00:00",
+        "submissionAccount": {
+          "centerName": "Wellcome Sanger Institute",
+          "laboratoryName": "Tree of Life Programme",
+          "address": "Wellcome Genome Campus, Hinxton, Saffron Walden, Cambridgeshire CB10 1SA",
+          "country": "United Kingdom"
+        },
+        "authors": [
+          {
+            "firstName": "Mary",
+            "middleName": "Ann Louise",
+            "surname": "van der  Berg"
+          },
+          {
+            "firstName": "J. P.",
+            "surname": "Okafor"
+          },
+          {
+            "firstName": "",
+            "surname": ""
+          },
+          null,
+          {
+            "firstName": "Li",
+            "surname": "Wei"
+          }
+        ]
+      }
+    },
+    {
+      "referenceNumber": 2,
+      "title": "Reference without a submitted date",
+      "submitterDetails": {
+        "submissionAccount": {
+          "centerName": "EBI",
+          "country": "United Kingdom"
+        },
+        "authors": [
+          {
+            "firstName": "Ana",
+            "surname": "Silva"
+          }
+        ]
+      }
+    },
+    {
+      "referenceNumber": 3,
+      "title": "Reference with an unparseable date",
+      "submitterDetails": {
+        "submittedDate": "not-a-date",
+        "authors": [
+          {
+            "firstName": "Ana",
+            "surname": "Silva"
+          }
+        ]
+      }
+    },
+    {
+      "referenceNumber": 4,
+      "submitterDetails": {
+        "submittedDate": "15-MAR-2022",
+        "submissionAccount": {
+          "centerName": "  Institut Pasteur ",
+          "country": "France"
+        }
+      }
+    },
+    {
+      "referenceNumber": 5,
+      "title": "Reference without submitter details"
+    }
+  ]
+}
