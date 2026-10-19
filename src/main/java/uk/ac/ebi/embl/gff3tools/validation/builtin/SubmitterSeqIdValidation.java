@@ -56,19 +56,16 @@ public class SubmitterSeqIdValidation implements Validation {
 
         String seqId = sequenceRegion.accessionId();
         List<String> errors = new ArrayList<>();
-
         if (seqId.length() > MAX_LENGTH) {
             errors.add("it is %d characters long, but must be fewer than %d characters"
                     .formatted(seqId.length(), MAX_LENGTH + 1));
         }
-
         Set<String> illegalCharacters = findIllegalCharacters(seqId);
         if (!illegalCharacters.isEmpty()) {
             errors.add(
                     "it contains characters not permitted by INSDC: %s (spaces, '>', '[', ']', '|' and '\"' are not allowed)"
                             .formatted(String.join(", ", illegalCharacters)));
         }
-
         if (!errors.isEmpty()) {
             throw new ValidationException(
                     SUBMITTER_SEQ_ID_FORMAT_RULE,
