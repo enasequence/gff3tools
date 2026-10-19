@@ -126,8 +126,16 @@ public final class ReferenceMapper {
                 LOGGER.warn("Unparseable referencePosition '{}'; RP line omitted", position);
                 return null;
             }
-            long begin = Long.parseLong(m.group(1));
-            long end = Long.parseLong(m.group(2));
+            long begin;
+            long end;
+            try {
+                begin = Long.parseLong(m.group(1));
+                end = Long.parseLong(m.group(2));
+            } catch (NumberFormatException e) {
+                // the regex only admits digits, so this is a number too large for a long
+                LOGGER.warn("Out-of-range referencePosition '{}'; RP line omitted", position);
+                return null;
+            }
             if (begin < 1 || end < begin) {
                 LOGGER.warn("Invalid referencePosition '{}'; RP line omitted", position);
                 return null;

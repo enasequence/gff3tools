@@ -1616,7 +1616,7 @@ class GFF3MapperTest {
 
     @Test
     void unparseableReferencePositionOmitsRpLineWithoutFailing() throws Exception {
-        for (String position : List.of("abc", "1-", "0-5", "10-5", "1-5;7-9")) {
+        for (String position : List.of("abc", "1-", "0-5", "10-5", "1-5;7-9", "1-99999999999999999999")) {
             String out = embl(
                     "{\"referenceNumber\": 1, \"type\": \"UNPUBLISHED\", \"referencePosition\": \"" + position + "\"}");
             assertFalse(out.contains("RP   "), position + "\n" + out);
