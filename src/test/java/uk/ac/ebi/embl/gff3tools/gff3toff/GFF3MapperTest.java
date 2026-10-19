@@ -996,22 +996,22 @@ class GFF3MapperTest {
     @Test
     void toInitialsHandlesAllNameComponentShapes() {
         // null / blank
-        assertEquals("", GFF3Mapper.toInitials(null));
-        assertEquals("", GFF3Mapper.toInitials(""));
-        assertEquals("", GFF3Mapper.toInitials("   "));
+        assertEquals("", ReferenceMapper.toInitials(null));
+        assertEquals("", ReferenceMapper.toInitials(""));
+        assertEquals("", ReferenceMapper.toInitials("   "));
         // full name
-        assertEquals("E.", GFF3Mapper.toInitials("Eleanor"));
+        assertEquals("E.", ReferenceMapper.toInitials("Eleanor"));
         // single initial, with and without period
-        assertEquals("E.", GFF3Mapper.toInitials("E."));
-        assertEquals("E.", GFF3Mapper.toInitials("E"));
+        assertEquals("E.", ReferenceMapper.toInitials("E."));
+        assertEquals("E.", ReferenceMapper.toInitials("E"));
         // multiple initials, periods + spaces
-        assertEquals("E.P.", GFF3Mapper.toInitials("E. P."));
-        assertEquals("E.P.", GFF3Mapper.toInitials("E P"));
-        assertEquals("E.P.", GFF3Mapper.toInitials("E.P."));
+        assertEquals("E.P.", ReferenceMapper.toInitials("E. P."));
+        assertEquals("E.P.", ReferenceMapper.toInitials("E P"));
+        assertEquals("E.P.", ReferenceMapper.toInitials("E.P."));
         // doubled whitespace and lowercase
-        assertEquals("E.P.", GFF3Mapper.toInitials("  e.   p.  "));
+        assertEquals("E.P.", ReferenceMapper.toInitials("  e.   p.  "));
         // compound first name "Mary Anne"
-        assertEquals("M.A.", GFF3Mapper.toInitials("Mary Anne"));
+        assertEquals("M.A.", ReferenceMapper.toInitials("Mary Anne"));
     }
 
     // ── WGS contig regression tests ──
@@ -1290,7 +1290,7 @@ class GFF3MapperTest {
                 """
                 {"referenceNumber": 1, "type": "ELECTRONIC", "electronic": {"text": "https://example.org/x"}}
                 """);
-        assertTrue(electronic.contains("https://example.org/x"), electronic);
+        assertTrue(electronic.contains("\nRL   (er) https://example.org/x\n"), electronic);
     }
 
     @Test
@@ -1317,18 +1317,6 @@ class GFF3MapperTest {
         // the sequencetools writer prints an empty "RA   ;" when there are no persons
         assertTrue(out.contains("\nRA   ;\n"), out);
         assertFalse(out.contains("smith"), out);
-    }
-
-    @Test
-    void v1ReferenceTakesAuthorsFromSubmitterDetails() throws Exception {
-        String out = embl(
-                """
-                {"referenceNumber": 1, "authors": "Doe J.",
-                 "submitterDetails": {"submittedDate": "2025-04-03T13:30:22.000+00:00",
-                                      "authors": [{"surname": "Roe", "firstName": "Richard"}],
-                                      "submissionAccount": {"centerName": "EBI", "country": "UK"}}}
-                """);
-        assertTrue(out.contains("RA   Roe R.;"), out);
     }
 
     @Test
@@ -1375,7 +1363,41 @@ class GFF3MapperTest {
         assertTrue(out.contains("RA   Roe R.;"), out);
     }
 
-    // ---- review: required fields per type, submission date fallback, RP ----
+    @Test
+    void v1ReferenceIgnoresStructuredTopLevelAuthors() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "authors": [{"surname": "Doe", "firstName": "J."}],
+                 "submitterDetails": {"submittedDate": "2025-04-03T13:30:22.000+00:00",
+                                      "authors": [{"surname": "Roe", "firstName": "R."}]}}
+                """);
+        assertTrue(out.contains("\nRA   Roe R.;\n"), out);
+        assertFalse(out.contains("Doe"), out);
+    }
+
+    @Test
+    void typedReferenceWithoutAuthorsDoesNotUseSubmitterDetailsAuthors() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "SUBMISSION",
+                 "submission": {"submittedDate": "2024-03-05", "submitterAddress": "Dept X, UK"},
+                 "submitterDetails": {"authors": [{"surname": "Roe", "firstName": "R."}]}}
+                """);
+        assertTrue(out.contains("\nRA   ;\n"), out);
+        assertFalse(out.contains("Roe"), out);
+    }
+
+    @Test
+    void referenceTypeIsTrimmedAndCaseInsensitive() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": " article ",
+                 "article": {"journal": "J. Test", "year": 2007}}
+                """);
+        assertTrue(out.contains("\nRL   J. Test:(2007).\n"), out);
+    }
+
+    // ---- required fields per type, submission date fallback, RP ----
 
     @Test
     void articleWithoutJournalFallsBackToUnpublished() throws Exception {
@@ -1393,6 +1415,7 @@ class GFF3MapperTest {
         for (String block : List.of(
                 "{\"publisher\": \"CSIRO\", \"year\": 2001, " + editors + "}",
                 "{\"bookTitle\": \"PS2001\", \"year\": 2001, " + editors + "}",
+                "{\"bookTitle\": \"  \", \"publisher\": \"CSIRO\", \"year\": 2001, " + editors + "}",
                 "{\"bookTitle\": \"PS2001\", \"publisher\": \"CSIRO\", " + editors + "}",
                 "{\"bookTitle\": \"PS2001\", \"publisher\": \"CSIRO\", \"year\": 2001}",
                 "{\"bookTitle\": \"PS2001\", \"publisher\": \"CSIRO\", \"year\": 2001, \"editors\": []}",
@@ -1420,6 +1443,15 @@ class GFF3MapperTest {
     }
 
     @Test
+    void articleWithOutOfRangeYearFallsBackToUnpublished() throws Exception {
+        for (String year : List.of("0", "99999", "2000000000")) {
+            String out = embl("{\"referenceNumber\": 1, \"type\": \"ARTICLE\", "
+                    + "\"article\": {\"journal\": \"J. Test\", \"year\": " + year + "}}");
+            assertTrue(out.contains("RL   Unpublished."), year + "\n" + out);
+        }
+    }
+
+    @Test
     void articleWithoutYearFallsBackToUnpublished() throws Exception {
         String out = embl(
                 """
@@ -1437,10 +1469,22 @@ class GFF3MapperTest {
                 "{\"patentOffice\": \"US\", \"patentNumber\": \"1\", \"sequenceNumber\": 1, \"day\": \"2001-01-01\"}",
                 "{\"patentOffice\": \"US\", \"patentNumber\": \"1\", \"patentType\": \"A\", \"day\": \"2001-01-01\"}",
                 "{\"patentOffice\": \"US\", \"patentNumber\": \"1\", \"patentType\": \"A\", \"sequenceNumber\": 1}",
-                "{\"patentOffice\": \"US\", \"patentNumber\": \"1\", \"patentType\": \"A\", \"sequenceNumber\": 1, \"day\": \"not-a-date\"}")) {
+                "{\"patentOffice\": \"US\", \"patentNumber\": \"1\", \"patentType\": \"A\", \"sequenceNumber\": 1, \"day\": \"not-a-date\"}",
+                "{\"patentOffice\": \"US\", \"patentNumber\": \"12-345\", \"patentType\": \"A\", \"sequenceNumber\": 1, \"day\": \"2001-01-01\"}")) {
             String out = embl("{\"referenceNumber\": 1, \"type\": \"PATENT\", \"patent\": " + block + "}");
             assertTrue(out.contains("RL   Unpublished."), block + "\n" + out);
         }
+    }
+
+    @Test
+    void patentNumberAndTypeAreTrimmed() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "PATENT",
+                 "patent": {"patentOffice": "US", "patentNumber": "1234567 ", "patentType": " A1",
+                            "sequenceNumber": 1, "day": "2001-01-01"}}
+                """);
+        assertTrue(out.contains("\nRL   Patent number US1234567-A1/1, 01-JAN-2001.\n"), out);
     }
 
     @Test
@@ -1462,6 +1506,17 @@ class GFF3MapperTest {
                                       "submissionAccount": {"centerName": "EBI", "country": "UK"}}}
                 """);
         // only the date falls back; the block's address still wins over the account's
+        assertTrue(out.contains("\nRL   Submitted (03-APR-2025) to the INSDC.\nRL   Somewhere\n"), out);
+    }
+
+    @Test
+    void submissionWithInvalidDateFallsBackToSubmitterDetailsDate() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "SUBMISSION",
+                 "submission": {"submittedDate": "not-a-date", "submitterAddress": "Somewhere"},
+                 "submitterDetails": {"submittedDate": "2025-04-03T13:30:22.000+00:00"}}
+                """);
         assertTrue(out.contains("\nRL   Submitted (03-APR-2025) to the INSDC.\nRL   Somewhere\n"), out);
     }
 
@@ -1569,7 +1624,7 @@ class GFF3MapperTest {
         // unknown sources are rendered (with a WARN)
         assertTrue(out.contains("RX   EMBL; AB000001."), out);
         assertFalse(out.contains("PUBMED"), out);
-        assertFalse(out.contains("123"), out);
+        assertTrue(out.lines().filter(l -> l.startsWith("RX")).noneMatch(l -> l.contains("123")), out);
     }
 
     @Test
