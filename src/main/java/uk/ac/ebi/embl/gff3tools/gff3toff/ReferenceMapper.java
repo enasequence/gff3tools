@@ -75,8 +75,10 @@ public final class ReferenceMapper {
             publication.setConsortium(refData.getConsortium());
         }
 
+        // v1 records carry their authors only in submitterDetails. A v2 record with an empty
+        // authors[] means "no RA" (e.g. a consortium-only submitter), so it must not fall back.
         List<AuthorData> authors = refData.getAuthors();
-        if (authors == null || authors.isEmpty()) {
+        if (isBlank(refData.getType()) && (authors == null || authors.isEmpty())) {
             SubmitterDetails submitterDetails = refData.getSubmitterDetails();
             authors = submitterDetails == null ? null : submitterDetails.getAuthors();
         }

@@ -1306,6 +1306,32 @@ class GFF3MapperTest {
     }
 
     @Test
+    void v2ConsortiumOnlySubmissionDoesNotFallBackToSubmitterContacts() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "SUBMISSION", "consortium": "Smith J., Doe A.B.",
+                 "submission": {"submittedDate": "2024-03-05", "submitterAddress": "Dept X, UK"},
+                 "submitterDetails": {"authors": [{"surname": "smith", "firstName": "John"}]}}
+                """);
+        assertTrue(out.contains("RG   Smith J., Doe A.B."), out);
+        // the sequencetools writer prints an empty "RA   ;" when there are no persons
+        assertTrue(out.contains("\nRA   ;\n"), out);
+        assertFalse(out.contains("smith"), out);
+    }
+
+    @Test
+    void v1ReferenceTakesAuthorsFromSubmitterDetails() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "authors": "Doe J.",
+                 "submitterDetails": {"submittedDate": "2025-04-03T13:30:22.000+00:00",
+                                      "authors": [{"surname": "Roe", "firstName": "Richard"}],
+                                      "submissionAccount": {"centerName": "EBI", "country": "UK"}}}
+                """);
+        assertTrue(out.contains("RA   Roe R.;"), out);
+    }
+
+    @Test
     void unknownReferenceTypeFallsBackToUnpublished() throws Exception {
         String out = embl(
                 """
