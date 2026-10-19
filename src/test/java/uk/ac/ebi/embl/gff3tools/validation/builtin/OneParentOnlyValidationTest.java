@@ -28,6 +28,10 @@ import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 class OneParentOnlyValidationTest {
 
     private static final String MRNA_ID = "mrna_1";
+    private static final String MULTIPLE_PARENTS_MESSAGE =
+            "Violation of rule on line 1: Feature \"mrna_1\" (type: mRNA)"
+                    + " at ACC123:100-500 references 2 parents (gene_A, gene_B), but only one Parent is allowed per feature"
+                    + " (only the first Parent, eg. \"gene_A\", will be used)";
 
     private OneParentOnlyValidation validation;
 
@@ -70,8 +74,7 @@ class OneParentOnlyValidationTest {
         ValidationException exception =
                 assertThrows(ValidationException.class, () -> validation.validateOneParentOnly(mrna, 1));
 
-        assertTrue(exception.getMessage().contains("Feature \"" + MRNA_ID + "\""));
-        assertTrue(exception.getMessage().contains("references 2 parents (gene_A, gene_B)"));
+        assertEquals(MULTIPLE_PARENTS_MESSAGE, exception.getMessage());
     }
 
     @Test
@@ -81,8 +84,7 @@ class OneParentOnlyValidationTest {
         ValidationException exception =
                 assertThrows(ValidationException.class, () -> validation.validateOneParentOnly(mrna, 1));
 
-        assertTrue(exception.getMessage().contains("Feature \"" + MRNA_ID + "\""));
-        assertTrue(exception.getMessage().contains("references 2 parents (gene_A, gene_B)"));
+        assertEquals(MULTIPLE_PARENTS_MESSAGE, exception.getMessage());
     }
 
     private static GFF3Feature buildmRNAWithCol9String(String attributes) throws IOException {

@@ -41,7 +41,7 @@ public class OneParentOnlyValidation implements Validation {
     public static final String VALIDATION_RULE = "ONE_PARENT_ONLY";
 
     private static final String MULTIPLE_PARENTS_MESSAGE =
-            "Feature \"%s\" (type: %s) at %s:%d-%d references %d parents (%s), but only one Parent is allowed per feature (only the first Parent, eg. \"gene_A\", will be used)";
+            "Feature \"%s\" (type: %s) at %s:%d-%d references %d parents (%s), but only one Parent is allowed per feature (only the first Parent, eg. \"%s\", will be used)";
 
     @ValidationMethod(
             rule = VALIDATION_RULE,
@@ -63,7 +63,8 @@ public class OneParentOnlyValidation implements Validation {
                             feature.getStart(),
                             feature.getEnd(),
                             parents.size(),
-                            String.join(", ", parents)));
+                            String.join(", ", parents),
+                            parentValues.get(0)));
         }
     }
 }
