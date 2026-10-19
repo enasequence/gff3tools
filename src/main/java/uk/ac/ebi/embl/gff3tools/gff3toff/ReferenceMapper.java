@@ -42,8 +42,8 @@ import uk.ac.ebi.embl.gff3tools.metadata.SubmitterDetails;
  * Maps a master-entry {@link ReferenceData} (v1 or v2, see
  * docs/2610141424_reference_data_v2.md) to an EMBL {@link Reference}.
  *
- * <p>Public so that other consumers of master.json (e.g. ena-sequence-persistence) share
- * this one implementation instead of keeping a copy.
+ * <p>Public so that other consumers of master.json share this one implementation instead of
+ * keeping a copy.
  *
  * <p>Dispatches on the v2 {@code type}. Records without a {@code type} keep the v1
  * behaviour: a Submission when nested submitter details contain a valid submitted date,
@@ -75,12 +75,15 @@ public final class ReferenceMapper {
             publication.setConsortium(refData.getConsortium());
         }
 
-        // v1 records carry their authors only in submitterDetails. A v2 record with an empty
-        // authors[] means "no RA" (e.g. a consortium-only submitter), so it must not fall back.
-        List<AuthorData> authors = refData.getAuthors();
-        if (isBlank(refData.getType()) && (authors == null || authors.isEmpty())) {
+        // v1 records take their authors from submitterDetails only; a top-level authors list is
+        // ignored, as before v2. v2 records never fall back: an empty authors[] means "no RA"
+        // (e.g. a consortium-only submitter).
+        List<AuthorData> authors;
+        if (isBlank(refData.getType())) {
             SubmitterDetails submitterDetails = refData.getSubmitterDetails();
             authors = submitterDetails == null ? null : submitterDetails.getAuthors();
+        } else {
+            authors = refData.getAuthors();
         }
         addPersons(authors, publication::addAuthor);
 
@@ -167,7 +170,7 @@ public final class ReferenceMapper {
         String type = refData.getType();
         if (type == null || type.isBlank()) {
             // v1: submission when submitterDetails carry a valid date, else unpublished
-            Publication legacy = createSubmissionPublication(refData);
+            Submission legacy = buildSubmission(null, refData.getSubmitterDetails());
             return legacy != null ? legacy : referenceFactory.createUnpublished();
         }
         switch (type.trim().toUpperCase(Locale.ROOT)) {
@@ -192,17 +195,27 @@ public final class ReferenceMapper {
     }
 
     private static Publication createReferenceSubmission(ReferenceData refData) {
-        // merge field by field: the submission block wins, submitterDetails (v1) fills the gaps
-        ReferenceData.ReferenceSubmission block = refData.getSubmission();
-        SubmitterDetails submitterDetails = refData.getSubmitterDetails();
+        Submission submission = buildSubmission(refData.getSubmission(), refData.getSubmitterDetails());
+        if (submission == null) {
+            LOGGER.warn("Submission reference has no valid submittedDate in its submission block or "
+                    + "submitterDetails; mapping as unpublished");
+            return referenceFactory.createUnpublished();
+        }
+        return submission;
+    }
+
+    /**
+     * Merges field by field: the submission block (v2, may be null) wins, submitterDetails (v1)
+     * fills the gaps. Null when neither has a valid submittedDate.
+     */
+    private static Submission buildSubmission(
+            ReferenceData.ReferenceSubmission block, SubmitterDetails submitterDetails) {
         Date day = block == null || block.getSubmittedDate() == null ? null : parseDate(block.getSubmittedDate());
         if (day == null && submitterDetails != null && submitterDetails.getSubmittedDate() != null) {
             day = parseDate(submitterDetails.getSubmittedDate());
         }
         if (day == null) {
-            LOGGER.warn("Submission reference has no valid submittedDate in its submission block or "
-                    + "submitterDetails; mapping as unpublished");
-            return referenceFactory.createUnpublished();
+            return null;
         }
         Submission submission = referenceFactory.createSubmission();
         submission.setDay(day);
@@ -218,8 +231,8 @@ public final class ReferenceMapper {
     private static Publication createArticle(ReferenceData refData) {
         ReferenceData.Article block = refData.getArticle();
         if (block == null) return missingBlock(refData);
-        // without a year the writer drops "(year)" and the RL line no longer parses as an article
-        if (isBlank(block.getJournal()) || block.getYear() == null) {
+        // without a year the writer drops "(year)" and the article reads back without its year
+        if (isBlank(block.getJournal()) || !isValidYear(block.getYear())) {
             LOGGER.warn("Reference type '{}' needs journal and year; mapping as unpublished", refData.getType());
             return referenceFactory.createUnpublished();
         }
@@ -238,9 +251,9 @@ public final class ReferenceMapper {
         if (block == null) return missingBlock(refData);
         // A book RL line needs editors, title, publisher and year (sequencetools RL.16/RL.19/RL.20);
         // without editors the writer emits a bare "(in)" and without a year it drops "(year)", and
-        // either way the line no longer parses as a book. Pages may be absent: the writer renders
-        // them as 0-0.
-        if (isBlank(block.getBookTitle()) || isBlank(block.getPublisher()) || block.getYear() == null) {
+        // either way EmblBookMatcher no longer matches (the line reads back as an article). Pages
+        // may be absent: the writer renders them as 0-0.
+        if (isBlank(block.getBookTitle()) || isBlank(block.getPublisher()) || !isValidYear(block.getYear())) {
             LOGGER.warn(
                     "Reference type '{}' needs bookTitle, publisher and year; mapping as unpublished",
                     refData.getType());
@@ -263,8 +276,8 @@ public final class ReferenceMapper {
     private static Publication createThesis(ReferenceData refData) {
         ReferenceData.Thesis block = refData.getThesis();
         if (block == null) return missingBlock(refData);
-        // without a year the writer emits "Thesis ()", which does not parse
-        if (isBlank(block.getInstitute()) || block.getYear() == null) {
+        // without a year the writer emits "Thesis ()", which reads back as a thesis without a year
+        if (isBlank(block.getInstitute()) || !isValidYear(block.getYear())) {
             LOGGER.warn("Reference type '{}' needs institute and year; mapping as unpublished", refData.getType());
             return referenceFactory.createUnpublished();
         }
@@ -278,22 +291,29 @@ public final class ReferenceMapper {
         ReferenceData.Patent block = refData.getPatent();
         if (block == null) return missingBlock(refData);
         Date day = block.getDay() == null ? null : parseDate(block.getDay());
+        String number =
+                block.getPatentNumber() == null ? null : block.getPatentNumber().trim();
+        String patentType =
+                block.getPatentType() == null ? null : block.getPatentType().trim();
+        // office, number and type must match EmblPatentMatcher's character classes
         if (block.getPatentOffice() == null
                 || !block.getPatentOffice().trim().matches("[A-Za-z]{2}")
-                || isBlank(block.getPatentNumber())
-                || isBlank(block.getPatentType())
+                || number == null
+                || !number.matches("[A-Za-z0-9]+")
+                || patentType == null
+                || !patentType.matches("[A-Za-z0-9]+")
                 || block.getSequenceNumber() == null
                 || day == null) {
             LOGGER.warn(
-                    "Reference type '{}' needs patentOffice (2 letters), patentNumber, patentType, "
-                            + "sequenceNumber and a valid day; mapping as unpublished",
+                    "Reference type '{}' needs patentOffice (2 letters), patentNumber and patentType "
+                            + "(letters and digits), sequenceNumber and a valid day; mapping as unpublished",
                     refData.getType());
             return referenceFactory.createUnpublished();
         }
         Patent patent = referenceFactory.createPatent();
         patent.setPatentOffice(block.getPatentOffice().trim().toUpperCase(Locale.ROOT));
-        patent.setPatentNumber(block.getPatentNumber());
-        patent.setPatentType(block.getPatentType());
+        patent.setPatentNumber(number);
+        patent.setPatentType(patentType);
         patent.setSequenceNumber(block.getSequenceNumber());
         patent.setDay(day);
         if (block.getApplicants() != null) {
@@ -330,34 +350,14 @@ public final class ReferenceMapper {
         return referenceFactory.createUnpublished();
     }
 
-    private static Date yearToDate(Integer year) {
-        if (year == null) return null;
-        return Date.from(
-                LocalDate.of(year, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+    /** A four-digit year; anything else is treated as missing. */
+    private static boolean isValidYear(Integer year) {
+        return year != null && year >= 1000 && year <= 9999;
     }
 
-    private static Submission createSubmissionPublication(ReferenceData refData) {
-        SubmitterDetails submitterDetails = refData.getSubmitterDetails();
-        // Submission RL lines require a valid submitted date. When submitter details are
-        // absent or the date is missing/unparseable, fall back to an unpublished reference
-        // instead of emitting a malformed EMBL submission location.
-        if (submitterDetails == null || submitterDetails.getSubmittedDate() == null) {
-            return null;
-        }
-        Date parsedDate = parseDate(submitterDetails.getSubmittedDate());
-        if (parsedDate == null) {
-            LOGGER.warn(
-                    "Unable to map submission reference location due to invalid submittedDate '{}'",
-                    submitterDetails.getSubmittedDate());
-            return null;
-        }
-        Submission submission = referenceFactory.createSubmission();
-        submission.setDay(parsedDate);
-        String address = buildSubmitterAddress(submitterDetails.getSubmissionAccount());
-        if (address != null && !address.isBlank()) {
-            submission.setSubmitterAddress(address);
-        }
-        return submission;
+    private static Date yearToDate(int year) {
+        return Date.from(
+                LocalDate.of(year, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
     /**
@@ -365,7 +365,7 @@ public final class ReferenceMapper {
      * ReferenceUtils.getAddressFromSubmissionAccount): a broker account gives "broker, address,
      * country", any other "center, laboratory, address, country"; blank parts are skipped.
      */
-    static String buildSubmitterAddress(SubmissionAccount account) {
+    private static String buildSubmitterAddress(SubmissionAccount account) {
         if (account == null) {
             return null;
         }
@@ -395,7 +395,7 @@ public final class ReferenceMapper {
      * ("E." / "E" → "E."), and multiple initials separated by spaces and/or
      * periods ("E. P." / "E P" / "E.P." → "E.P."). Returns "" for null/blank.
      */
-    public static String toInitials(String component) {
+    static String toInitials(String component) {
         if (component == null) return "";
         StringBuilder sb = new StringBuilder();
         for (String token : component.trim().split("\\s+")) {
@@ -420,10 +420,11 @@ public final class ReferenceMapper {
      * line stable across runners.
      *
      * <p>Supports: ISO-8601 offset/zoned datetimes, ISO-8601 instants ("...Z"),
-     * ISO-8601 local datetimes / dates (assumed UTC), and EMBL "dd-MMM-yyyy".
+     * ISO-8601 local datetimes / dates (assumed UTC), and EMBL "dd-MMM-yyyy". Null (with a
+     * WARN) when the input is null or none of those.
      */
-    public static Date parseDate(String dateStr) {
-        LocalDate utcDate = parseToUtcLocalDate(dateStr);
+    static Date parseDate(String dateStr) {
+        LocalDate utcDate = dateStr == null ? null : parseToUtcLocalDate(dateStr);
         if (utcDate == null) {
             LOGGER.warn("Unable to parse date '{}'; skipping date mapping", dateStr);
             return null;

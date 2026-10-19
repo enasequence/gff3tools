@@ -27,3 +27,9 @@ RN   [5]
 RA   ;
 RT   "Reference without submitter details";
 RL   Unpublished.
+XX
+RN   [6]
+RA   Lee K.;
+RT   "Reference from a broker account";
+RL   Submitted (08-JUL-2021) to the INSDC.
+RL   Example Broker Ltd, 1 Broker Road, Cambridge, United Kingdom

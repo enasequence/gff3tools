@@ -117,6 +117,26 @@
     {
       "referenceNumber": 5,
       "title": "Reference without submitter details"
+    },
+    {
+      "referenceNumber": 6,
+      "title": "Reference from a broker account",
+      "submitterDetails": {
+        "submittedDate": "2021-07-08",
+        "submissionAccount": {
+          "brokerName": "Example Broker Ltd",
+          "centerName": "Ignored Center",
+          "laboratoryName": "Ignored Lab",
+          "address": "1 Broker Road, Cambridge",
+          "country": "United Kingdom"
+        },
+        "authors": [
+          {
+            "firstName": "Kim",
+            "surname": "Lee"
+          }
+        ]
+      }
     }
   ]
 }

@@ -57,8 +57,9 @@ public class ReferenceData {
     private String type;
 
     /**
-     * v2 structured authors (RA); preferred over {@code submitterDetails.authors}. v1 producers
-     * emitted {@code authors} as a free-text string; that is tolerated and ignored (empty list).
+     * v2 structured authors (RA) of typed records; records without {@code type} take
+     * {@code submitterDetails.authors} instead. v1 producers emitted {@code authors} as a free-text
+     * string; that is tolerated and ignored (empty list).
      */
     @JsonDeserialize(using = AuthorsDeserializer.class)
     private List<AuthorData> authors;
