@@ -103,7 +103,7 @@ public class ReferenceData {
         private String lastPage;
         private Integer year;
 
-        /** True for in-press articles (ERA PUBTYPE 7); carried for lossless round-trips, not rendered. */
+        /** True for in-press articles; carried for lossless round-trips, not rendered. */
         private boolean accepted;
     }
 
