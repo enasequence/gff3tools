@@ -1,6 +1,6 @@
 - Feature Name: `reference_data_v2`
 - Document Date: 2026-10-14
-- Last Updated: 2026-10-16
+- Last Updated: 2026-10-19
 
 # Summary
 
@@ -15,8 +15,7 @@ result `GFF3Mapper.mapReference` degrades every non-submission reference to
 This document specifies **ReferenceData v2**: a flat, discriminated-union JSON schema for
 the `references` array of master-entry JSON, projected from the EMBL reference block
 (RN/RP/RX/RG/RA/RT/RL). It defines the field set, per-type validity, backward-compatible
-reading rules, and the four-sided rollout order (this repo, webin-master-service,
-webin-gff3-stages, ena-sequence-persistence).
+reading rules, and the rollout order (this repo, webin-master-service, webin-gff3-stages).
 
 # Motivation & Rationale
 
@@ -70,7 +69,7 @@ webin-gff3-stages, ena-sequence-persistence).
     // ---- shared fields (all types) ----
     "referenceNumber":   2,                 // RN
     "type":              "ARTICLE",         // NEW: discriminator; REQUIRED in v2 output
-    "referencePosition": "1-1470",          // RP  (optional)
+    "referencePosition": "1-1470",          // RP  (optional; rendered for v2 records only)
     "referenceComment":  null,              //     (optional)
     "title":             "Complete nucleotide sequence ...",   // RT
     "consortium":        null,              // RG
@@ -99,9 +98,12 @@ webin-gff3-stages, ena-sequence-persistence).
     "electronic":  { "text": "https://..." },
     "unpublished": { "journalBlock": "..." },
 
-    // ---- legacy v1 fields, still read, never written by v2 producers ----
-    "submitterDetails": null,               // superseded by type=SUBMISSION + "submission"
-    "authors-free-text": null               // superseded by structured authors[]
+    // ---- legacy v1 fields: still read; producers MAY keep emitting them alongside the
+    //      v2 fields during the rollout ----
+    "submitterDetails": null,               // superseded by type=SUBMISSION + "submission";
+                                            // fills gaps in the submission block (see below)
+    "authors-free-text": null               // informational only, never rendered; superseded
+                                            // by structured authors[]
   }
 ]
 ```
@@ -157,7 +159,8 @@ on all but a handful of rows, which is why the flag is a faithful carry, not a g
 | unpublished | | ✔ | | | | | |
 
 A record is valid when the block named `lower(type)` is present (an `UNPUBLISHED`
-record may omit its block). Any other type block present is ignored and logged.
+record may omit its block) and carries the fields its RL line needs (see "Required fields"
+below). Any other type block present is ignored.
 
 ### Dates
 
@@ -171,32 +174,35 @@ One shape, everywhere: `{source, primaryId, secondaryId}` — the master-service
 `webin-gff3-stages` shape, which is field-for-field the sequencetools `XRef`
 (`database`, `primaryAccession`, `secondaryAccession`). Allowed `source` values are the
 ERA CV: `DOI`, `PUBMED`, `AGRICOLA`; unknown sources are carried but logged by
-consumers (EMBL `RX` lines must use known CVs).
+consumers (EMBL `RX` lines must use known CVs). gff3tools trims and upper-cases `source`,
+skips xrefs with a blank `source` or `primaryId`, and renders unknown sources with a WARN.
 
 `secondaryId` is currently only meaningful for future RX partners; EMBL `RX` writes
 `<db>; <primaryId>.` today.
 
 ## Backward compatibility
 
-1. **`type` absent → v1 semantics.** `SUBMISSION` when `submitterDetails` (or the legacy
-   free-text `authors`/`address`) is present, else `UNPUBLISHED`. Identical to the
-   current `GFF3Mapper`/`Gff3MasterJsonReader` behaviour; no consumer change needed to
-   keep working.
+1. **`type` absent → v1 semantics.** `SUBMISSION` when `submitterDetails` carries a valid
+   `submittedDate`, else `UNPUBLISHED`; `referencePosition` is not rendered (RP on a v1
+   record comes only from the WGS contig length). Byte-identical to the pre-v2 gff3tools
+   output (locked by `ReferenceV1GoldenTest`); no consumer change needed to keep working.
 2. **Unknown `type` → log WARN + fall back to `UNPUBLISHED`.** Never throw; never drop
    the reference silently.
-3. **v1 input remains valid input.** Nested `submitterDetails` and free-text
-   `authors`/`address` keep their current meaning; producers stop emitting them once v2
-   is live. The gff3tools mapper prefers structured `authors[]` and falls back to the
-   legacy forms.
+3. **v1 input remains valid input.** Nested `submitterDetails` keeps its current meaning;
+   producers may keep emitting it alongside the v2 fields during the rollout. A free-text
+   `authors` string (and free-text `address`, `authors-free-text`) is tolerated and
+   ignored, never rejected: the mapper prefers structured `authors[]` and falls back to
+   `submitterDetails.authors`. Non-object elements inside an `authors` array (e.g. plain
+   name strings) are skipped with a WARN instead of failing the master JSON.
 4. **`xrefs` is additive.** Absent `xrefs` = current behaviour.
 
 ## Consumer mapping (gff3tools)
 
-`GFF3Mapper.mapReference` dispatches on `type`:
+`ReferenceMapper.map` (called by `GFF3Mapper.mapReference`) dispatches on `type`:
 
 | `type` | construction |
 |---|---|
-| `SUBMISSION` | `createSubmission()`; `day` = `submission.submittedDate`; address = `submission.submitterAddress` (or legacy `submitterDetails` path) |
+| `SUBMISSION` | `createSubmission()`; merged field by field: `day` = `submission.submittedDate`, else `submitterDetails.submittedDate`; address = non-blank `submission.submitterAddress`, else the `submitterDetails.submissionAccount` address (broker rule below) |
 | `ARTICLE` | `createArticle()`; journal/volume/issue/firstPage/lastPage/year from `article`; `accepted` is read but not rendered |
 | `BOOK` | `createBook()`; bookTitle/publisher/pages/year (+ `editors` as `Person`s) |
 | `THESIS` | `createThesis()`; institute/year |
@@ -208,21 +214,52 @@ consumers (EMBL `RX` lines must use known CVs).
 Shared: `title` → `setTitle`, `consortium` → `setConsortium`, `authors[]` →
 `createPerson(surname, initials-from-firstName/middleName)` (existing
 `toInitials` logic), `xrefs` → `publication.addXRef(new XRef(source, primaryId))` —
-which the existing `RXWriter` then emits. `referencePosition` continues to flow to
-`reference.setLocations` (existing `RP` handling).
+which the existing `RXWriter` then emits. `referencePosition` ("1-100" or
+"1-100,200-300") → `reference.setLocations` is **new for v2 records only**; v1 records
+never rendered it and still do not. On WGS contigs the contig range `1-<contigLength>`
+overrides it for both v1 and v2. An unparseable value omits the RP line with a WARN.
+
+### Required fields (fallback to `UNPUBLISHED`)
+
+A typed record whose RL line would not parse is mapped as `Unpublished` with a WARN
+instead of emitting a malformed line:
+
+| `type` | required |
+|---|---|
+| `SUBMISSION` | a valid date in `submission` or `submitterDetails` |
+| `ARTICLE` | `journal`, `year` (volume/issue/pages optional; an in-press article renders e.g. `Photosyn. Res.:(2007).`) |
+| `BOOK` | at least one editor with a name, `bookTitle`, `publisher`, `year` (pages render as `0-0` when absent) |
+| `THESIS` | `institute`, `year` |
+| `PATENT` | `patentOffice` (2 letters, stored upper-case), `patentNumber`, `patentType`, `sequenceNumber`, valid `day`; blank applicants are dropped |
+| `ELECTRONIC` | non-blank `text` |
+
+### Submitter reference (producer rule)
+
+Producers (webin-gff3-stages) build the `SUBMISSION` reference the way the legacy
+pipeline does (sequencetools `ReferenceUtils`):
+
+- **Authors**: the manifest `AUTHORS` when present — for submission account
+  `Webin-55551` the whole value becomes the consortium (RG) instead of RA; otherwise the
+  submission account contacts, where a contact with a consortium contributes RG (and no
+  RA person).
+- **Address**: the manifest `ADDRESS` when present, else the submission account address:
+  `broker, address, country` for broker accounts (non-blank `brokerName`), otherwise
+  `center, laboratory, address, country`; blank parts are skipped. gff3tools applies the
+  same account rule when it falls back to `submitterDetails.submissionAccount`.
 
 ## Rollout order (dependency-ordered)
 
 | # | Repo | Change | Depends on |
 |---|---|---|---|
 | 0 | (this doc) | agree schema | — |
-| 1 | `gff3tools` (implemented on this branch) | widen `ReferenceData`/`CrossReference`, dispatch in `mapReference`, fixtures + tests | 0 |
-| 2 | `webin-master-service` | widen model, drop `@JsonIgnore` on xrefs | 0 |
-| 3 | `webin-gff3-stages` (implemented, PR https://github.com/enasequence/webin-gff3-stages/pull/39) | emit `type: SUBMISSION` + `submission` block + structured `authors[]` (manifest AUTHORS parsed; initials split from surname), keeping v1 fields alongside | 0, 1, 2 |
-| 4 | (not needed) | e2e smoke: v1 and v2 render identically for submission-only references | 1–3 |
+| 1 | `gff3tools` [#188](https://github.com/enasequence/gff3tools/pull/188) | widen `ReferenceData`, `ReferenceMapper` dispatch, fixtures + tests (v1 output unchanged) | 0 |
+| 2 | `webin-master-service` #7 | widen model, carry xrefs; ENAPRO reference enrichment is on by default once the ENAPRO secret exists | 1 |
+| 3 | (operations) | drain the stages pipeline (no in-flight jobs on the old producer) | 2 |
+| 4 | `webin-gff3-stages` [#39](https://github.com/enasequence/webin-gff3-stages/pull/39) | emit `type: SUBMISSION` + `submission` block + structured `authors[]` (manifest AUTHORS parsed; initials split from surname), keeping v1 fields alongside | 1, 2, 3 |
 
-Steps 1/2 are independently shippable (additive, dormant until data arrives).
-Step 3 is the activation switch and must not land before 1 and 2 are deployed.
+The ENAPRO secret that switches master-service enrichment on is created only after every
+consumer of master.json, including UniParc, runs a gff3tools build with #188; until then
+master-service serves v1-shaped references only.
 
 # Open questions
 
@@ -230,7 +267,8 @@ Step 3 is the activation switch and must not land before 1 and 2 are deployed.
    (`ReferenceData.Xref` in gff3tools). `CrossReference {id, source, url}` is a different
    concept (entry-level DR lines) and is left unchanged.
 2. **D2 free-text authors** — resolved: structured `authors[]` is canonical; the v1
-   `submitterDetails.authors` is read as a fallback; no free-text input is accepted.
+   `submitterDetails.authors` is read as a fallback; free-text author strings are
+   tolerated and ignored (not rendered, not rejected).
 3. **D4 `ACCEPTED`** — resolved: `ARTICLE` plus `article.accepted`, set from `PUBTYPE = 7` (see above).
 4. **D5 shared model** — single library (e.g. in gff3tools, consumed by the services) vs
    four synced copies. If not now, this change makes the drift worse; budget it.
@@ -238,7 +276,7 @@ Step 3 is the activation switch and must not land before 1 and 2 are deployed.
    mapper, the fixtures, and both consumer paths run through it).
 6. **`editors` as structured people** — BOOK needs editors (`(in) X. (Eds.)`); confirm
    producers can supply them from ERA (legacy `Book` model has them).
-7. **Producer source and timing** — resolved by measurement (ENAPRO week samples, 2022-03 / 2024-03 / 2026-03): every Webin assembly carries only the PUBTYPE-0 submission reference at load and never gains a journal reference afterwards (0 article/book/thesis/patent references on 1,794 and 46,152-assembly samples, and on the chromosome entries of the 2022/2024 samples). No enrichment/backfill path is justified today. If non-submission references are ever needed, the preferred mechanism is to enrich in the **webin-master-service read path** (read PUBLICATION/JOURNALARTICLE/ACCEPTED from ENAPRO `DATALIB` on GET, cached) — not a pipeline change. For context: ~20% of 2024-03 assemblies have a `PUBMED` link in their ERA project XML, but all point to a shared study citation (one PMID across 18 projects), not a per-entry paper.
+7. **Producer source and timing** — resolved by measurement (ENAPRO week samples, 2022-03 / 2024-03 / 2026-03): every Webin assembly carries only the PUBTYPE-0 submission reference at load and never gains a journal reference afterwards (0 article/book/thesis/patent references on 1,794 and 46,152-assembly samples, and on the chromosome entries of the 2022/2024 samples). No pipeline backfill is justified. Non-submission references, where they exist, are enriched in the **webin-master-service read path** (#7: read PUBLICATION/JOURNALARTICLE/ACCEPTED from ENAPRO `DATALIB` on GET, cached), switched on by the ENAPRO secret (see Rollout order) — not a pipeline change. For context: ~20% of 2024-03 assemblies have a `PUBMED` link in their ERA project XML, but all point to a shared study citation (one PMID across 18 projects), not a per-entry paper.
 
 # References
 
