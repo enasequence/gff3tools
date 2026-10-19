@@ -44,6 +44,12 @@ class OneParentOnlyValidationTest {
     }
 
     @Test
+    void validateOneParentOnlyWithoutParent() throws IOException {
+        GFF3Feature feature = TestUtils.createGFF3Feature(MRNA_ID, null, "gene", "ACC123", 1, 800);
+        assertDoesNotThrow(() -> validation.validateOneParentOnly(feature, 1));
+    }
+
+    @Test
     void validateOneParentOnlyWithRepeatedCommaSeparatedParent() throws IOException {
         GFF3Feature mrna = buildmRNAWithCol9String("Parent=gene_A,gene_A");
 
