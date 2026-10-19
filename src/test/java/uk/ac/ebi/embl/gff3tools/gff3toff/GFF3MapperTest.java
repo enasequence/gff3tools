@@ -1352,7 +1352,7 @@ class GFF3MapperTest {
 
     @Test
     void v1FreeTextAuthorsStringIsToleratedAndSubmitterDetailsAuthorsUsed() throws Exception {
-        // v1 master-service JSON carried "authors" as a plain string; it must neither fail
+        // v1 master JSON carried "authors" as a plain string; it must neither fail
         // deserialization nor shadow submitterDetails.authors
         String out = embl(
                 """
