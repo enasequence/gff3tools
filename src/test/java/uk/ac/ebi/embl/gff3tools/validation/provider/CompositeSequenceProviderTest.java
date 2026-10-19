@@ -210,6 +210,71 @@ class CompositeSequenceProviderTest {
         assertSame(expected, provider.get(new ValidationContext()).getSequenceSliceReader("seq1", 1L, 6L));
     }
 
+    // --- version-tolerant resolution (TTENA-317) ---
+
+    @Test
+    void unversionedQueryResolvesVersionedKey() throws Exception {
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        provider.addSource(stubSource("OZ375371.1", "ATGAAA"));
+
+        SequenceLookup lookup = provider.get(new ValidationContext());
+        assertEquals("ATGAAA", lookup.getSequenceSlice("OZ375371", 1L, 6L));
+    }
+
+    @Test
+    void versionedQueryResolvesUnversionedKey() throws Exception {
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        provider.addSource(stubSource("OZ375371", "ATGAAA"));
+
+        SequenceLookup lookup = provider.get(new ValidationContext());
+        assertEquals("ATGAAA", lookup.getSequenceSlice("OZ375371.1", 1L, 6L));
+    }
+
+    @Test
+    void versionedQueryAboveNineResolvesExactKey() throws Exception {
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        provider.addSource(stubSource("X.10", "ATGAAA"));
+
+        SequenceLookup lookup = provider.get(new ValidationContext());
+        assertEquals("ATGAAA", lookup.getSequenceSlice("X.10", 1L, 6L));
+        assertThrows(IllegalArgumentException.class, () -> lookup.getSequenceSlice("X", 1L, 6L));
+    }
+
+    @Test
+    void exactMatchInLaterSourceWinsOverVariantInEarlierSource() throws Exception {
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        provider.addSource(stubSource("X.1", "AAA"));
+        provider.addSource(stubSource("X", "TTT"));
+
+        SequenceLookup lookup = provider.get(new ValidationContext());
+        assertEquals("TTT", lookup.getSequenceSlice("X", 1L, 3L));
+        assertEquals("AAA", lookup.getSequenceSlice("X.1", 1L, 3L));
+    }
+
+    @Test
+    void ambiguousVariantAcrossSourcesIsSkipped() throws Exception {
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        provider.addSource(stubSource("X.1", "AAA"));
+        provider.addSource(stubSource("X.2", "TTT"));
+
+        SequenceLookup lookup = provider.get(new ValidationContext());
+        // Neither X.1 nor X.2 may silently win for a query of X.
+        assertThrows(IllegalArgumentException.class, () -> lookup.getSequenceSlice("X", 1L, 3L));
+        assertEquals("AAA", lookup.getSequenceSlice("X.1", 1L, 3L));
+        assertEquals("TTT", lookup.getSequenceSlice("X.2", 1L, 3L));
+    }
+
+    @Test
+    void unknownSeqIdErrorMentionsTheRequestedId() throws Exception {
+        CompositeSequenceProvider provider = new CompositeSequenceProvider();
+        provider.addSource(stubSource("X.1", "AAA"));
+
+        SequenceLookup lookup = provider.get(new ValidationContext());
+        IllegalArgumentException ex =
+                assertThrows(IllegalArgumentException.class, () -> lookup.getSequenceSlice("unknown", 1L, 3L));
+        assertTrue(ex.getMessage().contains("unknown"));
+    }
+
     // --- unknown seqId tests ---
 
     @Test
