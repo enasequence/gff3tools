@@ -61,7 +61,6 @@ public class GFF3Mapper {
     private final QualifierFactory qualifierFactory = new QualifierFactory();
     private final LocationFactory locationFactory = new LocationFactory();
     private final SequenceFactory sequenceFactory = new SequenceFactory();
-    private final ReferenceFactory referenceFactory = new ReferenceFactory();
     private static final Logger LOGGER = LoggerFactory.getLogger(GFF3Mapper.class);
 
     Map<String, GFF3Feature> parentFeatures;
@@ -654,7 +653,7 @@ public class GFF3Mapper {
 
         // DT lines: first public and last updated (dates + release numbers)
         if (m.getFirstPublic() != null) {
-            Date date = parseDate(m.getFirstPublic());
+            Date date = ReferenceMapper.parseDate(m.getFirstPublic());
             if (date != null) {
                 entry.setFirstPublic(date);
             }
@@ -663,7 +662,7 @@ public class GFF3Mapper {
             entry.setFirstPublicRelease(m.getFirstPublicRelease());
         }
         if (m.getLastUpdated() != null) {
-            Date date = parseDate(m.getLastUpdated());
+            Date date = ReferenceMapper.parseDate(m.getLastUpdated());
             if (date != null) {
                 entry.setLastUpdated(date);
             }
@@ -763,10 +762,6 @@ public class GFF3Mapper {
         return prefix.toString();
     }
 
-    static String toInitials(String component) {
-        return ReferenceMapper.toInitials(component);
-    }
-
     /** Target content width for `CC` lines (EMBL convention is 80 total = 5-col prefix + 75). */
     private static final int CC_LINE_WIDTH = 75;
 
@@ -864,10 +859,6 @@ public class GFF3Mapper {
         if (metagenomeSource != null && !metagenomeSource.isBlank()) {
             sourceFt.addQualifier(qualifierFactory.createQualifier("environmental_sample"));
         }
-    }
-
-    private Date parseDate(String dateStr) {
-        return ReferenceMapper.parseDate(dateStr);
     }
 
     /** ID line field 3, resolved as validation resolves it; unset when no source declares one. */
