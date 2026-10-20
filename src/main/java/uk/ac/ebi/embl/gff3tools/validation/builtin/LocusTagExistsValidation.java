@@ -73,8 +73,6 @@ public class LocusTagExistsValidation implements Validation {
      * the rule stays inert unless a caller registers a real analysis type.
      */
     private boolean isGenomeSubmission(String accession) {
-        // TODO: use the parent analysis type for a DECOUPLED_ANNOTATION (see
-        // AnalysisContext#analysisType), so a decoupled annotation of an assembly is checked too.
         AnalysisType analysisType = context.contains(AnalysisContext.class)
                 ? context.get(AnalysisContext.class).getAnalysisType()
                 : AnalysisType.UNKNOWN;

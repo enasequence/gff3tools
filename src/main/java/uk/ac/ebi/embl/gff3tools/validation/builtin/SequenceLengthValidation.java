@@ -162,9 +162,6 @@ public class SequenceLengthValidation implements Validation {
         if (wgsAssembly == null) {
             AnalysisContext analysisContext =
                     context.contains(AnalysisContext.class) ? context.get(AnalysisContext.class) : null;
-            // TODO: use the parent analysis type for a DECOUPLED_ANNOTATION (see
-            // AnalysisContext#analysisType). This also needs AssemblyTypeValidator to accept an
-            // assembly type for one, or the WGS check below can never pass.
             wgsAssembly = analysisContext != null
                     && analysisContext.getAnalysisType() == AnalysisType.SEQUENCE_ASSEMBLY
                     && analysisContext

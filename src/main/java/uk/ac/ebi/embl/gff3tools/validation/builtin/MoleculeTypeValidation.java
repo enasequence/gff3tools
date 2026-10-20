@@ -231,7 +231,7 @@ public class MoleculeTypeValidation implements Validation {
             throw new ValidationException(
                     ANALYSIS_TYPE_RULE,
                     line,
-                    "Molecule type %s is not permitted for a %s submission."
+                    "Molecule type %s is not permitted for analysis type %s."
                             .formatted(moleculeType.get().getValue(), analysisType));
         }
     }
@@ -242,8 +242,6 @@ public class MoleculeTypeValidation implements Validation {
      * so the rule stays inert unless a caller registers a real analysis type.
      */
     private AnalysisType getAnalysisType() {
-        // TODO: return the parent analysis type for a DECOUPLED_ANNOTATION (see
-        // AnalysisContext#analysisType), so a decoupled annotation gets its parent's constraints.
         return context.contains(AnalysisContext.class)
                 ? context.get(AnalysisContext.class).getAnalysisType()
                 : AnalysisType.UNKNOWN;

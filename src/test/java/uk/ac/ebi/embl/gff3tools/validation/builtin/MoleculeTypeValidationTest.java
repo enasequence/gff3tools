@@ -422,7 +422,7 @@ class MoleculeTypeValidationTest {
             String message = exception.getMessage();
             assertTrue(message.contains(MoleculeTypeValidation.ANALYSIS_TYPE_RULE));
             assertTrue(message.contains(
-                    "Molecule type %s is not permitted for a %s submission.".formatted(moleculeType, analysisType)));
+                    "Molecule type %s is not permitted for analysis type %s.".formatted(moleculeType, analysisType)));
         }
 
         private void withAnalysisType(AnalysisType analysisType) {

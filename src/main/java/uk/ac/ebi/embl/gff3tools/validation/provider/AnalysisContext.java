@@ -34,26 +34,15 @@ import uk.ac.ebi.embl.gff3tools.utils.GapOptionsValidator;
 public final class AnalysisContext {
 
     /**
-     * The analysis type the submission was made under. Where {@code sequencetools} gates a rule on
-     * data class, the gff3tools rule gates on the analysis type instead, using this mapping:
+     * The analysis type whose rules apply.
      *
-     * <pre>
-     * Analysis type            Parent analysis type     Data class
-     * SEQUENCE_ASSEMBLY        -                        WGS, STD
-     * TRANSCRIPTOME_ASSEMBLY   -                        TSA
-     * SEQUENCE_FLATFILE        -                        STD
-     * DECOUPLED_ANNOTATION     SEQUENCE_ASSEMBLY        WGS, STD
-     * DECOUPLED_ANNOTATION     TRANSCRIPTOME_ASSEMBLY   TSA
-     * DECOUPLED_ANNOTATION     SEQUENCE_FLATFILE        STD
-     * </pre>
+     * <p>A decoupled annotation ENA analysis type has the data class of the parent analysis it annotates,
+     * so a caller should pass in the parent analysis's type
+     * ({@link AnalysisType} has no {@code DECOUPLED_ANNOTATION} option).
      *
-     * <p>A rule uses the analysis type, or the parent analysis type when the analysis type is
-     * {@code DECOUPLED_ANNOTATION}: a decoupled annotation has the data class of the analysis it
-     * annotates.
-     *
-     * <p>TODO: {@link AnalysisType} has no {@code DECOUPLED_ANNOTATION} yet, and this class has no
-     * parent analysis type. Until both exist, a decoupled annotation cannot be represented, and the
-     * rules that read this field compare it directly instead of resolving the parent first.
+     * <p>{@link AnalysisType#UNKNOWN} means there is no ENA submission context, as for the CLI or
+     * any other use of the library outside ENA's pipelines. The rules that need an analysis type do
+     * not run.
      */
     @Getter
     private final AnalysisType analysisType;
