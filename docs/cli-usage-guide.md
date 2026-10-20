@@ -228,7 +228,7 @@ ValidationEngine engine = new ValidationEngineBuilder()
 ```
 
 The assembly type is optional and is only accepted with `SEQUENCE_ASSEMBLY`. For a decoupled
-annotation, pass the analysis type of the analysis it annotates: there is no
+annotation, pass the parent analysis type of the analysis it annotates: there is no
 `DECOUPLED_ANNOTATION` value. Without an analysis type the context defaults to `UNKNOWN`, meaning
 no ENA submission context, and these rules stay off.
 
