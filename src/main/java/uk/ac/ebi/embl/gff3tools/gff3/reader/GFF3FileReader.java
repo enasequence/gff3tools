@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.Getter;
@@ -28,6 +29,7 @@ import uk.ac.ebi.embl.gff3tools.metrics.MetricsCollector;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.provider.SourceTranslations;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonAccessionRegistry;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonomyIdentifier;
 
@@ -71,6 +73,7 @@ public class GFF3FileReader implements AutoCloseable {
         currentAnnotation = new GFF3Annotation();
         processedAccessions = new HashSet<>();
         translationReader = new GFF3TranslationReader(validationEngine, gff3Path);
+        registerSourceTranslations();
     }
 
     // Used by GFF3 processing pipeline
@@ -237,6 +240,19 @@ public class GFF3FileReader implements AutoCloseable {
             return null;
         }
         return null;
+    }
+
+    /**
+     * Lets validations see which features this file's {@code ##FASTA} gives a translation, before
+     * the reader gets there. The keys are only read if a validation asks for them.
+     */
+    private void registerSourceTranslations() {
+        ValidationContext context = validationEngine == null ? null : validationEngine.getContext();
+        if (context == null) {
+            return;
+        }
+        Supplier<Set<String>> keys = () -> getTranslationOffsetMap().keySet();
+        context.register(SourceTranslations.class, new SourceTranslations(keys));
     }
 
     private void registerTaxon(String accession) {

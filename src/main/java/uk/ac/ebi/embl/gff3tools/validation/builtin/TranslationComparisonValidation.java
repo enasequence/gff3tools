@@ -21,6 +21,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.PseudoLookup;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
@@ -66,8 +67,14 @@ public class TranslationComparisonValidation {
                 annotation, f -> OntologyTerm.CDS.name().equals(f.getName()));
 
         List<String> mismatches = new ArrayList<>();
+        PseudoLookup pseudoLookup = PseudoLookup.of(annotation, context);
 
         for (Map.Entry<String, List<GFF3Feature>> entry : cdsGroups.entrySet()) {
+            // A pseudo CDS is never translated, so there is nothing to compare. Any translation
+            // it carries is reported by CDS_PSEUDO_TRANSLATION instead.
+            if (pseudoLookup.isPseudo(entry.getValue())) {
+                continue;
+            }
             // Sort by start position to match TranslationFix's representative selection
             GFF3Feature representative = ValidationUtils.representativeOfFeatureGroup(entry.getValue());
             String key = TranslationState.buildKey(

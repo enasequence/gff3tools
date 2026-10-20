@@ -21,6 +21,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.PseudoLookup;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
@@ -50,12 +51,13 @@ public class CdsTranslationPresenceValidation {
             return;
         }
         TranslationState state = context.get(TranslationState.class);
+        PseudoLookup pseudoLookup = PseudoLookup.of(annotation, context);
 
         List<String> missing = new ArrayList<>();
         for (List<GFF3Feature> segments : ValidationUtils.groupFeaturesById(
                         annotation, f -> OntologyTerm.CDS.name().equals(f.getName()))
                 .values()) {
-            if (isExempt(segments)) {
+            if (isExempt(segments, pseudoLookup)) {
                 continue;
             }
             GFF3Feature representative = ValidationUtils.representativeOfFeatureGroup(segments);
@@ -94,10 +96,9 @@ public class CdsTranslationPresenceValidation {
                 && !entry.newTranslation().isBlank();
     }
 
-    private boolean isExempt(List<GFF3Feature> segments) {
-        return segments.stream()
-                .anyMatch(s -> s.getAttribute(GFF3Attributes.EXCEPTION).isPresent()
-                        || s.hasAttribute(GFF3Attributes.PSEUDO)
-                        || s.hasAttribute(GFF3Attributes.PSEUDOGENE));
+    private boolean isExempt(List<GFF3Feature> segments, PseudoLookup pseudoLookup) {
+        boolean hasException = segments.stream()
+                .anyMatch(s -> s.getAttribute(GFF3Attributes.EXCEPTION).isPresent());
+        return hasException || pseudoLookup.isPseudo(segments);
     }
 }

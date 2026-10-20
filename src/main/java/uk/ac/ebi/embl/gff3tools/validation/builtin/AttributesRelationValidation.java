@@ -18,6 +18,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.PseudoLookup;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
@@ -161,6 +162,12 @@ public class AttributesRelationValidation implements Validation {
 
             for (String value : MUTUALLY_EXCLUSIVE.get(key)) {
                 if (feature.hasAttribute(value)) {
+                    // CDS_PSEUDO_PRODUCT reports a product on a pseudo CDS or pseudogenic_CDS,
+                    // including one that is pseudo only through its ancestors.
+                    if (GFF3Attributes.PRODUCT.equals(value)
+                            && PseudoLookup.isCdsOrPseudogenicCds(feature, context.get(OntologyClient.class))) {
+                        continue;
+                    }
                     if (GFF3Attributes.PSEUDO.equals(key) || GFF3Attributes.PSEUDOGENE.equals(key)) {
                         throw new ValidationException(
                                 line, ERROR_PSEUDO_PRODUCT_CONFLICT.formatted(key, value, value, GFF3Attributes.NOTE));

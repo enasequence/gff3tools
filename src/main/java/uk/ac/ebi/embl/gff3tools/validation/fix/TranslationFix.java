@@ -23,6 +23,7 @@ import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.translation.TranslationResult;
 import uk.ac.ebi.embl.gff3tools.translation.Translator;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.PseudoLookup;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
@@ -90,12 +91,14 @@ public class TranslationFix {
         Map<String, List<GFF3Feature>> cdsGroups = ValidationUtils.groupFeaturesById(
                 annotation, f -> OntologyTerm.CDS.name().equals(f.getName()));
 
+        PseudoLookup pseudoLookup = PseudoLookup.of(annotation, context);
         for (List<GFF3Feature> segments : cdsGroups.values()) {
-            translateCdsGroup(segments, sequenceLookup, line);
+            translateCdsGroup(segments, sequenceLookup, line, pseudoLookup.isPseudo(segments));
         }
     }
 
-    private void translateCdsGroup(List<GFF3Feature> features, SequenceLookup sequenceLookup, int line)
+    private void translateCdsGroup(
+            List<GFF3Feature> features, SequenceLookup sequenceLookup, int line, boolean isPseudo)
             throws ValidationException {
 
         boolean isTransSpliced = features.stream().anyMatch(s -> s.hasAttribute(GFF3Attributes.TRANS_SPLICING));
@@ -143,6 +146,11 @@ public class TranslationFix {
             }
 
             Translator translator = new Translator(sortedFeatures);
+            if (isPseudo) {
+                // The Translator only checks the first segment's own attributes. A CDS is also
+                // pseudo when a later segment or an ancestor is, and must not be translated.
+                translator.setNonTranslating(true);
+            }
             if (hasMixedStrands) {
                 // Sequence is already strand-corrected per segment; prevent the Translator
                 // from applying an additional full-sequence RC.
