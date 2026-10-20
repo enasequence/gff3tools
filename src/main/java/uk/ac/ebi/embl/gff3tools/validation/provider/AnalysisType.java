@@ -10,7 +10,10 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
-/** The type of analysis a GFF3 file is being validated for. */
+/**
+ * The type of analysis a GFF3 file is being validated for. A decoupled annotation is validated as
+ * the type of the analysis it annotates; see {@link AnalysisContext#getAnalysisType()}.
+ */
 public enum AnalysisType {
     /*** This is the default AnalysisType for previous Template pipeline submissions*/
     SEQUENCE_FLATFILE,

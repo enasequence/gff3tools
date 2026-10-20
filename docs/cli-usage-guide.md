@@ -205,6 +205,33 @@ stderr. Reading from stdin means the `##FASTA`/translation section, if any, cann
 re-read and is omitted from the output (a warning is logged); gzip-compressed file input is
 supported and round-trips the `##FASTA` section normally.
 
+### Rules that depend on the analysis type
+
+These rules need to know what kind of submission the file belongs to, and nothing in a GFF3
+file says so:
+
+| Rule | Runs only when |
+|------|----------------|
+| `LOCUS_TAG_EXISTS` | the analysis type is `SEQUENCE_ASSEMBLY`, and a registered `TaxonProvider` resolves the organism to a non-virus. Core ships no `TaxonProvider`. |
+| `MOLECULE_TYPE_ANALYSIS_TYPE` | the analysis type is `SEQUENCE_ASSEMBLY` or `TRANSCRIPTOME_ASSEMBLY`, and the FASTA header declares a recognised molecule type |
+| `ASSEMBLY_SEQUENCE_TOO_SHORT` | the analysis type is `SEQUENCE_ASSEMBLY`, the assembly type is a whole genome sequence one (`clone or isolate`, MAG, SAG or `COVID-19 outbreak`), and a registered sequence source knows the sequence's length |
+
+The CLI has no option to set the analysis type or the assembly type, so these rules never fire
+from `validation` or `conversion`. They run only when a library caller registers an
+`AnalysisContext` with a real analysis type, plus a `TaxonProvider` for `LOCUS_TAG_EXISTS`:
+
+```java
+ValidationEngine engine = new ValidationEngineBuilder()
+        .withProvider(new AnalysisContextProvider(
+                AnalysisType.SEQUENCE_ASSEMBLY, 10, null, null, "CLONE OR ISOLATE"))
+        .build();
+```
+
+The assembly type is optional and is only accepted with `SEQUENCE_ASSEMBLY`. For a decoupled
+annotation, pass the parent analysis type of the analysis it annotates: there is no
+`DECOUPLED_ANNOTATION` value. Without an analysis type the context defaults to `UNKNOWN`, meaning
+no ENA submission context, and these rules stay off.
+
 ---
 
 ## Metrics reports (`--metrics`)

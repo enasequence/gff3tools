@@ -18,27 +18,26 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
 
-@Slf4j
 @Gff3Validation(name = "MOLECULE_TYPE_FEATURE")
 public class MoleculeTypeValidation implements Validation {
     public static final String REQUIRED_FEATURE_RULE = "MOLECULE_TYPE_REQUIRED_FEATURE";
     public static final String FORBIDDEN_FEATURE_RULE = "MOLECULE_TYPE_FORBIDDEN_FEATURE";
     public static final String MRNA_CDS_COMPLEMENT_RULE = "MRNA_CDS_COMPLEMENT";
     public static final String MRNA_CDS_JOINED_LOCATION_RULE = "MRNA_CDS_JOINED_LOCATION";
+    public static final String ANALYSIS_TYPE_RULE = "MOLECULE_TYPE_ANALYSIS_TYPE";
 
     /**
      * The molecule types the specification names in b.vi.9: a record of either holds a transcript
@@ -66,6 +65,21 @@ public class MoleculeTypeValidation implements Validation {
                     ControlledVocabularyUtils.MolType.RRNA,
                     List.of(OntologyTerm.TRNA, OntologyTerm.CDS));
 
+    /**
+     * The molecule types each sequencing technique rules out: a genome assembly is never sequenced as
+     * mRNA, and a transcriptome assembly is never sequenced as DNA. Analysis types absent from this
+     * map place no constraint on the molecule type.
+     */
+    private static final Map<AnalysisType, Set<ControlledVocabularyUtils.MolType>>
+            FORBIDDEN_MOLECULE_TYPES_BY_ANALYSIS_TYPE = Map.of(
+                    AnalysisType.SEQUENCE_ASSEMBLY,
+                    Set.of(ControlledVocabularyUtils.MolType.MRNA),
+                    AnalysisType.TRANSCRIPTOME_ASSEMBLY,
+                    Set.of(
+                            ControlledVocabularyUtils.MolType.GENOMIC_DNA,
+                            ControlledVocabularyUtils.MolType.OTHER_DNA,
+                            ControlledVocabularyUtils.MolType.UNASSIGNED_DNA));
+
     @InjectContext
     private ValidationContext context;
 
@@ -75,7 +89,8 @@ public class MoleculeTypeValidation implements Validation {
             type = ANNOTATION,
             priority = ValidationPriority.CRITICAL)
     public void validateRequiredFeature(GFF3Annotation annotation, int line) throws ValidationException {
-        Optional<ControlledVocabularyUtils.MolType> moleculeType = getMoleculeType(annotation.getAccession());
+        Optional<ControlledVocabularyUtils.MolType> moleculeType =
+                ValidationUtils.getFastaMoleculeType(annotation.getAccession(), context);
         if (moleculeType.isEmpty()) {
             return;
         }
@@ -108,7 +123,8 @@ public class MoleculeTypeValidation implements Validation {
             type = ANNOTATION,
             priority = ValidationPriority.CRITICAL)
     public void validateForbiddenFeature(GFF3Annotation annotation, int line) throws ValidationException {
-        Optional<ControlledVocabularyUtils.MolType> moleculeType = getMoleculeType(annotation.getAccession());
+        Optional<ControlledVocabularyUtils.MolType> moleculeType =
+                ValidationUtils.getFastaMoleculeType(annotation.getAccession(), context);
         if (moleculeType.isEmpty()) {
             return;
         }
@@ -173,7 +189,8 @@ public class MoleculeTypeValidation implements Validation {
             type = ANNOTATION,
             priority = ValidationPriority.CRITICAL)
     public void validateMrnaCdsJoinedLocation(GFF3Annotation annotation, int line) throws ValidationException {
-        Optional<ControlledVocabularyUtils.MolType> moleculeType = getMoleculeType(annotation.getAccession());
+        Optional<ControlledVocabularyUtils.MolType> moleculeType =
+                ValidationUtils.getFastaMoleculeType(annotation.getAccession(), context);
         if (moleculeType.isEmpty() || !PROCESSED_TRANSCRIPT_MOLECULE_TYPES.contains(moleculeType.get())) {
             return;
         }
@@ -192,6 +209,42 @@ public class MoleculeTypeValidation implements Validation {
                             segments.size(),
                             formatLocations(segments)));
         }
+    }
+
+    @ValidationMethod(
+            rule = ANALYSIS_TYPE_RULE,
+            description = "Check that the molecule type is one the submission's analysis type permits",
+            type = ANNOTATION,
+            priority = ValidationPriority.CRITICAL)
+    public void validateMoleculeTypeAgainstAnalysisType(GFF3Annotation annotation, int line)
+            throws ValidationException {
+        Optional<ControlledVocabularyUtils.MolType> moleculeType =
+                ValidationUtils.getFastaMoleculeType(annotation.getAccession(), context);
+        if (moleculeType.isEmpty()) {
+            return;
+        }
+
+        AnalysisType analysisType = getAnalysisType();
+        if (FORBIDDEN_MOLECULE_TYPES_BY_ANALYSIS_TYPE
+                .getOrDefault(analysisType, Set.of())
+                .contains(moleculeType.get())) {
+            throw new ValidationException(
+                    ANALYSIS_TYPE_RULE,
+                    line,
+                    "Molecule type %s is not permitted for analysis type %s."
+                            .formatted(moleculeType.get().getValue(), analysisType));
+        }
+    }
+
+    /**
+     * Only the caller can tell us which technique produced the sequences - nothing in a GFF3 marks
+     * one. {@link AnalysisContext} is classpath-scanned and defaults to {@link AnalysisType#UNKNOWN},
+     * so the rule stays inert unless a caller registers a real analysis type.
+     */
+    private AnalysisType getAnalysisType() {
+        return context.contains(AnalysisContext.class)
+                ? context.get(AnalysisContext.class).getAnalysisType()
+                : AnalysisType.UNKNOWN;
     }
 
     private boolean hasRibosomalSlippage(List<GFF3Feature> segments) {
@@ -220,26 +273,10 @@ public class MoleculeTypeValidation implements Validation {
     }
 
     private boolean isMRNA(String accession) {
-        Optional<ControlledVocabularyUtils.MolType> molTypeOpt = getMoleculeType(accession);
+        Optional<ControlledVocabularyUtils.MolType> molTypeOpt =
+                ValidationUtils.getFastaMoleculeType(accession, context);
         return molTypeOpt
                 .filter(molType -> molType == ControlledVocabularyUtils.MolType.MRNA)
                 .isPresent();
-    }
-
-    private Optional<ControlledVocabularyUtils.MolType> getMoleculeType(String accession) {
-        FastaHeaderProvider fastaHeaderProvider =
-                context.contains(FastaHeaderProvider.class) ? context.get(FastaHeaderProvider.class) : null;
-        if (fastaHeaderProvider == null) {
-            return Optional.empty();
-        }
-
-        log.debug("Validating molecule type from FASTA header for accession {}", accession);
-        Optional<FastaHeader> header = fastaHeaderProvider.getHeader(accession);
-        if (header.isEmpty()) {
-            log.warn("No FASTA header found for accession {}", accession);
-            return Optional.empty();
-        }
-
-        return ControlledVocabularyUtils.normaliseMolType(header.get());
     }
 }

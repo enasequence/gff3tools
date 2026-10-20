@@ -14,6 +14,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -21,6 +22,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils.MolType;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
@@ -65,6 +67,20 @@ public class ValidationUtils {
                 .flatMap(ControlledVocabularyUtils.Topology::fromValue)
                 .map(ControlledVocabularyUtils.Topology.CIRCULAR::equals)
                 .orElse(false);
+    }
+
+    /**
+     * The molecule type declared for an accession in its FASTA header, or empty when no header is
+     * available. This is where a submission's {@code MOLECULETYPE} reaches gff3tools; nothing in the
+     * GFF3 file itself carries it.
+     */
+    public static Optional<MolType> getFastaMoleculeType(String accession, ValidationContext context) {
+        if (!context.contains(FastaHeaderProvider.class)) {
+            return Optional.empty();
+        }
+        return context.get(FastaHeaderProvider.class)
+                .getHeader(accession)
+                .flatMap(ControlledVocabularyUtils::normaliseMolType);
     }
 
     /**
