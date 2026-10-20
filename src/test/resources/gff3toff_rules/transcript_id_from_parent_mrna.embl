@@ -1,0 +1,39 @@
+ID   BN000065; SV 1; XXX; XXX; XXX; XXX; 0 BP.
+XX
+AC   BN000065;
+XX
+DE   .
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..1000
+FT   gene            1..1000
+FT                   /gene="ABC"
+FT   mRNA            join(1..200,401..1000)
+FT                   /gene="ABC"
+FT                   /transcript_id=tx_A
+FT   mRNA            1..1000
+FT                   /gene="ABC"
+FT                   /transcript_id=tx_B
+FT   mRNA            1..990
+FT                   /gene="ABC"
+FT   mRNA            1..980
+FT                   /gene="ABC"
+FT                   /transcript_id=tx_D
+FT   CDS             51..970
+FT                   /gene="ABC"
+FT                   /transcript_id=tx_OWN
+FT   CDS             51..960
+FT                   /gene="ABC"
+FT   CDS             51..950
+FT                   /gene="ABC"
+FT                   /transcript_id=tx_B
+FT   CDS             51..940
+FT                   /gene="ABC"
+FT   CDS             join(51..200,401..900)
+FT                   /gene="ABC"
+FT                   /transcript_id=tx_A
+XX
+//
