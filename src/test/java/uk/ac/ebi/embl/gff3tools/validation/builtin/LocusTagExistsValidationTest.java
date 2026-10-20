@@ -26,6 +26,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils.MolType;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
@@ -46,6 +47,9 @@ class LocusTagExistsValidationTest {
     private static final String VIRUS_LINEAGE = "Viruses; Riboviria; Orthornavirae; Pisuviricota.";
     private static final String EUKARYOTE_LINEAGE = "Eukaryota; Metazoa; Chordata; Homo.";
     private static final String PROKARYOTE_LINEAGE = "Bacteria; Pseudomonadati; Pseudomonadota; Escherichia.";
+
+    /** The organism for tests that are not about the organism: resolvable, and not a virus. */
+    private static final String DEFAULT_LINEAGE = "Archaea; Methanobacteriota; Methanobacteria.";
 
     private LocusTagExistsValidation locusTagExistsValidation;
 
@@ -70,30 +74,16 @@ class LocusTagExistsValidationTest {
     }
 
     private Executable validation(AnalysisType analysisType, String moleculeType, GFF3Feature... features) {
-        return validation(analysisType, moleculeType, (Taxon) null, features);
+        return validation(analysisType, moleculeType, taxonProvider(taxon(DEFAULT_LINEAGE)), features);
     }
 
-    /**
-     * Registers a {@link TaxonProvider} returning a real {@link Taxon} rather than a mock, so the
-     * SDK's own {@code isChildOf} matching is exercised instead of stubbed. A non-null taxon with a
-     * null lineage stands for an organism that resolves but places nowhere.
-     */
+    /** A {@code null} {@code taxonProvider} registers none, as in client-side processing. */
     private Executable validation(
-            AnalysisType analysisType, String moleculeType, Taxon taxon, GFF3Feature... features) {
+            AnalysisType analysisType, String moleculeType, TaxonProvider taxonProvider, GFF3Feature... features) {
         ValidationContext context = TestUtils.createTestContext();
 
-        if (taxon != null) {
-            context.register(TaxonProvider.class, new TaxonProvider() {
-                @Override
-                public Optional<Taxon> resolve(String accession) {
-                    return Optional.of(taxon);
-                }
-
-                @Override
-                public TaxonProvider get(ValidationContext ctx) {
-                    return this;
-                }
-            });
+        if (taxonProvider != null) {
+            context.register(TaxonProvider.class, taxonProvider);
         }
 
         if (analysisType != null) {
@@ -111,6 +101,25 @@ class LocusTagExistsValidationTest {
         TestUtils.injectContext(locusTagExistsValidation, context);
         gff3Annotation.setFeatures(List.of(features));
         return () -> locusTagExistsValidation.validateLocusTagExists(gff3Annotation, 1);
+    }
+
+    /**
+     * A {@link TaxonProvider} resolving every accession to {@code taxon}, or to nothing when it is
+     * {@code null}. It returns a real {@link Taxon} rather than a mock, so the SDK's own
+     * {@code isChildOf} matching is exercised instead of stubbed.
+     */
+    private TaxonProvider taxonProvider(Taxon taxon) {
+        return new TaxonProvider() {
+            @Override
+            public Optional<Taxon> resolve(String accession) {
+                return Optional.ofNullable(taxon);
+            }
+
+            @Override
+            public TaxonProvider get(ValidationContext ctx) {
+                return this;
+            }
+        };
     }
 
     private <T> ContextProvider<T> provider(Class<T> type, T value) {
@@ -172,17 +181,29 @@ class LocusTagExistsValidationTest {
 
     @Test
     void testVirusSucceeds() {
-        Assertions.assertDoesNotThrow(validation(ASSEMBLY, null, taxon(VIRUS_LINEAGE), gene()));
+        Assertions.assertDoesNotThrow(validation(ASSEMBLY, null, taxonProvider(taxon(VIRUS_LINEAGE)), gene()));
     }
 
     @Test
     void testEukaryoteFails() {
-        assertViolation(validation(ASSEMBLY, null, taxon(EUKARYOTE_LINEAGE), gene()));
+        assertViolation(validation(ASSEMBLY, null, taxonProvider(taxon(EUKARYOTE_LINEAGE)), gene()));
     }
 
     @Test
     void testProkaryoteFails() {
-        assertViolation(validation(ASSEMBLY, null, taxon(PROKARYOTE_LINEAGE), gene()));
+        assertViolation(validation(ASSEMBLY, null, taxonProvider(taxon(PROKARYOTE_LINEAGE)), gene()));
+    }
+
+    /** Without taxonomy the organism cannot be ruled a non-virus, so the rule does not fire. */
+    @Test
+    void testWithoutTaxonProviderSucceeds() {
+        Assertions.assertDoesNotThrow(validation(ASSEMBLY, null, (TaxonProvider) null, gene()));
+    }
+
+    /** A lookup that finds nothing, including a taxonomy service failure, also skips the rule. */
+    @Test
+    void testUnresolvedTaxonSucceeds() {
+        Assertions.assertDoesNotThrow(validation(ASSEMBLY, null, taxonProvider(null), gene()));
     }
 
     @ParameterizedTest
@@ -198,26 +219,15 @@ class LocusTagExistsValidationTest {
         Assertions.assertDoesNotThrow(validation(ASSEMBLY, feature(OntologyTerm.REGION.name()), feature("gap")));
     }
 
+    /**
+     * Like {@code sequencetools}' {@code LocustagExistsCheck}, the rule places no condition on the
+     * molecule type: whether a molecule type is valid for an assembly is
+     * {@code MOLECULE_TYPE_ANALYSIS_TYPE}'s concern.
+     */
     @ParameterizedTest
-    @ValueSource(strings = {"genomic DNA", "genomic RNA", "viral cRNA", "other DNA", "other RNA"})
-    void testAssemblyMoleculeTypeStillFails(String moleculeType) {
-        assertViolation(validation(ASSEMBLY, moleculeType, gene()));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"mRNA", "rRNA", "tRNA", "transcribed RNA"})
-    void testTranscriptMoleculeTypeSucceeds(String moleculeType) {
-        Assertions.assertDoesNotThrow(validation(ASSEMBLY, moleculeType, gene()));
-    }
-
-    @Test
-    void testUnrecognisedMoleculeTypeLeavesRuleUnchanged() {
-        assertViolation(validation(ASSEMBLY, "not a molecule type", gene()));
-    }
-
-    @Test
-    void testAbsentMoleculeTypeLeavesRuleUnchanged() {
-        assertViolation(validation(ASSEMBLY, (String) null, gene()));
+    @EnumSource(MolType.class)
+    void testMoleculeTypeDoesNotAffectRule(MolType moleculeType) {
+        assertViolation(validation(ASSEMBLY, moleculeType.getValue(), gene()));
     }
 
     private Taxon taxon(String lineage) {
@@ -233,12 +243,12 @@ class LocusTagExistsValidationTest {
     @Test
     void testTaxonProviderVirusSucceedsWhenDomainDoesNotLeadTheLineage() {
         Assertions.assertDoesNotThrow(
-                validation(ASSEMBLY, null, taxon("cellular organisms; Viruses; Riboviria."), gene()));
+                validation(ASSEMBLY, null, taxonProvider(taxon("cellular organisms; Viruses; Riboviria.")), gene()));
     }
 
     /** A taxon that resolves without a lineage places the organism nowhere, so the rule still fires. */
     @Test
     void testTaxonWithNoLineageFails() {
-        assertViolation(validation(ASSEMBLY, null, taxon(null), gene()));
+        assertViolation(validation(ASSEMBLY, null, taxonProvider(taxon(null)), gene()));
     }
 }

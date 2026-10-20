@@ -11,15 +11,12 @@
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import java.util.Optional;
-import java.util.Set;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils.MolType;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
-import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
@@ -40,10 +37,6 @@ public class LocusTagExistsValidation implements Validation {
     private static final String LOCUS_TAG_EXISTS_MESSAGE =
             "/locus_tag must exist for annotated contigs/scaffolds/chromosomes.";
 
-    /** Molecule types valid on a genome sequence. Any other declared value rules the entry out. */
-    private static final Set<MolType> ASSEMBLY_MOLECULE_TYPES =
-            Set.of(MolType.GENOMIC_DNA, MolType.GENOMIC_RNA, MolType.VIRAL_CRNA, MolType.OTHER_DNA, MolType.OTHER_RNA);
-
     /** The domain that opens a viral lineage, e.g. "Viruses; Riboviria; ...". */
     private static final String VIRUS_LINEAGE_DOMAIN = "Viruses";
 
@@ -58,9 +51,7 @@ public class LocusTagExistsValidation implements Validation {
     public void validateLocusTagExists(GFF3Annotation gff3Annotation, int line) throws ValidationException {
         String accession = gff3Annotation.getAccession();
 
-        if (!isGenomeSubmission(accession)
-                || !lacksRequiredLocusTag(gff3Annotation)
-                || isVirus(accession)) { // for seqIds in GFF3, we can check taxId
+        if (!isGenomeSubmission() || !lacksRequiredLocusTag(gff3Annotation) || !isKnownNonVirus(accession)) {
             return;
         }
 
@@ -71,19 +62,16 @@ public class LocusTagExistsValidation implements Validation {
      * Only the caller can tell us this is an assembly submission - nothing in a GFF3 marks one.
      * {@link AnalysisContext} is classpath-scanned and defaults to {@link AnalysisType#UNKNOWN}, so
      * the rule stays inert unless a caller registers a real analysis type.
+     *
+     * <p>{@code sequencetools} gates this rule on the WGS and STD data classes within the assembly
+     * scopes, which is {@link AnalysisType#SEQUENCE_ASSEMBLY} here. It places no condition on the
+     * molecule type.
      */
-    private boolean isGenomeSubmission(String accession) {
+    private boolean isGenomeSubmission() {
         AnalysisType analysisType = context.contains(AnalysisContext.class)
                 ? context.get(AnalysisContext.class).getAnalysisType()
                 : AnalysisType.UNKNOWN;
-        return analysisType == AnalysisType.SEQUENCE_ASSEMBLY && !hasNonAssemblyMoleculeType(accession);
-    }
-
-    /** Whether a molecule type is declared and is one an assembly is never submitted under. */
-    private boolean hasNonAssemblyMoleculeType(String accession) {
-        return ValidationUtils.getMoleculeType(accession, context)
-                .filter(molType -> !ASSEMBLY_MOLECULE_TYPES.contains(molType))
-                .isPresent();
+        return analysisType == AnalysisType.SEQUENCE_ASSEMBLY;
     }
 
     /**
@@ -133,9 +121,15 @@ public class LocusTagExistsValidation implements Validation {
                 .isPresent();
     }
 
-    private boolean isVirus(String accession) {
+    /**
+     * Whether the organism is known and is not a virus. Viruses are exempt. An organism that does
+     * not resolve cannot be ruled a non-virus, so the rule does not fire for it. That covers no
+     * {@link TaxonProvider} being registered, as in client-side processing, and a lookup that finds
+     * nothing, which includes a taxonomy service failure.
+     */
+    private boolean isKnownNonVirus(String accession) {
         return resolveTaxon(accession)
-                .filter(taxon -> taxon.isChildOf(VIRUS_LINEAGE_DOMAIN))
+                .filter(taxon -> !taxon.isChildOf(VIRUS_LINEAGE_DOMAIN))
                 .isPresent();
     }
 

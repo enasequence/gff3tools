@@ -90,7 +90,7 @@ public class MoleculeTypeValidation implements Validation {
             priority = ValidationPriority.CRITICAL)
     public void validateRequiredFeature(GFF3Annotation annotation, int line) throws ValidationException {
         Optional<ControlledVocabularyUtils.MolType> moleculeType =
-                ValidationUtils.getMoleculeType(annotation.getAccession(), context);
+                ValidationUtils.getFastaMoleculeType(annotation.getAccession(), context);
         if (moleculeType.isEmpty()) {
             return;
         }
@@ -124,7 +124,7 @@ public class MoleculeTypeValidation implements Validation {
             priority = ValidationPriority.CRITICAL)
     public void validateForbiddenFeature(GFF3Annotation annotation, int line) throws ValidationException {
         Optional<ControlledVocabularyUtils.MolType> moleculeType =
-                ValidationUtils.getMoleculeType(annotation.getAccession(), context);
+                ValidationUtils.getFastaMoleculeType(annotation.getAccession(), context);
         if (moleculeType.isEmpty()) {
             return;
         }
@@ -190,7 +190,7 @@ public class MoleculeTypeValidation implements Validation {
             priority = ValidationPriority.CRITICAL)
     public void validateMrnaCdsJoinedLocation(GFF3Annotation annotation, int line) throws ValidationException {
         Optional<ControlledVocabularyUtils.MolType> moleculeType =
-                ValidationUtils.getMoleculeType(annotation.getAccession(), context);
+                ValidationUtils.getFastaMoleculeType(annotation.getAccession(), context);
         if (moleculeType.isEmpty() || !PROCESSED_TRANSCRIPT_MOLECULE_TYPES.contains(moleculeType.get())) {
             return;
         }
@@ -219,7 +219,7 @@ public class MoleculeTypeValidation implements Validation {
     public void validateMoleculeTypeAgainstAnalysisType(GFF3Annotation annotation, int line)
             throws ValidationException {
         Optional<ControlledVocabularyUtils.MolType> moleculeType =
-                ValidationUtils.getMoleculeType(annotation.getAccession(), context);
+                ValidationUtils.getFastaMoleculeType(annotation.getAccession(), context);
         if (moleculeType.isEmpty()) {
             return;
         }
@@ -273,7 +273,8 @@ public class MoleculeTypeValidation implements Validation {
     }
 
     private boolean isMRNA(String accession) {
-        Optional<ControlledVocabularyUtils.MolType> molTypeOpt = ValidationUtils.getMoleculeType(accession, context);
+        Optional<ControlledVocabularyUtils.MolType> molTypeOpt =
+                ValidationUtils.getFastaMoleculeType(accession, context);
         return molTypeOpt
                 .filter(molType -> molType == ControlledVocabularyUtils.MolType.MRNA)
                 .isPresent();

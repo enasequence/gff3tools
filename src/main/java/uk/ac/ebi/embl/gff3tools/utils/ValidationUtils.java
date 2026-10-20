@@ -74,7 +74,7 @@ public class ValidationUtils {
      * available. This is where a submission's {@code MOLECULETYPE} reaches gff3tools; nothing in the
      * GFF3 file itself carries it.
      */
-    public static Optional<MolType> getMoleculeType(String accession, ValidationContext context) {
+    public static Optional<MolType> getFastaMoleculeType(String accession, ValidationContext context) {
         if (!context.contains(FastaHeaderProvider.class)) {
             return Optional.empty();
         }

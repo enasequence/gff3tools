@@ -212,7 +212,7 @@ file says so:
 
 | Rule | Runs only when |
 |------|----------------|
-| `LOCUS_TAG_EXISTS` | the analysis type is `SEQUENCE_ASSEMBLY` |
+| `LOCUS_TAG_EXISTS` | the analysis type is `SEQUENCE_ASSEMBLY`, and a registered `TaxonProvider` resolves the organism to a non-virus. Core ships no `TaxonProvider`. |
 | `MOLECULE_TYPE_ANALYSIS_TYPE` | the analysis type is `SEQUENCE_ASSEMBLY` or `TRANSCRIPTOME_ASSEMBLY`, and the FASTA header declares a molecule type |
 | `ASSEMBLY_SEQUENCE_TOO_SHORT` | the analysis type is `SEQUENCE_ASSEMBLY` and the assembly type is a whole genome sequence one |
 
