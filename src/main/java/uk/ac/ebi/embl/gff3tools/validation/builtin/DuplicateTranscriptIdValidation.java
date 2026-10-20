@@ -26,12 +26,7 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
-import uk.ac.ebi.embl.gff3tools.validation.meta.ExitMethod;
-import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
-import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
-import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
-import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
-import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
+import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 /**
  * A transcript_id names one transcript across the whole genome annotation. In feature table format
