@@ -213,12 +213,12 @@ file says so:
 | Rule | Runs only when |
 |------|----------------|
 | `LOCUS_TAG_EXISTS` | the analysis type is `SEQUENCE_ASSEMBLY`, and a registered `TaxonProvider` resolves the organism to a non-virus. Core ships no `TaxonProvider`. |
-| `MOLECULE_TYPE_ANALYSIS_TYPE` | the analysis type is `SEQUENCE_ASSEMBLY` or `TRANSCRIPTOME_ASSEMBLY`, and the FASTA header declares a molecule type |
-| `ASSEMBLY_SEQUENCE_TOO_SHORT` | the analysis type is `SEQUENCE_ASSEMBLY` and the assembly type is a whole genome sequence one |
+| `MOLECULE_TYPE_ANALYSIS_TYPE` | the analysis type is `SEQUENCE_ASSEMBLY` or `TRANSCRIPTOME_ASSEMBLY`, and the FASTA header declares a recognised molecule type |
+| `ASSEMBLY_SEQUENCE_TOO_SHORT` | the analysis type is `SEQUENCE_ASSEMBLY`, the assembly type is a whole genome sequence one (`clone or isolate`, MAG, SAG or `COVID-19 outbreak`), and a registered sequence source knows the sequence's length |
 
 The CLI has no option to set the analysis type or the assembly type, so these rules never fire
 from `validation` or `conversion`. They run only when a library caller registers an
-`AnalysisContext` with a real analysis type:
+`AnalysisContext` with a real analysis type, plus a `TaxonProvider` for `LOCUS_TAG_EXISTS`:
 
 ```java
 ValidationEngine engine = new ValidationEngineBuilder()
