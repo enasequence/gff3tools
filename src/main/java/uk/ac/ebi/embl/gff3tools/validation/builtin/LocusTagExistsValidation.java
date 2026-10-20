@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import java.util.Optional;
+import java.util.Set;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -39,6 +40,24 @@ public class LocusTagExistsValidation implements Validation {
 
     /** The domain that opens a viral lineage, e.g. "Viruses; Riboviria; ...". */
     private static final String VIRUS_LINEAGE_DOMAIN = "Viruses";
+
+    /**
+     * The GFF3 stand-ins for INSDC {@code misc_feature}. These are the three SO terms that
+     * {@code feature-mapping.tsv} converts to a {@code misc_feature}:
+     *
+     * <ul>
+     *   <li>{@code sequence_feature} (SO:0000110), which {@code so.owl} also lists as an exact
+     *       synonym of {@code misc_feature};
+     *   <li>{@code biological_region} (SO:0001411);
+     *   <li>{@code sequence_comparison} (SO:0002072), written as a {@code misc_feature} with
+     *       {@code /note="sequence_comparison"}.
+     * </ul>
+     *
+     * <p>Exempting them gives the same outcome as {@code LocustagExistsCheck} would on the converted
+     * flat file.
+     */
+    private static final Set<String> MISC_FEATURE_SO_IDS =
+            Set.of(OntologyTerm.FEATURE.ID, OntologyTerm.BIOLOGICAL_REGION.ID, OntologyTerm.SEQUENCE_COMPARISON.ID);
 
     @InjectContext
     private ValidationContext context;
@@ -107,12 +126,20 @@ public class LocusTagExistsValidation implements Validation {
         return annotated;
     }
 
-    /** repeat_region and its descendants, plus the SO terms that stand in for misc_feature. */
+    /**
+     * The GFF3 form of {@code LocustagExistsCheck}'s two exempt features, {@code repeat_region} and
+     * {@code misc_feature}:
+     *
+     * <ul>
+     *   <li>{@code repeat_region} (SO:0000657) and its descendants, such as {@code tandem_repeat}.
+     *       Every descendant that {@code feature-mapping.tsv} maps converts to an INSDC
+     *       {@code repeat_region}.
+     *   <li>{@link #MISC_FEATURE_SO_IDS} for {@code misc_feature}.
+     * </ul>
+     */
     private boolean isLocusTagExempt(OntologyClient ontologyClient, String soId) {
         return ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.REPEAT_REGION.ID)
-                || OntologyTerm.FEATURE.ID.equals(soId)
-                || OntologyTerm.BIOLOGICAL_REGION.ID.equals(soId)
-                || OntologyTerm.SEQUENCE_COMPARISON.ID.equals(soId);
+                || MISC_FEATURE_SO_IDS.contains(soId);
     }
 
     private boolean hasLocusTag(GFF3Feature feature) {
