@@ -25,8 +25,6 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
-import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
@@ -67,18 +65,12 @@ class LocusTagExistsValidationTest {
         return TestUtils.createGFF3Feature(name, name, Map.of());
     }
 
-    private Executable validation(AnalysisType analysisType, String lineage, GFF3Feature... features) {
-        return validation(analysisType, lineage, null, features);
+    private Executable validation(AnalysisType analysisType, GFF3Feature... features) {
+        return validation(analysisType, (String) null, features);
     }
 
-    private Executable validation(
-            AnalysisType analysisType, String lineage, String moleculeType, GFF3Feature... features) {
-        return validation(analysisType, lineage, moleculeType, null, features);
-    }
-
-    private Executable validation(
-            AnalysisType analysisType, String lineage, String moleculeType, String dataClass, GFF3Feature... features) {
-        return validation(analysisType, lineage, moleculeType, dataClass, null, features);
+    private Executable validation(AnalysisType analysisType, String moleculeType, GFF3Feature... features) {
+        return validation(analysisType, moleculeType, (Taxon) null, features);
     }
 
     /**
@@ -87,12 +79,7 @@ class LocusTagExistsValidationTest {
      * null lineage stands for an organism that resolves but places nowhere.
      */
     private Executable validation(
-            AnalysisType analysisType,
-            String lineage,
-            String moleculeType,
-            String dataClass,
-            Taxon taxon,
-            GFF3Feature... features) {
+            AnalysisType analysisType, String moleculeType, Taxon taxon, GFF3Feature... features) {
         ValidationContext context = TestUtils.createTestContext();
 
         if (taxon != null) {
@@ -112,14 +99,6 @@ class LocusTagExistsValidationTest {
         if (analysisType != null) {
             context.register(
                     AnalysisContext.class, provider(AnalysisContext.class, new AnalysisContext(analysisType, 10)));
-        }
-        if (lineage != null || dataClass != null) {
-            MasterMetadata metadata = new MasterMetadata();
-            metadata.setLineage(lineage);
-            metadata.setDataClass(dataClass);
-            MasterMetadataProvider metadataProvider = new MasterMetadataProvider();
-            metadataProvider.addSource(seqId -> Optional.of(metadata));
-            context.register(MasterMetadataProvider.class, provider(MasterMetadataProvider.class, metadataProvider));
         }
         if (moleculeType != null) {
             FastaHeader header = new FastaHeader();
@@ -156,7 +135,7 @@ class LocusTagExistsValidationTest {
 
     @Test
     void testAnnotatedGenomeWithoutLocusTagFails() {
-        assertViolation(validation(ASSEMBLY, null, gene()));
+        assertViolation(validation(ASSEMBLY, gene()));
     }
 
     @Test
@@ -166,7 +145,7 @@ class LocusTagExistsValidationTest {
                 OntologyTerm.GENE.name(),
                 Map.of(GFF3Attributes.LOCUS_TAG, List.of("LOCUS_0001")));
 
-        Assertions.assertDoesNotThrow(validation(ASSEMBLY, null, tagged));
+        Assertions.assertDoesNotThrow(validation(ASSEMBLY, tagged));
     }
 
     @Test
@@ -174,7 +153,7 @@ class LocusTagExistsValidationTest {
         GFF3Feature blank = TestUtils.createGFF3Feature(
                 OntologyTerm.GENE.name(), OntologyTerm.GENE.name(), Map.of(GFF3Attributes.LOCUS_TAG, List.of(" ")));
 
-        assertViolation(validation(ASSEMBLY, null, blank));
+        assertViolation(validation(ASSEMBLY, blank));
     }
 
     @ParameterizedTest
@@ -183,87 +162,68 @@ class LocusTagExistsValidationTest {
             names = {"SEQUENCE_ASSEMBLY"},
             mode = EnumSource.Mode.EXCLUDE)
     void testOtherAnalysisTypesSucceed(AnalysisType analysisType) {
-        Assertions.assertDoesNotThrow(validation(analysisType, null, gene()));
+        Assertions.assertDoesNotThrow(validation(analysisType, gene()));
     }
 
     @Test
     void testWithoutAnalysisTypeSucceeds() {
-        Assertions.assertDoesNotThrow(validation(null, null, gene()));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"WGS", "STD", "CON", "SET", "TSA"})
-    void testDataClassIsNeverConsulted(String dataClass) {
-        Assertions.assertDoesNotThrow(validation(null, null, null, dataClass, gene()));
-    }
-
-    @Test
-    void testTranscriptomeAssemblySucceedsDespiteGenomeDataClass() {
-        Assertions.assertDoesNotThrow(validation(AnalysisType.TRANSCRIPTOME_ASSEMBLY, null, null, "WGS", gene()));
+        Assertions.assertDoesNotThrow(validation(null, gene()));
     }
 
     @Test
     void testVirusSucceeds() {
-        Assertions.assertDoesNotThrow(validation(ASSEMBLY, null, null, null, taxon(VIRUS_LINEAGE), gene()));
+        Assertions.assertDoesNotThrow(validation(ASSEMBLY, null, taxon(VIRUS_LINEAGE), gene()));
     }
 
     @Test
     void testEukaryoteFails() {
-        assertViolation(validation(ASSEMBLY, null, null, null, taxon(EUKARYOTE_LINEAGE), gene()));
+        assertViolation(validation(ASSEMBLY, null, taxon(EUKARYOTE_LINEAGE), gene()));
     }
 
     @Test
     void testProkaryoteFails() {
-        assertViolation(validation(ASSEMBLY, null, null, null, taxon(PROKARYOTE_LINEAGE), gene()));
-    }
-
-    @Test
-    void testUnknownOrganismFails() {
-        assertViolation(validation(ASSEMBLY, null, gene()));
+        assertViolation(validation(ASSEMBLY, null, taxon(PROKARYOTE_LINEAGE), gene()));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"repeat_region", "tandem_repeat", "sequence_feature", "biological_region"})
+    @ValueSource(
+            strings = {"repeat_region", "tandem_repeat", "sequence_feature", "biological_region", "sequence_comparison"
+            })
     void testExemptFeatureSucceeds(String featureName) {
-        Assertions.assertDoesNotThrow(validation(ASSEMBLY, null, gene(), feature(featureName)));
+        Assertions.assertDoesNotThrow(validation(ASSEMBLY, gene(), feature(featureName)));
     }
 
     @Test
     void testWithoutAnnotationSucceeds() {
-        Assertions.assertDoesNotThrow(validation(ASSEMBLY, null, feature(OntologyTerm.REGION.name()), feature("gap")));
+        Assertions.assertDoesNotThrow(validation(ASSEMBLY, feature(OntologyTerm.REGION.name()), feature("gap")));
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"genomic DNA", "genomic RNA", "viral cRNA", "other DNA", "other RNA"})
     void testAssemblyMoleculeTypeStillFails(String moleculeType) {
-        assertViolation(validation(ASSEMBLY, null, moleculeType, gene()));
+        assertViolation(validation(ASSEMBLY, moleculeType, gene()));
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"mRNA", "rRNA", "tRNA", "transcribed RNA"})
     void testTranscriptMoleculeTypeSucceeds(String moleculeType) {
-        Assertions.assertDoesNotThrow(validation(ASSEMBLY, null, moleculeType, gene()));
+        Assertions.assertDoesNotThrow(validation(ASSEMBLY, moleculeType, gene()));
     }
 
     @Test
     void testUnrecognisedMoleculeTypeLeavesRuleUnchanged() {
-        assertViolation(validation(ASSEMBLY, null, "not a molecule type", gene()));
+        assertViolation(validation(ASSEMBLY, "not a molecule type", gene()));
     }
 
     @Test
     void testAbsentMoleculeTypeLeavesRuleUnchanged() {
-        assertViolation(validation(ASSEMBLY, null, (String) null, gene()));
+        assertViolation(validation(ASSEMBLY, (String) null, gene()));
     }
 
     private Taxon taxon(String lineage) {
         Taxon taxon = new TaxonFactory().createTaxon();
         taxon.setLineage(lineage);
         return taxon;
-    }
-
-    @Test
-    void testTaxonProviderVirusSucceeds() {
-        Assertions.assertDoesNotThrow(validation(ASSEMBLY, null, null, null, taxon(VIRUS_LINEAGE), gene()));
     }
 
     /**
@@ -273,12 +233,12 @@ class LocusTagExistsValidationTest {
     @Test
     void testTaxonProviderVirusSucceedsWhenDomainDoesNotLeadTheLineage() {
         Assertions.assertDoesNotThrow(
-                validation(ASSEMBLY, null, null, null, taxon("cellular organisms; Viruses; Riboviria."), gene()));
+                validation(ASSEMBLY, null, taxon("cellular organisms; Viruses; Riboviria."), gene()));
     }
 
     /** A taxon that resolves without a lineage places the organism nowhere, so the rule still fires. */
     @Test
     void testTaxonWithNoLineageFails() {
-        assertViolation(validation(ASSEMBLY, VIRUS_LINEAGE, null, null, taxon(null), gene()));
+        assertViolation(validation(ASSEMBLY, null, taxon(null), gene()));
     }
 }

@@ -19,8 +19,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
-import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
@@ -69,18 +67,6 @@ public class ValidationUtils {
                 .flatMap(ControlledVocabularyUtils.Topology::fromValue)
                 .map(ControlledVocabularyUtils.Topology.CIRCULAR::equals)
                 .orElse(false);
-    }
-
-    /**
-     * The master metadata for an accession, or empty when none is available. The provider is
-     * auto-registered by the classpath scan but holds no sources until a caller supplies a master
-     * entry, so an empty result is the normal case rather than a failure.
-     */
-    public static Optional<MasterMetadata> getMasterMetadata(String accession, ValidationContext context) {
-        if (!context.contains(MasterMetadataProvider.class)) {
-            return Optional.empty();
-        }
-        return context.get(MasterMetadataProvider.class).getMetadata(accession);
     }
 
     /**

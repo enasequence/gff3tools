@@ -46,6 +46,10 @@ public class SequenceLengthValidation implements Validation {
      * The assembly types whose top level sequences are whole genome sequences, and therefore must
      * meet {@link #ASSEMBLY_MINIMUM_SEQUENCE_LENGTH}. The remaining types (clinical isolate
      * assembly, primary metagenome and binned metagenome) can legitimately contain shorter sequences.
+     *
+     * <p>The excluded three are the assembly types that get an ERZ accession instead of a WGS set
+     * accession: {@code EntryUtils.excludeDistribution} in {@code sequencetools} and {@code
+     * AssemblyUtil.isERZAccAssembly} in {@code webin-sequence-stages} list the same three.
      */
     private static final Set<AssemblyType> WGS_ASSEMBLY_TYPES = EnumSet.of(
             AssemblyType.CLONEORISOLATE,
@@ -158,6 +162,9 @@ public class SequenceLengthValidation implements Validation {
         if (wgsAssembly == null) {
             AnalysisContext analysisContext =
                     context.contains(AnalysisContext.class) ? context.get(AnalysisContext.class) : null;
+            // TODO: use the parent analysis type for a DECOUPLED_ANNOTATION (see
+            // AnalysisContext#analysisType). This also needs AssemblyTypeValidator to accept an
+            // assembly type for one, or the WGS check below can never pass.
             wgsAssembly = analysisContext != null
                     && analysisContext.getAnalysisType() == AnalysisType.SEQUENCE_ASSEMBLY
                     && analysisContext

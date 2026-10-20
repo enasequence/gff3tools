@@ -10,7 +10,6 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
@@ -60,10 +59,8 @@ public class LocusTagExistsValidation implements Validation {
         String accession = gff3Annotation.getAccession();
 
         if (!isGenomeSubmission(accession)
-                || !hasNonGapFeatures(gff3Annotation) // excludes FASTA submissions by default
-                || hasLocusTagExemptFeature(gff3Annotation)
-                || isVirus(accession) // for seqIds in GFF3, we can check taxId
-                || hasLocusTag(gff3Annotation)) {
+                || !lacksRequiredLocusTag(gff3Annotation)
+                || isVirus(accession)) { // for seqIds in GFF3, we can check taxId
             return;
         }
 
@@ -76,6 +73,8 @@ public class LocusTagExistsValidation implements Validation {
      * the rule stays inert unless a caller registers a real analysis type.
      */
     private boolean isGenomeSubmission(String accession) {
+        // TODO: use the parent analysis type for a DECOUPLED_ANNOTATION (see
+        // AnalysisContext#analysisType), so a decoupled annotation of an assembly is checked too.
         AnalysisType analysisType = context.contains(AnalysisContext.class)
                 ? context.get(AnalysisContext.class).getAnalysisType()
                 : AnalysisType.UNKNOWN;
@@ -90,29 +89,50 @@ public class LocusTagExistsValidation implements Validation {
     }
 
     /**
-     * One repeat_region or misc_feature exempts the whole entry, not just that feature - matching
-     * the {@code excludeFeatureCheckList} early return in {@code sequencetools}.
+     * Whether the annotation needs a locus_tag that none of its features carries, decided in one
+     * pass over the features:
+     *
+     * <ul>
+     *   <li>One repeat_region or misc_feature exempts the whole entry, not just that feature -
+     *       matching the {@code excludeFeatureCheckList} early return in {@code sequencetools}.
+     *   <li>One feature with a locus_tag satisfies the rule.
+     *   <li>Otherwise a locus_tag is needed only if the entry is annotated. Gaps and the
+     *       whole-sequence region line do not count, which excludes FASTA submissions by default.
+     * </ul>
      */
-    private boolean hasLocusTagExemptFeature(GFF3Annotation gff3Annotation) {
+    private boolean lacksRequiredLocusTag(GFF3Annotation gff3Annotation) {
         OntologyClient ontologyClient = context.get(OntologyClient.class);
+        boolean annotated = false;
         for (GFF3Feature feature : gff3Annotation.getFeatures()) {
             if (feature == null) {
                 continue;
             }
-            Optional<String> soIdOpt = ontologyClient.findTermByNameOrSynonym(feature.getName());
-            if (soIdOpt.isEmpty()) {
-                continue;
+            Optional<String> soId = ontologyClient.findTermByNameOrSynonym(feature.getName());
+            if (soId.isPresent() && isLocusTagExempt(ontologyClient, soId.get())) {
+                return false;
             }
-            String soId = soIdOpt.get();
-            // repeat_region and its descendants, plus the SO terms that stand in for misc_feature
-            if (ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.REPEAT_REGION.ID)
-                    || OntologyTerm.FEATURE.ID.equals(soId)
-                    || OntologyTerm.BIOLOGICAL_REGION.ID.equals(soId)
-                    || OntologyTerm.SEQUENCE_COMPARISON.ID.equals(soId)) {
-                return true;
+            if (hasLocusTag(feature)) {
+                return false;
             }
+            annotated |= soId.map(id -> !OntologyTerm.REGION.ID.equals(id)
+                            && !ontologyClient.isSelfOrDescendantOf(id, OntologyTerm.GAP.ID))
+                    .orElse(true);
         }
-        return false;
+        return annotated;
+    }
+
+    /** repeat_region and its descendants, plus the SO terms that stand in for misc_feature. */
+    private boolean isLocusTagExempt(OntologyClient ontologyClient, String soId) {
+        return ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.REPEAT_REGION.ID)
+                || OntologyTerm.FEATURE.ID.equals(soId)
+                || OntologyTerm.BIOLOGICAL_REGION.ID.equals(soId)
+                || OntologyTerm.SEQUENCE_COMPARISON.ID.equals(soId);
+    }
+
+    private boolean hasLocusTag(GFF3Feature feature) {
+        return feature.getAttribute(GFF3Attributes.LOCUS_TAG)
+                .filter(locusTag -> !locusTag.isBlank())
+                .isPresent();
     }
 
     private boolean isVirus(String accession) {
@@ -125,22 +145,5 @@ public class LocusTagExistsValidation implements Validation {
         return context.contains(TaxonProvider.class)
                 ? context.get(TaxonProvider.class).resolve(accession)
                 : Optional.empty();
-    }
-
-    /** An unannotated entry has nothing to tag: gaps and the whole-sequence region line do not count. */
-    private boolean hasNonGapFeatures(GFF3Annotation gff3Annotation) {
-        OntologyClient ontologyClient = context.get(OntologyClient.class);
-        return gff3Annotation.getFeatures().stream().filter(Objects::nonNull).anyMatch(feature -> ontologyClient
-                .findTermByNameOrSynonym(feature.getName())
-                .map(soId -> !OntologyTerm.REGION.ID.equals(soId)
-                        && !ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.GAP.ID))
-                .orElse(true));
-    }
-
-    private boolean hasLocusTag(GFF3Annotation gff3Annotation) {
-        return gff3Annotation.getFeatures().stream()
-                .filter(Objects::nonNull)
-                .map(feature -> feature.getAttribute(GFF3Attributes.LOCUS_TAG).orElse(null))
-                .anyMatch(locusTag -> locusTag != null && !locusTag.isBlank());
     }
 }

@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -32,7 +31,6 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
 
-@Slf4j
 @Gff3Validation(name = "MOLECULE_TYPE_FEATURE")
 public class MoleculeTypeValidation implements Validation {
     public static final String REQUIRED_FEATURE_RULE = "MOLECULE_TYPE_REQUIRED_FEATURE";
@@ -244,6 +242,8 @@ public class MoleculeTypeValidation implements Validation {
      * so the rule stays inert unless a caller registers a real analysis type.
      */
     private AnalysisType getAnalysisType() {
+        // TODO: return the parent analysis type for a DECOUPLED_ANNOTATION (see
+        // AnalysisContext#analysisType), so a decoupled annotation gets its parent's constraints.
         return context.contains(AnalysisContext.class)
                 ? context.get(AnalysisContext.class).getAnalysisType()
                 : AnalysisType.UNKNOWN;

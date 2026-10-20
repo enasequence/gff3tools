@@ -46,6 +46,8 @@ public final class AssemblyTypeValidator {
             return Optional.empty();
         }
 
+        // TODO: also accept a DECOUPLED_ANNOTATION whose parent analysis type is SEQUENCE_ASSEMBLY
+        // (see AnalysisContext#analysisType). Neither the analysis type nor the parent exists yet.
         if (analysisType != AnalysisType.SEQUENCE_ASSEMBLY) {
             throw new IllegalArgumentException("assemblyType \"%s\" must not be supplied for analysis type %s, only %s"
                     .formatted(rawAssemblyType, analysisType, AnalysisType.SEQUENCE_ASSEMBLY));
