@@ -25,12 +25,14 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.SequenceRegionProvider;
 
 class LocationValidationTest {
 
@@ -107,6 +109,15 @@ class LocationValidationTest {
 
     private void injectNoLookup() {
         TestUtils.injectContext(locationValidation);
+    }
+
+    private void injectSequenceRegionWithoutLookup(String seqId, long end, String topology) {
+        SequenceRegionProvider sequenceRegionProvider = new SequenceRegionProvider();
+        sequenceRegionProvider.record(new GFF3SequenceRegion(seqId, Optional.empty(), 1, end));
+        ValidationContext context = TestUtils.createTestContext();
+        context.register(SequenceRegionProvider.class, sequenceRegionProvider);
+        context.register(FastaHeaderProvider.class, headerProviderFor(seqId, topology));
+        TestUtils.injectContext(locationValidation, context);
     }
 
     @Nested
@@ -226,6 +237,39 @@ class LocationValidationTest {
         }
 
         @Test
+        void endEqualsTwiceCircularSequenceLengthSuccess() throws Exception {
+            injectLookupReturning(SEQ_ID, 1000L, "circular");
+            GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 1001L, 2000L, Map.of());
+            assertDoesNotThrow(() -> locationValidation.validateFeatureEndWithinSequence(feature, 1));
+        }
+
+        @Test
+        void endExceedsTwiceCircularSequenceLengthFailure() throws Exception {
+            injectLookupReturning(SEQ_ID, 1000L, "circular");
+            GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 1500L, 2400L, Map.of());
+            ValidationException exception = assertThrows(
+                    ValidationException.class, () -> locationValidation.validateFeatureEndWithinSequence(feature, 1));
+            assertTrue(exception.getMessage().contains("FEATURE_END_EXCEEDS_SEQUENCE_LENGTH"));
+            assertTrue(exception.getMessage().contains("twice the length of the circular sequence"));
+        }
+
+        @Test
+        void endExceedsSequenceRegionWithoutLookupFailure() {
+            injectSequenceRegionWithoutLookup(SEQ_ID, 1000L, "linear");
+            GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 1L, 1001L, Map.of());
+            assertThrows(
+                    ValidationException.class, () -> locationValidation.validateFeatureEndWithinSequence(feature, 1));
+        }
+
+        @Test
+        void endExceedsTwiceCircularSequenceRegionWithoutLookupFailure() {
+            injectSequenceRegionWithoutLookup(SEQ_ID, 1000L, "circular");
+            GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 1500L, 2400L, Map.of());
+            assertThrows(
+                    ValidationException.class, () -> locationValidation.validateFeatureEndWithinSequence(feature, 1));
+        }
+
+        @Test
         void endExceedsSequenceLengthOnNonCanonicalCircularTopologySuccess() throws Exception {
             long seqLen = 1000L;
             injectLookupReturning(SEQ_ID, seqLen, "Circular");
@@ -289,6 +333,15 @@ class LocationValidationTest {
                     () -> locationValidation.validateFeatureWithinCircularSequence(feature, 1));
             assertTrue(exception.getMessage().contains("FEATURE_LONGER_THAN_CIRCULAR_SEQUENCE"));
             assertTrue(exception.getMessage().contains("spans 1101 bases"));
+        }
+
+        @Test
+        void longerThanCircularSequenceRegionWithoutLookupFailure() {
+            injectSequenceRegionWithoutLookup(SEQ_ID, 1000L, "circular");
+            GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 500L, 1600L, Map.of());
+            assertThrows(
+                    ValidationException.class,
+                    () -> locationValidation.validateFeatureWithinCircularSequence(feature, 1));
         }
 
         @Test

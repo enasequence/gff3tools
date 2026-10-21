@@ -28,6 +28,7 @@ import uk.ac.ebi.embl.gff3tools.metrics.MetricsCollector;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.provider.SequenceRegionProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonAccessionRegistry;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonomyIdentifier;
 
@@ -104,6 +105,7 @@ public class GFF3FileReader implements AutoCloseable {
                 // Create directive
                 GFF3SequenceRegion sequenceRegion = readSequenceRegion(m);
                 accessionSequenceRegionMap.put(sequenceRegion.accession(), sequenceRegion);
+                registerSequenceRegion(sequenceRegion);
                 registerTaxon(sequenceRegion.accession());
             } else if (RESOLUTION_DIRECTIVE.matcher(line).matches()) {
                 if (!currentAnnotation.getFeatures().isEmpty() || currentAnnotation.getSequenceRegion() != null) {
@@ -237,6 +239,14 @@ public class GFF3FileReader implements AutoCloseable {
             return null;
         }
         return null;
+    }
+
+    private void registerSequenceRegion(GFF3SequenceRegion sequenceRegion) {
+        ValidationContext context = validationEngine.getContext();
+        if (!context.contains(SequenceRegionProvider.class)) {
+            context.register(SequenceRegionProvider.class, new SequenceRegionProvider());
+        }
+        context.get(SequenceRegionProvider.class).record(sequenceRegion);
     }
 
     private void registerTaxon(String accession) {

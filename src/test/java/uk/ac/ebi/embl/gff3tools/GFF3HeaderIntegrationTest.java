@@ -77,12 +77,34 @@ class GFF3HeaderIntegrationTest {
                         "fftogff3_rules/circular_virtual_space.gff3",
                         "sequence/fasta/header_circular.json",
                         "gff3toff_header_tests/circular_virtual_space_round_trip.embl",
-                        "flat file to GFF3 virtual space maps back to the original locations"),
-                Arguments.of(
-                        "gff3toff_header_tests/circular_origin_lapping_start.gff3",
-                        "sequence/fasta/header_circular.json",
-                        "gff3toff_header_tests/circular_origin_lapping_start.embl",
-                        "feature lapping its own start is not split"));
+                        "flat file to GFF3 virtual space maps back to the original locations"));
+    }
+
+    @ParameterizedTest(name = "{0} rejected by {1}")
+    @CsvSource({
+        "gff3toff_header_tests/circular_origin_lapping_start.gff3, FEATURE_LONGER_THAN_CIRCULAR_SEQUENCE",
+        "gff3toff_header_tests/circular_end_past_twice_length.gff3, FEATURE_END_EXCEEDS_SEQUENCE_LENGTH"
+    })
+    void locationOutsideCircularSequenceIsRejectedWithoutFasta(String gff3Resource, String rule) throws Exception {
+        Path outFile = Files.createTempFile("header-test-", ".embl");
+        try {
+            String[] args = {
+                "conversion",
+                "--fasta-header",
+                getResourcePath("sequence/fasta/header_circular.json").toString(),
+                getResourcePath(gff3Resource).toString(),
+                outFile.toString()
+            };
+            StringWriter err = new StringWriter();
+            CommandLine command = new CommandLine(new Main());
+            command.setErr(new PrintWriter(err));
+            command.setOut(new PrintWriter(new StringWriter()));
+
+            assertNotEquals(0, command.execute(args));
+            assertTrue(err.toString().contains(rule), "Expected " + rule + " in:\n" + err);
+        } finally {
+            Files.deleteIfExists(outFile);
+        }
     }
 
     @ParameterizedTest(name = "{3}")

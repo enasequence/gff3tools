@@ -14,12 +14,14 @@ import java.util.*;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
+import uk.ac.ebi.embl.gff3tools.validation.provider.SequenceRegionProvider;
 
 @Gff3Validation(
         name = "LOCATION",
@@ -33,6 +35,8 @@ public class LocationValidation implements Validation {
     private static final String RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH = "FEATURE_END_EXCEEDS_SEQUENCE_LENGTH";
     private static final String FEATURE_END_EXCEEDS_SEQUENCE_LENGTH =
             "The end position of the location \"%s\" for accession \"%s\" is greater than the length of the sequence (\"%d\").";
+    private static final String FEATURE_END_EXCEEDS_CIRCULAR_SEQUENCE_LENGTH =
+            "The end position of the location \"%s\" for accession \"%s\" is greater than twice the length of the circular sequence (\"%d\").";
     private static final String RULE_FEATURE_LONGER_THAN_CIRCULAR_SEQUENCE = "FEATURE_LONGER_THAN_CIRCULAR_SEQUENCE";
     private static final String FEATURE_LONGER_THAN_CIRCULAR_SEQUENCE =
             "The location \"%s\" for accession \"%s\" spans %d bases, more than the length of the circular sequence (\"%d\").";
@@ -71,23 +75,26 @@ public class LocationValidation implements Validation {
 
     @ValidationMethod(
             rule = RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH,
-            description = "Feature end position must not exceed the sequence length",
+            description =
+                    "Feature end position must not exceed the sequence length (twice the length on a circular sequence)",
             type = ValidationType.FEATURE,
             priority = ValidationPriority.HIGH)
     public void validateFeatureEndWithinSequence(GFF3Feature feature, int line) throws ValidationException {
-        Long lastBaseIndex = ValidationUtils.resolveSequenceLength(feature.accession(), sequenceLengthCache, context);
+        Long lastBaseIndex = resolveSequenceLength(feature.accession());
         if (lastBaseIndex == null) {
             return;
         }
 
-        // On a circular sequence an end past the length is virtual (end + L) and allowed.
+        // On a circular sequence an end past the length is virtual (end - L), up to twice the length.
         boolean isCircular = TopologyUtils.isCircularSequence(feature.accession(), context);
-        if (!isCircular && feature.getEnd() > lastBaseIndex) {
+        long maxEnd = isCircular ? 2 * lastBaseIndex : lastBaseIndex;
+        if (feature.getEnd() > maxEnd) {
+            String message =
+                    isCircular ? FEATURE_END_EXCEEDS_CIRCULAR_SEQUENCE_LENGTH : FEATURE_END_EXCEEDS_SEQUENCE_LENGTH;
             throw new ValidationException(
                     RULE_FEATURE_END_EXCEEDS_SEQUENCE_LENGTH,
                     line,
-                    FEATURE_END_EXCEEDS_SEQUENCE_LENGTH.formatted(
-                            location(feature), feature.accession(), lastBaseIndex));
+                    message.formatted(location(feature), feature.accession(), lastBaseIndex));
         }
     }
 
@@ -98,7 +105,7 @@ public class LocationValidation implements Validation {
             type = ValidationType.FEATURE,
             priority = ValidationPriority.HIGH)
     public void validateFeatureWithinCircularSequence(GFF3Feature feature, int line) throws ValidationException {
-        Long lastBaseIndex = ValidationUtils.resolveSequenceLength(feature.accession(), sequenceLengthCache, context);
+        Long lastBaseIndex = resolveSequenceLength(feature.accession());
         if (lastBaseIndex == null || !TopologyUtils.isCircularSequence(feature.accession(), context)) {
             return;
         }
@@ -204,6 +211,16 @@ public class LocationValidation implements Validation {
     @ExitMethod
     public void clear() {
         sequenceLengthCache.clear();
+    }
+
+    /** {@code ##sequence-region} first, then the sequence reader. */
+    private Long resolveSequenceLength(String accession) {
+        GFF3SequenceRegion sequenceRegion = context.contains(SequenceRegionProvider.class)
+                ? context.get(SequenceRegionProvider.class)
+                        .getSequenceRegion(accession)
+                        .orElse(null)
+                : null;
+        return ValidationUtils.resolveSequenceLength(sequenceRegion, accession, sequenceLengthCache, context);
     }
 
     private static String location(GFF3Feature feature) {
