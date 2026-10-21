@@ -55,7 +55,10 @@ public class LocationValidation implements Validation {
     @InjectContext
     private ValidationContext context;
 
-    @ValidationMethod(rule = RULE_FEATURE_LOCATION_RANGE, type = ValidationType.FEATURE)
+    @ValidationMethod(
+            rule = RULE_FEATURE_LOCATION_RANGE,
+            type = ValidationType.FEATURE,
+            priority = ValidationPriority.HIGH)
     public void validateLocationRange(GFF3Feature feature, int line) throws ValidationException {
         long start = feature.getStart();
         long end = feature.getEnd();
