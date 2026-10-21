@@ -36,12 +36,6 @@ public class FlatfileSequenceTopologyProvider implements ContextProvider<Flatfil
         return FlatfileSequenceTopologyProvider.class;
     }
 
-    /** Kept off the context while empty; flat file conversion registers its own instance. */
-    @Override
-    public boolean isActive() {
-        return !topologies.isEmpty();
-    }
-
     /** A {@code null} (undeclared) topology is not recorded. */
     public void record(String accession, Sequence.Topology topology) {
         if (topology == null) {

@@ -115,10 +115,11 @@ public class GFF3AnnotationFactory {
     /** Makes the entry's declared topology visible to the topology-aware rules that validate it. */
     private void recordTopology(GFF3SequenceRegion sequenceRegion, Entry entry) {
         ValidationContext context = validationEngine.getContext();
-        if (context.contains(FlatfileSequenceTopologyProvider.class)) {
-            context.get(FlatfileSequenceTopologyProvider.class)
-                    .record(sequenceRegion.accession(), entry.getSequence().getTopology());
+        if (!context.contains(FlatfileSequenceTopologyProvider.class)) {
+            context.register(FlatfileSequenceTopologyProvider.class, new FlatfileSequenceTopologyProvider());
         }
+        context.get(FlatfileSequenceTopologyProvider.class)
+                .record(sequenceRegion.accession(), entry.getSequence().getTopology());
     }
 
     private boolean lacksCircularAttribute() {
