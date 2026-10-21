@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/enasequence/gff3tools/docs/reference-data-v2/reference-data-v2.schema.json",
+  "title": "Master entry JSON: references (ReferenceData v2)",
+  "description": "Validates the `references` array of a master entry JSON. Other master entry fields are not constrained here. Each reference mirrors the EMBL reference block (RN/RP/RX/RG/RA/RT/RL): shared fields, plus one type-specific block named after the lower-case `type`. See docs/2610141424_reference_data_v2.md.",
+  "type": "object",
+  "properties": {
+    "references": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/reference" }
+    }
+  },
+  "$defs": {
+    "reference": {
+      "type": "object",
+      "description": "One literature reference. Readers also accept v1 records (no `type`, submission data under `submitterDetails`); this schema describes v2 output, where `type` is required.",
+      "required": ["referenceNumber", "type"],
+      "properties": {
+        "referenceNumber": { "type": "integer", "minimum": 1, "description": "RN" },
+        "type": {
+          "enum": ["SUBMISSION", "UNPUBLISHED", "ARTICLE", "BOOK", "THESIS", "PATENT", "ELECTRONIC"],
+          "description": "Discriminator. Readers treat an unknown value as UNPUBLISHED and log a warning."
+        },
+        "referencePosition": { "type": ["string", "null"], "description": "RP, e.g. \"1-1470\" or \"1-100,200-300\"." },
+        "referenceComment": { "type": ["string", "null"] },
+        "title": { "type": ["string", "null"], "description": "RT" },
+        "consortium": { "type": ["string", "null"], "description": "RG: a group or consortium name. Put a consortium here, not in `authors`." },
+        "authors": {
+          "type": ["array", "null"],
+          "description": "RA, one entry per person.",
+          "items": { "$ref": "#/$defs/person" }
+        },
+        "xrefs": {
+          "type": ["array", "null"],
+          "description": "RX",
+          "items": { "$ref": "#/$defs/xref" }
+        },
+        "submission": { "oneOf": [{ "$ref": "#/$defs/submission" }, { "type": "null" }] },
+        "article": { "oneOf": [{ "$ref": "#/$defs/article" }, { "type": "null" }] },
+        "book": { "oneOf": [{ "$ref": "#/$defs/book" }, { "type": "null" }] },
+        "thesis": { "oneOf": [{ "$ref": "#/$defs/thesis" }, { "type": "null" }] },
+        "patent": { "oneOf": [{ "$ref": "#/$defs/patent" }, { "type": "null" }] },
+        "electronic": { "oneOf": [{ "$ref": "#/$defs/electronic" }, { "type": "null" }] },
+        "unpublished": { "oneOf": [{ "$ref": "#/$defs/unpublished" }, { "type": "null" }] }
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "SUBMISSION" } } }, "then": { "required": ["submission"], "properties": { "submission": { "type": "object" } } } },
+        { "if": { "properties": { "type": { "const": "ARTICLE" } } }, "then": { "required": ["article"], "properties": { "article": { "type": "object" } } } },
+        { "if": { "properties": { "type": { "const": "BOOK" } } }, "then": { "required": ["book"], "properties": { "book": { "type": "object" } } } },
+        { "if": { "properties": { "type": { "const": "THESIS" } } }, "then": { "required": ["thesis"], "properties": { "thesis": { "type": "object" } } } },
+        { "if": { "properties": { "type": { "const": "PATENT" } } }, "then": { "required": ["patent"], "properties": { "patent": { "type": "object" } } } },
+        { "if": { "properties": { "type": { "const": "ELECTRONIC" } } }, "then": { "required": ["electronic"], "properties": { "electronic": { "type": "object" } } } }
+      ]
+    },
+    "person": {
+      "type": "object",
+      "description": "Each name part may be a full name or initials, with or without a period.",
+      "required": ["surname"],
+      "properties": {
+        "surname": { "type": "string", "minLength": 1 },
+        "firstName": { "type": ["string", "null"] },
+        "middleName": { "type": ["string", "null"] }
+      }
+    },
+    "xref": {
+      "type": "object",
+      "required": ["source", "primaryId"],
+      "properties": {
+        "source": { "enum": ["DOI", "PUBMED", "AGRICOLA"] },
+        "primaryId": { "type": "string", "minLength": 1 },
+        "secondaryId": { "type": ["string", "null"] }
+      }
+    },
+    "date": {
+      "description": "ISO-8601 calendar date or date-time.",
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})?)?$"
+    },
+    "year": { "type": "integer", "minimum": 1000, "maximum": 9999 },
+    "submission": {
+      "type": "object",
+      "description": "Needs a valid `submittedDate`, otherwise readers fall back to UNPUBLISHED.",
+      "required": ["submittedDate"],
+      "properties": {
+        "submittedDate": { "$ref": "#/$defs/date" },
+        "submitterAddress": { "type": ["string", "null"] }
+      }
+    },
+    "article": {
+      "type": "object",
+      "required": ["journal", "year"],
+      "properties": {
+        "journal": { "type": "string", "minLength": 1 },
+        "volume": { "type": ["string", "null"] },
+        "issue": { "type": ["string", "null"] },
+        "firstPage": { "type": ["string", "null"] },
+        "lastPage": { "type": ["string", "null"] },
+        "year": { "$ref": "#/$defs/year" },
+        "accepted": { "type": "boolean", "default": false, "description": "True for an in-press article." }
+      }
+    },
+    "book": {
+      "type": "object",
+      "required": ["bookTitle", "publisher", "year", "editors"],
+      "properties": {
+        "bookTitle": { "type": "string", "minLength": 1 },
+        "publisher": { "type": "string", "minLength": 1 },
+        "firstPage": { "type": ["string", "null"] },
+        "lastPage": { "type": ["string", "null"] },
+        "year": { "$ref": "#/$defs/year" },
+        "editors": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/person" } }
+      }
+    },
+    "thesis": {
+      "type": "object",
+      "required": ["institute", "year"],
+      "properties": {
+        "institute": { "type": "string", "minLength": 1 },
+        "year": { "$ref": "#/$defs/year" }
+      }
+    },
+    "patent": {
+      "type": "object",
+      "required": ["patentOffice", "patentNumber", "patentType", "sequenceNumber", "day"],
+      "properties": {
+        "patentOffice": { "type": "string", "pattern": "^[A-Za-z]{2}$" },
+        "patentNumber": { "type": "string", "pattern": "^[A-Za-z0-9]+$" },
+        "patentType": { "type": "string", "pattern": "^[A-Za-z0-9]+$" },
+        "sequenceNumber": { "type": "integer", "minimum": 1 },
+        "day": { "$ref": "#/$defs/date" },
+        "applicants": { "type": ["array", "null"], "items": { "type": "string" } }
+      }
+    },
+    "electronic": {
+      "type": "object",
+      "required": ["text"],
+      "properties": { "text": { "type": "string", "minLength": 1 } }
+    },
+    "unpublished": {
+      "type": "object",
+      "properties": { "journalBlock": { "type": ["string", "null"], "description": "Carried, not rendered." } }
+    }
+  }
+}
