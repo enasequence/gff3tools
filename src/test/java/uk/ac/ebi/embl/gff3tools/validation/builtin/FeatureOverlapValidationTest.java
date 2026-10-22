@@ -224,19 +224,19 @@ class FeatureOverlapValidationTest {
 
         @ParameterizedTest
         @ValueSource(strings = {".", "?"})
-        void failsWhenTheRrnaStrandIsUnknown(String strand) {
-            // An unknown strand may be either one, so the overlap still counts.
+        void passesWhenTheRrnaStrandIsUnknown(String strand) {
+            // Only a known strand can be shown to match, so an overlap with . or ? is not reported.
             addFeatures(rrna("rrna1", 100L, 300L, strand), cds("cds1", 200L, 400L, "-"));
 
-            assertThrows(ValidationException.class, () -> validation.validateRrnaOverlap(annotation, 1));
+            assertDoesNotThrow(() -> validation.validateRrnaOverlap(annotation, 1));
         }
 
         @ParameterizedTest
         @ValueSource(strings = {".", "?"})
-        void failsWhenTheCdsStrandIsUnknown(String strand) {
+        void passesWhenTheCdsStrandIsUnknown(String strand) {
             addFeatures(rrna("rrna1", 100L, 300L, "-"), cds("cds1", 200L, 400L, strand));
 
-            assertThrows(ValidationException.class, () -> validation.validateRrnaOverlap(annotation, 1));
+            assertDoesNotThrow(() -> validation.validateRrnaOverlap(annotation, 1));
         }
 
         @Test

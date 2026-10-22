@@ -101,8 +101,8 @@ public class FeatureOverlapValidation implements Validation {
     }
 
     /**
-     * <p>Only segments on the same strand clash. A strand of {@code .} or {@code ?} is unknown, so
-     * it may be either one and the segment is still compared.
+     * <p>Only segments on the same known strand clash. A segment whose strand is {@code .} or
+     * {@code ?} is never reported.
      */
     @ValidationMethod(
             rule = RRNA_OVERLAP_RULE,
@@ -173,7 +173,7 @@ public class FeatureOverlapValidation implements Validation {
     private void collectOverlap(
             List<GFF3Feature> rrna, List<GFF3Feature> other, String otherLabel, List<String> violations) {
         GFF3Feature[] overlapping = firstOverlappingPair(
-                rrna, other, false, (left, right) -> mayShareStrand(left, right) && overlaps(left, right));
+                rrna, other, false, (left, right) -> onSameStrand(left, right) && overlaps(left, right));
         if (overlapping == null) {
             return;
         }
@@ -207,10 +207,8 @@ public class FeatureOverlapValidation implements Validation {
                 && right.getStart() <= left.getEnd();
     }
 
-    private boolean mayShareStrand(GFF3Feature left, GFF3Feature right) {
-        return !hasKnownStrand(left)
-                || !hasKnownStrand(right)
-                || left.getStrand().equals(right.getStrand());
+    private boolean onSameStrand(GFF3Feature left, GFF3Feature right) {
+        return hasKnownStrand(left) && left.getStrand().equals(right.getStrand());
     }
 
     private boolean hasKnownStrand(GFF3Feature feature) {
