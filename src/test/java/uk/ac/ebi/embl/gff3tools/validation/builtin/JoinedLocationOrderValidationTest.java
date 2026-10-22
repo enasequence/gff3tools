@@ -95,8 +95,8 @@ class JoinedLocationOrderValidationTest {
     /** Features without an ID are separate features, not segments of one, however they are listed. */
     @Test
     void featuresWithoutAnIdAreNotJudgedAgainstEachOther() {
-        add(build(GENE_FEATURE, null, ACCESSION, 800, 822, PLUS));
-        add(build(GENE_FEATURE, null, ACCESSION, 600, 700, PLUS));
+        add(TestUtils.createGFF3Feature(null, GENE_FEATURE, ACCESSION, 800, 822, PLUS));
+        add(TestUtils.createGFF3Feature(null, GENE_FEATURE, ACCESSION, 600, 700, PLUS));
 
         assertDoesNotThrow(() -> validation.validateJoinedLocationOrder(annotation, 1));
     }
@@ -274,26 +274,11 @@ class JoinedLocationOrderValidationTest {
     }
 
     private GFF3Feature segmentOnStrand(String id, long start, long end, String strand) {
-        return add(build(GENE_FEATURE, id, ACCESSION, start, end, strand));
+        return add(TestUtils.createGFF3Feature(id, GENE_FEATURE, ACCESSION, start, end, strand));
     }
 
     private GFF3Feature add(GFF3Feature feature) {
         annotation.addFeature(feature);
         return feature;
-    }
-
-    private static GFF3Feature build(String name, String id, String seqId, long start, long end, String strand) {
-        return new GFF3Feature(
-                Optional.ofNullable(id),
-                Optional.empty(),
-                seqId,
-                Optional.empty(),
-                ".",
-                name,
-                start,
-                end,
-                ".",
-                strand,
-                "");
     }
 }
