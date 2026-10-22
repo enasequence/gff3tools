@@ -1,0 +1,11 @@
+##gff-version 3.1.26
+##sequence-region SEQID1 1 120
+##sequence-region SEQID2 1 120
+SEQID1	.	CDS	91	171	.	+	0	ID=cds1;transl_table=11;
+SEQID2	.	CDS	91	120	.	-	0	ID=cds2;transl_table=11;
+SEQID2	.	CDS	133	183	.	-	0	ID=cds2;transl_table=11;
+##FASTA
+>SEQID1|cds1
+MAAAAAAAAAAAAAAAAAAAAAAAAA
+>SEQID2|cds2
+MAAAAAAAAAAAAAAAAAAAAAAAAA

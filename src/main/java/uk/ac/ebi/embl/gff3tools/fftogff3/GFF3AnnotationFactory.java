@@ -26,8 +26,12 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
+import uk.ac.ebi.embl.gff3tools.utils.CoordinateShiftUtils;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
+import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.provider.FlatfileSequenceTopologyProvider;
 
 public class GFF3AnnotationFactory {
 
@@ -49,6 +53,14 @@ public class GFF3AnnotationFactory {
     GFF3DirectivesFactory directivesFactory;
     ValidationEngine validationEngine;
 
+    // Sequence length when circular, for writing virtual coordinates; otherwise null.
+    Long circularSequenceLength;
+    // Per gene, how far its origin-crossing features run past the origin (1..L numbering).
+    Map<String, Long> wrappedEndByGene = new HashMap<>();
+
+    /** One GFF3 line of a feature: its span, partiality and strand. */
+    private record Segment(long start, long end, List<String> partiality, String strand) {}
+
     public GFF3AnnotationFactory(ValidationEngine validationEngine, GFF3DirectivesFactory directivesFactory) {
         this.validationEngine = validationEngine;
         this.directivesFactory = directivesFactory;
@@ -62,6 +74,13 @@ public class GFF3AnnotationFactory {
         String accession = ConversionUtils.getEffectiveAccession(entry);
         LOG.info("Converting entry: {}", accession);
         GFF3SequenceRegion sequenceRegion = directivesFactory.createSequenceRegion(entry);
+        recordTopology(sequenceRegion, entry);
+        // Same topology as validation, so virtual coordinates are written only where accepted.
+        circularSequenceLength =
+                TopologyUtils.isCircularSequence(sequenceRegion.accession(), validationEngine.getContext())
+                        ? sequenceRegion.end()
+                        : null;
+        recordWrappedGenes(entry);
 
         for (Feature feature : entry.getFeatures().stream().sorted().toList()) {
 
@@ -91,6 +110,16 @@ public class GFF3AnnotationFactory {
         validationEngine.validate(annotation, -1);
 
         return annotation;
+    }
+
+    /** Makes the entry's declared topology visible to the topology-aware rules that validate it. */
+    private void recordTopology(GFF3SequenceRegion sequenceRegion, Entry entry) {
+        ValidationContext context = validationEngine.getContext();
+        if (!context.contains(FlatfileSequenceTopologyProvider.class)) {
+            context.register(FlatfileSequenceTopologyProvider.class, new FlatfileSequenceTopologyProvider());
+        }
+        context.get(FlatfileSequenceTopologyProvider.class)
+                .record(sequenceRegion.accession(), entry.getSequence().getTopology());
     }
 
     private boolean lacksCircularAttribute() {
@@ -146,13 +175,16 @@ public class GFF3AnnotationFactory {
         // Translation attribute is left on the feature; TranslationFix captures it
         // into TranslationState during validation, and GFF3File writes the FASTA section.
 
-        CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
-        for (Location location : compoundLocation.getLocations()) {
+        VirtualLayout layout = virtualLayout(ffFeature, geneName);
+        if (layout != null) {
+            shiftPositions(baseAttributes, layout);
+        }
+
+        for (Segment segment : getSegments(ffFeature, layout)) {
             Map<String, List<String>> attributes = new LinkedHashMap<>(baseAttributes);
 
-            List<String> partiality = getPartiality(location);
-            if (!partiality.isEmpty()) {
-                attributes.put("partial", partiality);
+            if (!segment.partiality().isEmpty()) {
+                attributes.put("partial", segment.partiality());
             }
 
             GFF3Feature gff3Feature = new GFF3Feature(
@@ -162,10 +194,10 @@ public class GFF3AnnotationFactory {
                     sequenceRegion.accessionVersion(),
                     source,
                     featureName,
-                    location.getBeginPosition(),
-                    location.getEndPosition(),
+                    segment.start(),
+                    segment.end(),
                     score,
-                    getStrand(location, compoundLocation),
+                    segment.strand(),
                     getPhase(ffFeature));
             gff3Feature.addAttributes(attributes);
             validationEngine.validate(gff3Feature, -1);
@@ -272,6 +304,169 @@ public class GFF3AnnotationFactory {
             // Child cleanup
             root.removeAttributeList(GFF3Attributes.ATTRIBUTE_PARENT);
         }
+    }
+
+    /**
+     * The GFF3 lines of a feature, one per location. On a circular sequence a plain path is written in
+     * virtual space, merged where it runs straight through the origin, and shifted with its gene.
+     */
+    private List<Segment> getSegments(Feature ffFeature, VirtualLayout layout) {
+        if (layout == null) {
+            return locationSegments(ffFeature);
+        }
+        long length = circularSequenceLength;
+        List<Segment> result = new ArrayList<>();
+        for (int i = 0; i < layout.path().size(); i++) {
+            Segment segment = layout.path().get(i);
+            CoordinateShiftUtils.Span span = layout.virtual().get(i);
+            Segment shifted = new Segment(span.start(), span.end(), segment.partiality(), segment.strand());
+            Segment previous = result.isEmpty() ? null : result.get(result.size() - 1);
+            if (previous != null
+                    && CoordinateShiftUtils.continuesAcrossOrigin(
+                            new CoordinateShiftUtils.Span(previous.start(), previous.end()), span, length)) {
+                result.set(result.size() - 1, mergeAcrossOrigin(previous, shifted));
+            } else {
+                result.add(shifted);
+            }
+        }
+        return result;
+    }
+
+    /** A plain path's locations in plus-strand order and where each lands in virtual space. */
+    private record VirtualLayout(List<Segment> path, List<CoordinateShiftUtils.Span> virtual) {}
+
+    /** Null when the locations are written as they are (sequence not circular, or not a plain path). */
+    private VirtualLayout virtualLayout(Feature ffFeature, Optional<String> geneName) {
+        if (circularSequenceLength == null) {
+            return null;
+        }
+        List<Segment> path = plusStrandPath(ffFeature, locationSegments(ffFeature));
+        if (path == null) {
+            return null;
+        }
+        long length = circularSequenceLength;
+        List<CoordinateShiftUtils.Span> pieces = path.stream()
+                .map(s -> new CoordinateShiftUtils.Span(s.start(), s.end()))
+                .toList();
+        List<CoordinateShiftUtils.Span> virtual = CoordinateShiftUtils.toVirtualSpace(pieces, length);
+        if (virtual.equals(pieces) && liesPastOriginOfGene(pieces, geneName)) {
+            virtual = pieces.stream()
+                    .map(s -> new CoordinateShiftUtils.Span(s.start() + length, s.end() + length))
+                    .toList();
+        }
+        return new VirtualLayout(path, virtual);
+    }
+
+    private List<Segment> locationSegments(Feature ffFeature) {
+        CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
+        List<Segment> segments = new ArrayList<>();
+        for (Location location : compoundLocation.getLocations()) {
+            segments.add(new Segment(
+                    location.getBeginPosition(),
+                    location.getEndPosition(),
+                    getPartiality(location),
+                    getStrand(location, compoundLocation)));
+        }
+        return segments;
+    }
+
+    /** Anticodon and transl_except positions take the shift of the location they lie in. */
+    private void shiftPositions(Map<String, List<String>> attributes, VirtualLayout layout) {
+        List<CoordinateShiftUtils.Span> pieces = layout.path().stream()
+                .map(segment -> new CoordinateShiftUtils.Span(segment.start(), segment.end()))
+                .toList();
+        for (String key : List.of(GFF3Attributes.ANTI_CODON, GFF3Attributes.TRANSL_EXCEPT)) {
+            List<String> values = attributes.get(key);
+            if (values != null) {
+                attributes.put(
+                        key,
+                        values.stream()
+                                .map(value -> CoordinateShiftUtils.mapPosition(
+                                        value,
+                                        position -> CoordinateShiftUtils.toVirtualPosition(
+                                                position, pieces, layout.virtual())))
+                                .toList());
+            }
+        }
+    }
+
+    /**
+     * The locations in plus-strand order ({@code join(complement(..),..)} reversed), or null for a
+     * trans-spliced, mixed-strand or remote feature, whose order is biological, not a path.
+     */
+    private List<Segment> plusStrandPath(Feature ffFeature, List<Segment> segments) {
+        CompoundLocation<Location> compoundLocation = ffFeature.getLocations();
+        if (!ffFeature.getQualifiers(Qualifier.TRANS_SPLICING).isEmpty() || compoundLocation.hasRemoteLocation()) {
+            return null;
+        }
+        long complemented = compoundLocation.getLocations().stream()
+                .filter(Location::isComplement)
+                .count();
+        if (complemented == 0) {
+            return segments;
+        }
+        if (complemented == segments.size() && !compoundLocation.isComplement()) {
+            List<Segment> reversed = new ArrayList<>(segments);
+            Collections.reverse(reversed);
+            return reversed;
+        }
+        return null;
+    }
+
+    /** Start partiality from the first piece, end partiality from the second. */
+    private Segment mergeAcrossOrigin(Segment first, Segment second) {
+        List<String> partiality = new ArrayList<>();
+        if (first.partiality().contains("start")) {
+            partiality.add("start");
+        }
+        if (second.partiality().contains("end")) {
+            partiality.add("end");
+        }
+        return new Segment(first.start(), second.end(), partiality, first.strand());
+    }
+
+    /** Fills {@link #wrappedEndByGene} for the entry. */
+    private void recordWrappedGenes(Entry entry) {
+        wrappedEndByGene.clear();
+        if (circularSequenceLength == null) {
+            return;
+        }
+        long length = circularSequenceLength;
+        for (Feature feature : entry.getFeatures()) {
+            List<Qualifier> genes = feature.getQualifiers(Qualifier.GENE_QUALIFIER_NAME);
+            if (genes.isEmpty() || feature.getLocations() == null) {
+                continue;
+            }
+            List<Segment> segments = new ArrayList<>();
+            for (Location location : feature.getLocations().getLocations()) {
+                segments.add(new Segment(location.getBeginPosition(), location.getEndPosition(), List.of(), ""));
+            }
+            List<Segment> path = plusStrandPath(feature, segments);
+            if (path == null) {
+                continue;
+            }
+            List<CoordinateShiftUtils.Span> spans = path.stream()
+                    .map(s -> new CoordinateShiftUtils.Span(s.start(), s.end()))
+                    .toList();
+            List<CoordinateShiftUtils.Span> virtual = CoordinateShiftUtils.toVirtualSpace(spans, length);
+            if (virtual.equals(spans)) {
+                continue;
+            }
+            long wrappedEnd = virtual.stream()
+                            .mapToLong(CoordinateShiftUtils.Span::end)
+                            .max()
+                            .orElse(length)
+                    - length;
+            for (Qualifier gene : genes) {
+                wrappedEndByGene.merge(gene.getValue(), wrappedEnd, Math::max);
+            }
+        }
+    }
+
+    /** Whether the spans lie wholly in the part of their gene that runs past the origin. */
+    private boolean liesPastOriginOfGene(List<CoordinateShiftUtils.Span> spans, Optional<String> geneName) {
+        Long wrappedEnd = geneName.map(wrappedEndByGene::get).orElse(null);
+        return wrappedEnd != null && spans.stream().allMatch(s -> s.end() <= wrappedEnd);
     }
 
     private String getStrand(Location location, CompoundLocation<Location> compoundLocation) {
