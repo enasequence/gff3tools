@@ -23,6 +23,8 @@ import java.nio.file.Path;
 import java.util.zip.GZIPOutputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.metrics.Gff3ToolsVersion;
 
@@ -525,6 +527,38 @@ class FileConversionCommandTest {
                 exitCode,
                 "plain sequence input to FASTA to GFF3 should be a usage error, not silent empty output");
         assertFalse(Files.exists(outputFile), "No output file should be created on a usage error");
+    }
+
+    @ParameterizedTest(name = "fail-fast: {0}")
+    @ValueSource(booleans = {false, true})
+    void gapPastTheEndOfLinearSequenceIsReportedAsValidationError(boolean failFast) throws Exception {
+        String bases = "N".repeat(10) + "ACGT".repeat(245) + "N".repeat(10);
+        Path fasta = tempDir.resolve("linear.fasta");
+        Files.writeString(
+                fasta,
+                ">SEQID1 | {\"description\":\"x\",\"molecule_type\":\"genomic DNA\",\"topology\":\"linear\"}\n" + bases
+                        + "\n");
+        Path gff3 = tempDir.resolve("gap_past_end.gff3");
+        Files.writeString(
+                gff3,
+                "##gff-version 3.1.26\n"
+                        + "##sequence-region SEQID1 1 1000\n"
+                        + "SEQID1\t.\tgap\t991\t1010\t.\t+\t.\tID=gap1;estimated_length=20;"
+                        + "gap_type=within scaffold;linkage_evidence=paired-ends;\n");
+        Path outputFile = tempDir.resolve("output.embl");
+
+        int exitCode = failFast
+                ? executeConversion(
+                        "conversion",
+                        "--fail-fast",
+                        "--sequence",
+                        fasta.toString(),
+                        gff3.toString(),
+                        outputFile.toString())
+                : executeConversion(
+                        "conversion", "--sequence", fasta.toString(), gff3.toString(), outputFile.toString());
+
+        assertEquals(CLIExitCode.VALIDATION_ERROR.asInt(), exitCode);
     }
 
     private int executeConversion(String... args) {

@@ -282,7 +282,7 @@ class CdsMrnaLocationValidationTest {
     }
 
     private GFF3Feature mrnaOnStrand(String id, long start, long end, String strand) {
-        return add(build(MRNA_FEATURE, id, ACCESSION, start, end, strand));
+        return add(TestUtils.createGFF3Feature(id, MRNA_FEATURE, ACCESSION, start, end, strand));
     }
 
     private GFF3Feature cds(String id, long start, long end, String... parents) {
@@ -290,15 +290,15 @@ class CdsMrnaLocationValidationTest {
     }
 
     private GFF3Feature cdsOnStrand(String id, long start, long end, String strand, String... parents) {
-        return add(withParents(build(CDS_FEATURE, id, ACCESSION, start, end, strand), parents));
+        return add(withParents(TestUtils.createGFF3Feature(id, CDS_FEATURE, ACCESSION, start, end, strand), parents));
     }
 
     private GFF3Feature typed(String featureName, String id, long start, long end, String... parents) {
-        return add(withParents(build(featureName, id, ACCESSION, start, end, PLUS), parents));
+        return add(withParents(TestUtils.createGFF3Feature(id, featureName, ACCESSION, start, end, PLUS), parents));
     }
 
     private GFF3Feature cdsOnAccession(String id, String seqId, long start, long end, String... parents) {
-        return add(withParents(build(CDS_FEATURE, id, seqId, start, end, PLUS), parents));
+        return add(withParents(TestUtils.createGFF3Feature(id, CDS_FEATURE, seqId, start, end, PLUS), parents));
     }
 
     private GFF3Feature add(GFF3Feature feature) {
@@ -314,10 +314,5 @@ class CdsMrnaLocationValidationTest {
             feature.setParentId(Optional.of(parents[0]));
         }
         return feature;
-    }
-
-    private static GFF3Feature build(String name, String id, String seqId, long start, long end, String strand) {
-        return new GFF3Feature(
-                Optional.of(id), Optional.empty(), seqId, Optional.empty(), ".", name, start, end, ".", strand, "");
     }
 }

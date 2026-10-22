@@ -1,0 +1,12 @@
+ID   TST01; SV 1; circular; genomic DNA; STD; PRO; 120 BP.
+XX
+AC   TST01;
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..120
+FT                   /organism="Escherichia coli"
+FT                   /mol_type="genomic DNA"
+FT                   /db_xref="taxon:562"
+XX
+//

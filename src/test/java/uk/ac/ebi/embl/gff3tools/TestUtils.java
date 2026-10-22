@@ -329,4 +329,20 @@ public class TestUtils {
                 ".");
         return feature;
     }
+
+    public static GFF3Feature createGFF3Feature(
+            String id, String featureName, String seqId, long start, long end, String strand) {
+        return new GFF3Feature(
+                Optional.ofNullable(id),
+                Optional.empty(),
+                seqId,
+                Optional.empty(),
+                ".",
+                featureName,
+                start,
+                end,
+                ".",
+                strand,
+                "");
+    }
 }
