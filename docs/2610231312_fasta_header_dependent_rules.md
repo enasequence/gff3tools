@@ -114,9 +114,11 @@ or stay unset. See [spec-fasta-header-to-embl-entry-mapping.md](spec-fasta-heade
 
 # Testing Strategy
 
-- `FastaHeaderMappingOffTest` runs GFF3 through the full engine with stub sequence and header
+- `NoFastaHeaderForSequenceTest` runs GFF3 through the full engine with stub sequence and header
   providers, where some sequences have no header. With `FASTA_HEADER_MAPPING` on, each header-less
-  annotation is reported; with it off, nothing fails.
+  annotation is reported; with it off, regular coordinates pass. A gene in virtual coordinates past
+  the origin is declined without a header, and passes when the header or the master entry declares
+  the sequence circular.
 - The unit tests of each rule above cover both cases: no header source registered, and a source
   with no header for the sequence.
 

@@ -29,6 +29,8 @@ import uk.ac.ebi.embl.fastareader.SequenceStats;
 import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
+import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
@@ -39,98 +41,90 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
 /**
- * Runs GFF3 through the full validation engine with a header provider registered that has no
- * header for some accessions. Every sequence is available and clean, so the only thing wrong with
- * the input is the missing headers: with FASTA_HEADER_MAPPING on that must be reported, and with it
- * off nothing else in the engine may trip over the missing headers.
+ * Runs GFF3 through the full validation engine with a FASTA header provider registered that has no
+ * header for some sequences. Every sequence is available and clean, so the only thing missing is
+ * the header. With FASTA_HEADER_MAPPING on that is reported; with it off, regular coordinates pass,
+ * and virtual coordinates past the origin pass only when something declares the sequence circular.
  */
-class FastaHeaderMappingOffTest {
+class NoFastaHeaderForSequenceTest {
 
-    private static final String RULE = "FASTA_HEADER_MAPPING";
-    private static final Map<String, RuleSeverity> RULE_OFF = Map.of(RULE, RuleSeverity.OFF);
+    private static final String MAPPING_RULE = "FASTA_HEADER_MAPPING";
+    private static final Map<String, RuleSeverity> MAPPING_OFF = Map.of(MAPPING_RULE, RuleSeverity.OFF);
     private static final int SEQUENCE_LENGTH = 1000;
 
     @TempDir
     Path tempDir;
 
+    // ---- regular coordinates --------------------------------------------------
+
     @Test
-    void reportsEveryAnnotationWithoutHeaderWhenRuleIsOn() throws Exception {
+    void reportsEveryAnnotationWithoutHeaderWhenMappingIsOn() throws Exception {
         String gff3 = gff3(gene("SEQ1"), gene("SEQ2"), gene("SEQ3"));
 
-        ValidationEngine engine = run(gff3, Map.of(), false, "SEQ1");
+        ValidationEngine engine = run(gff3, Map.of(), false, Map.of("SEQ1", header("linear")), Map.of());
 
         List<ValidationException> errors = engine.getCollectedErrors();
         assertEquals(2, errors.size(), "Errors: " + errors);
-        assertTrue(errors.stream().allMatch(e -> RULE.equals(e.getValidationRule())), "Errors: " + errors);
+        assertTrue(errors.stream().allMatch(e -> MAPPING_RULE.equals(e.getValidationRule())), "Errors: " + errors);
         assertTrue(errors.get(0).getMessage().contains("SEQ2"));
         assertTrue(errors.get(1).getMessage().contains("SEQ3"));
     }
 
     @Test
-    void singleAnnotationWithoutHeaderPasses() throws Exception {
-        assertPassesWithRuleOff(gff3(gene("SEQ2")), "SEQ1");
-    }
+    void regularCoordinatesWithoutHeaderPassWhenMappingIsOff() throws Exception {
+        String gff3 = gff3(gene("SEQ1"), geneModel("SEQ2"), gene("SEQ3"));
 
-    @Test
-    void providerWithNoHeadersAtAllPasses() throws Exception {
-        assertPassesWithRuleOff(gff3(gene("SEQ1"), gene("SEQ2"), gene("SEQ3")));
-    }
+        ValidationEngine engine = run(gff3, MAPPING_OFF, false, Map.of("SEQ1", header("linear")), Map.of());
 
-    @Test
-    void firstAnnotationWithoutHeaderPasses() throws Exception {
-        assertPassesWithRuleOff(gff3(gene("SEQ2"), gene("SEQ1")), "SEQ1");
-    }
-
-    @Test
-    void lastAnnotationWithoutHeaderPasses() throws Exception {
-        // The last annotation is only flushed at EOF, through a different branch of the reader.
-        assertPassesWithRuleOff(gff3(gene("SEQ1"), gene("SEQ2")), "SEQ1");
-    }
-
-    @Test
-    void annotationWithoutHeaderBetweenAnnotationsWithHeadersPasses() throws Exception {
-        assertPassesWithRuleOff(gff3(gene("SEQ1"), gene("SEQ2"), gene("SEQ3")), "SEQ1", "SEQ3");
-    }
-
-    @Test
-    void geneModelWithoutHeaderPasses() throws Exception {
-        assertPassesWithRuleOff(gff3(geneModel("SEQ2")), "SEQ1");
-    }
-
-    @Test
-    void severalFeaturesOnSequenceWithoutHeaderPasses() throws Exception {
-        String features = String.join(
-                "",
-                feature("SEQ2", "gene", 10, 200, "ID=gene1;gene=geneA;"),
-                feature("SEQ2", "gene", 300, 500, "ID=gene2;gene=geneB;"),
-                feature("SEQ2", "gene", 600, 900, "ID=gene3;gene=geneC;"));
-        assertPassesWithRuleOff(gff3(features), "SEQ1");
-    }
-
-    @Test
-    void featureSpanningWholeSequenceWithoutHeaderPasses() throws Exception {
-        assertPassesWithRuleOff(gff3(feature("SEQ2", "gene", 1, SEQUENCE_LENGTH, "ID=gene1;gene=geneA;")), "SEQ1");
-    }
-
-    @Test
-    void annotationsSplitByDirectiveWithoutHeaderPass() throws Exception {
-        // "###" closes an annotation early; the reader merges same-accession annotations back.
-        String features = gene("SEQ2") + "###\n" + feature("SEQ2", "gene", 600, 900, "ID=gene2;gene=geneB;");
-        assertPassesWithRuleOff(gff3(features), "SEQ1");
+        assertNoErrorsOrWarnings(engine);
     }
 
     @Test
     void failFastEngineDoesNotThrowWithoutHeaders() throws Exception {
         String gff3 = gff3(gene("SEQ1"), gene("SEQ2"), gene("SEQ3"));
 
-        ValidationEngine engine = assertDoesNotThrow(() -> run(gff3, RULE_OFF, true, "SEQ1"));
+        ValidationEngine engine =
+                assertDoesNotThrow(() -> run(gff3, MAPPING_OFF, true, Map.of("SEQ1", header("linear")), Map.of()));
 
         assertTrue(engine.getCollectedErrors().isEmpty(), "Errors: " + engine.getCollectedErrors());
     }
 
-    private void assertPassesWithRuleOff(String gff3, String... accessionsWithHeader) throws Exception {
-        ValidationEngine engine = run(gff3, RULE_OFF, false, accessionsWithHeader);
+    // ---- virtual coordinates past the origin -----------------------------------
 
+    @Test
+    void virtualCoordinatesWithoutHeaderAreDeclined() throws Exception {
+        // Nothing declares SEQ2 circular, so it is treated as linear and 901..1200 runs past its end.
+        String gff3 = gff3(originCrossingGene("SEQ2"));
+
+        ValidationEngine engine = run(gff3, MAPPING_OFF, false, Map.of(), Map.of());
+
+        List<ValidationException> errors = engine.getCollectedErrors();
+        assertFalse(errors.isEmpty(), "Expected the origin-crossing gene to be declined");
+        assertTrue(
+                errors.stream().allMatch(e -> "FEATURE_END_EXCEEDS_SEQUENCE_LENGTH".equals(e.getValidationRule())),
+                "Errors: " + errors);
+    }
+
+    @Test
+    void virtualCoordinatesWithCircularHeaderPass() throws Exception {
+        String gff3 = gff3(originCrossingGene("SEQ2"));
+
+        ValidationEngine engine = run(gff3, MAPPING_OFF, false, Map.of("SEQ2", header("circular")), Map.of());
+
+        assertNoErrorsOrWarnings(engine);
+    }
+
+    @Test
+    void virtualCoordinatesWithCircularMasterEntryPass() throws Exception {
+        // No FASTA header, but the master entry declares SEQ2 circular.
+        String gff3 = gff3(originCrossingGene("SEQ2"));
+
+        ValidationEngine engine = run(gff3, MAPPING_OFF, false, Map.of(), Map.of("SEQ2", masterEntry("circular")));
+
+        assertNoErrorsOrWarnings(engine);
+    }
+
+    private static void assertNoErrorsOrWarnings(ValidationEngine engine) {
         assertTrue(engine.getCollectedErrors().isEmpty(), "Errors: " + engine.getCollectedErrors());
         assertTrue(engine.getParsingWarnings().isEmpty(), "Warnings: " + engine.getParsingWarnings());
         assertDoesNotThrow(engine::throwIfErrorsCollected);
@@ -138,31 +132,37 @@ class FastaHeaderMappingOffTest {
 
     /**
      * Reads {@code gff3} through a full (classpath-scanned) engine. Every sequence-region accession
-     * gets a clean sequence; only {@code accessionsWithHeader} get a FASTA header.
+     * gets a clean sequence; only the accessions in {@code headers} get a FASTA header, and a master
+     * entry provider is registered only when {@code masterEntries} is not empty.
      */
     private ValidationEngine run(
-            String gff3, Map<String, RuleSeverity> rules, boolean failFast, String... accessionsWithHeader)
+            String gff3,
+            Map<String, RuleSeverity> rules,
+            boolean failFast,
+            Map<String, FastaHeader> headers,
+            Map<String, MasterMetadata> masterEntries)
             throws Exception {
         Map<String, String> sequences = new LinkedHashMap<>();
         for (String accession : List.of("SEQ1", "SEQ2", "SEQ3")) {
             sequences.put(accession, "ACGT".repeat(SEQUENCE_LENGTH / 4));
         }
-        Map<String, FastaHeader> headers = new HashMap<>();
-        for (String accession : accessionsWithHeader) {
-            headers.put(accession, validHeader());
-        }
 
         Path file = tempDir.resolve("input.gff3");
         Files.writeString(file, gff3);
 
-        ValidationEngine engine = new ValidationEngineBuilder()
+        ValidationEngineBuilder builder = new ValidationEngineBuilder()
                 .withProvider(new StubSequenceProvider(sequences))
                 .withProvider(new StubFastaHeaderProvider(headers))
                 .overrideMethodRules(rules)
                 // Mirrors GFF3 conversion: gap generation only belongs to FASTA -> GFF3.
                 .overrideMethodFixs(Map.of("GAP_GENERATION", false))
-                .failFast(failFast)
-                .build();
+                .failFast(failFast);
+        if (!masterEntries.isEmpty()) {
+            MasterMetadataProvider masterProvider = new MasterMetadataProvider();
+            masterProvider.addSource(seqId -> Optional.ofNullable(masterEntries.get(seqId)));
+            builder.withProvider(masterProvider);
+        }
+        ValidationEngine engine = builder.build();
         try (GFF3FileReader reader = new GFF3FileReader(engine, file)) {
             reader.readHeader();
             reader.read(annotation -> {});
@@ -196,17 +196,28 @@ class FastaHeaderMappingOffTest {
                 + feature(accession, "exon", 300, 500, "ID=exon2;Parent=mrna1;gene=geneA;");
     }
 
+    /** A gene written in virtual coordinates across the origin: 901..1000 then 1..200. */
+    private static String originCrossingGene(String accession) {
+        return feature(accession, "gene", 901, 1200, "ID=gene1;gene=geneA;");
+    }
+
     private static String feature(String accession, String type, int start, int end, String attributes) {
         return String.join("\t", accession, ".", type, String.valueOf(start), String.valueOf(end), ".", "+", ".") + "\t"
                 + attributes + "\n";
     }
 
-    private static FastaHeader validHeader() {
+    private static FastaHeader header(String topology) {
         FastaHeader header = new FastaHeader();
         header.setDescription("Test sequence");
         header.setMoleculeType("genomic DNA");
-        header.setTopology("linear");
+        header.setTopology(topology);
         return header;
+    }
+
+    private static MasterMetadata masterEntry(String topology) {
+        MasterMetadata master = new MasterMetadata();
+        master.setTopology(topology);
+        return master;
     }
 
     /** Header provider that is always registered but only knows the headers it was given. */
