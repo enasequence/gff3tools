@@ -239,9 +239,9 @@ no ENA submission context, and these rules stay off.
 ### Rules that depend on the FASTA header
 
 Some rules read a sequence's molecule type, topology or chromosome fields from its FASTA header.
-In `conversion`, once a header source is given (`--sequence` FASTA files with JSON headers, or
-`--fasta-header`), `FASTA_HEADER_MAPPING` fails every sequence that has no header. To accept those
-sequences, turn it off:
+In `conversion`, when the FASTA files given with `--sequence` carry JSON headers,
+`FASTA_HEADER_MAPPING` fails every annotated sequence without one (`--fasta-header` gives every
+sequence a header). To accept those sequences, turn it off:
 
 ```bash
 $GFF3TOOLS conversion --sequence genome.fasta --rules FASTA_HEADER_MAPPING:OFF annotation.gff3 annotation.embl

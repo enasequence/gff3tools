@@ -4,20 +4,16 @@
 
 # Summary
 
-Some validation rules and fixes read a sequence's FASTA header: its molecule type, topology or
-chromosome fields. This document lists what each of them does when there is no header, whether
-because no header source was given or because the source has no header for that sequence.
-
-Only `FASTA_HEADER_MAPPING` fails on a missing header. Every other rule either skips, applies a
-more lenient limit, or assumes the sequence is linear.
+What each rule that reads a sequence's FASTA header (molecule type, topology, chromosome fields)
+does when there is no header: no header source given, or none for that sequence. Only
+`FASTA_HEADER_MAPPING` fails; every other rule skips, applies a more lenient limit, or assumes the
+sequence is linear.
 
 # Motivation & Rationale
 
-Not every submission has a FASTA header for every sequence (TTENA-304, FASTA header legacy
-compatibility). With `FASTA_HEADER_MAPPING` turned off, a sequence without a header has to be
-judged on what is actually known about it, not on what a header would have said.
-
-Two rules were changed for this:
+GFF3-only submissions may have no FASTA header for some or all sequences (TTENA-304). With
+`FASTA_HEADER_MAPPING` off, nothing else should fail just because the header is missing. Two rules
+were changed for this:
 
 - **`GAP_BASES_PERCENTAGE`.** With a header source registered but no header for the sequence, the
   rule used to apply the strict 50% limit. With no header source at all it applied the lenient
@@ -59,7 +55,7 @@ A value the controlled vocabulary does not recognise counts as missing.
 
 | Rule | Behaviour |
 |---|---|
-| `FASTA_HEADER_MAPPING` | Fails when a header source is registered but has no header for the sequence. Skipped when no header source is registered. |
+| `FASTA_HEADER_MAPPING` | Fails when a header source is registered but has no header for the sequence. Skipped when no header source is registered. Never fails with `--fasta-header`, which gives every sequence a header. |
 
 ## Skipped without a header
 
@@ -87,22 +83,18 @@ A value the controlled vocabulary does not recognise counts as missing.
 
 ## Assume linear when no source declares the topology
 
-These give the right answer for a linear sequence. For an undeclared circular sequence they are
-stricter than they would be with the topology known.
-
-| Rule | Behaviour on an undeclared topology |
-|---|---|
-| `FEATURE_END_EXCEEDS_SEQUENCE_LENGTH` | A feature may end at most at the sequence length (twice the length on a circular sequence). |
-| `GAP_BASES` | A gap is not unwrapped across the origin. A gap running past the end is left to `FEATURE_END_EXCEEDS_SEQUENCE_LENGTH`. |
-| `JOINED_LOCATION_ORDER` | Same verdict either way. On a circular sequence the message adds a hint to write the segment in virtual coordinates. |
-| fix `TRANSLATION` | A CDS crossing the origin is not unwrapped, so it fails with a `TRANSLATION` error. |
-| fix `ANTICODON_ATTRIBUTE_ADD_SEQUENCE` | An anticodon past the sequence end is not read, and gets no `seq:` value. |
+`FEATURE_END_EXCEEDS_SEQUENCE_LENGTH` lets a feature end at most at the sequence length (twice the
+length on a circular sequence), so a feature in virtual coordinates past the origin is declined.
+`GAP_BASES` and the `TRANSLATION` and `ANTICODON_ATTRIBUTE_ADD_SEQUENCE` fixes don't unwrap across
+the origin either. `JOINED_LOCATION_ORDER` gives the same verdict either way; only the circular
+message adds a virtual-coordinates hint.
 
 ## Conversion
 
-Not a rule: in GFF3 → EMBL conversion the header fills the DE line, molecule type, topology and
-chromosome qualifiers, after the master entry. Without a header they come from the master entry
-or stay unset. See [spec-fasta-header-to-embl-entry-mapping.md](spec-fasta-header-to-embl-entry-mapping.md).
+Not a rule: in GFF3 → EMBL conversion the header fills the DE line, molecule type and chromosome
+qualifiers that the master entry leaves unset. Topology is resolved as in validation, header before
+master entry. Without a header these come from the master entry or stay unset. See
+[spec-fasta-header-to-embl-entry-mapping.md](spec-fasta-header-to-embl-entry-mapping.md).
 
 # Technical Debt / Future Considerations
 
