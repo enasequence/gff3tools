@@ -20,6 +20,8 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -206,6 +208,57 @@ class FeatureOverlapValidationTest {
         }
 
         @Test
+        void passesWhenAnRrnaAndACdsLieOnOppositeStrands() {
+            addFeatures(rrna("rrna1", 100L, 300L, "-"), cds("cds1", 200L, 400L, "+"));
+
+            assertDoesNotThrow(() -> validation.validateRrnaOverlap(annotation, 1));
+        }
+
+        @Test
+        void passesWhenTwoRrnasLieOnOppositeStrands() {
+            addFeatures(rrna("rrna1", 100L, 300L, "+"), rrna("rrna2", 250L, 400L, "-"));
+
+            assertDoesNotThrow(() -> validation.validateRrnaOverlap(annotation, 1));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {".", "?"})
+        void passesWhenTheRrnaStrandIsUnknown(String strand) {
+            // Only a known strand can be shown to match, so an overlap with . or ? is not reported.
+            addFeatures(rrna("rrna1", 100L, 300L, strand), cds("cds1", 200L, 400L, "-"));
+
+            assertDoesNotThrow(() -> validation.validateRrnaOverlap(annotation, 1));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {".", "?"})
+        void passesWhenTheCdsStrandIsUnknown(String strand) {
+            addFeatures(rrna("rrna1", 100L, 300L, "-"), cds("cds1", 200L, 400L, strand));
+
+            assertDoesNotThrow(() -> validation.validateRrnaOverlap(annotation, 1));
+        }
+
+        @Test
+        void failsWhenTheOverlappingPieceOfATransSplicedCdsSharesTheRrnaStrand() {
+            addFeatures(
+                    rrna("rrna1", 1000L, 2000L, "+"), cds("cds1", 1500L, 1700L, "+"), cds("cds1", 5000L, 5300L, "-"));
+
+            ValidationException exception =
+                    assertThrows(ValidationException.class, () -> validation.validateRrnaOverlap(annotation, 1));
+
+            assertTrue(exception.getMessage().contains("overlaps interval 1500..1700"));
+        }
+
+        @Test
+        void passesWhenOnlyAPieceOfATransSplicedCdsAwayFromTheRrnaSharesItsStrand() {
+            // Strands are compared piece by piece: the piece overlapping the rRNA is on the other strand.
+            addFeatures(
+                    rrna("rrna1", 1000L, 2000L, "+"), cds("cds1", 1500L, 1700L, "-"), cds("cds1", 5000L, 5300L, "+"));
+
+            assertDoesNotThrow(() -> validation.validateRrnaOverlap(annotation, 1));
+        }
+
+        @Test
         void recognisesDescendantsOfRrna() {
             addFeatures(feature("cytosolic_16S_rRNA", "rrna1", SEQ_ID, 100L, 300L), cds("cds1", 200L, 400L));
 
@@ -328,8 +381,16 @@ class FeatureOverlapValidationTest {
         return f;
     }
 
+    private GFF3Feature cds(String id, long start, long end, String strand) {
+        return feature(OntologyTerm.CDS.name(), id, start, end, strand);
+    }
+
     private GFF3Feature rrna(String id, long start, long end) {
         return feature("rRNA", id, SEQ_ID, start, end);
+    }
+
+    private GFF3Feature rrna(String id, long start, long end, String strand) {
+        return feature("rRNA", id, start, end, strand);
     }
 
     private GFF3Feature trna(String id, long start, long end) {
@@ -338,5 +399,9 @@ class FeatureOverlapValidationTest {
 
     private GFF3Feature feature(String name, String id, String seqId, long start, long end) {
         return TestUtils.createGFF3Feature(id, null, name, seqId, start, end);
+    }
+
+    private GFF3Feature feature(String name, String id, long start, long end, String strand) {
+        return TestUtils.createGFF3Feature(id, name, SEQ_ID, start, end, strand);
     }
 }

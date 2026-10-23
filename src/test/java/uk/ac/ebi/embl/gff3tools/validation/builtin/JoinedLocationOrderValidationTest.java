@@ -22,6 +22,7 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
@@ -95,8 +96,8 @@ class JoinedLocationOrderValidationTest {
     /** Features without an ID are separate features, not segments of one, however they are listed. */
     @Test
     void featuresWithoutAnIdAreNotJudgedAgainstEachOther() {
-        add(build(GENE_FEATURE, null, ACCESSION, 800, 822, PLUS));
-        add(build(GENE_FEATURE, null, ACCESSION, 600, 700, PLUS));
+        add(TestUtils.createGFF3Feature(null, GENE_FEATURE, ACCESSION, 800, 822, PLUS));
+        add(TestUtils.createGFF3Feature(null, GENE_FEATURE, ACCESSION, 600, 700, PLUS));
 
         assertDoesNotThrow(() -> validation.validateJoinedLocationOrder(annotation, 1));
     }
@@ -172,14 +173,17 @@ class JoinedLocationOrderValidationTest {
 
     // ---- circular topology ---------------------------------------------------
 
-    /** A feature crossing the origin of a circular sequence steps back once, legitimately. */
     @Test
-    void originSpanningJoinOnCircularSequenceIsValid() {
+    void restartingAtOneOnCircularSequenceIsReported() {
         injectTopology("circular");
+        sequenceRegion(1000);
         segment("gene1", 900, 1000);
         segment("gene1", 1, 200);
 
-        assertDoesNotThrow(() -> validation.validateJoinedLocationOrder(annotation, 1));
+        ValidationException exception =
+                assertThrows(ValidationException.class, () -> validation.validateJoinedLocationOrder(annotation, 1));
+        assertTrue(exception.getMessage().contains("segment 1..200 starts before the preceding segment 900..1000"));
+        assertTrue(exception.getMessage().contains("write 1..200 as 1001..1200"));
     }
 
     @Test
@@ -191,32 +195,6 @@ class JoinedLocationOrderValidationTest {
         ValidationException exception =
                 assertThrows(ValidationException.class, () -> validation.validateJoinedLocationOrder(annotation, 1));
         assertTrue(exception.getMessage().contains("segment 1..200 starts before the preceding segment 900..1000"));
-    }
-
-    /** One step back is the origin; a second one is a scrambled join whatever the topology. */
-    @Test
-    void secondBackwardStepOnCircularSequenceIsReported() {
-        injectTopology("circular");
-        segment("gene1", 900, 1000);
-        segment("gene1", 1, 200);
-        segment("gene1", 400, 500);
-        segment("gene1", 300, 350);
-
-        ValidationException exception =
-                assertThrows(ValidationException.class, () -> validation.validateJoinedLocationOrder(annotation, 1));
-        assertTrue(exception.getMessage().contains("segment 300..350 starts before the preceding segment 400..500"));
-    }
-
-    /** Segments on both sides of the origin, stopping short of where the feature began. */
-    @Test
-    void multiSegmentOriginSpanningJoinOnCircularSequenceIsValid() {
-        injectTopology("circular");
-        segment("gene1", 800, 850);
-        segment("gene1", 900, 1000);
-        segment("gene1", 1, 200);
-        segment("gene1", 300, 400);
-
-        assertDoesNotThrow(() -> validation.validateJoinedLocationOrder(annotation, 1));
     }
 
     /** A single step back mid-join is not the origin: the feature would run past its own start. */
@@ -269,31 +247,20 @@ class JoinedLocationOrderValidationTest {
         TestUtils.injectContext(validation, context);
     }
 
+    private void sequenceRegion(long length) {
+        annotation.setSequenceRegion(new GFF3SequenceRegion(ACCESSION, Optional.empty(), 1, length));
+    }
+
     private GFF3Feature segment(String id, long start, long end) {
         return segmentOnStrand(id, start, end, PLUS);
     }
 
     private GFF3Feature segmentOnStrand(String id, long start, long end, String strand) {
-        return add(build(GENE_FEATURE, id, ACCESSION, start, end, strand));
+        return add(TestUtils.createGFF3Feature(id, GENE_FEATURE, ACCESSION, start, end, strand));
     }
 
     private GFF3Feature add(GFF3Feature feature) {
         annotation.addFeature(feature);
         return feature;
-    }
-
-    private static GFF3Feature build(String name, String id, String seqId, long start, long end, String strand) {
-        return new GFF3Feature(
-                Optional.ofNullable(id),
-                Optional.empty(),
-                seqId,
-                Optional.empty(),
-                ".",
-                name,
-                start,
-                end,
-                ".",
-                strand,
-                "");
     }
 }

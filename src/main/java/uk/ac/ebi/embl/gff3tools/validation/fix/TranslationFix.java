@@ -22,7 +22,9 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.translation.TranslationResult;
 import uk.ac.ebi.embl.gff3tools.translation.Translator;
+import uk.ac.ebi.embl.gff3tools.utils.CoordinateShiftUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
@@ -46,6 +48,8 @@ public class TranslationFix {
 
     @InjectContext
     private ValidationContext context;
+
+    private final Map<String, Long> sequenceLengthCache = new HashMap<>();
 
     @FixMethod(
             rule = "REMOVE_TRANSLATION_ATTRIBUTE",
@@ -90,19 +94,26 @@ public class TranslationFix {
         Map<String, List<GFF3Feature>> cdsGroups = ValidationUtils.groupFeaturesById(
                 annotation, f -> OntologyTerm.CDS.name().equals(f.getName()));
 
+        Long circularSequenceLength = TopologyUtils.isCircularSequence(annotation.getAccession(), context)
+                ? ValidationUtils.resolveSequenceLength(
+                        annotation.getSequenceRegion(), annotation.getAccession(), sequenceLengthCache, context)
+                : null;
+
         for (List<GFF3Feature> segments : cdsGroups.values()) {
-            translateCdsGroup(segments, sequenceLookup, line);
+            translateCdsGroup(segments, sequenceLookup, line, circularSequenceLength);
         }
     }
 
-    private void translateCdsGroup(List<GFF3Feature> features, SequenceLookup sequenceLookup, int line)
+    private void translateCdsGroup(
+            List<GFF3Feature> features, SequenceLookup sequenceLookup, int line, Long circularSequenceLength)
             throws ValidationException {
 
         boolean isTransSpliced = features.stream().anyMatch(s -> s.hasAttribute(GFF3Attributes.TRANS_SPLICING));
 
         List<GFF3Feature> sortedFeatures = new ArrayList<>(features);
+        // Sort features by genomic start position when they are not trans-spliced (in virtual
+        // space this is also the reading order across the origin).
         if (!isTransSpliced) {
-            // Sort features by genomic start position when they are not trans-spliced.
             sortedFeatures.sort(Comparator.comparingLong(GFF3Feature::getStart));
         }
 
@@ -134,8 +145,12 @@ public class TranslationFix {
             // For uniform-strand joins, concatenate raw and let the Translator apply overall RC.
             StringBuilder concatenated = new StringBuilder();
             for (GFF3Feature segment : sortedFeatures) {
-                String slice =
-                        sequenceLookup.getSequenceSlice(segment.accession(), segment.getStart(), segment.getEnd());
+                // Virtual coordinates (past the end of a circular sequence) continue from base 1.
+                String slice = CoordinateShiftUtils.readBases(
+                        sequenceLookup,
+                        segment.accession(),
+                        CoordinateShiftUtils.unwrapOriginSpan(
+                                segment.getStart(), segment.getEnd(), circularSequenceLength));
                 if (hasMixedStrands && segment.isComplement()) {
                     slice = new String(Translator.reverseComplement(slice.getBytes()));
                 }
