@@ -14,6 +14,7 @@ import uk.ac.ebi.embl.fastareader.SequenceStats;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils.Topology;
 import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
@@ -25,7 +26,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation(
         name = "NO_TERMINAL_GAPS",
-        description = "Validates that a linear sequence does not start or end with N (gap) bases")
+        description = "Validates that a sequence declared linear does not start or end with N (gap) bases")
 public class TerminalGapBasesValidation implements Validation {
 
     public static final String NO_TERMINAL_GAPS_RULE = "NO_TERMINAL_GAPS";
@@ -38,7 +39,7 @@ public class TerminalGapBasesValidation implements Validation {
 
     @ValidationMethod(
             rule = NO_TERMINAL_GAPS_RULE,
-            description = "A sequence must not begin or end with N bases",
+            description = "A sequence declared linear must not begin or end with N bases",
             type = ValidationType.ANNOTATION,
             priority = ValidationPriority.LOW)
     public void validateTerminalGapBases(GFF3Annotation annotation, int line) throws ValidationException {
@@ -51,8 +52,11 @@ public class TerminalGapBasesValidation implements Validation {
         }
 
         String seqId = annotation.getAccession();
-        // A circular sequence has no first or last base, so terminal gaps are not meaningful for it.
-        if (TopologyUtils.isCircularSequence(seqId, context)) {
+        // Only a sequence declared linear has a first and last base. A circular one has neither, and an
+        // undeclared topology may be circular, so terminal gaps are not checked for either.
+        if (TopologyUtils.resolveTopology(seqId, context)
+                .filter(Topology.LINEAR::equals)
+                .isEmpty()) {
             return;
         }
 
