@@ -359,6 +359,20 @@ class LocationValidationTest {
         }
 
         @Test
+        void noHeaderProviderSkipped() throws Exception {
+            injectLookupReturning(SEQ_ID, 1000L);
+            GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 500L, 1600L, Map.of());
+            assertDoesNotThrow(() -> locationValidation.validateFeatureWithinCircularSequence(feature, 1));
+        }
+
+        @Test
+        void noHeaderForAccessionSkipped() throws Exception {
+            injectLookupReturningWithoutHeaderFor(SEQ_ID, 1000L);
+            GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 500L, 1600L, Map.of());
+            assertDoesNotThrow(() -> locationValidation.validateFeatureWithinCircularSequence(feature, 1));
+        }
+
+        @Test
         void noLookupSkipped() throws Exception {
             injectNoLookup();
             GFF3Feature feature = TestUtils.createGFF3Feature("gene", SEQ_ID, 500L, 1600L, Map.of());

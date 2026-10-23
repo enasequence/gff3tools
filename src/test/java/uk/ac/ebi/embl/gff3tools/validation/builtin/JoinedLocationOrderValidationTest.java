@@ -11,6 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -233,6 +234,19 @@ class JoinedLocationOrderValidationTest {
         segment("gene1", 1, 200);
 
         assertThrows(ValidationException.class, () -> validation.validateJoinedLocationOrder(annotation, 1));
+    }
+
+    /** No header provider registered at all: reported as on a linear sequence, without the circular hint. */
+    @Test
+    void noHeaderProviderIsTreatedAsLinear() {
+        sequenceRegion(1000);
+        segment("gene1", 900, 1000);
+        segment("gene1", 1, 200);
+
+        ValidationException exception =
+                assertThrows(ValidationException.class, () -> validation.validateJoinedLocationOrder(annotation, 1));
+        assertTrue(exception.getMessage().contains("segment 1..200 starts before the preceding segment 900..1000"));
+        assertFalse(exception.getMessage().contains("write 1..200 as 1001..1200"));
     }
 
     // ---- builders ------------------------------------------------------------
