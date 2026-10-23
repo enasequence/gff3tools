@@ -64,13 +64,16 @@ class GapFeatureBasesValidationTest {
     }
 
     private SequenceLookup injectCircular(long length) throws Exception {
-        SequenceLookup mockLookup = mock(SequenceLookup.class);
-        when(mockLookup.getSequenceLength(SEQ_ID)).thenReturn(length);
-
         FastaHeader header = new FastaHeader();
         header.setTopology("circular");
         FastaHeaderProvider headers = new FastaHeaderProvider();
         headers.addSource(seqId -> SEQ_ID.equals(seqId) ? Optional.of(header) : Optional.empty());
+        return injectWithHeaders(length, headers);
+    }
+
+    private SequenceLookup injectWithHeaders(long length, FastaHeaderProvider headers) throws Exception {
+        SequenceLookup mockLookup = mock(SequenceLookup.class);
+        when(mockLookup.getSequenceLength(SEQ_ID)).thenReturn(length);
 
         ValidationContext context = TestUtils.createTestContext();
         context.register(SequenceLookup.class, new ContextProvider<>() {
@@ -111,6 +114,18 @@ class GapFeatureBasesValidationTest {
         injectWithGapRegions(SEQ_ID, 991L, 1010L, List.of());
         GFF3Feature gap = TestUtils.createGFF3Feature("gap", SEQ_ID, 991L, 1010L, Map.of());
         assertDoesNotThrow(() -> check.validateGapBases(gap, 1));
+    }
+
+    /** No header for the accession: the topology is unknown, so the gap is not unwrapped across the origin. */
+    @Test
+    void gapPastTheEndWithoutHeaderForAccessionIsLeftToTheLocationRule() throws Exception {
+        FastaHeaderProvider headers = new FastaHeaderProvider();
+        headers.addSource(seqId -> Optional.empty());
+        SequenceLookup lookup = injectWithHeaders(1000L, headers);
+        GFF3Feature gap = TestUtils.createGFF3Feature("gap", SEQ_ID, 991L, 1010L, Map.of());
+
+        assertDoesNotThrow(() -> check.validateGapBases(gap, 1));
+        verify(lookup, never()).getGapRegions(anyString(), anyLong(), anyLong());
     }
 
     @Test

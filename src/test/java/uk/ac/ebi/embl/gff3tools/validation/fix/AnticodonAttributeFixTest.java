@@ -454,6 +454,22 @@ class AnticodonAttributeFixTest {
         assertEquals(List.of("(pos:1010..1012,aa:Glu)"), anticodon(feature));
     }
 
+    @Test
+    void skipsAnticodonPastTheEndWithoutHeaderForAccession() throws Exception {
+        FastaHeaderProvider headers = new FastaHeaderProvider();
+        headers.addSource(seqId -> Optional.empty());
+        ValidationContext context = contextWith(lookup);
+        context.register(FastaHeaderProvider.class, headers);
+        ValidationRegistry.injectContext(fix, context);
+        annotation.setSequenceRegion(new GFF3SequenceRegion(SEQ_ID, Optional.empty(), 1, 1000));
+        GFF3Feature feature = tRna("t1", 951, 1050, PLUS, "(pos:1010..1012,aa:Glu)");
+
+        assertDoesNotThrow(() -> fix.addSequence(annotation, 1));
+
+        verify(lookup, never()).getSequenceSlice(anyString(), anyLong(), anyLong());
+        assertEquals(List.of("(pos:1010..1012,aa:Glu)"), anticodon(feature));
+    }
+
     // --- helpers --------------------------------------------------------
 
     private void circularSequence(long length) {
