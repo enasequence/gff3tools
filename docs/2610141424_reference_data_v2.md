@@ -50,7 +50,7 @@ reading rules, and how gff3tools maps each type to EMBL.
 
 ## Schema (informative JSON)
 
-The formal JSON Schema is `docs/reference-data-v2/reference-data-v2.schema.json`, with a
+The formal JSON Schema of the whole master entry (references included) is `docs/reference-data-v2/master-entry.schema.json`, with a
 valid master entry in `docs/reference-data-v2/master-example.json` (converted in
 `ReferenceV2ExampleTest`). The commented sketch below is informative; if they disagree, the
 schema file wins.
