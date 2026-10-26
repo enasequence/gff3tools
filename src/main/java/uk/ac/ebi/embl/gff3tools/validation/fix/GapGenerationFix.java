@@ -134,7 +134,7 @@ public class GapGenerationFix implements Fix {
             List<GapRegion> runs = lookup.getGapRegions(accession);
             return runs != null ? runs : List.of();
         } catch (Exception e) {
-            // Already reported as SEQUENCE_MAPPING; a trace is all that is useful here.
+            // Already reported as SEQUENCE_MAPPING
             log.debug("No gap regions resolvable for accession {}: {}", accession, e.getMessage());
             return List.of();
         }

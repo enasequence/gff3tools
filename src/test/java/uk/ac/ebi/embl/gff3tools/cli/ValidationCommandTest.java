@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
+import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.metrics.Gff3ToolsVersion;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationConfig;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
@@ -132,6 +134,16 @@ public class ValidationCommandTest {
         // Without --sequence, validation should still work (translation is skipped)
         int exitCode = executeValidation("validation", gff3.toString());
         assertEquals(0, exitCode, "Validation without --sequence should succeed");
+    }
+
+    @Test
+    void validation_rrnaAndCdsOverlapOnOppositeStrands_succeeds() {
+        // RRNA_FEATURE_OVERLAP only reports features on the same strand: here the rRNA is on - and the CDS on +.
+        File gff3 = TestUtils.getResourceFile("cli-examples/rrna_overlap/rrna_cds_opposite_strand.gff3");
+
+        int exitCode = executeValidation("validation", gff3.getPath());
+
+        assertEquals(0, exitCode, "An rRNA and a CDS overlapping on opposite strands should pass validation");
     }
 
     @Test

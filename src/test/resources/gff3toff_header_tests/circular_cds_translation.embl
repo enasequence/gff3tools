@@ -1,0 +1,40 @@
+ID   SEQID1; SV 1; circular; genomic DNA; XXX; XXX; 120 BP.
+XX
+AC   SEQID1;
+XX
+DE   Circular test plasmid
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..120
+FT                   /mol_type="genomic DNA"
+FT   CDS             join(91..120,1..51)
+FT                   /transl_table=11
+FT                   /translation="MAAAAAAAAAAAAAAAAAAAAAAAAA"
+XX
+SQ   Sequence 120 BP; 11 A; 37 C; 37 G; 35 T; 0 other;
+     gctgctgctg ctgctgctgc tgctgctgct gctgctgctg ctgctgctta accgttgcaa        60
+     cggttccaag gccgttgcaa cggttccaag atggctgctg ctgctgctgc tgctgctgct       120
+//
+ID   SEQID2; SV 1; circular; genomic DNA; XXX; XXX; 120 BP.
+XX
+AC   SEQID2;
+XX
+DE   Circular test plasmid
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..120
+FT                   /mol_type="genomic DNA"
+FT   CDS             complement(join(91..120,13..63))
+FT                   /transl_table=11
+FT                   /translation="MAAAAAAAAAAAAAAAAAAAAAAAAA"
+XX
+SQ   Sequence 120 BP; 33 A; 39 C; 37 G; 11 T; 0 other;
+     ccgttgcaac ggagcagcag cagcagcagc agcagcagca gcagcagcag cagcagcagc        60
+     catccgttgc aacggttcca aggccgttgc ttaagcagca gcagcagcag cagcagcagc       120
+//

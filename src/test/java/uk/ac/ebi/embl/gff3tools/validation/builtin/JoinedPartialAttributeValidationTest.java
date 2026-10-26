@@ -14,9 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -130,9 +130,10 @@ class JoinedPartialAttributeValidationTest {
     /** Features without an ID are separate features, not segments of one join. */
     @Test
     void featuresWithoutAnIdAreNotJudgedAsOneJoin() {
-        add(build(GENE_FEATURE, null, ACCESSION, 1, 500, PLUS));
-        add(build(GENE_FEATURE, null, ACCESSION, 600, 700, PLUS)).addAttribute(GFF3Attributes.PARTIAL, START);
-        add(build(GENE_FEATURE, null, ACCESSION, 800, 822, PLUS));
+        add(TestUtils.createGFF3Feature(null, GENE_FEATURE, ACCESSION, 1, 500, PLUS));
+        add(TestUtils.createGFF3Feature(null, GENE_FEATURE, ACCESSION, 600, 700, PLUS))
+                .addAttribute(GFF3Attributes.PARTIAL, START);
+        add(TestUtils.createGFF3Feature(null, GENE_FEATURE, ACCESSION, 800, 822, PLUS));
 
         assertDoesNotThrow(() -> validation.validateJoinedPartialAttribute(annotation, 1));
     }
@@ -192,7 +193,7 @@ class JoinedPartialAttributeValidationTest {
     // ---- builders ------------------------------------------------------------
 
     private GFF3Feature segment(String id, long start, long end) {
-        return add(build(GENE_FEATURE, id, ACCESSION, start, end, PLUS));
+        return add(TestUtils.createGFF3Feature(id, GENE_FEATURE, ACCESSION, start, end, PLUS));
     }
 
     private GFF3Feature partialSegment(String id, long start, long end, String partial) {
@@ -200,7 +201,7 @@ class JoinedPartialAttributeValidationTest {
     }
 
     private GFF3Feature partialSegmentOnStrand(String id, long start, long end, String strand, String partial) {
-        GFF3Feature feature = add(build(GENE_FEATURE, id, ACCESSION, start, end, strand));
+        GFF3Feature feature = add(TestUtils.createGFF3Feature(id, GENE_FEATURE, ACCESSION, start, end, strand));
         feature.addAttribute(GFF3Attributes.PARTIAL, partial);
         return feature;
     }
@@ -213,20 +214,5 @@ class JoinedPartialAttributeValidationTest {
     private GFF3Feature add(GFF3Feature feature) {
         annotation.addFeature(feature);
         return feature;
-    }
-
-    private static GFF3Feature build(String name, String id, String seqId, long start, long end, String strand) {
-        return new GFF3Feature(
-                Optional.ofNullable(id),
-                Optional.empty(),
-                seqId,
-                Optional.empty(),
-                ".",
-                name,
-                start,
-                end,
-                ".",
-                strand,
-                "");
     }
 }

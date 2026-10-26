@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -29,6 +30,8 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
@@ -46,11 +49,12 @@ class AnticodonAttributeFixTest {
     private SequenceLookup lookup;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         fix = new AnticodonAttributeFix();
         annotation = new GFF3Annotation();
         lookup = mock(SequenceLookup.class);
         when(lookup.hasSequence(anyString())).thenReturn(true);
+        when(lookup.getSequenceLength(anyString())).thenReturn(5000L);
         ValidationRegistry.injectContext(fix, contextWith(lookup));
     }
 
@@ -416,7 +420,52 @@ class AnticodonAttributeFixTest {
         assertEquals(List.of("(pos:10..12,aa:Sec,seq:tta)"), anticodon(feature));
     }
 
+    @Test
+    void readsAnticodonPastTheOriginOfCircularSequence() throws Exception {
+        circularSequence(1000);
+        when(lookup.getSequenceSlice(SEQ_ID, 10L, 12L)).thenReturn("TTA");
+        GFF3Feature feature = tRna("t1", 951, 1050, PLUS, "(pos:1010..1012,aa:Glu)");
+
+        fix.addSequence(annotation, 1);
+
+        assertEquals(List.of("(pos:1010..1012,aa:Glu,seq:tta)"), anticodon(feature));
+    }
+
+    @Test
+    void readsAnticodonAcrossTheOriginOfCircularSequence() throws Exception {
+        circularSequence(1000);
+        when(lookup.getSequenceSlice(SEQ_ID, 999L, 1000L)).thenReturn("TT");
+        when(lookup.getSequenceSlice(SEQ_ID, 1L, 1L)).thenReturn("A");
+        GFF3Feature feature = tRna("t1", 951, 1050, PLUS, "(pos:999..1001,aa:Glu)");
+
+        fix.addSequence(annotation, 1);
+
+        assertEquals(List.of("(pos:999..1001,aa:Glu,seq:tta)"), anticodon(feature));
+    }
+
+    @Test
+    void skipsAnticodonPastTheEndOfLinearSequence() throws Exception {
+        annotation.setSequenceRegion(new GFF3SequenceRegion(SEQ_ID, Optional.empty(), 1, 1000));
+        GFF3Feature feature = tRna("t1", 951, 1050, PLUS, "(pos:1010..1012,aa:Glu)");
+
+        assertDoesNotThrow(() -> fix.addSequence(annotation, 1));
+
+        verify(lookup, never()).getSequenceSlice(anyString(), anyLong(), anyLong());
+        assertEquals(List.of("(pos:1010..1012,aa:Glu)"), anticodon(feature));
+    }
+
     // --- helpers --------------------------------------------------------
+
+    private void circularSequence(long length) {
+        FastaHeader header = new FastaHeader();
+        header.setTopology("circular");
+        FastaHeaderProvider headers = new FastaHeaderProvider();
+        headers.addSource(seqId -> SEQ_ID.equals(seqId) ? Optional.of(header) : Optional.empty());
+        ValidationContext context = contextWith(lookup);
+        context.register(FastaHeaderProvider.class, headers);
+        ValidationRegistry.injectContext(fix, context);
+        annotation.setSequenceRegion(new GFF3SequenceRegion(SEQ_ID, Optional.empty(), 1, length));
+    }
 
     private ValidationContext contextWith(SequenceLookup sequenceLookup) {
         ValidationContext context = new ValidationContext();

@@ -53,6 +53,10 @@ $GFF3TOOLS conversion -f embl -t gff3 annotation.ff annotation.gff3
 $GFF3TOOLS conversion OZ026791.gff3 OZ026791.embl
 ```
 
+A flat file location is either on the forward strand or `complement(...)`, so it cannot express the GFF3
+strands `.` (unstranded) and `?` (unknown). Both are written as forward strand and come back as `+`, so
+GFF3 → EMBL → GFF3 may not reproduce the original strand column.
+
 ### FASTA → GFF3
 
 The input FASTA must have sequence headers (plain sequences without `>` headers are not

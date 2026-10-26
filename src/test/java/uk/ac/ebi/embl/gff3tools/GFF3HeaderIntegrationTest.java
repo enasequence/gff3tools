@@ -19,8 +19,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import picocli.CommandLine;
 import uk.ac.ebi.embl.gff3tools.cli.Main;
@@ -55,7 +57,54 @@ class GFF3HeaderIntegrationTest {
                         "gff3toff_header_tests/fasta_header_plasmid_mito.gff3",
                         "sequence/fasta/header_plasmid_mito.json",
                         "gff3toff_header_tests/fasta_header_plasmid_mito.embl",
-                        "plasmid + mitochondrion header"));
+                        "plasmid + mitochondrion header"),
+                Arguments.of(
+                        "gff3toff_header_tests/circular_origin_spanning.gff3",
+                        "sequence/fasta/header_circular.json",
+                        "gff3toff_header_tests/circular_origin_spanning.embl",
+                        "origin-spanning features written past the sequence end"),
+                Arguments.of(
+                        "gff3toff_header_tests/circular_origin_spanning_virtual_segments.gff3",
+                        "sequence/fasta/header_circular.json",
+                        "gff3toff_header_tests/circular_origin_spanning.embl",
+                        "origin-spanning features written as one line per segment in virtual space"),
+                Arguments.of(
+                        "gff3toff_header_tests/circular_origin_spanning_figure3.gff3",
+                        "sequence/fasta/header_circular.json",
+                        "gff3toff_header_tests/circular_origin_spanning_figure3.embl",
+                        "multi-exon CDS whose last segment lies wholly past the origin"),
+                Arguments.of(
+                        "fftogff3_rules/circular_virtual_space.gff3",
+                        "sequence/fasta/header_circular.json",
+                        "gff3toff_header_tests/circular_virtual_space_round_trip.embl",
+                        "flat file to GFF3 virtual space maps back to the original locations"));
+    }
+
+    @ParameterizedTest(name = "{0} rejected by {1}")
+    @CsvSource({
+        "gff3toff_header_tests/circular_origin_lapping_start.gff3, FEATURE_LONGER_THAN_CIRCULAR_SEQUENCE",
+        "gff3toff_header_tests/circular_end_past_twice_length.gff3, FEATURE_END_EXCEEDS_SEQUENCE_LENGTH"
+    })
+    void locationOutsideCircularSequenceIsRejectedWithoutFasta(String gff3Resource, String rule) throws Exception {
+        Path outFile = Files.createTempFile("header-test-", ".embl");
+        try {
+            String[] args = {
+                "conversion",
+                "--fasta-header",
+                getResourcePath("sequence/fasta/header_circular.json").toString(),
+                getResourcePath(gff3Resource).toString(),
+                outFile.toString()
+            };
+            StringWriter err = new StringWriter();
+            CommandLine command = new CommandLine(new Main());
+            command.setErr(new PrintWriter(err));
+            command.setOut(new PrintWriter(new StringWriter()));
+
+            assertNotEquals(0, command.execute(args));
+            assertTrue(err.toString().contains(rule), "Expected " + rule + " in:\n" + err);
+        } finally {
+            Files.deleteIfExists(outFile);
+        }
     }
 
     @ParameterizedTest(name = "{3}")
@@ -85,5 +134,62 @@ class GFF3HeaderIntegrationTest {
         } finally {
             Files.deleteIfExists(outFile);
         }
+    }
+
+    private static final String CIRCULAR_CDS_GFF3 = "gff3toff_header_tests/circular_cds_translation.gff3";
+    private static final String CIRCULAR_CDS_FASTA = "gff3toff_header_tests/circular_cds_translation.fasta";
+    private static final String CIRCULAR_CDS_PROTEIN = "M" + "A".repeat(25);
+
+    @Test
+    void writesOriginSpanningCdsFromCircularFasta() throws Exception {
+        Path outFile = Files.createTempFile("circular-cds-", ".embl");
+        try {
+            int exitCode = convert(
+                    "--sequence",
+                    getResourcePath(CIRCULAR_CDS_FASTA).toString(),
+                    getResourcePath(CIRCULAR_CDS_GFF3).toString(),
+                    outFile.toString());
+            assertEquals(0, exitCode);
+
+            String expected = Files.readString(getResourcePath("gff3toff_header_tests/circular_cds_translation.embl"));
+            assertEquals(expected.trim(), Files.readString(outFile).trim());
+        } finally {
+            Files.deleteIfExists(outFile);
+        }
+    }
+
+    @ParameterizedTest(name = "translation {0} accepted: {1}")
+    @CsvSource({"MAAAAAAAAAAAAAAAAAAAAAAAAA, true", "MAAAAAAAAAAAAAAAAAAAAAAAAG, false"})
+    void comparesTranslationOfOriginSpanningCds(String translation, boolean accepted) throws Exception {
+        assertEquals(CIRCULAR_CDS_PROTEIN.length(), translation.length());
+        Path gff3 = Files.createTempFile("circular-cds-", ".gff3");
+        Path outFile = Files.createTempFile("circular-cds-", ".embl");
+        try {
+            String withoutFasta =
+                    Files.readString(getResourcePath(CIRCULAR_CDS_GFF3)).split("##FASTA")[0];
+            Files.writeString(
+                    gff3, withoutFasta.replace("transl_table=11;", "transl_table=11;translation=" + translation + ";"));
+
+            int exitCode = convert(
+                    "--sequence", getResourcePath(CIRCULAR_CDS_FASTA).toString(), gff3.toString(), outFile.toString());
+            if (accepted) {
+                assertEquals(0, exitCode);
+            } else {
+                assertNotEquals(0, exitCode);
+            }
+        } finally {
+            Files.deleteIfExists(gff3);
+            Files.deleteIfExists(outFile);
+        }
+    }
+
+    private int convert(String... options) {
+        String[] args = new String[options.length + 1];
+        args[0] = "conversion";
+        System.arraycopy(options, 0, args, 1, options.length);
+        CommandLine command = new CommandLine(new Main());
+        command.setErr(new PrintWriter(new StringWriter()));
+        command.setOut(new PrintWriter(new StringWriter()));
+        return command.execute(args);
     }
 }

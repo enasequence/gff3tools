@@ -22,6 +22,9 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.translation.Translator;
+import uk.ac.ebi.embl.gff3tools.utils.CoordinateShiftUtils;
+import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
+import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
@@ -37,6 +40,8 @@ public class AnticodonAttributeFix implements Fix {
 
     @InjectContext
     private ValidationContext context;
+
+    private final Map<String, Long> sequenceLengthCache = new HashMap<>();
 
     // Deliberately matches only a plain "123" or "123..456" for the position, bare or wrapped in a
     // single complement(...); anything more exotic (join(...), <100, OTHER_ACC:1..3) is left untouched
@@ -90,10 +95,17 @@ public class AnticodonAttributeFix implements Fix {
 
     private record Position(boolean hasComplementWrapper, long start, long end) {}
 
-    private record SequenceReader(SequenceLookup lookup, String accession, int line) {
+    private record SequenceReader(
+            SequenceLookup lookup, String accession, int line, Long sequenceLength, boolean circular) {
 
+        /** Null when the position runs past the end: ANTI_CODON_LOCATION or FEATURE_END_EXCEEDS_SEQUENCE_LENGTH reports it. */
         String read(Position position) throws Exception {
-            return lookup.getSequenceSlice(accession, position.start(), position.end());
+            List<CoordinateShiftUtils.Span> spans = CoordinateShiftUtils.unwrapOriginSpan(
+                    position.start(), position.end(), circular ? sequenceLength : null);
+            if (sequenceLength != null && spans.stream().anyMatch(span -> span.end() > sequenceLength)) {
+                return null;
+            }
+            return CoordinateShiftUtils.readBases(lookup, accession, spans);
         }
     }
 
@@ -191,7 +203,10 @@ public class AnticodonAttributeFix implements Fix {
             return;
         }
 
-        SequenceReader reader = new SequenceReader(sequenceLookup, accession, line);
+        Long sequenceLength = ValidationUtils.resolveSequenceLength(
+                annotation.getSequenceRegion(), accession, sequenceLengthCache, context);
+        boolean circular = TopologyUtils.isCircularSequence(accession, context);
+        SequenceReader reader = new SequenceReader(sequenceLookup, accession, line, sequenceLength, circular);
         for (List<GFF3Feature> rows : rowsByFeature.values()) {
             addSequenceToFeature(rows, reader);
         }

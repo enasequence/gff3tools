@@ -25,7 +25,7 @@ KW   .
 XX
 FH   Key             Location/Qualifiers
 FH
-FT   source          1..822
+FT   source          1..185472
 FT   CDS             join(complement(66903..>67016),183994..184671,
 FT                   185444..>185472)
 FT                   /pseudo

@@ -1,0 +1,17 @@
+ID   AF319782; SV 2; circular; genomic DNA; XXX; XXX; 0 BP.
+XX
+AC   AF319782;
+XX
+DE   Plasmid pBR322 complete sequence
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..149696
+FT                   /mol_type="genomic DNA"
+FT   CDS             complement(join(138637..138818,138904..139005,
+FT                   139106..139219,139294..139458,139572..139661,
+FT                   139744..139992,140075..140167,140247..140485,959..966))
+XX
+//

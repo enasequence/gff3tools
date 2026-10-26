@@ -1,0 +1,24 @@
+ID   SEQID1; SV 1; circular; genomic DNA; XXX; XXX; 0 BP.
+XX
+AC   SEQID1;
+XX
+DE   Plasmid pBR322 complete sequence
+XX
+KW   .
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..1000
+FT                   /mol_type="genomic DNA"
+FT   gene            join(901..1000,1..100)
+FT                   /gene="plusWrap"
+FT   gene            complement(join(901..1000,1..100))
+FT                   /gene="minusWrap"
+FT   gene            join(<951..1000,1..>50)
+FT                   /gene="plusPartial"
+FT   gene            complement(join(<951..1000,1..>50))
+FT                   /gene="minusPartial"
+FT   misc_feature    join(801..850,951..1000,1..20)
+FT                   /note="wraps on its second line"
+XX
+//
