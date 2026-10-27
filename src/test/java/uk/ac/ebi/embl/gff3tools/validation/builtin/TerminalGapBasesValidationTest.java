@@ -161,7 +161,7 @@ class TerminalGapBasesValidationTest {
         }
     }
 
-    // ---- circular sequences: skipped ----------------------------------------
+    // ---- circular or undeclared topology: skipped ---------------------------
 
     @Nested
     class CircularSequence {
@@ -174,27 +174,27 @@ class TerminalGapBasesValidationTest {
         }
 
         @Test
-        void unrecognisedTopologyTreatedAsLinearFailure() throws Exception {
+        void unrecognisedTopologySkipped() throws Exception {
             inject(lookupReturning(stats(5, 5)), topologyHeaderProvider("round"));
-            assertThrows(ValidationException.class, () -> check.validateTerminalGapBases(annotation(), 1));
+            assertDoesNotThrow(() -> check.validateTerminalGapBases(annotation(), 1));
         }
 
         @Test
-        void nullTopologyTreatedAsLinearFailure() throws Exception {
+        void nullTopologySkipped() throws Exception {
             inject(lookupReturning(stats(5, 5)), topologyHeaderProvider(null));
-            assertThrows(ValidationException.class, () -> check.validateTerminalGapBases(annotation(), 1));
+            assertDoesNotThrow(() -> check.validateTerminalGapBases(annotation(), 1));
         }
 
         @Test
-        void noHeaderForSeqIdTreatedAsLinearFailure() throws Exception {
+        void noHeaderForSeqIdSkipped() throws Exception {
             inject(lookupReturning(stats(5, 5)), emptyHeaderProvider());
-            assertThrows(ValidationException.class, () -> check.validateTerminalGapBases(annotation(), 1));
+            assertDoesNotThrow(() -> check.validateTerminalGapBases(annotation(), 1));
         }
 
         @Test
-        void noHeaderProviderTreatedAsLinearFailure() throws Exception {
+        void noHeaderProviderSkipped() throws Exception {
             inject(lookupReturning(stats(5, 5)), null);
-            assertThrows(ValidationException.class, () -> check.validateTerminalGapBases(annotation(), 1));
+            assertDoesNotThrow(() -> check.validateTerminalGapBases(annotation(), 1));
         }
 
         @Test
