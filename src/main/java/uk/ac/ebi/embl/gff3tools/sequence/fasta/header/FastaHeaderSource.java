@@ -25,4 +25,14 @@ public interface FastaHeaderSource {
      * Returns the {@link FastaHeader} for the given seqId, or empty if not available.
      */
     Optional<FastaHeader> getHeader(String seqId);
+
+    /**
+     * Returns {@code true} when this source can answer for any seqId, e.g. a single CLI-supplied
+     * header that acts as a global fallback. Catch-all sources are only consulted after every
+     * keyed source has been asked, so a header keyed by a versioned id in a FASTA file is not
+     * shadowed by the fallback.
+     */
+    default boolean isCatchAll() {
+        return false;
+    }
 }

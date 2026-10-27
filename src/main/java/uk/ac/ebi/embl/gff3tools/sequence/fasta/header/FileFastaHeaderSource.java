@@ -18,7 +18,9 @@ import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
  * A {@link FastaHeaderSource} backed by the parsed header map from a FASTA file.
  *
  * <p>Returns headers only for seqIds found in the FASTA file;
- * returns {@code Optional.empty()} for unknown seqIds.
+ * returns {@code Optional.empty()} for unknown seqIds. Version-tolerant resolution across
+ * candidate seqId forms (see {@code SeqIdVariants}) is done by {@link FastaHeaderProvider},
+ * not by this source, so that exact matches are preferred across sources.
  */
 public class FileFastaHeaderSource implements FastaHeaderSource {
 
@@ -30,6 +32,9 @@ public class FileFastaHeaderSource implements FastaHeaderSource {
 
     @Override
     public Optional<FastaHeader> getHeader(String seqId) {
+        if (seqId == null) {
+            return Optional.empty();
+        }
         return Optional.ofNullable(seqIdToHeader.get(seqId));
     }
 }
