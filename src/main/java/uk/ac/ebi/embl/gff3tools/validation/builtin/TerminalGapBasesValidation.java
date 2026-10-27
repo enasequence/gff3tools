@@ -14,7 +14,6 @@ import uk.ac.ebi.embl.fastareader.SequenceStats;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
-import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils.Topology;
 import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
@@ -54,9 +53,7 @@ public class TerminalGapBasesValidation implements Validation {
         String seqId = annotation.getAccession();
         // Only a sequence declared linear has a first and last base. A circular one has neither, and an
         // undeclared topology may be circular, so terminal gaps are not checked for either.
-        if (TopologyUtils.resolveTopology(seqId, context)
-                .filter(Topology.LINEAR::equals)
-                .isEmpty()) {
+        if (!TopologyUtils.isLinearSequence(seqId, context)) {
             return;
         }
 

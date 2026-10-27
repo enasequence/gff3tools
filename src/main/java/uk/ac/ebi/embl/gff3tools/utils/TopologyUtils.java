@@ -40,6 +40,13 @@ public class TopologyUtils {
                 .orElse(false);
     }
 
+    /** Linear only when declared so ({@link #resolveTopology}); an undeclared topology is neither. */
+    public static boolean isLinearSequence(String accession, ValidationContext context) {
+        return resolveTopology(accession, context)
+                .map(ControlledVocabularyUtils.Topology.LINEAR::equals)
+                .orElse(false);
+    }
+
     private static Optional<ControlledVocabularyUtils.Topology> masterTopology(
             String accession, ValidationContext context) {
         if (!context.contains(MasterMetadataProvider.class)) {
