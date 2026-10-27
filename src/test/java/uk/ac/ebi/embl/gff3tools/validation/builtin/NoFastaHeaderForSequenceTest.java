@@ -228,6 +228,8 @@ class NoFastaHeaderForSequenceTest {
             this.headers = headers;
         }
 
+        // The real provider is active only once a source is added. This stub has no sources, so it
+        // forces registration to stand in for a real source that has no header for some sequences.
         @Override
         public boolean isActive() {
             return true;
