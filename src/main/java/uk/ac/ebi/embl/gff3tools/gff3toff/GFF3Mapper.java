@@ -60,6 +60,7 @@ import uk.ac.ebi.embl.gff3tools.utils.ConversionUtils;
 import uk.ac.ebi.embl.gff3tools.utils.CoordinateShiftUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
+import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 import uk.ac.ebi.ena.taxonomy.taxon.TaxonFactory;
@@ -183,7 +184,8 @@ public class GFF3Mapper {
             parentFeatureLocation.addLocation(location);
         } else {
             String gff3FeatureName = gff3Feature.getName();
-            String gff3Id = getSOTermId(gff3FeatureName);
+            String gff3Id = ValidationUtils.getSoTermId(ConversionUtils.getOntologyClient(), gff3FeatureName)
+                    .orElse(null);
             if (gff3Feature.getAttribute("Is_circular").isPresent()
                     && OntologyTerm.REGION.ID.equalsIgnoreCase(gff3Id)) {
                 // Do not convert "region" features. These are added when doing EMBL->GFF3 mapping to
@@ -250,15 +252,6 @@ public class GFF3Mapper {
         }
     }
 
-    private String getSOTermId(String gff3FeatureName) {
-        if (ConversionUtils.getOntologyClient().isValidOntologyId(gff3FeatureName)) {
-            return gff3FeatureName;
-        }
-        return ConversionUtils.getOntologyClient()
-                .findTermByNameOrSynonym(gff3FeatureName)
-                .orElse(null);
-    }
-
     /**
      * Transform GFF3 translation to /translation qualifier
      */
@@ -301,7 +294,7 @@ public class GFF3Mapper {
      */
     private String getTranscriptIdOfParentMrna(GFF3Feature gff3Feature) {
         GFF3Feature parent = gff3Feature.getParentId().map(parentFeatures::get).orElse(null);
-        if (parent == null || !OntologyTerm.MRNA.ID.equals(getSOTermId(parent.getName()))) {
+        if (!ValidationUtils.isSoTerm(ConversionUtils.getOntologyClient(), parent, OntologyTerm.MRNA.ID)) {
             return null;
         }
         return parent.getAttribute(GFF3Attributes.TRANSCRIPT_ID).orElse(null);

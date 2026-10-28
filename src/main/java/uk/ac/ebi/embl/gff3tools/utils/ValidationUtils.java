@@ -140,4 +140,27 @@ public class ValidationUtils {
     public static String getLocationString(GFF3Feature feature) {
         return "%d..%d".formatted(feature.getStart(), feature.getEnd());
     }
+
+    /**
+     * The SO term a GFF3 feature type names: the type itself where it is a SO accession, else the
+     * term it is the name or a synonym of. Empty where it is neither.
+     */
+    public static Optional<String> getSoTermId(OntologyClient ontologyClient, String featureName) {
+        if (ontologyClient.isValidOntologyId(featureName)) {
+            return Optional.of(featureName);
+        }
+        return ontologyClient.findTermByNameOrSynonym(featureName);
+    }
+
+    /**
+     * Whether the feature is typed as exactly this SO term, by name or by accession. Descendants are
+     * not accepted: none of those of CDS or mRNA map to an INSDC feature, so admitting them would
+     * only widen a rule onto types the conversion cannot represent.
+     */
+    public static boolean isSoTerm(OntologyClient ontologyClient, GFF3Feature feature, String ontologyId) {
+        return feature != null
+                && getSoTermId(ontologyClient, feature.getName())
+                        .filter(ontologyId::equals)
+                        .isPresent();
+    }
 }

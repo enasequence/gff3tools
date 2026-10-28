@@ -112,27 +112,11 @@ public class DuplicateTranscriptIdValidation implements Validation {
     }
 
     private boolean isCds(GFF3Feature feature) {
-        return isSoTerm(feature, OntologyTerm.CDS.ID);
+        return ValidationUtils.isSoTerm(context.get(OntologyClient.class), feature, OntologyTerm.CDS.ID);
     }
 
     private boolean isMrna(GFF3Feature feature) {
-        return isSoTerm(feature, OntologyTerm.MRNA.ID);
-    }
-
-    /**
-     * Whether the feature is typed as exactly this SO term, by name or by accession. Descendants are
-     * not accepted, as in {@code CDS_MRNA_LOCATION}: the pairing is between an mRNA and a CDS only.
-     */
-    private boolean isSoTerm(GFF3Feature feature, String ontologyId) {
-        if (feature == null) {
-            return false;
-        }
-        OntologyClient ontologyClient = context.get(OntologyClient.class);
-        String name = feature.getName();
-        Optional<String> termId = ontologyClient.isValidOntologyId(name)
-                ? Optional.of(name)
-                : ontologyClient.findTermByNameOrSynonym(name);
-        return termId.filter(ontologyId::equals).isPresent();
+        return ValidationUtils.isSoTerm(context.get(OntologyClient.class), feature, OntologyTerm.MRNA.ID);
     }
 
     /** Just enough of a feature to recognise it again and to report it, kept for the whole file. */
