@@ -17,8 +17,7 @@ import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
  * SPI for supplying the set of locus_tag prefixes registered with the project.
  *
  * <p>Core ships no implementation — online-backed implementations are registered by downstream
- * modules (e.g. webin-gff3-stages) that have access to the ERA database. When no provider is
- * registered the registered-prefix rule in {@code LocusTagExistsValidation} stays inert.
+ * modules. When no provider is registered the registered-prefix rule in {@code LocusTagExistsValidation} stays inert.
  */
 public interface LocusTagProvider extends ContextProvider<LocusTagProvider> {
 
