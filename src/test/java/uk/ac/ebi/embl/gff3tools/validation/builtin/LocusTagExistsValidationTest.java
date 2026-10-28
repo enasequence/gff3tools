@@ -57,6 +57,8 @@ class LocusTagExistsValidationTest {
 
     private GFF3Annotation gff3Annotation;
 
+    private GFF3Feature feature;
+
     @BeforeEach
     void setUp() {
         gff3Annotation = new GFF3Annotation();
@@ -259,81 +261,90 @@ class LocusTagExistsValidationTest {
     @Test
     void testPrefixValidFormat() {
         // GPNCGGLF = 8 chars, starts with letter — from a real EMBL-to-GFF3 conversion
-        gff3Annotation
-                .getFeatures()
-                .add(TestUtils.createGFF3Feature("mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("GPNCGGLF_LOCUS1"))));
-        Assertions.assertDoesNotThrow(() -> locusTagExistsValidation.validateLocusTagPrefix(gff3Annotation, 1));
+        feature = TestUtils.createGFF3Feature("mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("GPNCGGLF_LOCUS1")));
+
+        Assertions.assertDoesNotThrow(() -> locusTagExistsValidation.validateLocusTagPrefix(feature, 1));
     }
 
     @Test
     void testPrefixMinLength() {
-        gff3Annotation
-                .getFeatures()
-                .add(TestUtils.createGFF3Feature("mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("ABC_001"))));
-        Assertions.assertDoesNotThrow(() -> locusTagExistsValidation.validateLocusTagPrefix(gff3Annotation, 1));
+        feature = TestUtils.createGFF3Feature("mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("ABC_001")));
+
+        Assertions.assertDoesNotThrow(() -> locusTagExistsValidation.validateLocusTagPrefix(feature, 1));
     }
 
     @Test
     void testPrefixMaxLength() {
-        gff3Annotation
-                .getFeatures()
-                .add(TestUtils.createGFF3Feature(
-                        "mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("ABCDEFGHIJKL_001"))));
-        Assertions.assertDoesNotThrow(() -> locusTagExistsValidation.validateLocusTagPrefix(gff3Annotation, 1));
+
+        feature = TestUtils.createGFF3Feature("mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("ABCDEFGHIJKL_001")));
+
+        Assertions.assertDoesNotThrow(() -> locusTagExistsValidation.validateLocusTagPrefix(feature, 1));
     }
 
     @Test
     void testPrefixWithDigits() {
-        gff3Annotation
-                .getFeatures()
-                .add(TestUtils.createGFF3Feature("mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("BC03BB108_2133"))));
-        Assertions.assertDoesNotThrow(() -> locusTagExistsValidation.validateLocusTagPrefix(gff3Annotation, 1));
+
+        feature = TestUtils.createGFF3Feature("mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("BC03BB108_2133")));
+
+        Assertions.assertDoesNotThrow(() -> locusTagExistsValidation.validateLocusTagPrefix(feature, 1));
     }
 
     @Test
     void testPrefixNoUnderscore() {
-        gff3Annotation
-                .getFeatures()
-                .add(TestUtils.createGFF3Feature("mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("GPNCGGLF"))));
-        Assertions.assertThrows(
-                ValidationException.class, () -> locusTagExistsValidation.validateLocusTagPrefix(gff3Annotation, 1));
+
+        feature = TestUtils.createGFF3Feature("mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("GPNCGGLF")));
+
+        ValidationException ex = Assertions.assertThrows(
+                ValidationException.class, () -> locusTagExistsValidation.validateLocusTagPrefix(feature, 1));
+
+        Assertions.assertTrue(ex.getMessage().contains("must be in format PREFIX_tag"));
+        Assertions.assertEquals(LocusTagExistsValidation.LOCUS_TAG_PREFIX_RULE, ex.getValidationRule());
     }
 
     @Test
     void testPrefixTooShort() {
-        gff3Annotation
-                .getFeatures()
-                .add(TestUtils.createGFF3Feature("mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("AB_001"))));
-        Assertions.assertThrows(
-                ValidationException.class, () -> locusTagExistsValidation.validateLocusTagPrefix(gff3Annotation, 1));
+        feature = TestUtils.createGFF3Feature("mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("AB_001")));
+
+        ValidationException ex = Assertions.assertThrows(
+                ValidationException.class, () -> locusTagExistsValidation.validateLocusTagPrefix(feature, 1));
+
+        Assertions.assertTrue(ex.getMessage().contains("must be 3-12 alphanumeric characters starting with a letter"));
+        Assertions.assertEquals(LocusTagExistsValidation.LOCUS_TAG_PREFIX_RULE, ex.getValidationRule());
     }
 
     @Test
     void testPrefixTooLong() {
-        gff3Annotation
-                .getFeatures()
-                .add(TestUtils.createGFF3Feature(
-                        "mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("ABCDEFGHIJKLM_001"))));
-        Assertions.assertThrows(
-                ValidationException.class, () -> locusTagExistsValidation.validateLocusTagPrefix(gff3Annotation, 1));
+        feature = TestUtils.createGFF3Feature("mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("ABCDEFGHIJKLM_001")));
+
+        ValidationException ex = Assertions.assertThrows(
+                ValidationException.class, () -> locusTagExistsValidation.validateLocusTagPrefix(feature, 1));
+
+        Assertions.assertTrue(ex.getMessage().contains("must be 3-12 alphanumeric characters starting with a letter"));
+        Assertions.assertEquals(LocusTagExistsValidation.LOCUS_TAG_PREFIX_RULE, ex.getValidationRule());
     }
 
     @Test
     void testPrefixStartsWithDigit() {
-        gff3Annotation
-                .getFeatures()
-                .add(TestUtils.createGFF3Feature("mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("1ABCDEF_001"))));
-        Assertions.assertThrows(
-                ValidationException.class, () -> locusTagExistsValidation.validateLocusTagPrefix(gff3Annotation, 1));
+
+        feature = TestUtils.createGFF3Feature("mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("1ABCDEF_001")));
+
+        ValidationException ex = Assertions.assertThrows(
+                ValidationException.class, () -> locusTagExistsValidation.validateLocusTagPrefix(feature, 1));
+
+        Assertions.assertTrue(ex.getMessage().contains("must be 3-12 alphanumeric characters starting with a letter"));
+        Assertions.assertEquals(LocusTagExistsValidation.LOCUS_TAG_PREFIX_RULE, ex.getValidationRule());
     }
 
     @Test
     void testPrefixEmptyTag() {
-        gff3Annotation
-                .getFeatures()
-                .add(TestUtils.createGFF3Feature("mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("GPNCGGLF_"))));
-        Assertions.assertThrows(
-                ValidationException.class, () -> locusTagExistsValidation.validateLocusTagPrefix(gff3Annotation, 1));
+
+        feature = TestUtils.createGFF3Feature("mRNA", Map.of(GFF3Attributes.LOCUS_TAG, List.of("GPNCGGLF_")));
+
+        ValidationException ex = Assertions.assertThrows(
+                ValidationException.class, () -> locusTagExistsValidation.validateLocusTagPrefix(feature, 1));
+
+        Assertions.assertTrue(ex.getMessage().contains("tag after underscore must not be empty"));
+        Assertions.assertEquals(LocusTagExistsValidation.LOCUS_TAG_PREFIX_RULE, ex.getValidationRule());
     }
 
     // --- locus_tag registered prefix tests ---
@@ -353,7 +364,7 @@ class LocusTagExistsValidationTest {
     }
 
     @Test
-    void validateRegisteredLocusTagPrefix_noProviderRegistered_ruleInert() {
+    void testRegisteredLocusTagPrefix_noProviderRegistered_ruleInert() {
         gff3Annotation
                 .getFeatures()
                 .add(TestUtils.createGFF3Feature("gene", Map.of(GFF3Attributes.LOCUS_TAG, List.of("ANYPREFIX_001"))));
@@ -364,7 +375,7 @@ class LocusTagExistsValidationTest {
     }
 
     @Test
-    void validateRegisteredLocusTagPrefix_registeredPrefix_passes() {
+    void testRegisteredLocusTagPrefix_registeredPrefix_passes() {
         gff3Annotation
                 .getFeatures()
                 .add(TestUtils.createGFF3Feature("gene", Map.of(GFF3Attributes.LOCUS_TAG, List.of("MYPFX_001"))));
@@ -376,7 +387,7 @@ class LocusTagExistsValidationTest {
     }
 
     @Test
-    void validateRegisteredLocusTagPrefix_unregisteredPrefix_throwsWithCorrectRule() {
+    void testRegisteredLocusTagPrefix_unregisteredPrefix_throwsWithCorrectRule() {
         gff3Annotation
                 .getFeatures()
                 .add(TestUtils.createGFF3Feature("gene", Map.of(GFF3Attributes.LOCUS_TAG, List.of("WRONG_001"))));
@@ -391,7 +402,22 @@ class LocusTagExistsValidationTest {
     }
 
     @Test
-    void validateRegisteredLocusTagPrefix_caseInsensitiveMatch() {
+    void testRegisteredLocusTagPrefix_InvalidFormatCaptureEarly() {
+        gff3Annotation
+                .getFeatures()
+                .add(TestUtils.createGFF3Feature("gene", Map.of(GFF3Attributes.LOCUS_TAG, List.of("WRONG_001"))));
+        ValidationContext context = TestUtils.createTestContext();
+        context.register(LocusTagProvider.class, prefixProvider(Set.of("MYPFX")));
+        TestUtils.injectContext(locusTagExistsValidation, context);
+        ValidationException ex = Assertions.assertThrows(
+                ValidationException.class,
+                () -> locusTagExistsValidation.validateRegisteredLocusTagPrefix(gff3Annotation, 1));
+        Assertions.assertEquals(LocusTagExistsValidation.LOCUS_TAG_REGISTERED_PREFIX_RULE, ex.getValidationRule());
+        Assertions.assertTrue(ex.getMessage().contains("WRONG"), ex.getMessage());
+    }
+
+    @Test
+    void testRegisteredLocusTagPrefix_caseInsensitiveMatch() {
         gff3Annotation
                 .getFeatures()
                 .add(TestUtils.createGFF3Feature("gene", Map.of(GFF3Attributes.LOCUS_TAG, List.of("mypfx_001"))));
@@ -403,7 +429,7 @@ class LocusTagExistsValidationTest {
     }
 
     @Test
-    void validateRegisteredLocusTagPrefix_biosampleAccessionAllowed() {
+    void testRegisteredLocusTagPrefix_biosampleAccessionAllowed() {
         gff3Annotation
                 .getFeatures()
                 .add(TestUtils.createGFF3Feature("gene", Map.of(GFF3Attributes.LOCUS_TAG, List.of("SAMEA123456_001"))));
@@ -415,11 +441,53 @@ class LocusTagExistsValidationTest {
     }
 
     @Test
-    void validateRegisteredLocusTagPrefix_featureWithoutLocusTag_passes() {
+    void testRegisteredLocusTagPrefix_featureWithoutLocusTag_passes() {
         gff3Annotation.getFeatures().add(TestUtils.createGFF3Feature("gene", Map.of()));
         ValidationContext context = TestUtils.createTestContext();
         context.register(LocusTagProvider.class, prefixProvider(Set.of("MYPFX")));
         TestUtils.injectContext(locusTagExistsValidation, context);
+        Assertions.assertDoesNotThrow(
+                () -> locusTagExistsValidation.validateRegisteredLocusTagPrefix(gff3Annotation, 1));
+    }
+
+    @Test
+    void testRegisteredLocusTagPrefix_noUnderscore_skipsForFormatValidation() {
+        gff3Annotation
+                .getFeatures()
+                .add(TestUtils.createGFF3Feature("gene", Map.of(GFF3Attributes.LOCUS_TAG, List.of("GPNCGGLF"))));
+
+        ValidationContext context = TestUtils.createTestContext();
+        context.register(LocusTagProvider.class, prefixProvider(Set.of("MYPFX")));
+        TestUtils.injectContext(locusTagExistsValidation, context);
+
+        Assertions.assertDoesNotThrow(
+                () -> locusTagExistsValidation.validateRegisteredLocusTagPrefix(gff3Annotation, 1));
+    }
+
+    @Test
+    void testRegisteredLocusTagPrefix_mixedCaseRegisteredPrefix_matchesCaseInsensitively() {
+        gff3Annotation
+                .getFeatures()
+                .add(TestUtils.createGFF3Feature("gene", Map.of(GFF3Attributes.LOCUS_TAG, List.of("mypfx_001"))));
+
+        ValidationContext context = TestUtils.createTestContext();
+        context.register(LocusTagProvider.class, prefixProvider(Set.of("MyPfX")));
+        TestUtils.injectContext(locusTagExistsValidation, context);
+
+        Assertions.assertDoesNotThrow(
+                () -> locusTagExistsValidation.validateRegisteredLocusTagPrefix(gff3Annotation, 1));
+    }
+
+    @Test
+    void testRegisteredLocusTagPrefix_multipleUnderscores_usesFirstPrefix() {
+        gff3Annotation
+                .getFeatures()
+                .add(TestUtils.createGFF3Feature("gene", Map.of(GFF3Attributes.LOCUS_TAG, List.of("ABC_DEF_001"))));
+
+        ValidationContext context = TestUtils.createTestContext();
+        context.register(LocusTagProvider.class, prefixProvider(Set.of("ABC")));
+        TestUtils.injectContext(locusTagExistsValidation, context);
+
         Assertions.assertDoesNotThrow(
                 () -> locusTagExistsValidation.validateRegisteredLocusTagPrefix(gff3Annotation, 1));
     }
