@@ -24,7 +24,7 @@ FT                   /gene="ABC"
 FT                   /transcript_id=tx_D
 FT   CDS             51..970
 FT                   /gene="ABC"
-FT                   /transcript_id=tx_OWN
+FT                   /transcript_id=tx_D
 FT   CDS             51..960
 FT                   /gene="ABC"
 FT   CDS             51..950
