@@ -42,8 +42,8 @@ public class LocusTagExistsValidation implements Validation {
     public static final String LOCUS_TAG_REGISTERED_PREFIX_RULE = "LOCUS_TAG_REGISTERED_PREFIX_CHECK";
 
     // INSDC: prefix is 3-12 alphanumeric characters, must start with a letter.
-    // LocusTagFix (FEATURE-level fix, same priority) always runs before this validation, so the
-    // value is already uppercased by the time the check fires.
+    // Uppercase-only: LocusTagFix runs before this validation and normalises the value. If the fix
+    // is disabled, a lowercase prefix fails here with a message that explicitly says "upper-case".
     private static final Pattern PREFIX_PATTERN = Pattern.compile("^[A-Z][A-Z0-9]{2,11}$");
 
     private static final String LOCUS_TAG_EXISTS_MESSAGE =
@@ -186,22 +186,19 @@ public class LocusTagExistsValidation implements Validation {
     }
 
     private void validateLocusTagFormat(String locusTag, int line) throws ValidationException {
-        int underscoreIdx = locusTag.indexOf('_');
-        if (underscoreIdx < 0) {
-            throw new ValidationException(
-                    LOCUS_TAG_PREFIX_RULE,
-                    line,
-                    "Invalid locus_tag \"%s\": must be in format PREFIX_tag".formatted(locusTag));
-        }
+        String prefix = extractPrefix(locusTag)
+                .orElseThrow(() -> new ValidationException(
+                        LOCUS_TAG_PREFIX_RULE,
+                        line,
+                        "Invalid locus_tag \"%s\": must be in format PREFIX_tag".formatted(locusTag)));
 
-        String prefix = locusTag.substring(0, underscoreIdx);
-        String tag = locusTag.substring(underscoreIdx + 1);
+        String tag = locusTag.substring(locusTag.indexOf('_') + 1);
 
         if (!PREFIX_PATTERN.matcher(prefix).matches()) {
             throw new ValidationException(
                     LOCUS_TAG_PREFIX_RULE,
                     line,
-                    "Invalid locus_tag \"%s\": prefix \"%s\" must be 3-12 alphanumeric characters starting with a letter"
+                    "Invalid locus_tag \"%s\": prefix \"%s\" must be 3-12 upper-case alphanumeric characters starting with a letter"
                             .formatted(locusTag, prefix));
         }
 
@@ -213,12 +210,21 @@ public class LocusTagExistsValidation implements Validation {
         }
     }
 
+    /** Returns the prefix (part before the first {@code _}), or empty if there is no underscore. */
+    private static Optional<String> extractPrefix(String locusTag) {
+        int idx = locusTag.indexOf('_');
+        return idx < 0 ? Optional.empty() : Optional.of(locusTag.substring(0, idx));
+    }
+
     /**
-     * Checks that the locus_tag prefix is registered with the project in ERA.
+     * Checks that the locus_tag prefix is registered with the project in Database.
      *
      * <p>Inert when no {@link LocusTagProvider} is registered on the context — the rule does
      * not fire in offline or client-side processing, and for submission types (FASTA-only) that
      * carry no locus_tag attributes.
+     *
+     * <p>LocusTag value without an underscore are skipped. Format errors are owned by
+     * {@value #LOCUS_TAG_PREFIX_RULE}. If that rule is disabled, malformed tags escape both checks.
      */
     @ValidationMethod(
             rule = LOCUS_TAG_REGISTERED_PREFIX_RULE,
@@ -234,16 +240,13 @@ public class LocusTagExistsValidation implements Validation {
         for (GFF3Feature feature : gff3Annotation.getFeatures()) {
             for (String locusTag :
                     feature.getAttributeList(GFF3Attributes.LOCUS_TAG).orElse(List.of())) {
-                int idx = locusTag.indexOf('_');
-                if (idx >= 0) {
-                    String prefix = locusTag.substring(0, idx).toUpperCase();
-                    if (!registeredPrefixes.contains(prefix)) {
-                        throw new ValidationException(
-                                LOCUS_TAG_REGISTERED_PREFIX_RULE,
-                                line,
-                                "locus_tag \"%s\": prefix \"%s\" is not registered with the project"
-                                        .formatted(locusTag, prefix));
-                    }
+                Optional<String> prefix = extractPrefix(locusTag).map(String::toUpperCase);
+                if (prefix.isPresent() && !registeredPrefixes.contains(prefix.get())) {
+                    throw new ValidationException(
+                            LOCUS_TAG_REGISTERED_PREFIX_RULE,
+                            line,
+                            "locus_tag \"%s\": prefix \"%s\" is not registered with the project"
+                                    .formatted(locusTag, prefix.get()));
                 }
             }
         }
