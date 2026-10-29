@@ -10,8 +10,11 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -27,6 +30,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
+import uk.ac.ebi.embl.gff3tools.validation.provider.LocusTagProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonProvider;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
@@ -34,6 +38,13 @@ import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 public class LocusTagExistsValidation implements Validation {
 
     public static final String LOCUS_TAG_EXISTS_RULE = "LOCUS_TAG_EXISTS";
+    public static final String LOCUS_TAG_PREFIX_RULE = "LOCUS_TAG_PREFIX_CHECK";
+    public static final String LOCUS_TAG_REGISTERED_PREFIX_RULE = "LOCUS_TAG_REGISTERED_PREFIX_CHECK";
+
+    // INSDC: prefix is 3-12 alphanumeric characters, must start with a letter.
+    // Uppercase-only: LocusTagFix runs before this validation and normalises the value. If the fix
+    // is disabled, a lowercase prefix fails here with a message that explicitly says "upper-case".
+    private static final Pattern PREFIX_PATTERN = Pattern.compile("^[A-Z][A-Z0-9]{2,11}$");
 
     private static final String LOCUS_TAG_EXISTS_MESSAGE =
             "/locus_tag must exist for annotated contigs/scaffolds/chromosomes.";
@@ -164,5 +175,80 @@ public class LocusTagExistsValidation implements Validation {
         return context.contains(TaxonProvider.class)
                 ? context.get(TaxonProvider.class).resolve(accession)
                 : Optional.empty();
+    }
+
+    @ValidationMethod(rule = LOCUS_TAG_PREFIX_RULE, type = ValidationType.FEATURE)
+    public void validateLocusTagPrefix(GFF3Feature feature, int line) throws ValidationException {
+        for (String locusTag :
+                feature.getAttributeList(GFF3Attributes.LOCUS_TAG).orElse(List.of())) {
+            validateLocusTagFormat(locusTag, line);
+        }
+    }
+
+    private void validateLocusTagFormat(String locusTag, int line) throws ValidationException {
+        String prefix = extractPrefix(locusTag)
+                .orElseThrow(() -> new ValidationException(
+                        LOCUS_TAG_PREFIX_RULE,
+                        line,
+                        "Invalid locus_tag \"%s\": must be in format PREFIX_tag".formatted(locusTag)));
+
+        String tag = locusTag.substring(locusTag.indexOf('_') + 1);
+
+        if (!PREFIX_PATTERN.matcher(prefix).matches()) {
+            throw new ValidationException(
+                    LOCUS_TAG_PREFIX_RULE,
+                    line,
+                    "Invalid locus_tag \"%s\": prefix \"%s\" must be 3-12 upper-case alphanumeric characters starting with a letter"
+                            .formatted(locusTag, prefix));
+        }
+
+        if (tag.isEmpty()) {
+            throw new ValidationException(
+                    LOCUS_TAG_PREFIX_RULE,
+                    line,
+                    "Invalid locus_tag \"%s\": tag after underscore must not be empty".formatted(locusTag));
+        }
+    }
+
+    /** Returns the prefix (part before the first {@code _}), or empty if there is no underscore. */
+    private static Optional<String> extractPrefix(String locusTag) {
+        int idx = locusTag.indexOf('_');
+        return idx < 0 ? Optional.empty() : Optional.of(locusTag.substring(0, idx));
+    }
+
+    /**
+     * Checks that the locus_tag prefix is registered with the project in Database.
+     *
+     * <p>Inert when no {@link LocusTagProvider} is registered on the context — the rule does
+     * not fire in offline or client-side processing, and for submission types (FASTA-only) that
+     * carry no locus_tag attributes.
+     *
+     * <p>LocusTag value without an underscore are skipped. Format errors are owned by
+     * {@value #LOCUS_TAG_PREFIX_RULE}. If that rule is disabled, malformed tags escape both checks.
+     */
+    @ValidationMethod(
+            rule = LOCUS_TAG_REGISTERED_PREFIX_RULE,
+            description = "Check that locus_tag prefix is registered with the project",
+            type = ValidationType.ANNOTATION)
+    public void validateRegisteredLocusTagPrefix(GFF3Annotation gff3Annotation, int line) throws ValidationException {
+        if (!context.contains(LocusTagProvider.class)) {
+            return;
+        }
+        Set<String> registeredPrefixes = context.get(LocusTagProvider.class).getPrefixes().stream()
+                .map(String::toUpperCase)
+                .collect(Collectors.toUnmodifiableSet());
+        for (GFF3Feature feature : gff3Annotation.getFeatures()) {
+            for (String locusTag :
+                    feature.getAttributeList(GFF3Attributes.LOCUS_TAG).orElse(List.of())) {
+                Optional<String> prefix = extractPrefix(locusTag).map(String::toUpperCase);
+                if (prefix.isPresent() && !registeredPrefixes.contains(prefix.get())) {
+                    throw new ValidationException(
+                            LOCUS_TAG_REGISTERED_PREFIX_RULE,
+                            line,
+                            "locus_tag \"%s\": prefix \"%s\" is not registered with the project"
+                                    .formatted(locusTag, prefix.get()));
+                }
+            }
+        }
     }
 }
