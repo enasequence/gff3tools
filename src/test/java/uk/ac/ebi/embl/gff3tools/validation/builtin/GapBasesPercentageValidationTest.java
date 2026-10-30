@@ -133,13 +133,6 @@ class GapBasesPercentageValidationTest {
         }
 
         @Test
-        void providerWithoutHeaderForSeqIdUsesStrictRuleFailure() throws Exception {
-            // Provider present but no header for this seqId -> strict 50% rule still applies.
-            inject(lookupReturning(stats(100, 60)), emptyHeaderProvider());
-            assertThrows(ValidationException.class, () -> check.validateGapBasesPercentage(annotation(), 1));
-        }
-
-        @Test
         void countsOnlyInteriorNs() throws Exception {
             // baseCount N = 100, edges = 30 + 20 -> interior Ns = 50 over an interior length of 100 -> 50% -> pass.
             SequenceStats stats = new SequenceStats(160, 100, 30L, 20L, Map.of('N', 100L));
@@ -148,7 +141,7 @@ class GapBasesPercentageValidationTest {
         }
     }
 
-    // ---- chromosome / no-provider: 100% rule --------------------------------
+    // ---- chromosome / no header: 100% rule ----------------------------------
 
     @Nested
     class LooseRule {
@@ -178,6 +171,13 @@ class GapBasesPercentageValidationTest {
         void noProviderAllNsFailure() throws Exception {
             inject(lookupReturning(stats(100, 100)), null);
             assertThrows(ValidationException.class, () -> check.validateGapBasesPercentage(annotation(), 1));
+        }
+
+        @Test
+        void providerWithoutHeaderForSeqIdAboveFiftyPercentSuccess() throws Exception {
+            // Provider present but no header for this seqId -> treated like no provider: loose rule.
+            inject(lookupReturning(stats(100, 60)), emptyHeaderProvider());
+            assertDoesNotThrow(() -> check.validateGapBasesPercentage(annotation(), 1));
         }
     }
 

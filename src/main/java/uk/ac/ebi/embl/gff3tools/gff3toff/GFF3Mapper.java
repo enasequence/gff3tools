@@ -183,14 +183,9 @@ public class GFF3Mapper {
             parentFeatureLocation.addLocation(location);
         } else {
             String gff3FeatureName = gff3Feature.getName();
-            String gff3Id;
-            if (ConversionUtils.getOntologyClient().isValidOntologyId(gff3FeatureName)) {
-                gff3Id = gff3FeatureName;
-            } else {
-                gff3Id = ConversionUtils.getOntologyClient()
-                        .findTermByNameOrSynonym(gff3FeatureName)
-                        .orElse(null);
-            }
+            String gff3Id = ConversionUtils.getOntologyClient()
+                    .getSoTermId(gff3FeatureName)
+                    .orElse(null);
             if (gff3Feature.getAttribute("Is_circular").isPresent()
                     && OntologyTerm.REGION.ID.equalsIgnoreCase(gff3Id)) {
                 // Do not convert "region" features. These are added when doing EMBL->GFF3 mapping to
@@ -247,6 +242,14 @@ public class GFF3Mapper {
                 ffFeature.addQualifier("gene", gene);
             }
         }
+        // A flat file pairs a CDS with its mRNA by a shared /transcript_id rather than by Parent
+        if (Feature.CDS_FEATURE_NAME.equals(ffFeature.getName())
+                && ffFeature.getQualifiers(GFF3Attributes.TRANSCRIPT_ID).isEmpty()) {
+            String transcriptId = getTranscriptIdOfParentMrna(gff3Feature);
+            if (transcriptId != null) {
+                ffFeature.addQualifier(GFF3Attributes.TRANSCRIPT_ID, transcriptId);
+            }
+        }
     }
 
     /**
@@ -283,6 +286,18 @@ public class GFF3Mapper {
         } else {
             return null;
         }
+    }
+
+    /**
+     * The transcript_id of the feature's Parent, or null where that parent is not an mRNA or carries
+     * none. Like the /gene lookup, it only sees parents that come before the feature in the file.
+     */
+    private String getTranscriptIdOfParentMrna(GFF3Feature gff3Feature) {
+        GFF3Feature parent = gff3Feature.getParentId().map(parentFeatures::get).orElse(null);
+        if (parent == null || !ConversionUtils.getOntologyClient().isSoTerm(parent.getName(), OntologyTerm.MRNA.ID)) {
+            return null;
+        }
+        return parent.getAttribute(GFF3Attributes.TRANSCRIPT_ID).orElse(null);
     }
 
     /**

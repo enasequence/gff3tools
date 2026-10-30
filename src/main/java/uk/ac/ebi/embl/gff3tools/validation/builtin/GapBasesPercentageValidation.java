@@ -110,8 +110,9 @@ public class GapBasesPercentageValidation implements Validation {
             return true;
         }
         Optional<FastaHeader> header = headerProvider.getHeader(seqId);
+        // No header for this sequence is treated like no header source at all: the loose rule applies.
         if (header.isEmpty()) {
-            return false;
+            return true;
         }
         FastaHeader fastaHeader = header.get();
         return fastaHeader.getChromosomeType() != null

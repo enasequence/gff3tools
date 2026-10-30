@@ -236,6 +236,22 @@ annotation, pass the parent analysis type of the analysis it annotates: there is
 `DECOUPLED_ANNOTATION` value. Without an analysis type the context defaults to `UNKNOWN`, meaning
 no ENA submission context, and these rules stay off.
 
+### Rules that depend on the FASTA header
+
+Some rules read a sequence's molecule type, topology or chromosome fields from its FASTA header.
+In `conversion`, when the FASTA files given with `--sequence` carry JSON headers,
+`FASTA_HEADER_MAPPING` fails every annotated sequence without one (`--fasta-header` gives every
+sequence a header). To accept those sequences, turn it off:
+
+```bash
+$GFF3TOOLS conversion --sequence genome.fasta --rules FASTA_HEADER_MAPPING:OFF annotation.gff3 annotation.embl
+```
+
+Without a header, the other rules skip, apply a more lenient limit, or assume the sequence is
+linear. `validation` registers no header source, so there they always behave as if no header was
+given. [2610231312_fasta_header_dependent_rules.md](2610231312_fasta_header_dependent_rules.md)
+lists each rule.
+
 ---
 
 ## Metrics reports (`--metrics`)

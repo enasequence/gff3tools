@@ -476,6 +476,64 @@ class MoleculeTypeValidationTest {
         }
     }
 
+    @Nested
+    class NoFastaHeaderForAccession {
+
+        // A provider is registered but has no header for this accession, so the molecule type cannot
+        // be resolved. Each annotation below would be rejected under a restrictive molecule type.
+        @BeforeEach
+        void noHeader() {
+            when(fastaHeaderProvider.getHeader(ACCESSION)).thenReturn(Optional.empty());
+        }
+
+        @Test
+        void validateRequiredFeatureDoesNotThrow() {
+            GFF3Feature gene = feature("gene");
+            when(annotation.getFeatures()).thenReturn(List.of(gene));
+
+            assertDoesNotThrow(() -> validation.validateRequiredFeature(annotation, LINE));
+        }
+
+        @Test
+        void validateForbiddenFeatureDoesNotThrow() {
+            GFF3Feature trna = feature("tRNA");
+            when(annotation.getFeatures()).thenReturn(List.of(trna));
+            when(ontologyClient.findTermByNameOrSynonym("tRNA")).thenReturn(Optional.of(OntologyTerm.TRNA.ID));
+            when(ontologyClient.isSelfOrDescendantOf(OntologyTerm.TRNA.ID, OntologyTerm.TRNA.ID))
+                    .thenReturn(true);
+
+            assertDoesNotThrow(() -> validation.validateForbiddenFeature(annotation, LINE));
+        }
+
+        @Test
+        void validateMrnaCdsComplementDoesNotThrow() {
+            GFF3Feature complementCds = feature("CDS", true);
+            when(annotation.getFeatures()).thenReturn(List.of(complementCds));
+            when(ontologyClient.findTermByNameOrSynonym("CDS")).thenReturn(Optional.of(OntologyTerm.CDS.ID));
+
+            assertDoesNotThrow(() -> validation.validateMrnaCdsComplement(annotation, LINE));
+        }
+
+        @Test
+        void validateMrnaCdsJoinedLocationDoesNotThrow() {
+            GFF3Feature first = cdsSegment("cds1", 1L, 60L);
+            GFF3Feature second = cdsSegment("cds1", 100L, 159L);
+            when(annotation.getFeatures()).thenReturn(List.of(first, second));
+            when(ontologyClient.findTermByNameOrSynonym("CDS")).thenReturn(Optional.of(OntologyTerm.CDS.ID));
+
+            assertDoesNotThrow(() -> validation.validateMrnaCdsJoinedLocation(annotation, LINE));
+        }
+
+        @Test
+        void validateMoleculeTypeAgainstAnalysisTypeDoesNotThrow() {
+            when(context.contains(AnalysisContext.class)).thenReturn(true);
+            when(context.get(AnalysisContext.class))
+                    .thenReturn(new AnalysisContext(AnalysisType.TRANSCRIPTOME_ASSEMBLY, 10));
+
+            assertDoesNotThrow(() -> validation.validateMoleculeTypeAgainstAnalysisType(annotation, LINE));
+        }
+    }
+
     private static String moleculeTypeName(String moleculeType) {
         return ControlledVocabularyUtils.MolType.fromValue(moleculeType)
                 .orElseThrow()

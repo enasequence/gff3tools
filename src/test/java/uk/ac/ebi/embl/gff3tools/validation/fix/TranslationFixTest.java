@@ -561,6 +561,21 @@ class TranslationFixTest {
         assertTrue(exception.getMessage().contains("bad base range"));
     }
 
+    @Test
+    void doesNotUnwrapWithoutHeaderForAccession() throws Exception {
+        sequence(CDS.substring(6) + FILLER + CDS.substring(0, 6));
+        FastaHeaderProvider headers = new FastaHeaderProvider();
+        headers.addSource(seqId -> Optional.empty());
+        context.register(FastaHeaderProvider.class, headers);
+
+        GFF3Feature cds = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 25, 39, "+");
+        GFF3Annotation annotation = createAnnotation(cds);
+        annotation.setSequenceRegion(new GFF3SequenceRegion("seq1", Optional.empty(), 1, CIRCLE));
+
+        ValidationException exception = assertThrows(ValidationException.class, () -> fix.fixAnnotation(annotation, 1));
+        assertTrue(exception.getMessage().contains("bad base range"));
+    }
+
     private void sequence(String bases) throws Exception {
         assertEquals(CIRCLE, bases.length());
         when(mockLookup.getSequenceSlice(eq("seq1"), anyLong(), anyLong())).thenAnswer(invocation -> {
