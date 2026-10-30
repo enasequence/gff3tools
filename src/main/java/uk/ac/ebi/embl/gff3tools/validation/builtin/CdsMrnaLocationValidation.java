@@ -245,11 +245,16 @@ public class CdsMrnaLocationValidation implements Validation {
         return "%d..%d".formatted(sortedSegments.get(0).getStart(), end);
     }
 
+    /**
+     * Descendants are not accepted here or in {@link #isMrna}: none of those of CDS or mRNA map to an
+     * INSDC feature, so admitting them would only widen the rule onto types the conversion cannot
+     * represent.
+     */
     private boolean isCds(GFF3Feature feature) {
-        return ValidationUtils.isSoTerm(context.get(OntologyClient.class), feature, OntologyTerm.CDS.ID);
+        return context.get(OntologyClient.class).isSoTerm(feature.getName(), OntologyTerm.CDS.ID);
     }
 
     private boolean isMrna(GFF3Feature feature) {
-        return ValidationUtils.isSoTerm(context.get(OntologyClient.class), feature, OntologyTerm.MRNA.ID);
+        return context.get(OntologyClient.class).isSoTerm(feature.getName(), OntologyTerm.MRNA.ID);
     }
 }

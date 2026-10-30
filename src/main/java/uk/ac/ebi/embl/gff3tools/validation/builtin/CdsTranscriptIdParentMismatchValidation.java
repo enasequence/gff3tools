@@ -111,10 +111,10 @@ public class CdsTranscriptIdParentMismatchValidation implements Validation {
     }
 
     private boolean isCds(GFF3Feature feature) {
-        return ValidationUtils.isSoTerm(context.get(OntologyClient.class), feature, OntologyTerm.CDS.ID);
+        return context.get(OntologyClient.class).isSoTerm(feature.getName(), OntologyTerm.CDS.ID);
     }
 
     private boolean isMrna(GFF3Feature feature) {
-        return ValidationUtils.isSoTerm(context.get(OntologyClient.class), feature, OntologyTerm.MRNA.ID);
+        return context.get(OntologyClient.class).isSoTerm(feature.getName(), OntologyTerm.MRNA.ID);
     }
 }

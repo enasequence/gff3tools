@@ -112,11 +112,11 @@ public class DuplicateTranscriptIdValidation implements Validation {
     }
 
     private boolean isCds(GFF3Feature feature) {
-        return ValidationUtils.isSoTerm(context.get(OntologyClient.class), feature, OntologyTerm.CDS.ID);
+        return context.get(OntologyClient.class).isSoTerm(feature.getName(), OntologyTerm.CDS.ID);
     }
 
     private boolean isMrna(GFF3Feature feature) {
-        return ValidationUtils.isSoTerm(context.get(OntologyClient.class), feature, OntologyTerm.MRNA.ID);
+        return context.get(OntologyClient.class).isSoTerm(feature.getName(), OntologyTerm.MRNA.ID);
     }
 
     /** Just enough of a feature to recognise it again and to report it, kept for the whole file. */

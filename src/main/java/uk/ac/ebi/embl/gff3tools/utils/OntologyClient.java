@@ -197,6 +197,26 @@ public class OntologyClient {
     }
 
     /**
+     * The SO term a GFF3 feature type names: the type itself where it is a SO accession, else the
+     * term it is the name or a synonym of. Empty where it is neither.
+     */
+    public Optional<String> getSoTermId(String featureName) {
+        if (isValidOntologyId(featureName)) {
+            return Optional.of(featureName);
+        }
+        return findTermByNameOrSynonym(featureName);
+    }
+
+    /**
+     * Whether the feature type is exactly this SO term, by name or by accession. Descendants are not
+     * accepted; {@link #isSelfOrDescendantOf} is the check that admits them.
+     */
+    public boolean isSoTerm(String featureName, String ontologyId) {
+        return featureName != null
+                && getSoTermId(featureName).filter(ontologyId::equals).isPresent();
+    }
+
+    /**
      * Checks if a given string is a valid feature SO term. This involves:
      * 1. Checking if the string is a valid ontology ID format (e.g., SO:0000123).
      * 2. If it's a valid ID, checking if the term is defined in the ontology and the child of a feature.
