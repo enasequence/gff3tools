@@ -27,17 +27,15 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
-import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
-import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
-import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
-import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
-import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
+import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 /**
  * A CDS and an mRNA are each stored as a list of intervals - one GFF3 line per interval, all lines
  * sharing an ID. Where a CDS is linked to an mRNA by {@code Parent} or {@code transcript_id}, its
  * intervals must line up against consecutive mRNA intervals with every shared edge matching
  * exactly, and only its outermost start and end may sit inside the mRNA's.
+ *
+ * Needs to run after {@link DuplicateTranscriptIdValidation} and {@link DanglingParentValidation}
  */
 @Gff3Validation(name = "CDS_MRNA_LOCATION", description = "Paired CDS and mRNA features must have compatible locations")
 public class CdsMrnaLocationValidation implements Validation {
@@ -59,6 +57,7 @@ public class CdsMrnaLocationValidation implements Validation {
             description = "A CDS paired with an mRNA must be contained within the joined mRNA location "
                     + "and share its internal interval boundaries",
             type = ANNOTATION,
+            priority = ValidationPriority.LOW,
             severity = RuleSeverity.ERROR)
     public void validateCdsMrnaLocation(GFF3Annotation annotation, int line) throws ValidationException {
         Map<String, List<GFF3Feature>> mrnaGroups = ValidationUtils.groupFeaturesById(annotation, this::isMrna);
@@ -246,26 +245,16 @@ public class CdsMrnaLocationValidation implements Validation {
         return "%d..%d".formatted(sortedSegments.get(0).getStart(), end);
     }
 
+    /**
+     * Descendants are not accepted here or in {@link #isMrna}: none of those of CDS or mRNA map to an
+     * INSDC feature, so admitting them would only widen the rule onto types the conversion cannot
+     * represent.
+     */
     private boolean isCds(GFF3Feature feature) {
-        return isSoTerm(feature, OntologyTerm.CDS.ID);
+        return context.get(OntologyClient.class).isSoTerm(feature.getName(), OntologyTerm.CDS.ID);
     }
 
     private boolean isMrna(GFF3Feature feature) {
-        return isSoTerm(feature, OntologyTerm.MRNA.ID);
-    }
-
-    /**
-     * Whether the feature is typed as exactly this SO term. Descendants are not accepted because
-     * none of those of CDS or mRNA map to an INSDC feature, so admitting them would only widen the
-     * rule onto types the conversion cannot represent.
-     */
-    private boolean isSoTerm(GFF3Feature feature, String ontologyId) {
-        if (feature == null) {
-            return false;
-        }
-        return context.get(OntologyClient.class)
-                .findTermByNameOrSynonym(feature.getName())
-                .filter(ontologyId::equals)
-                .isPresent();
+        return context.get(OntologyClient.class).isSoTerm(feature.getName(), OntologyTerm.MRNA.ID);
     }
 }

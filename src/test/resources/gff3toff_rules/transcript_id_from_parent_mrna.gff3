@@ -1,0 +1,14 @@
+##gff-version 3.1.26
+##sequence-region BN000065.1 1 1000
+BN000065.1	.	gene	1	1000	.	+	.	ID=gene1;gene=ABC
+BN000065.1	.	mRNA	1	200	.	+	.	ID=rna1;Parent=gene1;transcript_id=tx_A
+BN000065.1	.	mRNA	401	1000	.	+	.	ID=rna1;Parent=gene1;transcript_id=tx_A
+BN000065.1	.	CDS	51	200	.	+	0	ID=cds1;Parent=rna1
+BN000065.1	.	CDS	401	900	.	+	0	ID=cds1;Parent=rna1
+BN000065.1	.	SO:0000234	1	1000	.	+	.	ID=rna2;Parent=gene1;transcript_id=tx_B
+BN000065.1	.	CDS	51	950	.	+	0	ID=cds2;Parent=rna2
+BN000065.1	.	mRNA	1	990	.	+	.	ID=rna3;Parent=gene1
+BN000065.1	.	CDS	51	960	.	+	0	ID=cds3;Parent=rna3
+BN000065.1	.	mRNA	1	980	.	+	.	ID=rna4;Parent=gene1;transcript_id=tx_D
+BN000065.1	.	CDS	51	970	.	+	0	ID=cds4;Parent=rna4;transcript_id=tx_D
+BN000065.1	.	CDS	51	940	.	+	0	ID=cds5;Parent=gene1
