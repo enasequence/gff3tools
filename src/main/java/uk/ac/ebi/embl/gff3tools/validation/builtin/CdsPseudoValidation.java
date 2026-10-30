@@ -15,6 +15,7 @@ import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -48,6 +49,10 @@ public class CdsPseudoValidation {
     private static final String CDS_PSEUDO_TRANSLATION_MESSAGE =
             "%s \"%s\" at %s:%s has a translation but is pseudo: %s. A pseudo CDS must not have a"
                     + " translation; remove it.";
+
+    private static final String UNREADABLE_SOURCE_TRANSLATIONS_MESSAGE =
+            "Could not check the translations of pseudo CDS features, because the ##FASTA section could not be"
+                    + " read: %s";
 
     @InjectContext
     private ValidationContext context;
@@ -90,11 +95,10 @@ public class CdsPseudoValidation {
 
         List<String> violations = new ArrayList<>();
         for (List<GFF3Feature> segments : cdsGroups(annotation, pseudoLookup)) {
-            pseudoLookup.pseudoReason(segments).ifPresent(reason -> {
-                if (hasTranslation(segments)) {
-                    violations.add(describe(CDS_PSEUDO_TRANSLATION_MESSAGE, segments, reason));
-                }
-            });
+            Optional<String> reason = pseudoLookup.pseudoReason(segments);
+            if (reason.isPresent() && hasTranslation(segments, line)) {
+                violations.add(describe(CDS_PSEUDO_TRANSLATION_MESSAGE, segments, reason.get()));
+            }
         }
 
         if (!violations.isEmpty()) {
@@ -113,7 +117,7 @@ public class CdsPseudoValidation {
      * {@code ##FASTA}. A recorded translation counts whether submitted or generated, matching what
      * {@link TranslationState#forEachResolved} writes out.
      */
-    private boolean hasTranslation(List<GFF3Feature> segments) {
+    private boolean hasTranslation(List<GFF3Feature> segments, int line) throws ValidationException {
         if (segments.stream().anyMatch(s -> s.hasAttribute(GFF3Attributes.TRANSLATION))) {
             return true;
         }
@@ -133,8 +137,20 @@ public class CdsPseudoValidation {
             }
         }
 
-        return context.contains(SourceTranslations.class)
-                && context.get(SourceTranslations.class).contains(key);
+        return context.contains(SourceTranslations.class) && hasSourceTranslation(key, line);
+    }
+
+    /**
+     * Reading the source file's {@code ##FASTA} fails with an unchecked exception when the section is
+     * malformed. Report-only validation has no other reason to read it, so the failure is reported
+     * here as a violation rather than ending the run with a stack trace.
+     */
+    private boolean hasSourceTranslation(String key, int line) throws ValidationException {
+        try {
+            return context.get(SourceTranslations.class).contains(key);
+        } catch (RuntimeException e) {
+            throw new ValidationException(line, UNREADABLE_SOURCE_TRANSLATIONS_MESSAGE.formatted(e.getMessage()));
+        }
     }
 
     private static boolean isPresent(String translation) {

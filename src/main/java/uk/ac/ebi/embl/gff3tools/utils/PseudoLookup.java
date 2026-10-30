@@ -26,14 +26,16 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 public final class PseudoLookup {
 
     private final OntologyClient ontologyClient;
-    private final Map<String, GFF3Feature> featuresById = new HashMap<>();
+    private final Map<String, List<GFF3Feature>> linesById = new HashMap<>();
     private final Map<GFF3Feature, Optional<String>> ownReasons = new IdentityHashMap<>();
 
     private PseudoLookup(GFF3Annotation annotation, OntologyClient ontologyClient) {
         this.ontologyClient = ontologyClient;
         for (GFF3Feature feature : annotation.getFeatures()) {
             if (feature != null) {
-                feature.getId().ifPresent(id -> featuresById.putIfAbsent(id, feature));
+                feature.getId().ifPresent(id -> linesById
+                        .computeIfAbsent(id, key -> new ArrayList<>())
+                        .add(feature));
             }
         }
     }
@@ -53,11 +55,8 @@ public final class PseudoLookup {
 
     /** True for a feature typed {@code CDS} or {@code pseudogenic_CDS}. */
     public static boolean isCdsOrPseudogenicCds(GFF3Feature feature, OntologyClient ontologyClient) {
-        return ontologyClient
-                .findTermByNameOrSynonym(feature.getName())
-                .map(soId -> OntologyTerm.CDS.ID.equals(soId)
-                        || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENIC_CDS.ID))
-                .orElse(false);
+        return ontologyClient.isSoTerm(feature.getName(), OntologyTerm.CDS.ID)
+                || ontologyClient.isSoTerm(feature.getName(), OntologyTerm.PSEUDOGENIC_CDS.ID);
     }
 
     /**
@@ -84,17 +83,23 @@ public final class PseudoLookup {
             return own.map(reason -> "it " + reason);
         }
 
-        Set<GFF3Feature> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-        seen.add(feature);
-        GFF3Feature current = feature;
-        GFF3Feature parent;
-        while ((parent = parentOf(current)) != null && seen.add(parent)) {
-            Optional<String> inherited = ownReason(parent);
-            if (inherited.isPresent()) {
-                return Optional.of(
-                        "its ancestor \"%s\" %s".formatted(parent.getId().orElse(""), inherited.get()));
+        // Parents are resolved from Parent references, because only the flat file to GFF3 path ever
+        // sets the linked parent object. Every line of a parent counts, as for the feature's own.
+        Set<String> seen = new HashSet<>();
+        Deque<String> pending = new ArrayDeque<>();
+        feature.getParentId().ifPresent(pending::add);
+        while (!pending.isEmpty()) {
+            String parentId = pending.poll();
+            if (!seen.add(parentId)) {
+                continue;
             }
-            current = parent;
+            for (GFF3Feature parentLine : linesById.getOrDefault(parentId, List.of())) {
+                Optional<String> inherited = ownReason(parentLine);
+                if (inherited.isPresent()) {
+                    return Optional.of("its ancestor \"%s\" %s".formatted(parentId, inherited.get()));
+                }
+                parentLine.getParentId().ifPresent(pending::add);
+            }
         }
         return Optional.empty();
     }
@@ -115,19 +120,11 @@ public final class PseudoLookup {
             }
         }
         boolean pseudoType = ontologyClient
-                .findTermByNameOrSynonym(feature.getName())
+                .getSoTermId(feature.getName())
                 .map(soId -> ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENE.ID)
                         || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENIC_REGION.ID))
                 .orElse(false);
         return pseudoType ? Optional.of("is of type " + feature.getName()) : Optional.empty();
-    }
-
-    /**
-     * The parent of a feature, resolved from its {@code Parent} reference. The linked parent object
-     * is not consulted because only the flat file to GFF3 path ever sets it.
-     */
-    private GFF3Feature parentOf(GFF3Feature feature) {
-        return feature.getParentId().map(featuresById::get).orElse(null);
     }
 
     /**
