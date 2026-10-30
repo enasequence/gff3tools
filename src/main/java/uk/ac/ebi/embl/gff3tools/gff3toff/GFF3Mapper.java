@@ -11,15 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.gff3toff;
 
 import java.nio.ByteBuffer;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.format.DateTimeParseException;
 import java.util.*;
-import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.api.entry.Entry;
@@ -44,13 +36,10 @@ import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
-import uk.ac.ebi.embl.gff3tools.metadata.AuthorData;
 import uk.ac.ebi.embl.gff3tools.metadata.CrossReference;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
 import uk.ac.ebi.embl.gff3tools.metadata.ReferenceData;
-import uk.ac.ebi.embl.gff3tools.metadata.SubmissionAccount;
-import uk.ac.ebi.embl.gff3tools.metadata.SubmitterDetails;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
@@ -72,7 +61,6 @@ public class GFF3Mapper {
     private final QualifierFactory qualifierFactory = new QualifierFactory();
     private final LocationFactory locationFactory = new LocationFactory();
     private final SequenceFactory sequenceFactory = new SequenceFactory();
-    private final ReferenceFactory referenceFactory = new ReferenceFactory();
     private static final Logger LOGGER = LoggerFactory.getLogger(GFF3Mapper.class);
 
     Map<String, GFF3Feature> parentFeatures;
@@ -665,7 +653,7 @@ public class GFF3Mapper {
 
         // DT lines: first public and last updated (dates + release numbers)
         if (m.getFirstPublic() != null) {
-            Date date = parseDate(m.getFirstPublic());
+            Date date = ReferenceMapper.parseDate(m.getFirstPublic());
             if (date != null) {
                 entry.setFirstPublic(date);
             }
@@ -674,7 +662,7 @@ public class GFF3Mapper {
             entry.setFirstPublicRelease(m.getFirstPublicRelease());
         }
         if (m.getLastUpdated() != null) {
-            Date date = parseDate(m.getLastUpdated());
+            Date date = ReferenceMapper.parseDate(m.getLastUpdated());
             if (date != null) {
                 entry.setLastUpdated(date);
             }
@@ -723,46 +711,12 @@ public class GFF3Mapper {
     }
 
     /**
-     * Maps a ReferenceData to an EMBL Reference and adds it to the entry.
-     * Creates a {@link Submission} when nested submitter details contain a valid
-     * submitted date; otherwise falls back to {@link Unpublished}. When
-     * {@code contigRpLength} is non-null the resulting Reference is given an RP
-     * range of 1..contigRpLength.
+     * Maps a ReferenceData to an EMBL Reference (see {@link ReferenceMapper}) and adds it to
+     * the entry. When {@code contigRpLength} is non-null the Reference is given an RP range
+     * of 1..contigRpLength.
      */
     private void mapReference(ReferenceData refData, Entry entry, Long contigRpLength) {
-        Publication publication = createSubmissionPublication(refData);
-        if (publication == null) {
-            publication = referenceFactory.createUnpublished();
-        }
-
-        if (refData.getTitle() != null) {
-            publication.setTitle(refData.getTitle());
-        }
-
-        if (refData.getConsortium() != null) {
-            publication.setConsortium(refData.getConsortium());
-        }
-
-        SubmitterDetails submitterDetails = refData.getSubmitterDetails();
-        List<AuthorData> authors = submitterDetails == null ? null : submitterDetails.getAuthors();
-        if (authors != null) {
-            for (AuthorData author : authors) {
-                if (author == null) continue;
-                String surname = author.getSurname() == null
-                        ? ""
-                        : author.getSurname().trim().replaceAll("\\s+", " ");
-                String initials = toInitials(author.getFirstName()) + toInitials(author.getMiddleName());
-                if (surname.isEmpty() && initials.isEmpty()) continue;
-                publication.addAuthor(referenceFactory.createPerson(
-                        surname.isEmpty() ? null : surname, initials.isEmpty() ? null : initials));
-            }
-        }
-
-        Reference reference = referenceFactory.createReference(publication, refData.getReferenceNumber());
-
-        if (refData.getReferenceComment() != null) {
-            reference.setComment(refData.getReferenceComment());
-        }
+        Reference reference = ReferenceMapper.map(refData);
 
         if (contigRpLength != null && contigRpLength > 0) {
             Order<LocalRange> rpLocations = new Order<>();
@@ -771,62 +725,6 @@ public class GFF3Mapper {
         }
 
         entry.addReference(reference);
-    }
-
-    private Submission createSubmissionPublication(ReferenceData refData) {
-        SubmitterDetails submitterDetails = refData.getSubmitterDetails();
-        // Submission RL lines require a valid submitted date. When submitter details are
-        // absent or the date is missing/unparseable, fall back to an unpublished reference
-        // instead of emitting a malformed EMBL submission location.
-        if (submitterDetails == null || submitterDetails.getSubmittedDate() == null) {
-            return null;
-        }
-        Date parsedDate = parseDate(submitterDetails.getSubmittedDate());
-        if (parsedDate == null) {
-            LOGGER.warn(
-                    "Unable to map submission reference location due to invalid submittedDate '{}'",
-                    submitterDetails.getSubmittedDate());
-            return null;
-        }
-        Submission submission = referenceFactory.createSubmission();
-        submission.setDay(parsedDate);
-        String address = buildSubmitterAddress(submitterDetails.getSubmissionAccount());
-        if (address != null && !address.isBlank()) {
-            submission.setSubmitterAddress(address);
-        }
-        return submission;
-    }
-
-    private static String buildSubmitterAddress(SubmissionAccount account) {
-        if (account == null) {
-            return null;
-        }
-        String institutionLine = Stream.of(account.getCenterName(), account.getLaboratoryName())
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(part -> !part.isEmpty())
-                .reduce((left, right) -> left + ", " + right)
-                .orElse(null);
-
-        String addressLine = Stream.of(account.getAddress(), account.getCountry())
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(part -> !part.isEmpty())
-                .reduce((left, right) -> left + ", " + right)
-                .orElse(null);
-
-        if (institutionLine == null) {
-            return addressLine;
-        }
-        if (addressLine == null) {
-            return institutionLine;
-        }
-        // Join with a comma so the EMBL RL writer wraps on commas across the
-        // whole address (rather than treating institution and address as two
-        // separate blocks). The writer collapses any embedded newline to a
-        // single space anyway, so a `\n` separator would yield the institution
-        // and address running together with no separator.
-        return institutionLine + ", " + addressLine;
     }
 
     /**
@@ -862,25 +760,6 @@ public class GFF3Mapper {
             prefix.append('0');
         }
         return prefix.toString();
-    }
-
-    /**
-     * Reduce a name component (firstName or middleName) to compact EMBL initials,
-     * each letter followed by a period, no separators between letters. Accepts:
-     * full name ("Eleanor" → "E."), single initial with or without period
-     * ("E." / "E" → "E."), and multiple initials separated by spaces and/or
-     * periods ("E. P." / "E P" / "E.P." → "E.P."). Returns "" for null/blank.
-     */
-    static String toInitials(String component) {
-        if (component == null) return "";
-        StringBuilder sb = new StringBuilder();
-        for (String token : component.trim().split("\\s+")) {
-            for (String sub : token.split("\\.")) {
-                if (sub.isEmpty()) continue;
-                sb.append(Character.toUpperCase(sub.charAt(0))).append('.');
-            }
-        }
-        return sb.toString();
     }
 
     /** Target content width for `CC` lines (EMBL convention is 80 total = 5-col prefix + 75). */
@@ -980,64 +859,6 @@ public class GFF3Mapper {
         if (metagenomeSource != null && !metagenomeSource.isBlank()) {
             sourceFt.addQualifier(qualifierFactory.createQualifier("environmental_sample"));
         }
-    }
-
-    private static final DateTimeFormatter EMBL_DATE_FORMATTER = new DateTimeFormatterBuilder()
-            .parseCaseInsensitive()
-            .appendPattern("dd-MMM-yyyy")
-            .toFormatter(Locale.ENGLISH);
-
-    /**
-     * Parses a date string into a {@link Date} whose calendar day (in the JVM
-     * default zone) matches the UTC calendar day of the input. The downstream
-     * EMBL writer reformats the {@link Date} back through {@link ZoneId#systemDefault()},
-     * so anchoring start-of-day in the same zone keeps the rendered DT/Submitted
-     * line stable across runners.
-     *
-     * <p>Supports: ISO-8601 offset/zoned datetimes, ISO-8601 instants ("...Z"),
-     * ISO-8601 local datetimes / dates (assumed UTC), and EMBL "dd-MMM-yyyy".
-     */
-    private Date parseDate(String dateStr) {
-        LocalDate utcDate = parseToUtcLocalDate(dateStr);
-        if (utcDate == null) {
-            LOGGER.warn("Unable to parse date '{}'; skipping date mapping", dateStr);
-            return null;
-        }
-        return Date.from(utcDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
-    }
-
-    private LocalDate parseToUtcLocalDate(String dateStr) {
-        // ISO-8601 with offset (e.g. "2025-04-03T01:00:00+12:00", "...Z")
-        try {
-            return OffsetDateTime.parse(dateStr)
-                    .toInstant()
-                    .atZone(ZoneOffset.UTC)
-                    .toLocalDate();
-        } catch (DateTimeParseException ignored) {
-            // not an offset datetime; try other formats
-        }
-
-        // ISO-8601 local datetime (no offset) — interpret as UTC
-        try {
-            return DateTimeFormatter.ISO_LOCAL_DATE_TIME.parse(dateStr, LocalDate::from);
-        } catch (DateTimeParseException ignored) {
-            // not a local datetime; try other formats
-        }
-
-        // ISO-8601 local date
-        try {
-            return LocalDate.parse(dateStr);
-        } catch (DateTimeParseException ignored) {
-            // not an ISO local date
-        }
-
-        // EMBL "dd-MMM-yyyy"
-        try {
-            return LocalDate.parse(dateStr, EMBL_DATE_FORMATTER);
-        } catch (DateTimeParseException ignored) {
-            // not EMBL date format
-        }
-        return null;
     }
 
     /** ID line field 3, resolved as validation resolves it; unset when no source declares one. */
