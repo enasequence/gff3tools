@@ -168,9 +168,11 @@ public class AttributesLocationValidation implements Validation {
                                 line, INVALID_LOCATION_RANGE.formatted(attribute, start, end, fullStart, fullEnd));
                     }
 
-                    // Length must be 3 unless transl_except TERM
+                    // Length must be 3 unless transl_except TERM, in any of the spellings read as a stop
+                    // codon. Where a stop codon may be shorter is TRANSL_EXCEPT_CODON's call.
                     if (length != 3
-                            && !(attribute.equalsIgnoreCase(TRANSL_EXCEPT) && TERM_AMINO_ACID.equals(aminoAcidCode))) {
+                            && !(attribute.equalsIgnoreCase(TRANSL_EXCEPT)
+                                    && AminoAcidExcept.getAminoAcidLetter(aminoAcidCode) == '*')) {
                         throw new ValidationException(line, INVALID_LOCATION_SPAN.formatted(attribute, 3, fullStart));
                     }
                 }
