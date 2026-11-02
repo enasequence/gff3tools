@@ -425,7 +425,8 @@ public class AttributesLocationValidationTest {
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class, () -> attributesLocationValidation.validateTranslExcept(gff3Annotation, 1));
 
-        Assertions.assertTrue(ex.getMessage().contains("%s location span must be \"3\"".formatted(TRANSL_EXCEPT)));
+        Assertions.assertTrue(ex.getMessage()
+                .contains("%s location span must be \"3\" at location 252..258".formatted(TRANSL_EXCEPT)));
     }
 
     @ParameterizedTest

@@ -31,7 +31,7 @@ public class AttributesLocationValidation implements Validation {
     private static final String INVALID_LOCATION_RANGE = "%s location %s..%s is outside feature range %s..%s";
     private static final String INVALID_LOCATION_VALUE =
             "Invalid %s location: start must be > 0 and less than end at %s..%s";
-    private static final String INVALID_LOCATION_SPAN = "%s location span must be \"%s\" at location %s";
+    private static final String INVALID_LOCATION_SPAN = "%s location span must be \"%s\" at location %s..%s";
     private static final String COMPLEMENT_STRAND_CONFLICT =
             "%s location is wrapped in complement() but the containing feature is on strand \"%s\": %s";
 
@@ -173,7 +173,7 @@ public class AttributesLocationValidation implements Validation {
                     boolean stopCodon = attribute.equalsIgnoreCase(TRANSL_EXCEPT)
                             && AminoAcidExcept.getAminoAcidLetter(aminoAcidCode) == '*';
                     if (length > 3 || (length < 3 && !stopCodon)) {
-                        throw new ValidationException(line, INVALID_LOCATION_SPAN.formatted(attribute, 3, fullStart));
+                        throw new ValidationException(line, INVALID_LOCATION_SPAN.formatted(attribute, 3, start, end));
                     }
                 }
             }

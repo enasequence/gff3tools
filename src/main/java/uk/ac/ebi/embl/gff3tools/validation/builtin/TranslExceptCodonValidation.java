@@ -222,7 +222,10 @@ public class TranslExceptCodonValidation implements Validation {
                 cds.id(), cds.location(), text, intoCodon, intoCodon == 1 ? "" : "s", codonStart));
     }
 
-    /** The CDSs of the annotation that carry at least one transl_except read as a codon. */
+    /**
+     * The CDSs of the annotation that carry at least one transl_except read as a codon. Each row of a
+     * join repeats the CDS's values, so a value copied across rows counts once.
+     */
     private List<CdsExceptions> readCdsExceptions(GFF3Annotation annotation) {
         List<CdsExceptions> result = new ArrayList<>();
         for (List<GFF3Feature> segments :
