@@ -66,22 +66,36 @@ public class TranslExceptCodonValidation implements Validation {
 
     private static final int DEFAULT_CODON_START = 1;
 
-    private static final String CODON_MESSAGE = "A transl_except must be given only once per codon, on one full codon "
-            + "(3 bp, or 1-2 bp for a stop codon completed by polyadenylation) in the CDS's reading frame:%s";
+    private static final String CODON_MESSAGE =
+            "Each transl_except must name one full codon of its CDS, once, in the CDS's reading frame:%s";
 
-    private static final String REPEATED_MESSAGE = "\ntransl_except \"%s\" on CDS %s is given more than once";
+    private static final String CDS_HEADER = "\nCDS %s:";
 
-    private static final String OVERLAP_MESSAGE = "\ntransl_except \"%s\" and \"%s\" on CDS %s both cover bases %d..%d";
+    private static final String PROBLEM = "\n  - %s";
+
+    private static final String REPEATED_MESSAGE = "\"%s\" is given more than once; keep one";
+
+    private static final String SAME_CODON_MESSAGE = "\"%s\" and \"%s\" both name the codon at %d..%d; keep one";
+
+    private static final String OVERLAP_MESSAGE =
+            "\"%s\" and \"%s\" overlap at %d..%d, so they cannot both be codons of this CDS";
 
     private static final String TOO_LONG_MESSAGE =
-            "\ntransl_except \"%s\" on CDS %s spans %d bases, more than one codon";
+            "\"%s\" spans %d bases, but a stop codon spans 3 bases, or 1-2 at the 3' end of the CDS";
 
-    private static final String NOT_AT_END_MESSAGE =
-            "\ntransl_except \"%s\" on CDS %s is a %d-base stop codon but does not end the coding sequence";
+    private static final String NOT_AT_END_MESSAGE = "\"%s\" is a %d-base stop codon but does not end the CDS, "
+            + "whose 3' end is at %d; only the last 1-2 bases of a CDS can form a stop codon completed by "
+            + "polyadenylation";
 
-    private static final String OUT_OF_FRAME_MESSAGE =
-            "\ntransl_except \"%s\" on CDS %s starts at base %d of the coding sequence, which is in frame %d, "
-                    + "but codon_start is %d";
+    private static final String OUT_OF_FRAME_MESSAGE = "\"%s\" is out of frame: it starts %d base%s into a codon "
+            + "(base %d of the spliced coding sequence, codon_start=%d)%s";
+
+    private static final String BEFORE_FIRST_CODON_MESSAGE = "\"%s\" is out of frame: it starts at base %d of the "
+            + "spliced coding sequence, before the first full codon at base %d (codon_start=%d)%s";
+
+    private static final String NEAREST_CODON = "; the nearest codon is at %s";
+
+    private static final String NEAREST_CODONS = "; the nearest codons are at %s and %s";
 
     @InjectContext
     private ValidationContext context;
@@ -101,11 +115,17 @@ public class TranslExceptCodonValidation implements Validation {
                 continue;
             }
 
-            String cds = describe(segments);
             CdsLayout layout = new CdsLayout(segments);
-            checkOncePerCodon(segments, values, cds, violations);
-            checkStopCodonSpans(values, layout, cds, violations);
-            checkReadingFrame(segments, values, layout, cds, violations);
+            List<String> problems = new ArrayList<>();
+            checkOncePerCodon(segments, values, problems);
+            checkStopCodonSpans(values, layout, problems);
+            checkReadingFrame(segments, values, layout, problems);
+
+            if (!problems.isEmpty()) {
+                StringBuilder violation = new StringBuilder(CDS_HEADER.formatted(describe(segments)));
+                problems.forEach(problem -> violation.append(PROBLEM.formatted(problem)));
+                violations.add(violation.toString());
+            }
         }
 
         if (!violations.isEmpty()) {
@@ -118,10 +138,7 @@ public class TranslExceptCodonValidation implements Validation {
      * naming the same codon, or overlapping it.
      */
     private void checkOncePerCodon(
-            List<GFF3Feature> segments,
-            Map<String, TranslExceptAttribute> values,
-            String cds,
-            List<String> violations) {
+            List<GFF3Feature> segments, Map<String, TranslExceptAttribute> values, List<String> problems) {
         Set<String> repeated = new LinkedHashSet<>();
         for (GFF3Feature segment : segments) {
             Set<String> seen = new HashSet<>();
@@ -131,7 +148,7 @@ public class TranslExceptCodonValidation implements Validation {
                 }
             }
         }
-        repeated.forEach(value -> violations.add(REPEATED_MESSAGE.formatted(value, cds)));
+        repeated.forEach(value -> problems.add(REPEATED_MESSAGE.formatted(value)));
 
         List<Map.Entry<String, TranslExceptAttribute>> entries = List.copyOf(values.entrySet());
         for (int i = 0; i < entries.size(); i++) {
@@ -140,17 +157,20 @@ public class TranslExceptCodonValidation implements Validation {
                 TranslExceptAttribute b = entries.get(j).getValue();
                 int sharedStart = Math.max(a.getStartPosition(), b.getStartPosition());
                 int sharedEnd = Math.min(a.getEndPosition(), b.getEndPosition());
-                if (sharedStart <= sharedEnd) {
-                    violations.add(OVERLAP_MESSAGE.formatted(
-                            entries.get(i).getKey(), entries.get(j).getKey(), cds, sharedStart, sharedEnd));
+                if (sharedStart > sharedEnd) {
+                    continue;
                 }
+                boolean sameCodon = a.getStartPosition().equals(b.getStartPosition())
+                        && a.getEndPosition().equals(b.getEndPosition());
+                problems.add((sameCodon ? SAME_CODON_MESSAGE : OVERLAP_MESSAGE)
+                        .formatted(entries.get(i).getKey(), entries.get(j).getKey(), sharedStart, sharedEnd));
             }
         }
     }
 
     /** A stop codon may be shorter than 3 bases only where it ends the coding sequence, and never longer. */
     private void checkStopCodonSpans(
-            Map<String, TranslExceptAttribute> values, CdsLayout layout, String cds, List<String> violations) {
+            Map<String, TranslExceptAttribute> values, CdsLayout layout, List<String> problems) {
         values.forEach((text, value) -> {
             if (value.getAminoAcidLetter() != STOP_CODON) {
                 return;
@@ -158,7 +178,7 @@ public class TranslExceptCodonValidation implements Validation {
 
             int span = value.getEndPosition() - value.getStartPosition() + 1;
             if (span > 3) {
-                violations.add(TOO_LONG_MESSAGE.formatted(text, cds, span));
+                problems.add(TOO_LONG_MESSAGE.formatted(text, span));
                 return;
             }
             if (span == 3) {
@@ -167,7 +187,7 @@ public class TranslExceptCodonValidation implements Validation {
 
             Optional<CdsLayout.Span> located = layout.locate(value.getStartPosition(), value.getEndPosition());
             if (located.isPresent() && located.get().last() != layout.length()) {
-                violations.add(NOT_AT_END_MESSAGE.formatted(text, cds, span));
+                problems.add(NOT_AT_END_MESSAGE.formatted(text, span, layout.threePrimeEnd()));
             }
         });
     }
@@ -176,8 +196,7 @@ public class TranslExceptCodonValidation implements Validation {
             List<GFF3Feature> segments,
             Map<String, TranslExceptAttribute> values,
             CdsLayout layout,
-            String cds,
-            List<String> violations) {
+            List<String> problems) {
         Optional<Integer> codonStart = findCodonStart(segments);
         if (codonStart.isEmpty() || isNotReadInOneFrame(segments)) {
             return;
@@ -189,11 +208,41 @@ public class TranslExceptCodonValidation implements Validation {
                 return;
             }
             long first = located.get().first();
-            long frame = (first - 1) % 3 + 1;
-            if (frame != codonStart.get()) {
-                violations.add(OUT_OF_FRAME_MESSAGE.formatted(text, cds, first, frame, codonStart.get()));
+            if (first < codonStart.get()) {
+                problems.add(BEFORE_FIRST_CODON_MESSAGE.formatted(
+                        text, first, codonStart.get(), codonStart.get(), nearestCodons(layout, codonStart.get())));
+                return;
+            }
+            long intoCodon = Math.floorMod(first - codonStart.get(), 3);
+            if (intoCodon != 0) {
+                long codonBefore = first - intoCodon;
+                problems.add(OUT_OF_FRAME_MESSAGE.formatted(
+                        text,
+                        intoCodon,
+                        intoCodon == 1 ? "" : "s",
+                        first,
+                        codonStart.get(),
+                        nearestCodons(layout, codonBefore, codonBefore + 3)));
             }
         });
+    }
+
+    /**
+     * Where the codons starting at the given bases of the spliced coding sequence sit on the sequence,
+     * for the submitter to pick from. A codon split across an intron is left out, as one transl_except
+     * position cannot name it.
+     */
+    private String nearestCodons(CdsLayout layout, long... codonFirstBases) {
+        List<String> codons = new ArrayList<>();
+        for (long codonFirst : codonFirstBases) {
+            layout.toSequence(codonFirst, codonFirst + 2)
+                    .ifPresent(bases -> codons.add("%d..%d".formatted(bases.start(), bases.end())));
+        }
+        return switch (codons.size()) {
+            case 0 -> "";
+            case 1 -> NEAREST_CODON.formatted(codons.get(0));
+            default -> NEAREST_CODONS.formatted(codons.get(0), codons.get(1));
+        };
     }
 
     /**
@@ -323,7 +372,37 @@ public class TranslExceptCodonValidation implements Validation {
             return Optional.empty();
         }
 
+        /**
+         * The reverse of {@link #locate}: the bases on the sequence that positions {@code first..last}
+         * of the spliced coding sequence sit at, lowest first. Empty where no single segment holds them
+         * all, as for a codon split across an intron or past either end.
+         */
+        Optional<Bases> toSequence(long first, long last) {
+            long preceding = 0;
+            for (GFF3Feature segment : readingOrder) {
+                if (first > preceding && last <= preceding + segment.getLength()) {
+                    long fromFirst = first - preceding - 1;
+                    long fromLast = last - preceding - 1;
+                    return Optional.of(
+                            segment.isComplement()
+                                    ? new Bases(segment.getEnd() - fromLast, segment.getEnd() - fromFirst)
+                                    : new Bases(segment.getStart() + fromFirst, segment.getStart() + fromLast));
+                }
+                preceding += segment.getLength();
+            }
+            return Optional.empty();
+        }
+
+        /** The sequence position of the CDS's 3'-most base. */
+        long threePrimeEnd() {
+            GFF3Feature last = readingOrder.get(readingOrder.size() - 1);
+            return last.isComplement() ? last.getStart() : last.getEnd();
+        }
+
         /** Positions in the spliced coding sequence: {@code first} is the 5'-most base, {@code last} the 3'-most. */
         record Span(long first, long last) {}
+
+        /** Positions on the sequence, {@code start <= end}. */
+        record Bases(long start, long end) {}
     }
 }
