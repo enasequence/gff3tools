@@ -135,7 +135,7 @@ class TranslExceptCodonValidationTest {
 
         @Test
         void passesWhenAShortStopEndsAMinusStrandCdsAtItsLowestCoordinate() {
-            cds(MINUS, 1, 298, te("complement(1)", "TERM"));
+            cds(MINUS, 1, 298, te("1", "TERM"));
 
             assertDoesNotThrow(this::validate);
         }
@@ -150,8 +150,8 @@ class TranslExceptCodonValidationTest {
 
         @Test
         void passesWhenAShortStopEndsAMinusStrandJoinAtItsLowestCoordinate() {
-            cds(MINUS, 1, 150, te("complement(1)", "TERM"));
-            cds(MINUS, 201, 349, te("complement(1)", "TERM"));
+            cds(MINUS, 1, 150, te("1", "TERM"));
+            cds(MINUS, 201, 349, te("1", "TERM"));
 
             assertDoesNotThrow(this::validate);
         }
@@ -176,7 +176,7 @@ class TranslExceptCodonValidationTest {
 
         @Test
         void failsWhenAShortStopSitsAtTheHighestCoordinateOfAMinusStrandCds() {
-            cds(MINUS, 1, 298, te("complement(298)", "TERM"));
+            cds(MINUS, 1, 298, te("298", "TERM"));
 
             assertTrue(violationsOf(this::validate).contains("does not end the CDS, whose 3' end is at 1"));
         }
@@ -210,8 +210,9 @@ class TranslExceptCodonValidationTest {
             cds(1, 300, te(position, "Sec"));
 
             assertTrue(violationsOf(this::validate)
-                    .contains("CDS \"cds1\" at seq1:1..300: \"(pos:%s,aa:Sec)\" starts %s into a codon (codon_start=1)"
-                            .formatted(position, offset)));
+                    .contains(
+                            "CDS \"cds1\" at seq1:1..300: \"(pos:%s,aa:Sec)\" starts %s into a codon on strand \"+\" (codon_start=1)"
+                                    .formatted(position, offset)));
         }
 
         @Test
@@ -243,12 +244,12 @@ class TranslExceptCodonValidationTest {
         @Test
         void readsAMinusStrandJoinFromItsHighestCoordinate() {
             // 350 is base 1 of the spliced sequence, so 348..350 is a codon and 347..349 is not
-            cds(MINUS, 1, 150, te("complement(348..350)", "Met"), te("complement(347..349)", "Trp"));
-            cds(MINUS, 201, 350, te("complement(348..350)", "Met"), te("complement(347..349)", "Trp"));
+            cds(MINUS, 1, 150, te("348..350", "Met"), te("347..349", "Trp"));
+            cds(MINUS, 201, 350, te("348..350", "Met"), te("347..349", "Trp"));
 
             String violations = violationsOf(this::validate);
-            assertTrue(violations.contains("\"(pos:complement(347..349),aa:Trp)\" starts 1 base into a codon"));
-            assertFalse(violations.contains("(pos:complement(348..350),aa:Met)"));
+            assertTrue(violations.contains("\"(pos:347..349,aa:Trp)\" starts 1 base into a codon on strand \"-\""));
+            assertFalse(violations.contains("(pos:348..350,aa:Met)"));
         }
 
         @Test
@@ -277,25 +278,13 @@ class TranslExceptCodonValidationTest {
 
         @Test
         void readsEachSegmentOfAMixedStrandJoinInItsOwnDirection() {
-            // complement(1..150) is read from 150, so 150 is base 1 and 201 is base 151
-            cds(
-                    MINUS,
-                    1,
-                    150,
-                    te("complement(148..150)", "Met"),
-                    te("201..203", "Sec"),
-                    te("complement(147..149)", "Trp"));
-            cds(
-                    PLUS,
-                    201,
-                    350,
-                    te("complement(148..150)", "Met"),
-                    te("201..203", "Sec"),
-                    te("complement(147..149)", "Trp"));
+            // The minus-strand row 1..150 is read from 150, so 150 is base 1 and 201 is base 151
+            cds(MINUS, 1, 150, te("148..150", "Met"), te("201..203", "Sec"), te("147..149", "Trp"));
+            cds(PLUS, 201, 350, te("148..150", "Met"), te("201..203", "Sec"), te("147..149", "Trp"));
 
             String violations = violationsOf(this::validate);
-            assertTrue(violations.contains("\"(pos:complement(147..149),aa:Trp)\" starts 1 base into a codon"));
-            assertFalse(violations.contains("(pos:complement(148..150),aa:Met)"));
+            assertTrue(violations.contains("\"(pos:147..149,aa:Trp)\" starts 1 base into a codon on strand \"-\""));
+            assertFalse(violations.contains("(pos:148..150,aa:Met)"));
             assertFalse(violations.contains("(pos:201..203,aa:Sec)"));
         }
 

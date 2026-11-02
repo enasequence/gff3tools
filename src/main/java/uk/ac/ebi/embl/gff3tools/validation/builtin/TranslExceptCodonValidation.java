@@ -74,7 +74,7 @@ public class TranslExceptCodonValidation implements Validation {
     private static final String READING_FRAME_MESSAGE =
             "A transl_except must name a codon in the CDS's reading frame:%s";
     private static final String OUT_OF_FRAME_VIOLATION =
-            "\nCDS \"%s\" at %s: \"%s\" starts %d base%s into a codon (codon_start=%d)";
+            "\nCDS \"%s\" at %s: \"%s\" starts %d base%s into a codon on strand \"%s\" (codon_start=%d)";
     private static final String BEFORE_FIRST_CODON_VIOLATION =
             "\nCDS \"%s\" at %s: \"%s\" starts before the first full codon (codon_start=%d)";
 
@@ -219,7 +219,13 @@ public class TranslExceptCodonValidation implements Validation {
             return Optional.empty();
         }
         return Optional.of(OUT_OF_FRAME_VIOLATION.formatted(
-                cds.id(), cds.location(), text, intoCodon, intoCodon == 1 ? "" : "s", codonStart));
+                cds.id(),
+                cds.location(),
+                text,
+                intoCodon,
+                intoCodon == 1 ? "" : "s",
+                span.get().strand(),
+                codonStart));
     }
 
     /**
@@ -366,10 +372,12 @@ public class TranslExceptCodonValidation implements Validation {
                             segment.isComplement()
                                     ? new Span(
                                             preceding + segment.getEnd() - end + 1,
-                                            preceding + segment.getEnd() - start + 1)
+                                            preceding + segment.getEnd() - start + 1,
+                                            segment.getStrand())
                                     : new Span(
                                             preceding + start - segment.getStart() + 1,
-                                            preceding + end - segment.getStart() + 1));
+                                            preceding + end - segment.getStart() + 1,
+                                            segment.getStrand()));
                 }
                 preceding += segment.getLength();
             }
@@ -382,7 +390,11 @@ public class TranslExceptCodonValidation implements Validation {
             return last.isComplement() ? last.getStart() : last.getEnd();
         }
 
-        /** Positions in the spliced coding sequence: {@code first} is the 5'-most base, {@code last} the 3'-most. */
-        record Span(long first, long last) {}
+        /**
+         * Positions in the spliced coding sequence: {@code first} is the 5'-most base, {@code last} the
+         * 3'-most. {@code strand} is that of the segment holding them, which on a mixed-strand join can
+         * differ from the CDS's other segments.
+         */
+        record Span(long first, long last, String strand) {}
     }
 }
