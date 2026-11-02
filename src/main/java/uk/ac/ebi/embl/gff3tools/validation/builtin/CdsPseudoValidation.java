@@ -70,6 +70,10 @@ public class CdsPseudoValidation {
             if (segments.stream().noneMatch(s -> s.hasAttribute(GFF3Attributes.PRODUCT))) {
                 continue;
             }
+            // MUTUALLY_EXCLUSIVE_ATTRIBUTES already reports pseudo and product on the same line
+            if (segments.stream().anyMatch(CdsPseudoValidation::hasPseudoAndProduct)) {
+                continue;
+            }
             pseudoLookup
                     .pseudoReason(segments)
                     .ifPresent(reason -> violations.add(describe(CDS_PSEUDO_PRODUCT_MESSAGE, segments, reason)));
@@ -104,6 +108,11 @@ public class CdsPseudoValidation {
         if (!violations.isEmpty()) {
             throw new ValidationException(line, String.join("\n", violations));
         }
+    }
+
+    private static boolean hasPseudoAndProduct(GFF3Feature line) {
+        return line.hasAttribute(GFF3Attributes.PRODUCT)
+                && (line.hasAttribute(GFF3Attributes.PSEUDO) || line.hasAttribute(GFF3Attributes.PSEUDOGENE));
     }
 
     private Collection<List<GFF3Feature>> cdsGroups(GFF3Annotation annotation, PseudoLookup pseudoLookup) {

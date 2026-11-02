@@ -50,11 +50,6 @@ public final class PseudoLookup {
 
     /** True for a feature typed {@code CDS} or {@code pseudogenic_CDS}. */
     public boolean isCdsOrPseudogenicCds(GFF3Feature feature) {
-        return isCdsOrPseudogenicCds(feature, ontologyClient);
-    }
-
-    /** True for a feature typed {@code CDS} or {@code pseudogenic_CDS}. */
-    public static boolean isCdsOrPseudogenicCds(GFF3Feature feature, OntologyClient ontologyClient) {
         return ontologyClient.isSoTerm(feature.getName(), OntologyTerm.CDS.ID)
                 || ontologyClient.isSoTerm(feature.getName(), OntologyTerm.PSEUDOGENIC_CDS.ID);
     }
