@@ -298,14 +298,8 @@ public class TranslExceptCodonValidation implements Validation {
                     .orElse("<no ID>");
         }
 
-        /** The span the CDS covers, with the line of its first segment where it was read from a file. */
         String location() {
-            GFF3Feature representative = ValidationUtils.representativeOfFeatureGroup(segments);
-            long end = segments.stream().mapToLong(GFF3Feature::getEnd).max().orElse(representative.getEnd());
-            String location = "%s:%d..%d".formatted(representative.accession(), representative.getStart(), end);
-            return representative.getLine() >= 0
-                    ? location + " (line %d)".formatted(representative.getLine())
-                    : location;
+            return ValidationUtils.getGroupLocationString(segments);
         }
     }
 
