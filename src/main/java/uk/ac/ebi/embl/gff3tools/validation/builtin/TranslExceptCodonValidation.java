@@ -88,14 +88,10 @@ public class TranslExceptCodonValidation implements Validation {
             + "polyadenylation";
 
     private static final String OUT_OF_FRAME_MESSAGE = "\"%s\" is out of frame: it starts %d base%s into a codon "
-            + "(base %d of the spliced coding sequence, codon_start=%d)%s";
+            + "(base %d of the spliced coding sequence, codon_start=%d)";
 
     private static final String BEFORE_FIRST_CODON_MESSAGE = "\"%s\" is out of frame: it starts at base %d of the "
-            + "spliced coding sequence, before the first full codon at base %d (codon_start=%d)%s";
-
-    private static final String NEAREST_CODON = "; the nearest codon is at %s";
-
-    private static final String NEAREST_CODONS = "; the nearest codons are at %s and %s";
+            + "spliced coding sequence, before the first full codon at base %d (codon_start=%d)";
 
     @InjectContext
     private ValidationContext context;
@@ -209,40 +205,15 @@ public class TranslExceptCodonValidation implements Validation {
             }
             long first = located.get().first();
             if (first < codonStart.get()) {
-                problems.add(BEFORE_FIRST_CODON_MESSAGE.formatted(
-                        text, first, codonStart.get(), codonStart.get(), nearestCodons(layout, codonStart.get())));
+                problems.add(BEFORE_FIRST_CODON_MESSAGE.formatted(text, first, codonStart.get(), codonStart.get()));
                 return;
             }
             long intoCodon = Math.floorMod(first - codonStart.get(), 3);
             if (intoCodon != 0) {
-                long codonBefore = first - intoCodon;
                 problems.add(OUT_OF_FRAME_MESSAGE.formatted(
-                        text,
-                        intoCodon,
-                        intoCodon == 1 ? "" : "s",
-                        first,
-                        codonStart.get(),
-                        nearestCodons(layout, codonBefore, codonBefore + 3)));
+                        text, intoCodon, intoCodon == 1 ? "" : "s", first, codonStart.get()));
             }
         });
-    }
-
-    /**
-     * Where the codons starting at the given bases of the spliced coding sequence sit on the sequence,
-     * for the submitter to pick from. A codon split across an intron is left out, as one transl_except
-     * position cannot name it.
-     */
-    private String nearestCodons(CdsLayout layout, long... codonFirstBases) {
-        List<String> codons = new ArrayList<>();
-        for (long codonFirst : codonFirstBases) {
-            layout.toSequence(codonFirst, codonFirst + 2)
-                    .ifPresent(bases -> codons.add("%d..%d".formatted(bases.start(), bases.end())));
-        }
-        return switch (codons.size()) {
-            case 0 -> "";
-            case 1 -> NEAREST_CODON.formatted(codons.get(0));
-            default -> NEAREST_CODONS.formatted(codons.get(0), codons.get(1));
-        };
     }
 
     /**
@@ -372,27 +343,6 @@ public class TranslExceptCodonValidation implements Validation {
             return Optional.empty();
         }
 
-        /**
-         * The reverse of {@link #locate}: the bases on the sequence that positions {@code first..last}
-         * of the spliced coding sequence sit at, lowest first. Empty where no single segment holds them
-         * all, as for a codon split across an intron or past either end.
-         */
-        Optional<Bases> toSequence(long first, long last) {
-            long preceding = 0;
-            for (GFF3Feature segment : readingOrder) {
-                if (first > preceding && last <= preceding + segment.getLength()) {
-                    long fromFirst = first - preceding - 1;
-                    long fromLast = last - preceding - 1;
-                    return Optional.of(
-                            segment.isComplement()
-                                    ? new Bases(segment.getEnd() - fromLast, segment.getEnd() - fromFirst)
-                                    : new Bases(segment.getStart() + fromFirst, segment.getStart() + fromLast));
-                }
-                preceding += segment.getLength();
-            }
-            return Optional.empty();
-        }
-
         /** The sequence position of the CDS's 3'-most base. */
         long threePrimeEnd() {
             GFF3Feature last = readingOrder.get(readingOrder.size() - 1);
@@ -401,8 +351,5 @@ public class TranslExceptCodonValidation implements Validation {
 
         /** Positions in the spliced coding sequence: {@code first} is the 5'-most base, {@code last} the 3'-most. */
         record Span(long first, long last) {}
-
-        /** Positions on the sequence, {@code start <= end}. */
-        record Bases(long start, long end) {}
     }
 }
