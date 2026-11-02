@@ -49,10 +49,6 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.*;
  *   <li>{@code TRANSL_EXCEPT_READING_FRAME}: each value starts a codon of the CDS's reading frame.
  * </ul>
  *
- * <p>{@code TRANSL_EXCEPT_LOCATION} reports values that cannot be read, that lie outside the CDS, or
- * whose length no codon can have; these rules leave such values out. The rows of a join each carry a
- * copy of the CDS's values, so a value repeated across rows is counted once.
- *
  * <p>The rules run at normal priority, before the {@link uk.ac.ebi.embl.gff3tools.validation.fix.TranslationFix}
  * (low priority), so that a CDS failing them is never written with a translation.
  */
