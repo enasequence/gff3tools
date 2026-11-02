@@ -44,7 +44,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.*;
  * <p>The clause is checked by three rules, so that each can be relaxed on its own:
  *
  * <ul>
- *   <li>{@code TRANSL_EXCEPT_ONCE_PER_CODON}: no CDS has two or more transl_except attributes;
+ *   <li>{@code TRANSL_EXCEPT_ONCE_PER_CODON}: no codon is named by more than one transl_except;
  *   <li>{@code TRANSL_EXCEPT_SHORT_STOP_POSITION}: a stop codon of 1-2 bases ends the CDS;
  *   <li>{@code TRANSL_EXCEPT_READING_FRAME}: each value starts a codon of the CDS's reading frame.
  * </ul>
