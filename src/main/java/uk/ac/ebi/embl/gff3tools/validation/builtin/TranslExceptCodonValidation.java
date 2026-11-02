@@ -93,9 +93,7 @@ public class TranslExceptCodonValidation implements Validation {
     @ValidationMethod(
             rule = ONCE_PER_CODON_RULE,
             description = "No codon of a CDS is named by more than one transl_except",
-            type = ANNOTATION,
-            severity = RuleSeverity.ERROR,
-            priority = ValidationPriority.NORMAL)
+            type = ANNOTATION)
     public void validateOncePerCodon(GFF3Annotation annotation, int line) throws ValidationException {
         List<String> violations = new ArrayList<>();
 
@@ -125,9 +123,7 @@ public class TranslExceptCodonValidation implements Validation {
     @ValidationMethod(
             rule = SHORT_STOP_POSITION_RULE,
             description = "A transl_except stop codon of 1-2 bases ends the CDS",
-            type = ANNOTATION,
-            severity = RuleSeverity.ERROR,
-            priority = ValidationPriority.NORMAL)
+            type = ANNOTATION)
     public void validateShortStopPosition(GFF3Annotation annotation, int line) throws ValidationException {
         List<String> violations = new ArrayList<>();
 
@@ -161,9 +157,7 @@ public class TranslExceptCodonValidation implements Validation {
     @ValidationMethod(
             rule = READING_FRAME_RULE,
             description = "Each transl_except of a CDS names a codon in the CDS's reading frame",
-            type = ANNOTATION,
-            severity = RuleSeverity.ERROR,
-            priority = ValidationPriority.NORMAL)
+            type = ANNOTATION)
     public void validateReadingFrame(GFF3Annotation annotation, int line) throws ValidationException {
         List<String> violations = new ArrayList<>();
 
