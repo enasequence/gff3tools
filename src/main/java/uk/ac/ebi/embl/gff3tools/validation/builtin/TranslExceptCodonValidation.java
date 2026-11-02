@@ -41,200 +41,219 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.*;
  * given only once on a single codon, and must correspond to one full codon (3 bp, or 1-2 bp for a
  * stop codon completed by polyadenylation) in the expected reading frame.
  *
- * <p>A transl_except names one codon whose translation differs from the genetic code, so a codon
- * named twice is either repeated or contradicted. The one or two bases of a stop codon left
- * incomplete in the genome, a T or TA that the poly(A) tail completes to TAA, must end the coding
- * sequence, since only its 3' end meets the tail. And a codon must start at codon_start, or a multiple
- * of three bases after it, counted along the spliced coding sequence from its 5' end.
+ * <p>The clause is checked by three rules, so that each can be relaxed on its own:
  *
- * <p>The rows of a join each carry a copy of the CDS's values, so a value repeated across rows is
- * counted once. {@code TRANSL_EXCEPT_LOCATION} reports values that cannot be read, that lie outside
- * the CDS, or that span other than 3 bases without being a stop codon; those are not reported again.
+ * <ul>
+ *   <li>{@code TRANSL_EXCEPT_ONCE_PER_CODON}: no codon is named twice;
+ *   <li>{@code TRANSL_EXCEPT_SHORT_STOP_POSITION}: a stop codon of 1-2 bases ends the CDS;
+ *   <li>{@code TRANSL_EXCEPT_READING_FRAME}: each value starts a codon of the CDS's reading frame.
+ * </ul>
  *
- * <p>The reading frame is not checked on CDSs whose coding sequence is not read from the genome in
- * one frame: pseudo CDSs, which may carry frameshifts, and CDSs with an exception such as RNA editing,
- * which the translation skips as well.
+ * <p>{@code TRANSL_EXCEPT_LOCATION} reports values that cannot be read, that lie outside the CDS, or
+ * whose length no codon can have; these rules leave such values out. The rows of a join each carry a
+ * copy of the CDS's values, so a value repeated across rows is counted once.
+ *
+ * <p>The rules run at normal priority, before the translation (low priority), so that a CDS failing
+ * them is never written with a translation.
  */
 @Gff3Validation(
         name = "TRANSL_EXCEPT_CODON",
         description = "A CDS's transl_except values each name one full codon, once, in its reading frame")
 public class TranslExceptCodonValidation implements Validation {
 
-    private static final String RULE = "TRANSL_EXCEPT_CODON";
+    private static final String ONCE_PER_CODON_RULE = "TRANSL_EXCEPT_ONCE_PER_CODON";
+    private static final String SHORT_STOP_POSITION_RULE = "TRANSL_EXCEPT_SHORT_STOP_POSITION";
+    private static final String READING_FRAME_RULE = "TRANSL_EXCEPT_READING_FRAME";
+
+    private static final String ONCE_PER_CODON_MESSAGE = "A codon must carry at most one transl_except:%s";
+    private static final String REPEATED_VIOLATION = "\nCDS \"%s\" at %s: \"%s\" is given more than once";
+    private static final String SAME_CODON_VIOLATION = "\nCDS \"%s\" at %s: \"%s\" and \"%s\" name the same codon";
+    private static final String OVERLAP_VIOLATION = "\nCDS \"%s\" at %s: \"%s\" and \"%s\" overlap at %d..%d";
+
+    private static final String SHORT_STOP_POSITION_MESSAGE =
+            "A transl_except stop codon of 1-2 bases, completed by polyadenylation, must end the CDS:%s";
+    private static final String SHORT_STOP_VIOLATION =
+            "\nCDS \"%s\" at %s: \"%s\" does not end the CDS, whose 3' end is at %d";
+
+    private static final String READING_FRAME_MESSAGE =
+            "A transl_except must name a codon in the CDS's reading frame:%s";
+    private static final String OUT_OF_FRAME_VIOLATION =
+            "\nCDS \"%s\" at %s: \"%s\" starts %d base%s into a codon (codon_start=%d)";
+    private static final String BEFORE_FIRST_CODON_VIOLATION =
+            "\nCDS \"%s\" at %s: \"%s\" starts before the first full codon (codon_start=%d)";
 
     private static final char STOP_CODON = '*';
 
     private static final int DEFAULT_CODON_START = 1;
 
-    private static final String CODON_MESSAGE =
-            "Each transl_except must name one full codon of its CDS, once, in the CDS's reading frame:%s";
-
-    private static final String CDS_HEADER = "\nCDS %s:";
-
-    private static final String PROBLEM = "\n  - %s";
-
-    private static final String REPEATED_MESSAGE = "\"%s\" is given more than once; keep one";
-
-    private static final String SAME_CODON_MESSAGE = "\"%s\" and \"%s\" both name the codon at %d..%d; keep one";
-
-    private static final String OVERLAP_MESSAGE =
-            "\"%s\" and \"%s\" overlap at %d..%d, so they cannot both be codons of this CDS";
-
-    private static final String TOO_LONG_MESSAGE =
-            "\"%s\" spans %d bases, but a stop codon spans 3 bases, or 1-2 at the 3' end of the CDS";
-
-    private static final String NOT_AT_END_MESSAGE = "\"%s\" is a %d-base stop codon but does not end the CDS, "
-            + "whose 3' end is at %d; only the last 1-2 bases of a CDS can form a stop codon completed by "
-            + "polyadenylation";
-
-    private static final String OUT_OF_FRAME_MESSAGE = "\"%s\" is out of frame: it starts %d base%s into a codon "
-            + "(base %d of the spliced coding sequence, codon_start=%d)";
-
-    private static final String BEFORE_FIRST_CODON_MESSAGE = "\"%s\" is out of frame: it starts at base %d of the "
-            + "spliced coding sequence, before the first full codon at base %d (codon_start=%d)";
-
     @InjectContext
     private ValidationContext context;
 
+    /** The same value twice on one row, or two values sharing a base: the same codon, or overlapping ones. */
     @ValidationMethod(
-            rule = RULE,
-            description = "A CDS's transl_except values each name one full codon, once, in its reading frame",
+            rule = ONCE_PER_CODON_RULE,
+            description = "No codon of a CDS is named by more than one transl_except",
             type = ANNOTATION,
-            severity = RuleSeverity.ERROR)
-    public void validateTranslExceptCodons(GFF3Annotation annotation, int line) throws ValidationException {
+            severity = RuleSeverity.ERROR,
+            priority = ValidationPriority.NORMAL)
+    public void validateOncePerCodon(GFF3Annotation annotation, int line) throws ValidationException {
         List<String> violations = new ArrayList<>();
 
-        for (List<GFF3Feature> segments :
-                ValidationUtils.groupFeaturesById(annotation, this::isCds).values()) {
-            Map<String, TranslExceptAttribute> values = readDistinct(segments);
-            if (values.isEmpty()) {
-                continue;
+        for (CdsExceptions cds : readCdsExceptions(annotation)) {
+            for (String value : cds.repeated()) {
+                violations.add(REPEATED_VIOLATION.formatted(cds.id(), cds.location(), value));
             }
 
-            CdsLayout layout = new CdsLayout(segments);
-            List<String> problems = new ArrayList<>();
-            checkOncePerCodon(segments, values, problems);
-            checkStopCodonSpans(values, layout, problems);
-            checkReadingFrame(segments, values, layout, problems);
-
-            if (!problems.isEmpty()) {
-                StringBuilder violation = new StringBuilder(CDS_HEADER.formatted(describe(segments)));
-                problems.forEach(problem -> violation.append(PROBLEM.formatted(problem)));
-                violations.add(violation.toString());
+            List<String> values = List.copyOf(cds.exceptions().keySet());
+            for (int i = 0; i < values.size(); i++) {
+                for (int j = i + 1; j < values.size(); j++) {
+                    findSharedBases(cds, values.get(i), values.get(j)).ifPresent(violations::add);
+                }
             }
         }
 
         if (!violations.isEmpty()) {
-            throw new ValidationException(line, CODON_MESSAGE.formatted(String.join("", violations)));
+            throw new ValidationException(line, ONCE_PER_CODON_MESSAGE.formatted(String.join("", violations)));
         }
     }
 
     /**
-     * The same text twice on one row, and distinct values sharing any base: written differently but
-     * naming the same codon, or overlapping it.
+     * A genomic T or TA at the 3' end of a coding sequence becomes the stop codon TAA once the poly(A)
+     * tail is added. Only the 3' end meets the tail, so a shorter stop codon must be the last bases of
+     * the CDS.
      */
-    private void checkOncePerCodon(
-            List<GFF3Feature> segments, Map<String, TranslExceptAttribute> values, List<String> problems) {
-        Set<String> repeated = new LinkedHashSet<>();
-        for (GFF3Feature segment : segments) {
-            Set<String> seen = new HashSet<>();
-            for (String value : segment.getAttributeList(TRANSL_EXCEPT).orElse(List.of())) {
-                if (values.containsKey(value) && !seen.add(value)) {
-                    repeated.add(value);
+    @ValidationMethod(
+            rule = SHORT_STOP_POSITION_RULE,
+            description = "A transl_except stop codon of 1-2 bases ends the CDS",
+            type = ANNOTATION,
+            severity = RuleSeverity.ERROR,
+            priority = ValidationPriority.NORMAL)
+    public void validateShortStopPosition(GFF3Annotation annotation, int line) throws ValidationException {
+        List<String> violations = new ArrayList<>();
+
+        for (CdsExceptions cds : readCdsExceptions(annotation)) {
+            cds.exceptions().forEach((text, value) -> {
+                if (!isShortStopCodon(value)) {
+                    return;
                 }
-            }
-        }
-        repeated.forEach(value -> problems.add(REPEATED_MESSAGE.formatted(value)));
-
-        List<Map.Entry<String, TranslExceptAttribute>> entries = List.copyOf(values.entrySet());
-        for (int i = 0; i < entries.size(); i++) {
-            TranslExceptAttribute a = entries.get(i).getValue();
-            for (int j = i + 1; j < entries.size(); j++) {
-                TranslExceptAttribute b = entries.get(j).getValue();
-                int sharedStart = Math.max(a.getStartPosition(), b.getStartPosition());
-                int sharedEnd = Math.min(a.getEndPosition(), b.getEndPosition());
-                if (sharedStart > sharedEnd) {
-                    continue;
-                }
-                boolean sameCodon = a.getStartPosition().equals(b.getStartPosition())
-                        && a.getEndPosition().equals(b.getEndPosition());
-                problems.add((sameCodon ? SAME_CODON_MESSAGE : OVERLAP_MESSAGE)
-                        .formatted(entries.get(i).getKey(), entries.get(j).getKey(), sharedStart, sharedEnd));
-            }
-        }
-    }
-
-    /** A stop codon may be shorter than 3 bases only where it ends the coding sequence, and never longer. */
-    private void checkStopCodonSpans(
-            Map<String, TranslExceptAttribute> values, CdsLayout layout, List<String> problems) {
-        values.forEach((text, value) -> {
-            if (value.getAminoAcidLetter() != STOP_CODON) {
-                return;
-            }
-
-            int span = value.getEndPosition() - value.getStartPosition() + 1;
-            if (span > 3) {
-                problems.add(TOO_LONG_MESSAGE.formatted(text, span));
-                return;
-            }
-            if (span == 3) {
-                return;
-            }
-
-            Optional<CdsLayout.Span> located = layout.locate(value.getStartPosition(), value.getEndPosition());
-            if (located.isPresent() && located.get().last() != layout.length()) {
-                problems.add(NOT_AT_END_MESSAGE.formatted(text, span, layout.threePrimeEnd()));
-            }
-        });
-    }
-
-    private void checkReadingFrame(
-            List<GFF3Feature> segments,
-            Map<String, TranslExceptAttribute> values,
-            CdsLayout layout,
-            List<String> problems) {
-        Optional<Integer> codonStart = findCodonStart(segments);
-        if (codonStart.isEmpty() || isNotReadInOneFrame(segments)) {
-            return;
+                cds.layout()
+                        .locate(value.getStartPosition(), value.getEndPosition())
+                        .filter(span -> span.last() != cds.layout().length())
+                        .ifPresent(span -> violations.add(SHORT_STOP_VIOLATION.formatted(
+                                cds.id(), cds.location(), text, cds.layout().threePrimeEnd())));
+            });
         }
 
-        values.forEach((text, value) -> {
-            Optional<CdsLayout.Span> located = layout.locate(value.getStartPosition(), value.getEndPosition());
-            if (located.isEmpty()) {
-                return;
-            }
-            long first = located.get().first();
-            if (first < codonStart.get()) {
-                problems.add(BEFORE_FIRST_CODON_MESSAGE.formatted(text, first, codonStart.get(), codonStart.get()));
-                return;
-            }
-            long intoCodon = Math.floorMod(first - codonStart.get(), 3);
-            if (intoCodon != 0) {
-                problems.add(OUT_OF_FRAME_MESSAGE.formatted(
-                        text, intoCodon, intoCodon == 1 ? "" : "s", first, codonStart.get()));
-            }
-        });
+        if (!violations.isEmpty()) {
+            throw new ValidationException(line, SHORT_STOP_POSITION_MESSAGE.formatted(String.join("", violations)));
+        }
     }
 
     /**
-     * The distinct values carried by the CDS's rows, keyed by their text, leaving out those that cannot
-     * be read.
+     * A codon starts at codon_start, or a multiple of three bases after it, counted along the spliced
+     * coding sequence from its 5' end.
+     *
+     * <p>Pseudo CDSs, which may carry frameshifts, and CDSs with an exception such as RNA editing are
+     * not read from the genome in one frame, and are left out as the translation leaves them out. A
+     * ribosomal slippage is written as overlapping segments, so the spliced sequence keeps one frame
+     * across it, and it is checked like any other CDS.
      */
-    private Map<String, TranslExceptAttribute> readDistinct(List<GFF3Feature> segments) {
-        Map<String, TranslExceptAttribute> values = new LinkedHashMap<>();
-        for (GFF3Feature segment : segments) {
-            for (String value : segment.getAttributeList(TRANSL_EXCEPT).orElse(List.of())) {
-                if (value == null || values.containsKey(value)) {
-                    continue;
-                }
-                try {
-                    values.put(value, new TranslExceptAttribute(value));
-                } catch (TranslationException e) {
-                    // Malformed values are reported by TRANSL_EXCEPT_LOCATION.
+    @ValidationMethod(
+            rule = READING_FRAME_RULE,
+            description = "Each transl_except of a CDS names a codon in the CDS's reading frame",
+            type = ANNOTATION,
+            severity = RuleSeverity.ERROR,
+            priority = ValidationPriority.NORMAL)
+    public void validateReadingFrame(GFF3Annotation annotation, int line) throws ValidationException {
+        List<String> violations = new ArrayList<>();
+
+        for (CdsExceptions cds : readCdsExceptions(annotation)) {
+            Optional<Integer> codonStart = findCodonStart(cds.segments());
+            if (codonStart.isEmpty() || isNotReadInOneFrame(cds.segments())) {
+                continue;
+            }
+            cds.exceptions().forEach((text, value) -> findFrameViolation(cds, text, value, codonStart.get())
+                    .ifPresent(violations::add));
+        }
+
+        if (!violations.isEmpty()) {
+            throw new ValidationException(line, READING_FRAME_MESSAGE.formatted(String.join("", violations)));
+        }
+    }
+
+    private Optional<String> findSharedBases(CdsExceptions cds, String firstText, String secondText) {
+        TranslExceptAttribute first = cds.exceptions().get(firstText);
+        TranslExceptAttribute second = cds.exceptions().get(secondText);
+        int sharedStart = Math.max(first.getStartPosition(), second.getStartPosition());
+        int sharedEnd = Math.min(first.getEndPosition(), second.getEndPosition());
+        if (sharedStart > sharedEnd) {
+            return Optional.empty();
+        }
+
+        boolean sameCodon = first.getStartPosition().equals(second.getStartPosition())
+                && first.getEndPosition().equals(second.getEndPosition());
+        return Optional.of(
+                sameCodon
+                        ? SAME_CODON_VIOLATION.formatted(cds.id(), cds.location(), firstText, secondText)
+                        : OVERLAP_VIOLATION.formatted(
+                                cds.id(), cds.location(), firstText, secondText, sharedStart, sharedEnd));
+    }
+
+    private boolean isShortStopCodon(TranslExceptAttribute value) {
+        return value.getAminoAcidLetter() == STOP_CODON && value.getEndPosition() - value.getStartPosition() + 1 < 3;
+    }
+
+    private Optional<String> findFrameViolation(
+            CdsExceptions cds, String text, TranslExceptAttribute value, int codonStart) {
+        Optional<CdsLayout.Span> span = cds.layout().locate(value.getStartPosition(), value.getEndPosition());
+        if (span.isEmpty()) {
+            return Optional.empty();
+        }
+
+        long first = span.get().first();
+        if (first < codonStart) {
+            return Optional.of(BEFORE_FIRST_CODON_VIOLATION.formatted(cds.id(), cds.location(), text, codonStart));
+        }
+        long intoCodon = (first - codonStart) % 3;
+        if (intoCodon == 0) {
+            return Optional.empty();
+        }
+        return Optional.of(OUT_OF_FRAME_VIOLATION.formatted(
+                cds.id(), cds.location(), text, intoCodon, intoCodon == 1 ? "" : "s", codonStart));
+    }
+
+    /** The CDSs of the annotation that carry at least one readable transl_except. */
+    private List<CdsExceptions> readCdsExceptions(GFF3Annotation annotation) {
+        List<CdsExceptions> result = new ArrayList<>();
+        for (List<GFF3Feature> segments :
+                ValidationUtils.groupFeaturesById(annotation, this::isCds).values()) {
+            Map<String, TranslExceptAttribute> exceptions = new LinkedHashMap<>();
+            Set<String> repeated = new LinkedHashSet<>();
+            for (GFF3Feature segment : segments) {
+                Set<String> onThisRow = new HashSet<>();
+                for (String value : segment.getAttributeList(TRANSL_EXCEPT).orElse(List.of())) {
+                    if (!exceptions.containsKey(value)) {
+                        parse(value).ifPresent(parsed -> exceptions.put(value, parsed));
+                    }
+                    if (exceptions.containsKey(value) && !onThisRow.add(value)) {
+                        repeated.add(value);
+                    }
                 }
             }
+            if (!exceptions.isEmpty()) {
+                result.add(new CdsExceptions(segments, exceptions, repeated, new CdsLayout(segments)));
+            }
         }
-        return values;
+        return result;
+    }
+
+    private Optional<TranslExceptAttribute> parse(String value) {
+        try {
+            return Optional.of(new TranslExceptAttribute(value));
+        } catch (TranslationException e) {
+            // Malformed values are reported by TRANSL_EXCEPT_LOCATION.
+            return Optional.empty();
+        }
     }
 
     /**
@@ -265,21 +284,35 @@ public class TranslExceptCodonValidation implements Validation {
                         || segment.hasAttribute(GFF3Attributes.EXCEPTION));
     }
 
-    /** The CDS's ID and the span its segments cover, with the line of its first segment where it was read from a file. */
-    private String describe(List<GFF3Feature> segments) {
-        GFF3Feature representative = ValidationUtils.representativeOfFeatureGroup(segments);
-        long end = segments.stream().mapToLong(GFF3Feature::getEnd).max().orElse(representative.getEnd());
-        String location = "\"%s\" at %s:%d..%d"
-                .formatted(
-                        representative.getId().orElse("<no ID>"),
-                        representative.accession(),
-                        representative.getStart(),
-                        end);
-        return representative.getLine() >= 0 ? location + " (line %d)".formatted(representative.getLine()) : location;
-    }
-
     private boolean isCds(GFF3Feature feature) {
         return context.get(OntologyClient.class).isSoTerm(feature.getName(), OntologyTerm.CDS.ID);
+    }
+
+    /**
+     * One CDS with its distinct readable transl_except values, keyed by their text, and the values
+     * given more than once on a single row.
+     */
+    private record CdsExceptions(
+            List<GFF3Feature> segments,
+            Map<String, TranslExceptAttribute> exceptions,
+            Set<String> repeated,
+            CdsLayout layout) {
+
+        String id() {
+            return ValidationUtils.representativeOfFeatureGroup(segments)
+                    .getId()
+                    .orElse("<no ID>");
+        }
+
+        /** The span the CDS covers, with the line of its first segment where it was read from a file. */
+        String location() {
+            GFF3Feature representative = ValidationUtils.representativeOfFeatureGroup(segments);
+            long end = segments.stream().mapToLong(GFF3Feature::getEnd).max().orElse(representative.getEnd());
+            String location = "%s:%d..%d".formatted(representative.accession(), representative.getStart(), end);
+            return representative.getLine() >= 0
+                    ? location + " (line %d)".formatted(representative.getLine())
+                    : location;
+        }
     }
 
     /**
