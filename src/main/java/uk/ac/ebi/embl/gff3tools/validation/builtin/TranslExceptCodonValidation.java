@@ -44,7 +44,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.*;
  * <p>The clause is checked by three rules, so that each can be relaxed on its own:
  *
  * <ul>
- *   <li>{@code TRANSL_EXCEPT_ONCE_PER_CODON}: no codon is named twice;
+ *   <li>{@code TRANSL_EXCEPT_ONCE_PER_CODON}: no CDS has two or more transl_except attributes;
  *   <li>{@code TRANSL_EXCEPT_SHORT_STOP_POSITION}: a stop codon of 1-2 bases ends the CDS;
  *   <li>{@code TRANSL_EXCEPT_READING_FRAME}: each value starts a codon of the CDS's reading frame.
  * </ul>
@@ -53,8 +53,8 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.*;
  * whose length no codon can have; these rules leave such values out. The rows of a join each carry a
  * copy of the CDS's values, so a value repeated across rows is counted once.
  *
- * <p>The rules run at normal priority, before the translation (low priority), so that a CDS failing
- * them is never written with a translation.
+ * <p>The rules run at normal priority, before the {@link uk.ac.ebi.embl.gff3tools.validation.fix.TranslationFix}
+ * (low priority), so that a CDS failing them is never written with a translation.
  */
 @Gff3Validation(
         name = "TRANSL_EXCEPT_CODON",
@@ -194,7 +194,17 @@ public class TranslExceptCodonValidation implements Validation {
     }
 
     private boolean isShortStopCodon(TranslExceptAttribute value) {
-        return value.getAminoAcidLetter() == STOP_CODON && value.getEndPosition() - value.getStartPosition() + 1 < 3;
+        return value.getAminoAcidLetter() == STOP_CODON && lengthOf(value) < 3;
+    }
+
+    /** 3 bases, or 1-2 for a stop codon completed by polyadenylation. */
+    private boolean hasCodonLength(TranslExceptAttribute value) {
+        int length = lengthOf(value);
+        return length == 3 || (length > 0 && length < 3 && value.getAminoAcidLetter() == STOP_CODON);
+    }
+
+    private int lengthOf(TranslExceptAttribute value) {
+        return value.getEndPosition() - value.getStartPosition() + 1;
     }
 
     private Optional<String> findFrameViolation(
@@ -216,7 +226,7 @@ public class TranslExceptCodonValidation implements Validation {
                 cds.id(), cds.location(), text, intoCodon, intoCodon == 1 ? "" : "s", codonStart));
     }
 
-    /** The CDSs of the annotation that carry at least one readable transl_except. */
+    /** The CDSs of the annotation that carry at least one transl_except read as a codon. */
     private List<CdsExceptions> readCdsExceptions(GFF3Annotation annotation) {
         List<CdsExceptions> result = new ArrayList<>();
         for (List<GFF3Feature> segments :
@@ -227,7 +237,7 @@ public class TranslExceptCodonValidation implements Validation {
                 Set<String> onThisRow = new HashSet<>();
                 for (String value : segment.getAttributeList(TRANSL_EXCEPT).orElse(List.of())) {
                     if (!exceptions.containsKey(value)) {
-                        parse(value).ifPresent(parsed -> exceptions.put(value, parsed));
+                        readCodon(value).ifPresent(codon -> exceptions.put(value, codon));
                     }
                     if (exceptions.containsKey(value) && !onThisRow.add(value)) {
                         repeated.add(value);
@@ -241,11 +251,14 @@ public class TranslExceptCodonValidation implements Validation {
         return result;
     }
 
-    private Optional<TranslExceptAttribute> parse(String value) {
+    /**
+     * The value read as a codon. Empty where it cannot be read or has a length no codon can have, which
+     * {@code TRANSL_EXCEPT_LOCATION} reports.
+     */
+    private Optional<TranslExceptAttribute> readCodon(String value) {
         try {
-            return Optional.of(new TranslExceptAttribute(value));
+            return Optional.of(new TranslExceptAttribute(value)).filter(this::hasCodonLength);
         } catch (TranslationException e) {
-            // Malformed values are reported by TRANSL_EXCEPT_LOCATION.
             return Optional.empty();
         }
     }

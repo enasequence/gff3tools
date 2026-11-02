@@ -104,6 +104,13 @@ class TranslExceptCodonValidationTest {
             assertDoesNotThrow(this::validate);
         }
 
+        @Test
+        void leavesValuesOfNoCodonLengthToTranslExceptLocation() {
+            cds(1, 300, te("4..8", "Term"), te("4..6", "Sec"));
+
+            assertDoesNotThrow(this::validate);
+        }
+
         private void validate() throws ValidationException {
             validation.validateOncePerCodon(annotation, 1);
         }
@@ -257,6 +264,41 @@ class TranslExceptCodonValidationTest {
             assertFalse(violations.contains("(pos:102..104,aa:Sec)"));
         }
 
+        @Test
+        void keepsTheWrittenOrderOfATransSplicedCds() {
+            // Read in the order written, 501..600 comes first, so 3 is base 103 and 1 is base 101
+            cds(501, 600, te("3..5", "Sec"), te("1..3", "Trp")).addAttribute(GFF3Attributes.TRANS_SPLICING, "true");
+            cds(1, 150, te("3..5", "Sec"), te("1..3", "Trp")).addAttribute(GFF3Attributes.TRANS_SPLICING, "true");
+
+            String violations = violationsOf(this::validate);
+            assertTrue(violations.contains("\"(pos:1..3,aa:Trp)\" starts 1 base into a codon"));
+            assertFalse(violations.contains("(pos:3..5,aa:Sec)"));
+        }
+
+        @Test
+        void readsEachSegmentOfAMixedStrandJoinInItsOwnDirection() {
+            // complement(1..150) is read from 150, so 150 is base 1 and 201 is base 151
+            cds(
+                    MINUS,
+                    1,
+                    150,
+                    te("complement(148..150)", "Met"),
+                    te("201..203", "Sec"),
+                    te("complement(147..149)", "Trp"));
+            cds(
+                    PLUS,
+                    201,
+                    350,
+                    te("complement(148..150)", "Met"),
+                    te("201..203", "Sec"),
+                    te("complement(147..149)", "Trp"));
+
+            String violations = violationsOf(this::validate);
+            assertTrue(violations.contains("\"(pos:complement(147..149),aa:Trp)\" starts 1 base into a codon"));
+            assertFalse(violations.contains("(pos:complement(148..150),aa:Met)"));
+            assertFalse(violations.contains("(pos:201..203,aa:Sec)"));
+        }
+
         @ParameterizedTest
         @ValueSource(strings = {GFF3Attributes.PSEUDO, GFF3Attributes.PSEUDOGENE, GFF3Attributes.EXCEPTION})
         void leavesOutCdssNotReadInOneFrame(String attribute) {
@@ -265,9 +307,18 @@ class TranslExceptCodonValidationTest {
             assertDoesNotThrow(this::validate);
         }
 
-        @Test
-        void leavesAnInvalidCodonStartToTheTranslation() {
-            cds(1, 300, te("5..7", "Sec")).addAttribute(GFF3Attributes.CODON_START, "4");
+        @ParameterizedTest
+        @ValueSource(strings = {"4", "x"})
+        void leavesAnInvalidCodonStartToTheTranslation(String codonStart) {
+            cds(1, 300, te("5..7", "Sec")).addAttribute(GFF3Attributes.CODON_START, codonStart);
+
+            assertDoesNotThrow(this::validate);
+        }
+
+        @ParameterizedTest
+        @CsvSource({"200..204, Term", "5..6, Sec"})
+        void leavesValuesOfNoCodonLengthToTranslExceptLocation(String position, String aminoAcid) {
+            cds(1, 300, te(position, aminoAcid));
 
             assertDoesNotThrow(this::validate);
         }
