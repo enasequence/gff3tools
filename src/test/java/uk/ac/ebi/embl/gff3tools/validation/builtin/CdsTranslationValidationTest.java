@@ -13,18 +13,17 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
-import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationRegistry;
 import uk.ac.ebi.embl.gff3tools.validation.provider.SourceTranslations;
@@ -43,7 +42,7 @@ class CdsTranslationValidationTest {
         context = new ValidationContext();
         context.register(TranslationState.class, new TranslationStateProvider());
         state = context.get(TranslationState.class);
-        registerSequenceLookup(context, mock(SequenceLookup.class));
+        TestUtils.registerProvider(context, SequenceLookup.class, mock(SequenceLookup.class));
         ValidationRegistry.injectContext(validation, context);
     }
 
@@ -58,7 +57,8 @@ class CdsTranslationValidationTest {
             ctx.register(TranslationState.class, new TranslationStateProvider());
             ValidationRegistry.injectContext(noLookup, ctx);
 
-            GFF3Annotation annotation = createAnnotation(createCds("cds1", "seq1", 1, 9));
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                    "seq1", 1, 100, TestUtils.createGFF3Feature("cds1", null, OntologyTerm.CDS.name(), "seq1", 1, 9));
             // No translation recorded, but must not fire because translation was not requested.
             noLookup.validateTranslationPresence(annotation, 1);
         }
@@ -67,13 +67,15 @@ class CdsTranslationValidationTest {
         void passesWhenEveryCdsHasTranslation() throws Exception {
             state.record(TranslationState.buildKey("seq1", "cds1"), null, "MK");
 
-            GFF3Annotation annotation = createAnnotation(createCds("cds1", "seq1", 1, 9));
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                    "seq1", 1, 100, TestUtils.createGFF3Feature("cds1", null, OntologyTerm.CDS.name(), "seq1", 1, 9));
             validation.validateTranslationPresence(annotation, 1);
         }
 
         @Test
         void throwsWhenCdsHasNoTranslation() {
-            GFF3Annotation annotation = createAnnotation(createCds("cds1", "seq1", 1, 9));
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                    "seq1", 1, 100, TestUtils.createGFF3Feature("cds1", null, OntologyTerm.CDS.name(), "seq1", 1, 9));
 
             ValidationException ex = assertThrows(
                     ValidationException.class, () -> validation.validateTranslationPresence(annotation, 1));
@@ -87,7 +89,8 @@ class CdsTranslationValidationTest {
             // e.g. an old translation was captured but no new translation was generated.
             state.record(TranslationState.buildKey("seq1", "cds1"), "MK", null);
 
-            GFF3Annotation annotation = createAnnotation(createCds("cds1", "seq1", 1, 9));
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                    "seq1", 1, 100, TestUtils.createGFF3Feature("cds1", null, OntologyTerm.CDS.name(), "seq1", 1, 9));
             ValidationException ex = assertThrows(
                     ValidationException.class, () -> validation.validateTranslationPresence(annotation, 1));
             assertTrue(ex.getMessage().contains("1-9"));
@@ -95,9 +98,9 @@ class CdsTranslationValidationTest {
 
         @Test
         void exemptsCdsWithExceptionAttribute() throws Exception {
-            GFF3Feature cds = createCds("cds1", "seq1", 1, 9);
+            GFF3Feature cds = TestUtils.createGFF3Feature("cds1", null, OntologyTerm.CDS.name(), "seq1", 1, 9);
             cds.addAttribute(GFF3Attributes.EXCEPTION, "ribosomal slippage");
-            GFF3Annotation annotation = createAnnotation(cds);
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation("seq1", 1, 100, cds);
 
             // No translation recorded, but exception CDS is exempt.
             validation.validateTranslationPresence(annotation, 1);
@@ -105,9 +108,9 @@ class CdsTranslationValidationTest {
 
         @Test
         void exemptsPseudoCds() throws Exception {
-            GFF3Feature cds = createCds("cds1", "seq1", 1, 9);
+            GFF3Feature cds = TestUtils.createGFF3Feature("cds1", null, OntologyTerm.CDS.name(), "seq1", 1, 9);
             cds.addAttribute(GFF3Attributes.PSEUDO, "true");
-            GFF3Annotation annotation = createAnnotation(cds);
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation("seq1", 1, 100, cds);
 
             validation.validateTranslationPresence(annotation, 1);
         }
@@ -115,19 +118,8 @@ class CdsTranslationValidationTest {
         @Test
         void throwsForIdlessCds() {
             // CDS with no ID cannot be keyed into TranslationState => unexpected state.
-            GFF3Feature cds = new GFF3Feature(
-                    Optional.empty(),
-                    Optional.empty(),
-                    "seq1",
-                    Optional.empty(),
-                    ".",
-                    OntologyTerm.CDS.name(),
-                    1,
-                    9,
-                    ".",
-                    "+",
-                    "0");
-            GFF3Annotation annotation = createAnnotation(cds);
+            GFF3Feature cds = TestUtils.createGFF3Feature(null, null, OntologyTerm.CDS.name(), "seq1", 1, 9);
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation("seq1", 1, 100, cds);
 
             IllegalStateException ex = assertThrows(
                     IllegalStateException.class, () -> validation.validateTranslationPresence(annotation, 1));
@@ -139,9 +131,10 @@ class CdsTranslationValidationTest {
         void multipleCdsOneMissingThrowsAndReportsOnlyMissing() {
             state.record(TranslationState.buildKey("seq1", "cds_ok"), null, "MK");
 
-            GFF3Feature ok = createCds("cds_ok", "seq1", 1, 9);
-            GFF3Feature missing = createCds("cds_missing", "seq1", 20, 30);
-            GFF3Annotation annotation = createAnnotation(ok, missing);
+            GFF3Feature ok = TestUtils.createGFF3Feature("cds_ok", null, OntologyTerm.CDS.name(), "seq1", 1, 9);
+            GFF3Feature missing =
+                    TestUtils.createGFF3Feature("cds_missing", null, OntologyTerm.CDS.name(), "seq1", 20, 30);
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation("seq1", 1, 100, ok, missing);
 
             ValidationException ex = assertThrows(
                     ValidationException.class, () -> validation.validateTranslationPresence(annotation, 1));
@@ -151,7 +144,8 @@ class CdsTranslationValidationTest {
 
         @Test
         void ignoresNonCdsFeatures() throws Exception {
-            GFF3Annotation annotation = createAnnotation(createFeature("gene", "gene1", "seq1", 1, 9));
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                    "seq1", 1, 100, TestUtils.createGFF3Feature("gene1", null, "gene", "seq1", 1, 9));
             validation.validateTranslationPresence(annotation, 1);
         }
     }
@@ -160,7 +154,7 @@ class CdsTranslationValidationTest {
     class Absence {
 
         private GFF3Feature pseudoGene(String id) {
-            GFF3Feature gene = createFeature("gene", id, "seq1", 1, 30);
+            GFF3Feature gene = TestUtils.createGFF3Feature(id, null, "gene", "seq1", 1, 30);
             gene.addAttribute(GFF3Attributes.PSEUDOGENE, "unprocessed");
             return gene;
         }
@@ -177,29 +171,43 @@ class CdsTranslationValidationTest {
         @Test
         void passesWhenNoCdsIsPseudo() throws Exception {
             state.record(TranslationState.buildKey("seq1", "cds1"), "MK", "MK");
-            GFF3Feature inline = createCds("cds2", "seq1", 20, 28);
+            GFF3Feature inline = TestUtils.createGFF3Feature("cds2", null, OntologyTerm.CDS.name(), "seq1", 20, 28);
             inline.addAttribute(GFF3Attributes.TRANSLATION, "MK");
 
             validation.validateTranslationAbsence(
-                    createAnnotation(
-                            createFeature("gene", "gene1", "seq1", 1, 30), createCds("cds1", "seq1", 1, 9), inline),
+                    TestUtils.createGFF3Annotation(
+                            "seq1",
+                            1,
+                            100,
+                            TestUtils.createGFF3Feature("gene1", null, "gene", "seq1", 1, 30),
+                            TestUtils.createGFF3Feature("cds1", null, OntologyTerm.CDS.name(), "seq1", 1, 9),
+                            inline),
                     1);
         }
 
         @Test
         void passesWhenPseudoCdsHasNoTranslation() throws Exception {
             validation.validateTranslationAbsence(
-                    createAnnotation(pseudoGene("gene1"), createChild("CDS", "cds1", "gene1", "seq1", 1, 9)), 1);
+                    TestUtils.createGFF3Annotation(
+                            "seq1",
+                            1,
+                            100,
+                            pseudoGene("gene1"),
+                            TestUtils.createGFF3Feature("cds1", "gene1", "CDS", "seq1", 1, 9)),
+                    1);
         }
 
         @Test
         void throwsForRecordedOldTranslationUnderPseudoParent() {
             // CDS -> mRNA -> gene with pseudogene, translation captured from the inline attribute.
             state.record(TranslationState.buildKey("seq1", "cds1"), "MK", null);
-            GFF3Annotation annotation = createAnnotation(
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                    "seq1",
+                    1,
+                    100,
                     pseudoGene("gene1"),
-                    createChild("mRNA", "mrna1", "gene1", "seq1", 1, 20),
-                    createChild("CDS", "cds1", "mrna1", "seq1", 1, 9));
+                    TestUtils.createGFF3Feature("mrna1", "gene1", "mRNA", "seq1", 1, 20),
+                    TestUtils.createGFF3Feature("cds1", "mrna1", "CDS", "seq1", 1, 9));
 
             assertReported(annotation, "seq1 CDS: 1-9", "its ancestor \"gene1\" has pseudogene=unprocessed");
         }
@@ -208,18 +216,19 @@ class CdsTranslationValidationTest {
         void throwsForRecordedNewTranslation() {
             // e.g. an exception CDS, whose submitted translation TranslationFix records as the new one.
             state.record(TranslationState.buildKey("seq1", "cds1"), null, "MK");
-            GFF3Feature cds = createChild("CDS", "cds1", "gene1", "seq1", 1, 9);
+            GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "gene1", "CDS", "seq1", 1, 9);
             cds.addAttribute(GFF3Attributes.EXCEPTION, "RNA editing");
 
-            assertReported(createAnnotation(pseudoGene("gene1"), cds), "seq1 CDS: 1-9");
+            assertReported(TestUtils.createGFF3Annotation("seq1", 1, 100, pseudoGene("gene1"), cds), "seq1 CDS: 1-9");
         }
 
         @Test
         void throwsForInlineTranslationAttributeUnderPseudogeneType() {
             // The attribute is still on the feature when REMOVE_TRANSLATION_ATTRIBUTE is off.
-            GFF3Feature cds = createChild("CDS", "cds1", "pg1", "seq1", 1, 9);
+            GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "pg1", "CDS", "seq1", 1, 9);
             cds.addAttribute(GFF3Attributes.TRANSLATION, "MK");
-            GFF3Annotation annotation = createAnnotation(createFeature("pseudogene", "pg1", "seq1", 1, 30), cds);
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                    "seq1", 1, 100, TestUtils.createGFF3Feature("pg1", null, "pseudogene", "seq1", 1, 30), cds);
 
             assertReported(annotation, "its ancestor \"pg1\" is of type pseudogene");
         }
@@ -229,8 +238,12 @@ class CdsTranslationValidationTest {
             context.register(
                     SourceTranslations.class,
                     new SourceTranslations(() -> Set.of(TranslationState.buildKey("seq1", "cds1"))));
-            GFF3Annotation annotation =
-                    createAnnotation(pseudoGene("gene1"), createChild("CDS", "cds1", "gene1", "seq1", 1, 9));
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                    "seq1",
+                    1,
+                    100,
+                    pseudoGene("gene1"),
+                    TestUtils.createGFF3Feature("cds1", "gene1", "CDS", "seq1", 1, 9));
 
             assertReported(annotation, "seq1 CDS: 1-9");
         }
@@ -238,11 +251,16 @@ class CdsTranslationValidationTest {
         @Test
         void throwsWhenPseudoIsOnSecondLineOfParent() {
             state.record(TranslationState.buildKey("seq1", "cds1"), "MK", null);
-            GFF3Feature geneFirstLine = createFeature("gene", "gene1", "seq1", 1, 10);
-            GFF3Feature geneSecondLine = createFeature("gene", "gene1", "seq1", 20, 30);
+            GFF3Feature geneFirstLine = TestUtils.createGFF3Feature("gene1", null, "gene", "seq1", 1, 10);
+            GFF3Feature geneSecondLine = TestUtils.createGFF3Feature("gene1", null, "gene", "seq1", 20, 30);
             geneSecondLine.addAttribute(GFF3Attributes.PSEUDOGENE, "unprocessed");
-            GFF3Annotation annotation =
-                    createAnnotation(geneFirstLine, geneSecondLine, createChild("CDS", "cds1", "gene1", "seq1", 1, 9));
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                    "seq1",
+                    1,
+                    100,
+                    geneFirstLine,
+                    geneSecondLine,
+                    TestUtils.createGFF3Feature("cds1", "gene1", "CDS", "seq1", 1, 9));
 
             assertReported(annotation, "its ancestor \"gene1\" has pseudogene=unprocessed");
         }
@@ -250,16 +268,17 @@ class CdsTranslationValidationTest {
         @Test
         void throwsForCdsThatIsItselfPseudo() {
             state.record(TranslationState.buildKey("seq1", "cds1"), "MK", null);
-            GFF3Feature cds = createCds("cds1", "seq1", 1, 9);
+            GFF3Feature cds = TestUtils.createGFF3Feature("cds1", null, OntologyTerm.CDS.name(), "seq1", 1, 9);
             cds.addAttribute(GFF3Attributes.PSEUDO, "true");
 
-            assertReported(createAnnotation(cds), "it has pseudo=true");
+            assertReported(TestUtils.createGFF3Annotation("seq1", 1, 100, cds), "it has pseudo=true");
         }
 
         @Test
         void throwsForPseudogenicCds() {
             state.record(TranslationState.buildKey("seq1", "cds1"), "MK", null);
-            GFF3Annotation annotation = createAnnotation(createFeature("pseudogenic_CDS", "cds1", "seq1", 1, 9));
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                    "seq1", 1, 100, TestUtils.createGFF3Feature("cds1", null, "pseudogenic_CDS", "seq1", 1, 9));
 
             assertReported(annotation, "seq1 pseudogenic_CDS: 1-9", "it is of type pseudogenic_CDS");
         }
@@ -268,9 +287,12 @@ class CdsTranslationValidationTest {
         void throwsForTypesGivenAsSoAccessions() {
             // SO:0000336 is pseudogene, SO:0000316 is CDS.
             state.record(TranslationState.buildKey("seq1", "cds1"), "MK", null);
-            GFF3Annotation annotation = createAnnotation(
-                    createFeature("SO:0000336", "pg1", "seq1", 1, 30),
-                    createChild("SO:0000316", "cds1", "pg1", "seq1", 1, 9));
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                    "seq1",
+                    1,
+                    100,
+                    TestUtils.createGFF3Feature("pg1", null, "SO:0000336", "seq1", 1, 30),
+                    TestUtils.createGFF3Feature("cds1", "pg1", "SO:0000316", "seq1", 1, 9));
 
             assertReported(annotation, "its ancestor \"pg1\" is of type SO:0000336");
         }
@@ -283,8 +305,12 @@ class CdsTranslationValidationTest {
             ctx.register(TranslationState.class, new TranslationStateProvider());
             ctx.get(TranslationState.class).record(TranslationState.buildKey("seq1", "cds1"), "MK", null);
             ValidationRegistry.injectContext(noLookup, ctx);
-            GFF3Annotation annotation =
-                    createAnnotation(pseudoGene("gene1"), createChild("CDS", "cds1", "gene1", "seq1", 1, 9));
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                    "seq1",
+                    1,
+                    100,
+                    pseudoGene("gene1"),
+                    TestUtils.createGFF3Feature("cds1", "gene1", "CDS", "seq1", 1, 9));
 
             ValidationException ex =
                     assertThrows(ValidationException.class, () -> noLookup.validateTranslationAbsence(annotation, 1));
@@ -295,12 +321,15 @@ class CdsTranslationValidationTest {
         void multipleCdsReportsOnlyPseudoOnesWithTranslation() {
             state.record(TranslationState.buildKey("seq1", "cds_pseudo"), "MK", null);
             state.record(TranslationState.buildKey("seq1", "cds_ok"), "MK", "MK");
-            GFF3Annotation annotation = createAnnotation(
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                    "seq1",
+                    1,
+                    100,
                     pseudoGene("gene1"),
-                    createChild("CDS", "cds_pseudo", "gene1", "seq1", 1, 9),
-                    createChild("CDS", "cds_pseudo_untranslated", "gene1", "seq1", 12, 20),
-                    createFeature("gene", "gene2", "seq1", 40, 60),
-                    createChild("CDS", "cds_ok", "gene2", "seq1", 40, 48));
+                    TestUtils.createGFF3Feature("cds_pseudo", "gene1", "CDS", "seq1", 1, 9),
+                    TestUtils.createGFF3Feature("cds_pseudo_untranslated", "gene1", "CDS", "seq1", 12, 20),
+                    TestUtils.createGFF3Feature("gene2", null, "gene", "seq1", 40, 60),
+                    TestUtils.createGFF3Feature("cds_ok", "gene2", "CDS", "seq1", 40, 48));
 
             ValidationException ex =
                     assertThrows(ValidationException.class, () -> validation.validateTranslationAbsence(annotation, 1));
@@ -313,16 +342,25 @@ class CdsTranslationValidationTest {
         void ignoresBlankRecordedTranslation() throws Exception {
             state.record(TranslationState.buildKey("seq1", "cds1"), " ", "");
             validation.validateTranslationAbsence(
-                    createAnnotation(pseudoGene("gene1"), createChild("CDS", "cds1", "gene1", "seq1", 1, 9)), 1);
+                    TestUtils.createGFF3Annotation(
+                            "seq1",
+                            1,
+                            100,
+                            pseudoGene("gene1"),
+                            TestUtils.createGFF3Feature("cds1", "gene1", "CDS", "seq1", 1, 9)),
+                    1);
         }
 
         @Test
         void terminatesOnParentCycle() throws Exception {
             state.record(TranslationState.buildKey("seq1", "cds1"), "MK", null);
-            GFF3Annotation annotation = createAnnotation(
-                    createChild("gene", "geneA", "geneB", "seq1", 1, 30),
-                    createChild("gene", "geneB", "geneA", "seq1", 1, 30),
-                    createChild("CDS", "cds1", "geneA", "seq1", 1, 9));
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                    "seq1",
+                    1,
+                    100,
+                    TestUtils.createGFF3Feature("geneA", "geneB", "gene", "seq1", 1, 30),
+                    TestUtils.createGFF3Feature("geneB", "geneA", "gene", "seq1", 1, 30),
+                    TestUtils.createGFF3Feature("cds1", "geneA", "CDS", "seq1", 1, 9));
 
             // Neither gene is pseudo, so nothing is reported, and the walk must not loop.
             validation.validateTranslationAbsence(annotation, 1);
@@ -333,67 +371,14 @@ class CdsTranslationValidationTest {
             context.register(SourceTranslations.class, new SourceTranslations(() -> {
                 throw new RuntimeException("Invalid GFF3 translation sequence: not a sequence");
             }));
-            GFF3Annotation annotation =
-                    createAnnotation(pseudoGene("gene1"), createChild("CDS", "cds1", "gene1", "seq1", 1, 9));
+            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                    "seq1",
+                    1,
+                    100,
+                    pseudoGene("gene1"),
+                    TestUtils.createGFF3Feature("cds1", "gene1", "CDS", "seq1", 1, 9));
 
             assertReported(annotation, "could not be read", "not a sequence");
         }
-    }
-
-    private void registerSequenceLookup(ValidationContext ctx, SequenceLookup lookup) {
-        ctx.register(SequenceLookup.class, new ContextProvider<>() {
-            @Override
-            public SequenceLookup get(ValidationContext c) {
-                return lookup;
-            }
-
-            @Override
-            public Class<SequenceLookup> type() {
-                return SequenceLookup.class;
-            }
-        });
-    }
-
-    private GFF3Annotation createAnnotation(GFF3Feature... features) {
-        GFF3Annotation annotation = new GFF3Annotation();
-        for (GFF3Feature feature : features) {
-            annotation.addFeature(feature);
-        }
-        return annotation;
-    }
-
-    private GFF3Feature createCds(String featureId, String seqId, long start, long end) {
-        return createFeature(OntologyTerm.CDS.name(), featureId, seqId, start, end);
-    }
-
-    private GFF3Feature createFeature(String name, String featureId, String seqId, long start, long end) {
-        return new GFF3Feature(
-                Optional.of(featureId),
-                Optional.empty(),
-                seqId,
-                Optional.empty(),
-                ".",
-                name,
-                start,
-                end,
-                ".",
-                "+",
-                "0");
-    }
-
-    private GFF3Feature createChild(
-            String name, String featureId, String parentId, String seqId, long start, long end) {
-        return new GFF3Feature(
-                Optional.of(featureId),
-                Optional.of(parentId),
-                seqId,
-                Optional.empty(),
-                ".",
-                name,
-                start,
-                end,
-                ".",
-                "+",
-                "0");
     }
 }

@@ -14,7 +14,6 @@ import static uk.ac.ebi.embl.gff3tools.validation.builtin.AttributesRelationVali
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +39,7 @@ public class AttributesRelationValidationTest {
         TestUtils.injectContext(attributesRelationValidation);
     }
 
+    // ---tests for MUTUALLY_REQUIRED_ATTRIBUTES validation
     @Test
     public void testValidateMutuallyRequiredAttributesSuccess() {
         feature = TestUtils.createGFF3Feature(
@@ -64,6 +64,7 @@ public class AttributesRelationValidationTest {
         Assertions.assertTrue(ex.getMessage().contains("\"%s\" attribute is required".formatted(GFF3Attributes.CLONE)));
     }
 
+    // ---tests for MUTUALLY_EXCLUSIVE_ATTRIBUTES validation
     @Test
     public void testValidateMutuallyExclusiveAttributesSuccess() {
         feature = TestUtils.createGFF3Feature(
@@ -121,193 +122,7 @@ public class AttributesRelationValidationTest {
                 () -> attributesRelationValidation.validateMutuallyExclusiveAttributes(feature, 1));
     }
 
-    @Test
-    public void testValidateCdsPseudoParentProductFailure_PseudoParent() {
-        gff3Annotation.setFeatures(List.of(
-                feature("gene", "gene1", null, Map.of(GFF3Attributes.PSEUDO, List.of("true"))),
-                feature(OntologyTerm.CDS.name(), "cds1", "gene1", Map.of(GFF3Attributes.PRODUCT, List.of("Abc")))));
-
-        assertCdsPseudoProductReported(
-                "CDS \"cds1\" at seq1:1..90 has a \"product\" attribute", "its ancestor \"gene1\" has pseudo=true");
-    }
-
-    @Test
-    public void testValidateCdsPseudoParentProductFailure_PseudogeneParent() {
-        gff3Annotation.setFeatures(List.of(
-                feature("gene", "gene1", null, Map.of(GFF3Attributes.PSEUDOGENE, List.of("processed"))),
-                feature(OntologyTerm.CDS.name(), "cds1", "gene1", Map.of(GFF3Attributes.PRODUCT, List.of("Abc")))));
-
-        assertCdsPseudoProductReported("its ancestor \"gene1\" has pseudogene=processed");
-    }
-
-    @Test
-    public void testValidateCdsPseudoParentProductFailure_PseudogeneTypeGrandparent() {
-        gff3Annotation.setFeatures(List.of(
-                feature("pseudogene", "gene1", null, Map.of()),
-                feature("mRNA", "mrna1", "gene1", Map.of()),
-                feature(OntologyTerm.CDS.name(), "cds1", "mrna1", Map.of(GFF3Attributes.PRODUCT, List.of("Abc")))));
-
-        assertCdsPseudoProductReported("\"cds1\"", "its ancestor \"gene1\" is of type pseudogene");
-    }
-
-    @Test
-    public void testValidateCdsPseudoParentProductFailure_PseudogenicTranscriptParent() {
-        gff3Annotation.setFeatures(List.of(
-                feature("pseudogenic_transcript", "tx1", null, Map.of()),
-                feature(OntologyTerm.CDS.name(), "cds1", "tx1", Map.of(GFF3Attributes.PRODUCT, List.of("Abc")))));
-
-        assertCdsPseudoProductReported("its ancestor \"tx1\" is of type pseudogenic_transcript");
-    }
-
-    @Test
-    public void testValidateCdsPseudoParentProductFailure_SoAccessions() {
-        // SO:0000336 is pseudogene, SO:0000316 is CDS.
-        gff3Annotation.setFeatures(List.of(
-                feature("SO:0000336", "gene1", null, Map.of()),
-                feature("SO:0000316", "cds1", "gene1", Map.of(GFF3Attributes.PRODUCT, List.of("Abc")))));
-
-        assertCdsPseudoProductReported("\"cds1\"", "its ancestor \"gene1\" is of type SO:0000336");
-    }
-
-    @Test
-    public void testValidateCdsPseudoParentProductFailure_PseudogenicCds() {
-        gff3Annotation.setFeatures(List.of(
-                feature("gene", "gene1", null, Map.of(GFF3Attributes.PSEUDO, List.of("true"))),
-                feature("pseudogenic_CDS", "cds1", "gene1", Map.of(GFF3Attributes.PRODUCT, List.of("Abc")))));
-
-        assertCdsPseudoProductReported("pseudogenic_CDS \"cds1\"", "its ancestor \"gene1\" has pseudo=true");
-    }
-
-    @Test
-    public void testValidateCdsPseudoParentProductFailure_ProductOnSecondCdsLine() {
-        gff3Annotation.setFeatures(List.of(
-                feature("gene", "gene1", null, Map.of(GFF3Attributes.PSEUDO, List.of("true"))),
-                feature(OntologyTerm.CDS.name(), "cds1", "gene1", 1, 40, Map.of()),
-                feature(
-                        OntologyTerm.CDS.name(),
-                        "cds1",
-                        "gene1",
-                        50,
-                        90,
-                        Map.of(GFF3Attributes.PRODUCT, List.of("Abc")))));
-
-        assertCdsPseudoProductReported("CDS \"cds1\" at seq1:1..40", "its ancestor \"gene1\" has pseudo=true");
-    }
-
-    @Test
-    public void testValidateCdsPseudoParentProductFailure_AlsoPseudoItself() {
-        // The CDS's own pair is MUTUALLY_EXCLUSIVE_ATTRIBUTES', but its pseudo parent is still reported here.
-        gff3Annotation.setFeatures(List.of(
-                feature("gene", "gene1", null, Map.of(GFF3Attributes.PSEUDO, List.of("true"))),
-                feature(
-                        OntologyTerm.CDS.name(),
-                        "cds1",
-                        "gene1",
-                        Map.of(GFF3Attributes.PSEUDO, List.of("true"), GFF3Attributes.PRODUCT, List.of("Abc")))));
-
-        assertCdsPseudoProductReported("its ancestor \"gene1\" has pseudo=true");
-    }
-
-    @Test
-    public void testValidateCdsPseudoParentProductFailure_ReportsEveryCds() {
-        gff3Annotation.setFeatures(List.of(
-                feature("gene", "gene1", null, Map.of(GFF3Attributes.PSEUDO, List.of("true"))),
-                feature(OntologyTerm.CDS.name(), "cds1", "gene1", Map.of(GFF3Attributes.PRODUCT, List.of("Abc"))),
-                feature(OntologyTerm.CDS.name(), "cds2", "gene1", Map.of()),
-                feature("gene", "gene2", null, Map.of()),
-                feature(OntologyTerm.CDS.name(), "cds3", "gene2", Map.of(GFF3Attributes.PRODUCT, List.of("Def"))),
-                feature("gene", "gene3", null, Map.of(GFF3Attributes.PSEUDOGENE, List.of("unitary"))),
-                feature(OntologyTerm.CDS.name(), "cds4", "gene3", Map.of(GFF3Attributes.PRODUCT, List.of("Ghi")))));
-
-        ValidationException ex = Assertions.assertThrows(
-                ValidationException.class,
-                () -> attributesRelationValidation.validateCdsPseudoParentProduct(gff3Annotation, 1));
-
-        Assertions.assertTrue(ex.getMessage().contains("\"cds1\""), ex.getMessage());
-        Assertions.assertTrue(ex.getMessage().contains("\"cds4\""), ex.getMessage());
-        Assertions.assertFalse(ex.getMessage().contains("\"cds2\""), "No product: " + ex.getMessage());
-        Assertions.assertFalse(ex.getMessage().contains("\"cds3\""), "No pseudo parent: " + ex.getMessage());
-    }
-
-    @Test
-    public void testValidateCdsPseudoParentProductSuccess_PseudoOnlyOnCds() {
-        gff3Annotation.setFeatures(List.of(
-                feature("gene", "gene1", null, Map.of()),
-                feature(
-                        OntologyTerm.CDS.name(),
-                        "cds1",
-                        "gene1",
-                        Map.of(GFF3Attributes.PSEUDO, List.of("true"), GFF3Attributes.PRODUCT, List.of("Abc")))));
-
-        Assertions.assertDoesNotThrow(
-                () -> attributesRelationValidation.validateCdsPseudoParentProduct(gff3Annotation, 1));
-    }
-
-    @Test
-    public void testValidateCdsPseudoParentProductSuccess_PseudogenicCdsWithoutPseudoParent() {
-        gff3Annotation.setFeatures(
-                List.of(feature("pseudogenic_CDS", "cds1", null, Map.of(GFF3Attributes.PRODUCT, List.of("Abc")))));
-
-        Assertions.assertDoesNotThrow(
-                () -> attributesRelationValidation.validateCdsPseudoParentProduct(gff3Annotation, 1));
-    }
-
-    @Test
-    public void testValidateCdsPseudoParentProductSuccess_NoProduct() {
-        gff3Annotation.setFeatures(List.of(
-                feature("gene", "gene1", null, Map.of(GFF3Attributes.PSEUDO, List.of("true"))),
-                feature(OntologyTerm.CDS.name(), "cds1", "gene1", Map.of())));
-
-        Assertions.assertDoesNotThrow(
-                () -> attributesRelationValidation.validateCdsPseudoParentProduct(gff3Annotation, 1));
-    }
-
-    @Test
-    public void testValidateCdsPseudoParentProductSuccess_ParentNotPseudo() {
-        gff3Annotation.setFeatures(List.of(
-                feature("gene", "gene1", null, Map.of()),
-                feature(OntologyTerm.CDS.name(), "cds1", "gene1", Map.of(GFF3Attributes.PRODUCT, List.of("Abc")))));
-
-        Assertions.assertDoesNotThrow(
-                () -> attributesRelationValidation.validateCdsPseudoParentProduct(gff3Annotation, 1));
-    }
-
-    @Test
-    public void testValidateCdsPseudoParentProductSuccess_ProductOnPseudoGeneItself() {
-        // Only CDS features are checked; the gene's own pair is MUTUALLY_EXCLUSIVE_ATTRIBUTES'.
-        gff3Annotation.setFeatures(List.of(
-                feature(
-                        "gene",
-                        "gene1",
-                        null,
-                        Map.of(GFF3Attributes.PSEUDO, List.of("true"), GFF3Attributes.PRODUCT, List.of("Abc"))),
-                feature("mRNA", "mrna1", "gene1", Map.of(GFF3Attributes.PRODUCT, List.of("Abc")))));
-
-        Assertions.assertDoesNotThrow(
-                () -> attributesRelationValidation.validateCdsPseudoParentProduct(gff3Annotation, 1));
-    }
-
-    @Test
-    public void testValidateCdsPseudoParentProductSuccess_ParentCycle() {
-        // Neither gene is pseudo, so nothing is reported, and the walk must not loop.
-        gff3Annotation.setFeatures(List.of(
-                feature("gene", "gene1", "gene2", Map.of()),
-                feature("gene", "gene2", "gene1", Map.of()),
-                feature(OntologyTerm.CDS.name(), "cds1", "gene1", Map.of(GFF3Attributes.PRODUCT, List.of("Abc")))));
-
-        Assertions.assertDoesNotThrow(
-                () -> attributesRelationValidation.validateCdsPseudoParentProduct(gff3Annotation, 1));
-    }
-
-    @Test
-    public void testValidateCdsPseudoParentProductSuccess_DanglingParent() {
-        gff3Annotation.setFeatures(List.of(
-                feature(OntologyTerm.CDS.name(), "cds1", "missing", Map.of(GFF3Attributes.PRODUCT, List.of("Abc")))));
-
-        Assertions.assertDoesNotThrow(
-                () -> attributesRelationValidation.validateCdsPseudoParentProduct(gff3Annotation, 1));
-    }
-
+    // ---tests for MUTUALLY_EXCLUSIVE_ATTRIBUTES_VALUE validation
     @Test
     public void testValidateMutuallyExclusiveAttributesByValueSuccess() {
         feature = TestUtils.createGFF3Feature(
@@ -375,6 +190,7 @@ public class AttributesRelationValidationTest {
                         .formatted(GFF3Attributes.ORGANELLE, GFF3Attributes.GENE, rRna)));
     }
 
+    // ---tests for REQUIRED_ATTRIBUTES validation
     @Test
     public void testValidateRequiredAttributesInAnnotationSuccess() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
@@ -425,6 +241,7 @@ public class AttributesRelationValidationTest {
                         .formatted(GFF3Attributes.PCR_PRIMERS, GFF3Attributes.SATELLITE)));
     }
 
+    // ---tests for EXCLUSIVE_ATTRIBUTES validation
     @Test
     public void testValidateExclusiveAttributesSubCloneSuccess() {
         feature = TestUtils.createGFF3Feature(
@@ -501,6 +318,7 @@ public class AttributesRelationValidationTest {
         Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateExclusiveAttributes(feature, 1));
     }
 
+    // ---tests for CIRCULAR_RNA_ATTRIBUTES validation
     @Test
     public void testValidateFeatureCircularRNASuccess() {
         GFF3Feature cds = TestUtils.createGFF3Feature(
@@ -546,6 +364,212 @@ public class AttributesRelationValidationTest {
         Assertions.assertDoesNotThrow(() -> attributesRelationValidation.validateCircularRNAAttribute(cds, 1));
     }
 
+    // ---tests for CDS_PSEUDO_PRODUCT validation
+    @Test
+    public void testValidateCdsPseudoParentProductFailure_PseudoParent() {
+        GFF3Feature gene = TestUtils.createGFF3Feature("gene1", null, "gene", "seq1", 1, 90);
+        gene.addAttribute(GFF3Attributes.PSEUDO, "true");
+        GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "gene1", OntologyTerm.CDS.name(), "seq1", 1, 90);
+        cds.addAttribute(GFF3Attributes.PRODUCT, "Abc");
+        gff3Annotation.setFeatures(List.of(gene, cds));
+
+        assertCdsPseudoProductReported(
+                "CDS \"cds1\" at seq1:1..90 has a \"product\" attribute", "its ancestor \"gene1\" has pseudo=true");
+    }
+
+    @Test
+    public void testValidateCdsPseudoParentProductFailure_PseudogeneParent() {
+        GFF3Feature gene = TestUtils.createGFF3Feature("gene1", null, "gene", "seq1", 1, 90);
+        gene.addAttribute(GFF3Attributes.PSEUDOGENE, "processed");
+        GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "gene1", OntologyTerm.CDS.name(), "seq1", 1, 90);
+        cds.addAttribute(GFF3Attributes.PRODUCT, "Abc");
+        gff3Annotation.setFeatures(List.of(gene, cds));
+
+        assertCdsPseudoProductReported("its ancestor \"gene1\" has pseudogene=processed");
+    }
+
+    @Test
+    public void testValidateCdsPseudoParentProductFailure_PseudogeneTypeGrandparent() {
+        GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "mrna1", OntologyTerm.CDS.name(), "seq1", 1, 90);
+        cds.addAttribute(GFF3Attributes.PRODUCT, "Abc");
+        gff3Annotation.setFeatures(List.of(
+                TestUtils.createGFF3Feature("gene1", null, "pseudogene", "seq1", 1, 90),
+                TestUtils.createGFF3Feature("mrna1", "gene1", "mRNA", "seq1", 1, 90),
+                cds));
+
+        assertCdsPseudoProductReported("\"cds1\"", "its ancestor \"gene1\" is of type pseudogene");
+    }
+
+    @Test
+    public void testValidateCdsPseudoParentProductFailure_PseudogenicTranscriptParent() {
+        GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "tx1", OntologyTerm.CDS.name(), "seq1", 1, 90);
+        cds.addAttribute(GFF3Attributes.PRODUCT, "Abc");
+        gff3Annotation.setFeatures(
+                List.of(TestUtils.createGFF3Feature("tx1", null, "pseudogenic_transcript", "seq1", 1, 90), cds));
+
+        assertCdsPseudoProductReported("its ancestor \"tx1\" is of type pseudogenic_transcript");
+    }
+
+    @Test
+    public void testValidateCdsPseudoParentProductFailure_SoAccessions() {
+        // SO:0000336 is pseudogene, SO:0000316 is CDS.
+        GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "gene1", "SO:0000316", "seq1", 1, 90);
+        cds.addAttribute(GFF3Attributes.PRODUCT, "Abc");
+        gff3Annotation.setFeatures(
+                List.of(TestUtils.createGFF3Feature("gene1", null, "SO:0000336", "seq1", 1, 90), cds));
+
+        assertCdsPseudoProductReported("\"cds1\"", "its ancestor \"gene1\" is of type SO:0000336");
+    }
+
+    @Test
+    public void testValidateCdsPseudoParentProductFailure_PseudogenicCds() {
+        GFF3Feature gene = TestUtils.createGFF3Feature("gene1", null, "gene", "seq1", 1, 90);
+        gene.addAttribute(GFF3Attributes.PSEUDO, "true");
+        GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "gene1", "pseudogenic_CDS", "seq1", 1, 90);
+        cds.addAttribute(GFF3Attributes.PRODUCT, "Abc");
+        gff3Annotation.setFeatures(List.of(gene, cds));
+
+        assertCdsPseudoProductReported("pseudogenic_CDS \"cds1\"", "its ancestor \"gene1\" has pseudo=true");
+    }
+
+    @Test
+    public void testValidateCdsPseudoParentProductFailure_ProductOnSecondCdsLine() {
+        GFF3Feature gene = TestUtils.createGFF3Feature("gene1", null, "gene", "seq1", 1, 90);
+        gene.addAttribute(GFF3Attributes.PSEUDO, "true");
+        GFF3Feature secondLine = TestUtils.createGFF3Feature("cds1", "gene1", OntologyTerm.CDS.name(), "seq1", 50, 90);
+        secondLine.addAttribute(GFF3Attributes.PRODUCT, "Abc");
+        gff3Annotation.setFeatures(List.of(
+                gene,
+                TestUtils.createGFF3Feature("cds1", "gene1", OntologyTerm.CDS.name(), "seq1", 1, 40),
+                secondLine));
+
+        assertCdsPseudoProductReported("CDS \"cds1\" at seq1:1..40", "its ancestor \"gene1\" has pseudo=true");
+    }
+
+    @Test
+    public void testValidateCdsPseudoParentProductFailure_AlsoPseudoItself() {
+        // The CDS's own pair is MUTUALLY_EXCLUSIVE_ATTRIBUTES', but its pseudo parent is still reported here.
+        GFF3Feature gene = TestUtils.createGFF3Feature("gene1", null, "gene", "seq1", 1, 90);
+        gene.addAttribute(GFF3Attributes.PSEUDO, "true");
+        GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "gene1", OntologyTerm.CDS.name(), "seq1", 1, 90);
+        cds.addAttribute(GFF3Attributes.PSEUDO, "true");
+        cds.addAttribute(GFF3Attributes.PRODUCT, "Abc");
+        gff3Annotation.setFeatures(List.of(gene, cds));
+
+        assertCdsPseudoProductReported("its ancestor \"gene1\" has pseudo=true");
+    }
+
+    @Test
+    public void testValidateCdsPseudoParentProductFailure_ReportsEveryCds() {
+        GFF3Feature pseudoGene = TestUtils.createGFF3Feature("gene1", null, "gene", "seq1", 1, 90);
+        pseudoGene.addAttribute(GFF3Attributes.PSEUDO, "true");
+        GFF3Feature unitaryGene = TestUtils.createGFF3Feature("gene3", null, "gene", "seq1", 1, 90);
+        unitaryGene.addAttribute(GFF3Attributes.PSEUDOGENE, "unitary");
+        GFF3Feature cds1 = TestUtils.createGFF3Feature("cds1", "gene1", OntologyTerm.CDS.name(), "seq1", 1, 90);
+        cds1.addAttribute(GFF3Attributes.PRODUCT, "Abc");
+        GFF3Feature cds3 = TestUtils.createGFF3Feature("cds3", "gene2", OntologyTerm.CDS.name(), "seq1", 1, 90);
+        cds3.addAttribute(GFF3Attributes.PRODUCT, "Def");
+        GFF3Feature cds4 = TestUtils.createGFF3Feature("cds4", "gene3", OntologyTerm.CDS.name(), "seq1", 1, 90);
+        cds4.addAttribute(GFF3Attributes.PRODUCT, "Ghi");
+        gff3Annotation.setFeatures(List.of(
+                pseudoGene,
+                cds1,
+                TestUtils.createGFF3Feature("cds2", "gene1", OntologyTerm.CDS.name(), "seq1", 1, 90),
+                TestUtils.createGFF3Feature("gene2", null, "gene", "seq1", 1, 90),
+                cds3,
+                unitaryGene,
+                cds4));
+
+        ValidationException ex = Assertions.assertThrows(
+                ValidationException.class,
+                () -> attributesRelationValidation.validateCdsPseudoParentProduct(gff3Annotation, 1));
+
+        Assertions.assertTrue(ex.getMessage().contains("\"cds1\""), ex.getMessage());
+        Assertions.assertTrue(ex.getMessage().contains("\"cds4\""), ex.getMessage());
+        Assertions.assertFalse(ex.getMessage().contains("\"cds2\""), "No product: " + ex.getMessage());
+        Assertions.assertFalse(ex.getMessage().contains("\"cds3\""), "No pseudo parent: " + ex.getMessage());
+    }
+
+    @Test
+    public void testValidateCdsPseudoParentProductSuccess_PseudoOnlyOnCds() {
+        GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "gene1", OntologyTerm.CDS.name(), "seq1", 1, 90);
+        cds.addAttribute(GFF3Attributes.PSEUDO, "true");
+        cds.addAttribute(GFF3Attributes.PRODUCT, "Abc");
+        gff3Annotation.setFeatures(List.of(TestUtils.createGFF3Feature("gene1", null, "gene", "seq1", 1, 90), cds));
+
+        Assertions.assertDoesNotThrow(
+                () -> attributesRelationValidation.validateCdsPseudoParentProduct(gff3Annotation, 1));
+    }
+
+    @Test
+    public void testValidateCdsPseudoParentProductSuccess_PseudogenicCdsWithoutPseudoParent() {
+        GFF3Feature cds = TestUtils.createGFF3Feature("cds1", null, "pseudogenic_CDS", "seq1", 1, 90);
+        cds.addAttribute(GFF3Attributes.PRODUCT, "Abc");
+        gff3Annotation.setFeatures(List.of(cds));
+
+        Assertions.assertDoesNotThrow(
+                () -> attributesRelationValidation.validateCdsPseudoParentProduct(gff3Annotation, 1));
+    }
+
+    @Test
+    public void testValidateCdsPseudoParentProductSuccess_NoProduct() {
+        GFF3Feature gene = TestUtils.createGFF3Feature("gene1", null, "gene", "seq1", 1, 90);
+        gene.addAttribute(GFF3Attributes.PSEUDO, "true");
+        gff3Annotation.setFeatures(
+                List.of(gene, TestUtils.createGFF3Feature("cds1", "gene1", OntologyTerm.CDS.name(), "seq1", 1, 90)));
+
+        Assertions.assertDoesNotThrow(
+                () -> attributesRelationValidation.validateCdsPseudoParentProduct(gff3Annotation, 1));
+    }
+
+    @Test
+    public void testValidateCdsPseudoParentProductSuccess_ParentNotPseudo() {
+        GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "gene1", OntologyTerm.CDS.name(), "seq1", 1, 90);
+        cds.addAttribute(GFF3Attributes.PRODUCT, "Abc");
+        gff3Annotation.setFeatures(List.of(TestUtils.createGFF3Feature("gene1", null, "gene", "seq1", 1, 90), cds));
+
+        Assertions.assertDoesNotThrow(
+                () -> attributesRelationValidation.validateCdsPseudoParentProduct(gff3Annotation, 1));
+    }
+
+    @Test
+    public void testValidateCdsPseudoParentProductSuccess_ProductOnPseudoGeneItself() {
+        // Only CDS features are checked; the gene's own pair is MUTUALLY_EXCLUSIVE_ATTRIBUTES'.
+        GFF3Feature gene = TestUtils.createGFF3Feature("gene1", null, "gene", "seq1", 1, 90);
+        gene.addAttribute(GFF3Attributes.PSEUDO, "true");
+        gene.addAttribute(GFF3Attributes.PRODUCT, "Abc");
+        GFF3Feature mrna = TestUtils.createGFF3Feature("mrna1", "gene1", "mRNA", "seq1", 1, 90);
+        mrna.addAttribute(GFF3Attributes.PRODUCT, "Abc");
+        gff3Annotation.setFeatures(List.of(gene, mrna));
+
+        Assertions.assertDoesNotThrow(
+                () -> attributesRelationValidation.validateCdsPseudoParentProduct(gff3Annotation, 1));
+    }
+
+    @Test
+    public void testValidateCdsPseudoParentProductSuccess_ParentCycle() {
+        // Neither gene is pseudo, so nothing is reported, and the walk must not loop.
+        GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "gene1", OntologyTerm.CDS.name(), "seq1", 1, 90);
+        cds.addAttribute(GFF3Attributes.PRODUCT, "Abc");
+        gff3Annotation.setFeatures(List.of(
+                TestUtils.createGFF3Feature("gene1", "gene2", "gene", "seq1", 1, 90),
+                TestUtils.createGFF3Feature("gene2", "gene1", "gene", "seq1", 1, 90),
+                cds));
+
+        Assertions.assertDoesNotThrow(
+                () -> attributesRelationValidation.validateCdsPseudoParentProduct(gff3Annotation, 1));
+    }
+
+    @Test
+    public void testValidateCdsPseudoParentProductSuccess_DanglingParent() {
+        GFF3Feature cds = TestUtils.createGFF3Feature("cds1", "missing", OntologyTerm.CDS.name(), "seq1", 1, 90);
+        cds.addAttribute(GFF3Attributes.PRODUCT, "Abc");
+        gff3Annotation.setFeatures(List.of(cds));
+
+        Assertions.assertDoesNotThrow(
+                () -> attributesRelationValidation.validateCdsPseudoParentProduct(gff3Annotation, 1));
+    }
+
     private void assertCdsPseudoProductReported(String... expected) {
         ValidationException ex = Assertions.assertThrows(
                 ValidationException.class,
@@ -553,27 +577,5 @@ public class AttributesRelationValidationTest {
         for (String text : expected) {
             Assertions.assertTrue(ex.getMessage().contains(text), "Expected \"" + text + "\" in: " + ex.getMessage());
         }
-    }
-
-    private static GFF3Feature feature(String name, String id, String parentId, Map<String, List<String>> attributes) {
-        return feature(name, id, parentId, 1, 90, attributes);
-    }
-
-    private static GFF3Feature feature(
-            String name, String id, String parentId, long start, long end, Map<String, List<String>> attributes) {
-        GFF3Feature feature = new GFF3Feature(
-                Optional.of(id),
-                Optional.ofNullable(parentId),
-                "seq1",
-                Optional.empty(),
-                ".",
-                name,
-                start,
-                end,
-                ".",
-                "+",
-                "0");
-        feature.addAttributes(attributes);
-        return feature;
     }
 }
