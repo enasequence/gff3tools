@@ -71,7 +71,7 @@ public class TranslationComparisonValidation {
 
         for (Map.Entry<String, List<GFF3Feature>> entry : cdsGroups.entrySet()) {
             // A pseudo CDS is never translated, so there is nothing to compare. Any translation
-            // it carries is reported by CDS_PSEUDO_TRANSLATION instead.
+            // it carries is reported by CDS_TRANSLATION_ABSENCE instead.
             if (pseudoLookup.isPseudo(entry.getValue())) {
                 continue;
             }
