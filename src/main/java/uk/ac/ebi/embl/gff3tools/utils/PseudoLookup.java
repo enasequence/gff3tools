@@ -72,12 +72,29 @@ public final class PseudoLookup {
         return pseudoReason(segments).isPresent();
     }
 
+    /**
+     * Why an ancestor of a feature spread over {@code segments} is pseudo, or empty when none is. The
+     * feature's own attributes and type are ignored.
+     */
+    public Optional<String> ancestorPseudoReason(List<GFF3Feature> segments) {
+        for (GFF3Feature segment : segments) {
+            Optional<String> reason = ancestorPseudoReason(segment);
+            if (reason.isPresent()) {
+                return reason;
+            }
+        }
+        return Optional.empty();
+    }
+
     private Optional<String> pseudoReason(GFF3Feature feature) {
         Optional<String> own = ownReason(feature);
         if (own.isPresent()) {
             return own.map(reason -> "it " + reason);
         }
+        return ancestorPseudoReason(feature);
+    }
 
+    private Optional<String> ancestorPseudoReason(GFF3Feature feature) {
         // Parents are resolved from Parent references, because only the flat file to GFF3 path ever
         // sets the linked parent object. Every line of a parent counts, as for the feature's own.
         Set<String> seen = new HashSet<>();
