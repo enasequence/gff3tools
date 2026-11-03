@@ -34,6 +34,7 @@ import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
+import uk.ac.ebi.embl.gff3tools.validation.provider.LocusTagPrefixProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.LocusTagProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonProvider;
 import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
@@ -375,6 +376,30 @@ class LocusTagExistsValidationTest {
         TestUtils.injectContext(locusTagExistsValidation, context);
         Assertions.assertDoesNotThrow(
                 () -> locusTagExistsValidation.validateRegisteredLocusTagPrefix(gff3Annotation, 1));
+    }
+
+    @Test
+    void testLocusTagPrefixProvider_noArgConstructor_isInactive() {
+        Assertions.assertFalse(new LocusTagPrefixProvider().isActive());
+    }
+
+    @Test
+    void testLocusTagPrefixProvider_emptySetConstructor_isActive() {
+        Assertions.assertTrue(new LocusTagPrefixProvider(Set.of()).isActive());
+    }
+
+    @Test
+    void testEmptyRegisteredPrefixes_rejectsLocusTag() {
+        gff3Annotation
+                .getFeatures()
+                .add(TestUtils.createGFF3Feature("gene", Map.of(GFF3Attributes.LOCUS_TAG, List.of("ANYPREFIX_001"))));
+        ValidationContext context = TestUtils.createTestContext();
+        context.register(LocusTagProvider.class, new LocusTagPrefixProvider(Set.of()));
+        TestUtils.injectContext(locusTagExistsValidation, context);
+        ValidationException ex = Assertions.assertThrows(
+                ValidationException.class,
+                () -> locusTagExistsValidation.validateRegisteredLocusTagPrefix(gff3Annotation, 1));
+        Assertions.assertEquals(LocusTagExistsValidation.LOCUS_TAG_REGISTERED_PREFIX_RULE, ex.getValidationRule());
     }
 
     @Test

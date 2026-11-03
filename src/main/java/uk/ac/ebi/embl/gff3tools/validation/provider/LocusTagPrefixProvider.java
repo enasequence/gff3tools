@@ -17,20 +17,22 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 /**
  * A {@link LocusTagProvider} backed by a pre-fetched, immutable set of registered prefixes.
  *
- * <p>The no-arg constructor creates an inactive instance (empty prefix set) so the classpath
- * scanner can autoregister it without activating the registered-prefix rule. Callers
- * use the {@link #LocusTagPrefixProvider(Set)} constructor to supply real prefixes fetched
+ * <p>The no-arg constructor creates an inactive instance so
+ * the classpath scanner can auto-register it without activating the registered-prefix rule. Callers
+ * must use the {@link #LocusTagPrefixProvider(Set)} constructor to supply real prefixes fetched
  * before building the validation engine.
  *
- * <p>The provider is inactive when the set is empty, so the registered-prefix rule stays inert
- * for submissions with no registered locus_tag prefixes.
+ * <p>An explicitly constructed instance is always active, even when the prefix set is empty. An
+ * empty set means the lookup returned nothing (no prefixes registered for the project, or a failed
+ * lookup), so every locus_tag prefix is rejected — failing fast rather than silently passing all.
  */
 public class LocusTagPrefixProvider implements LocusTagProvider {
 
     private final Set<String> prefixes;
 
+    /** Inactive instance for classpath scanning — does not activate the registered-prefix rule. */
     public LocusTagPrefixProvider() {
-        this.prefixes = Set.of();
+        this.prefixes = null;
     }
 
     public LocusTagPrefixProvider(Set<String> prefixes) {
@@ -41,7 +43,7 @@ public class LocusTagPrefixProvider implements LocusTagProvider {
 
     @Override
     public Set<String> getPrefixes() {
-        return prefixes;
+        return prefixes != null ? prefixes : Set.of();
     }
 
     @Override
@@ -51,6 +53,6 @@ public class LocusTagPrefixProvider implements LocusTagProvider {
 
     @Override
     public boolean isActive() {
-        return !prefixes.isEmpty();
+        return prefixes != null;
     }
 }

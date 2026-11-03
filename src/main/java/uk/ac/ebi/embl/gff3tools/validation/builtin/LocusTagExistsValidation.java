@@ -219,9 +219,10 @@ public class LocusTagExistsValidation implements Validation {
     /**
      * Checks that the locus_tag prefix is registered with the project in Database.
      *
-     * <p>Inert when no {@link LocusTagProvider} is registered on the context — the rule does
-     * not fire in offline or client-side processing, and for submission types (FASTA-only) that
-     * carry no locus_tag attributes.
+     * <p>Inert when no {@link LocusTagProvider} is registered on the context — the rule does not
+     * fire in offline or client-side processing, and for submission types (FASTA-only) that carry
+     * no locus_tag attributes. When a provider is registered but returns an empty prefix set (no
+     * prefixes registered for the project, or a failed lookup), every locus_tag prefix is rejected.
      *
      * <p>LocusTag value without an underscore are skipped. Format errors are owned by
      * {@value #LOCUS_TAG_PREFIX_RULE}. If that rule is disabled, malformed tags escape both checks.
