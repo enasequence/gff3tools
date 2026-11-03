@@ -14,6 +14,7 @@ import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -31,6 +32,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
+import uk.ac.ebi.embl.gff3tools.validation.provider.ConversionDirectionProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 /**
@@ -178,7 +180,7 @@ public class TranslationFix {
                 recordTranslationState(representative, line, oldTranslation, translation);
             }
 
-            propagateJoinAttributes(sortedFeatures, result);
+            propagateJoinAttributes(sortedFeatures, result, line);
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
@@ -191,11 +193,13 @@ public class TranslationFix {
     }
 
     /**
-     * Redistributes partiality and pseudo attributes across multi-segment CDS join segments.
+     * Applies translation-derived partiality and pseudo attributes across multi-segment CDS join segments.
      * 5'/3' partial are assigned to the strand-correct segment (first/last depends on strand),
-     * and pseudo is propagated from the first segment to all others.
+     * and pseudo is set on all segments. These are only fixed for FF -> GFF3 conversion;
+     * otherwise a {@link ValidationException} is thrown.
      */
-    private void propagateJoinAttributes(List<GFF3Feature> segments, TranslationResult result) {
+    private void propagateJoinAttributes(List<GFF3Feature> segments, TranslationResult result, int line)
+            throws ValidationException {
         if (segments.isEmpty()) {
             return;
         }
@@ -203,30 +207,67 @@ public class TranslationFix {
         GFF3Feature first = segments.get(0);
         GFF3Feature last = segments.get(segments.size() - 1);
 
-        // Partiality based on translation is set to first or last segment based on strand
+        boolean applyFixes = isFlatfileToGff3Conversion();
+
+        // Rule: Fix 5' partiality only for FF -> GFF3 conversion; otherwise report it as an error.
         if (result.isFixedFivePrimePartial()) {
             GFF3Feature fivePrimeTarget = first.isComplement() ? last : first;
             if (!fivePrimeTarget.isFivePrimePartial()) {
-                fivePrimeTarget.setFivePrimePartial();
+                if (applyFixes) {
+                    fivePrimeTarget.setFivePrimePartial();
+                } else {
+                    throw new ValidationException(
+                            "TRANSLATION",
+                            line,
+                            "CDS feature at location %d-%d should be 5' partial"
+                                    .formatted(fivePrimeTarget.getStart(), fivePrimeTarget.getEnd()));
+                }
             }
         }
 
+        // Rule: Fix 3' partiality only for FF -> GFF3 conversion; otherwise report it as an error.
         if (result.isFixedThreePrimePartial()) {
             GFF3Feature threePrimeTarget = first.isComplement() ? first : last;
             if (!threePrimeTarget.isThreePrimePartial()) {
-                threePrimeTarget.setThreePrimePartial();
+                if (applyFixes) {
+                    threePrimeTarget.setThreePrimePartial();
+                } else {
+                    throw new ValidationException(
+                            "TRANSLATION",
+                            line,
+                            "CDS feature at location %d-%d should be 3' partial"
+                                    .formatted(threePrimeTarget.getStart(), threePrimeTarget.getEnd()));
+                }
             }
         }
 
         // Only propagate pseudo when translation newly determines the CDS is pseudo.
         // We intentionally do not copy an existing pseudo from the first segment to
         // the rest of the group, because such segments should not be treated as one join.
+        // Rule: Fix pseudo (internal stop codons) only for FF -> GFF3 conversion; otherwise report it as an error.
         if (result.isFixedPseudo()) {
-            for (GFF3Feature segment : segments) {
-                segment.removeAttributeList(GFF3Attributes.PSEUDO);
-                segment.addAttribute(GFF3Attributes.PSEUDO, "true");
+            if (applyFixes) {
+                for (GFF3Feature segment : segments) {
+                    segment.removeAttributeList(GFF3Attributes.PSEUDO);
+                    segment.addAttribute(GFF3Attributes.PSEUDO, "true");
+                }
+            } else {
+                String locations = segments.stream()
+                        .map(segment -> segment.getStart() + "-" + segment.getEnd())
+                        .collect(Collectors.joining(", "));
+                throw new ValidationException(
+                        "TRANSLATION",
+                        line,
+                        "CDS feature at locations %s should be pseudo as its translation contains internal stop codons"
+                                .formatted(locations));
             }
         }
+    }
+
+    /** Partiality and pseudo are auto-fixed only when converting EMBL flat files to GFF3. */
+    private boolean isFlatfileToGff3Conversion() {
+        return context.contains(ConversionDirectionProvider.class)
+                && context.get(ConversionDirectionProvider.class).isFlatfileToGff3();
     }
 
     private String lookupOldTranslation(GFF3Feature feature) {
