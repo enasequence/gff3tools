@@ -152,6 +152,50 @@ class MasterEntryOutputTest {
     }
 
     @Test
+    void drSecondaryIdsSurviveTheMasterFile() throws Exception {
+        // DDBJ record with secondary DR ids (EuropePMC's PubMed id, RFAM's id class)
+        JsonNode publications = generate("AB000001.1").get("publications");
+        JsonNode europepmc = publications.get(0);
+        assertEquals("EuropePMC", europepmc.get("source").asText());
+        assertEquals("PMC5172426", europepmc.get("id").asText());
+        assertEquals("15629058", europepmc.get("secondaryId").asText());
+        JsonNode rfam = publications.get(1);
+        assertEquals("RFAM", rfam.get("source").asText());
+        assertEquals("5_8S_rRNA", rfam.get("secondaryId").asText());
+
+        Path master = tempDir.resolve("AB000001.1.master.json");
+        Path gff3 = tempDir.resolve("AB000001.1.gff3");
+        assertEquals(
+                0,
+                run(
+                        "conversion",
+                        "-f",
+                        "embl",
+                        "-t",
+                        "gff3",
+                        "--output-master-entry",
+                        master.toString(),
+                        resource("master_output/AB000001.1.embl").toString(),
+                        gff3.toString()));
+        Path embl = tempDir.resolve("roundtrip.embl");
+        assertEquals(
+                0,
+                run(
+                        "conversion",
+                        "-f",
+                        "gff3",
+                        "-t",
+                        "embl",
+                        "-m",
+                        master.toString(),
+                        gff3.toString(),
+                        embl.toString()));
+        String roundTrip = Files.readString(embl).replace("\r\n", "\n");
+        assertTrue(roundTrip.contains("DR   EuropePMC; PMC5172426; 15629058.\n"), roundTrip);
+        assertTrue(roundTrip.contains("DR   RFAM; RF00002; 5_8S_rRNA.\n"), roundTrip);
+    }
+
+    @Test
     void optionIsRejectedOutsideEmblToGff3() throws Exception {
         Path master = tempDir.resolve("master.json");
         Path gff3 = tempDir.resolve("in.gff3");

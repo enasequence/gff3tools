@@ -661,7 +661,7 @@ public class GFF3Mapper {
         if (m.getPublications() != null) {
             for (CrossReference pub : m.getPublications()) {
                 if (pub.getSource() != null && pub.getId() != null && !"BioProject".equalsIgnoreCase(pub.getSource())) {
-                    entry.addXRef(new XRef(pub.getSource(), pub.getId()));
+                    entry.addXRef(new XRef(pub.getSource(), pub.getId(), pub.getSecondaryId()));
                 }
             }
         }

@@ -140,6 +140,13 @@
             "type": "string",
             "description": "Alias of id."
           },
+          "secondaryId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Third field of the DR line, where the database has one (e.g. EuropePMC's PubMed id)."
+          },
           "source": {
             "type": "string",
             "description": "e.g. BioSample, ENA."

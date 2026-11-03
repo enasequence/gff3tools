@@ -89,6 +89,7 @@ public final class MasterEntryJsonWriter {
                 CrossReference publication = new CrossReference();
                 publication.setSource(db);
                 publication.setId(id);
+                publication.setSecondaryId(xref.getSecondaryAccession());
                 publications.add(publication);
             }
         }

@@ -17,7 +17,8 @@ import lombok.Setter;
 
 /**
  * Represents a database cross-reference from MasterEntry JSON.
- * Maps to DR lines in EMBL output (e.g., BioSample, ENA).
+ * Maps to DR lines in EMBL output (e.g., BioSample, ENA); {@code secondaryId} is the DR
+ * line's third field where the database has one (e.g. EuropePMC's PubMed id).
  */
 @Getter
 @Setter
@@ -28,5 +29,6 @@ public class CrossReference {
     private String id;
 
     private String source;
+    private String secondaryId;
     private String url;
 }
