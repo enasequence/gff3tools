@@ -152,18 +152,18 @@ public class FileConversionCommand extends AbstractCommand {
                     // FastaHeaderProvider#isActive), so an empty one never lands on the context and
                     // header-aware rules (e.g. FASTA_HEADER_MAPPING) stay inert.
                     // The conversion direction that will be used by validations and fixes
-                    ConversionDirectionProvider directionProvider =
+                    ConversionDirectionProvider conversionDirectionProvider =
                             new ConversionDirectionProvider(fromFileType, toFileType);
                     ContextProvider<?>[] providers = analysisContextProvider != null
                             ? new ContextProvider<?>[] {
                                 compositeProvider,
                                 metadataProvider,
                                 headerProvider,
-                                directionProvider,
+                                conversionDirectionProvider,
                                 analysisContextProvider
                             }
                             : new ContextProvider<?>[] {
-                                compositeProvider, metadataProvider, headerProvider, directionProvider
+                                compositeProvider, metadataProvider, headerProvider, conversionDirectionProvider
                             };
                     // Gap generation belongs to FASTA -> GFF3, where the gap features are the entire
                     // output. Every other direction is converting annotation the submitter already
