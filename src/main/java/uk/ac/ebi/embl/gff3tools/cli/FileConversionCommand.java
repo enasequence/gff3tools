@@ -56,6 +56,13 @@ public class FileConversionCommand extends AbstractCommand {
     public Path masterFilePath;
 
     @CommandLine.Option(
+            names = {"--output-master-entry", "-om"},
+            description = "Output path for a master entry JSON generated from the input flat file "
+                    + "(EMBL to GFF3 conversion only). Written once the conversion succeeds; "
+                    + "describes the first entry when the input holds several.")
+    public Path masterOutputPath;
+
+    @CommandLine.Option(
             names = {"--output-sequence", "-os"},
             description = "Output path for nucleotide sequences in FASTA format (TSV to GFF3 conversion only)")
     public Path fastaOutputPath;
@@ -109,6 +116,10 @@ public class FileConversionCommand extends AbstractCommand {
             // validations run as in the FASTA+GFF3 case.
             FileSequenceSource inputFastaSource = null;
             boolean fastaToGff3 = fromFileType == ConversionFileFormat.fasta && toFileType == ConversionFileFormat.gff3;
+            if (masterOutputPath != null
+                    && !(fromFileType == ConversionFileFormat.embl && toFileType == ConversionFileFormat.gff3)) {
+                throw new CLIException("--output-master-entry is only supported for EMBL to GFF3 conversion");
+            }
 
             if (fastaToGff3) {
                 // Only this direction generates gaps, so this is the only direction whose gap
@@ -212,7 +223,7 @@ public class FileConversionCommand extends AbstractCommand {
             return new Gff3ToFFConverter(engine, inputFilePath, sequenceLookup);
         } else if (inputFileType == ConversionFileFormat.embl && outputFileType == ConversionFileFormat.gff3) {
             // Master metadata (from -m) is registered on the engine via buildMetadataProvider
-            return new FFToGff3Converter(engine);
+            return new FFToGff3Converter(engine, masterOutputPath);
         } else if (inputFileType == ConversionFileFormat.tsv && outputFileType == ConversionFileFormat.gff3) {
             // TSV to GFF3 conversion using sequencetools template processing
             return new TSVToGFF3Converter(engine, fastaOutputPath);
