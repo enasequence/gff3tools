@@ -1,0 +1,98 @@
+{
+  "id": "GCA_000001405.29",
+  "accession": "CAXMMS010000001",
+  "secondaryAccessions": [
+    "CAXMMS000000000"
+  ],
+  "description": "Homo sapiens genome assembly",
+  "title": "Human Genome Assembly",
+  "version": 1,
+  "moleculeType": "genomic DNA",
+  "topology": "linear",
+  "division": "HUM",
+  "dataClass": "STD",
+  "project": "PRJEB12345",
+  "sample": "SAMEA12345",
+  "taxon": "9606",
+  "scientificName": "Homo sapiens",
+  "commonName": "human",
+  "lineage": "Eukaryota; Metazoa; Chordata; Mammalia; Primates; Hominidae; Homo.",
+  "keywords": [
+    "WGS",
+    "genome"
+  ],
+  "comment": "This is a test assembly",
+  "chromosomeName": "chr1",
+  "chromosomeType": "Chromosome",
+  "chromosomeLocation": "Nucleus",
+  "firstPublic": "15-JAN-2024",
+  "firstPublicRelease": 144,
+  "lastUpdated": "01-JUN-2024",
+  "lastUpdatedRelease": 144,
+  "assemblyLevel": "chromosome",
+  "assemblyType": "primary metagenome",
+  "publications": [
+    {
+      "pid": "SAMEA12345",
+      "source": "BioSample"
+    }
+  ],
+  "references": [
+    {
+      "referenceNumber": 1,
+      "type": "ARTICLE",
+      "referencePosition": "1-1000",
+      "title": "Complete nucleotide sequence of an example chloroplast genome",
+      "authors": [
+        {
+          "surname": "Sugita",
+          "firstName": "Chieko",
+          "middleName": null
+        },
+        {
+          "surname": "Garcia-Lopez",
+          "firstName": "M.",
+          "middleName": "A."
+        }
+      ],
+      "xrefs": [
+        {
+          "source": "DOI",
+          "primaryId": "10.1007/s11120-006-9122-4",
+          "secondaryId": null
+        },
+        {
+          "source": "PUBMED",
+          "primaryId": "17211581",
+          "secondaryId": null
+        }
+      ],
+      "article": {
+        "journal": "Photosyn. Res.",
+        "volume": "93",
+        "issue": "1-3",
+        "firstPage": "55",
+        "lastPage": "67",
+        "year": 2007,
+        "accepted": false
+      }
+    },
+    {
+      "referenceNumber": 2,
+      "type": "SUBMISSION",
+      "referencePosition": "1-1000",
+      "consortium": "Example Sequencing Consortium",
+      "authors": [
+        {
+          "surname": "Smith",
+          "firstName": "Jane",
+          "middleName": "P. Q."
+        }
+      ],
+      "submission": {
+        "submittedDate": "2023-11-02",
+        "submitterAddress": "Example Institute, Wellcome Genome Campus, Hinxton, Cambridgeshire CB10 1SA, UNITED KINGDOM."
+      }
+    }
+  ]
+}
