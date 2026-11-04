@@ -62,6 +62,9 @@ public class EmblEntryMetadataSource implements MasterMetadataSource {
         if (entry.getVersion() != null) {
             meta.setVersion(entry.getVersion());
         }
+        if (entry.getSequence() != null && entry.getSequence().getVersion() != null) {
+            meta.setSequenceVersion(entry.getSequence().getVersion());
+        }
         if (entry.getComment() != null && entry.getComment().getText() != null) {
             meta.setComment(entry.getComment().getText());
         }

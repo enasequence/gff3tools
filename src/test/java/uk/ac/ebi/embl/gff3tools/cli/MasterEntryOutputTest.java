@@ -64,6 +64,42 @@ class MasterEntryOutputTest {
     }
 
     @Test
+    void entryVersionAndSequenceVersionAreKeptApart() throws Exception {
+        // ID line "SV 1", DT line "Version 4"
+        JsonNode master = generate("A00001.1");
+        assertEquals(4, master.get("version").asInt());
+        assertEquals(1, master.get("sequenceVersion").asInt());
+    }
+
+    @Test
+    void sequenceVersionDrivesTheIdLineWhenTheMasterIsReadBack() throws Exception {
+        Path master = tempDir.resolve("master.json");
+        Files.writeString(master, "{\"accession\":\"A00001\",\"version\":4,\"sequenceVersion\":2}");
+        // no version in the sequence-region, so the master decides the ID line
+        Path gff3 = tempDir.resolve("in.gff3");
+        Files.writeString(gff3, "##gff-version 3.1.26\n##sequence-region A00001 1 10\n");
+        Path embl = tempDir.resolve("out.embl");
+
+        assertEquals(
+                0,
+                run(
+                        "conversion",
+                        "-f",
+                        "gff3",
+                        "-t",
+                        "embl",
+                        "-m",
+                        master.toString(),
+                        gff3.toString(),
+                        embl.toString()));
+
+        String text = Files.readString(embl);
+        assertTrue(text.contains("ID   A00001; SV 2;"), text);
+        // no DT lines: the synthetic master has no first-public or last-updated dates
+        assertFalse(text.contains("DT   "), text);
+    }
+
+    @Test
     void patentRecordGivesPatentReferenceAndEntryFields() throws Exception {
         JsonNode master = generate("A00001.1");
 

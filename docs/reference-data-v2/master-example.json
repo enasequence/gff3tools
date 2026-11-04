@@ -7,6 +7,7 @@
   "description": "Homo sapiens genome assembly",
   "title": "Human Genome Assembly",
   "version": 1,
+  "sequenceVersion": 1,
   "moleculeType": "genomic DNA",
   "topology": "linear",
   "division": "HUM",

@@ -37,7 +37,11 @@ public class MasterMetadata {
     // ── Descriptive ──
     private String description;
     private String title;
+    // Entry version (DT line "Version N"): how often the record was updated.
     private Integer version;
+    // Sequence version (ID line "SV N", the ".N" of an accession.version): changes only when the
+    // sequence does. Preferred over `version` for the ID line when present.
+    private Integer sequenceVersion;
 
     // ── Sequence classification ──
     private String moleculeType;
