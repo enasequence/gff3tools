@@ -10,6 +10,7 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.provider;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
@@ -36,9 +37,8 @@ public class LocusTagPrefixProvider implements LocusTagProvider {
     }
 
     public LocusTagPrefixProvider(Set<String> prefixes) {
-        this.prefixes = prefixes == null
-                ? Set.of()
-                : prefixes.stream().map(String::toUpperCase).collect(Collectors.toUnmodifiableSet());
+        Objects.requireNonNull(prefixes, "Locus tag prefixes must not be null, use Set.of() for 'none registered'");
+        this.prefixes = prefixes.stream().map(String::toUpperCase).collect(Collectors.toUnmodifiableSet());
     }
 
     @Override

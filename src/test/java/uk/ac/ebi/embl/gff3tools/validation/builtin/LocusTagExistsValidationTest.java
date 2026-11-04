@@ -32,6 +32,8 @@ import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
 import uk.ac.ebi.embl.gff3tools.validation.provider.LocusTagPrefixProvider;
@@ -379,17 +381,51 @@ class LocusTagExistsValidationTest {
     }
 
     @Test
-    void testLocusTagPrefixProvider_noArgConstructor_isInactive() {
+    void testLocusTagPrefixProviderNoArgConstructorIsInactive() {
         Assertions.assertFalse(new LocusTagPrefixProvider().isActive());
     }
 
     @Test
-    void testLocusTagPrefixProvider_emptySetConstructor_isActive() {
+    void testLocusTagPrefixProviderEmptySetConstructorIsActive() {
         Assertions.assertTrue(new LocusTagPrefixProvider(Set.of()).isActive());
     }
 
     @Test
-    void testEmptyRegisteredPrefixes_rejectsLocusTag() {
+    void testLocusTagPrefixProviderNullPrefixesThrowsNPE() {
+        NullPointerException ex =
+                Assertions.assertThrows(NullPointerException.class, () -> new LocusTagPrefixProvider(null));
+        Assertions.assertTrue(ex.getMessage().contains("Locus tag prefixes must not be null"));
+    }
+
+    @Test
+    void registeredPrefixRuleNoExplicitProviderPlaceholderInert() {
+        ValidationEngine engine = new ValidationEngineBuilder().failFast(true).build();
+        GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                "ACC1",
+                1,
+                1000,
+                TestUtils.createGFF3Feature("gene", Map.of(GFF3Attributes.LOCUS_TAG, List.of("ANYPREFIX_001"))));
+        Assertions.assertDoesNotThrow(() -> engine.validate(annotation, 1));
+    }
+
+    @Test
+    void registeredPrefixRuleEmptyProviderExplicitRejectsLocusTag() {
+        ValidationEngine engine = new ValidationEngineBuilder()
+                .withProvider(new LocusTagPrefixProvider(Set.of()))
+                .failFast(true)
+                .build();
+        GFF3Annotation annotation = TestUtils.createGFF3Annotation(
+                "ACC1",
+                1,
+                1000,
+                TestUtils.createGFF3Feature("gene", Map.of(GFF3Attributes.LOCUS_TAG, List.of("ANYPREFIX_001"))));
+        ValidationException ex =
+                Assertions.assertThrows(ValidationException.class, () -> engine.validate(annotation, 1));
+        Assertions.assertEquals(LocusTagExistsValidation.LOCUS_TAG_REGISTERED_PREFIX_RULE, ex.getValidationRule());
+    }
+
+    @Test
+    void testEmptyRegisteredPrefixesRejectsLocusTag() {
         gff3Annotation
                 .getFeatures()
                 .add(TestUtils.createGFF3Feature("gene", Map.of(GFF3Attributes.LOCUS_TAG, List.of("ANYPREFIX_001"))));
