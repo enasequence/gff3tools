@@ -19,16 +19,23 @@ import lombok.Setter;
  * Represents a database cross-reference from MasterEntry JSON.
  * Maps to DR lines in EMBL output (e.g., BioSample, ENA); {@code secondaryId} is the DR
  * line's third field where the database has one (e.g. EuropePMC's PubMed id).
+ *
+ * <p>Written as {@code primaryId}/{@code secondaryId}, the same names as reference xrefs
+ * ({@link ReferenceData.Xref}). Older masters used {@code id}/{@code pid} and {@code sid}, which
+ * are still read.
  */
 @Getter
 @Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CrossReference {
 
-    @JsonAlias("pid")
-    private String id;
+    @JsonAlias({"id", "pid"})
+    private String primaryId;
 
     private String source;
+
+    @JsonAlias("sid")
     private String secondaryId;
+
     private String url;
 }

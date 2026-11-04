@@ -133,12 +133,16 @@
       "items": {
         "type": "object",
         "properties": {
-          "id": {
+          "primaryId": {
             "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "description": "Deprecated alias of primaryId, still read."
           },
           "pid": {
             "type": "string",
-            "description": "Alias of id."
+            "description": "Deprecated alias of primaryId, still read."
           },
           "secondaryId": {
             "type": [
@@ -146,6 +150,13 @@
               "null"
             ],
             "description": "Third field of the DR line, where the database has one (e.g. EuropePMC's PubMed id)."
+          },
+          "sid": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Deprecated alias of secondaryId, still read."
           },
           "source": {
             "type": "string",

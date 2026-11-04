@@ -660,8 +660,10 @@ public class GFF3Mapper {
         // Publications (e.g., BioSample). BioProject is skipped — handled via project → PR line.
         if (m.getPublications() != null) {
             for (CrossReference pub : m.getPublications()) {
-                if (pub.getSource() != null && pub.getId() != null && !"BioProject".equalsIgnoreCase(pub.getSource())) {
-                    entry.addXRef(new XRef(pub.getSource(), pub.getId(), pub.getSecondaryId()));
+                if (pub.getSource() != null
+                        && pub.getPrimaryId() != null
+                        && !"BioProject".equalsIgnoreCase(pub.getSource())) {
+                    entry.addXRef(new XRef(pub.getSource(), pub.getPrimaryId(), pub.getSecondaryId()));
                 }
             }
         }

@@ -33,7 +33,7 @@
   "assemblyType": "primary metagenome",
   "publications": [
     {
-      "pid": "SAMEA12345",
+      "primaryId": "SAMEA12345",
       "source": "BioSample"
     }
   ],

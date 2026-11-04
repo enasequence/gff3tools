@@ -157,7 +157,8 @@ class MasterEntryOutputTest {
         JsonNode publications = generate("AB000001.1").get("publications");
         JsonNode europepmc = publications.get(0);
         assertEquals("EuropePMC", europepmc.get("source").asText());
-        assertEquals("PMC5172426", europepmc.get("id").asText());
+        assertEquals("PMC5172426", europepmc.get("primaryId").asText());
+        assertFalse(europepmc.has("id"));
         assertEquals("15629058", europepmc.get("secondaryId").asText());
         JsonNode rfam = publications.get(1);
         assertEquals("RFAM", rfam.get("source").asText());
