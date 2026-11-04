@@ -40,7 +40,7 @@ public class ParentBeforeChildValidation implements Validation {
             description = "A parent feature must be listed before its children",
             type = ANNOTATION)
     public void validateParentBeforeChild(GFF3Annotation annotation, int line) throws ValidationException {
-        Map<String, GFF3Feature> firstLineById = firstLineById(annotation);
+        Map<String, GFF3Feature> firstLineById = getIdFeatureMap(annotation);
         Set<String> idsListedSoFar = new HashSet<>();
         Set<String> reportedChildren = new HashSet<>();
         List<String> violations = new ArrayList<>();
@@ -64,7 +64,7 @@ public class ParentBeforeChildValidation implements Validation {
     }
 
     /** Each ID's first line, which is where a parent counts as listed. */
-    private static Map<String, GFF3Feature> firstLineById(GFF3Annotation annotation) {
+    private static Map<String, GFF3Feature> getIdFeatureMap(GFF3Annotation annotation) {
         Map<String, GFF3Feature> firstLineById = new HashMap<>();
         for (GFF3Feature feature : annotation.getFeatures()) {
             feature.getId().ifPresent(id -> firstLineById.putIfAbsent(id, feature));
