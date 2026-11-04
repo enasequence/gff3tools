@@ -1,0 +1,65 @@
+ID   AB000001; SV 1; linear; genomic DNA; STD; FUN; 660 BP.
+XX
+AC   AB000001;
+XX
+DT   28-DEC-1996 (Rel. 50, Created)
+DT   15-JUL-2009 (Rel. 101, Last updated, Version 7)
+XX
+DE   Rhizoctonia solani genes for 18S rRNA, 5.8S rRNA, 28S rRNA, partial and
+DE   complete sequence, isolate: #1.
+XX
+KW   .
+XX
+OS   Rhizoctonia solani
+OC   Eukaryota; Fungi; Dikarya; Basidiomycota; Agaricomycotina; Agaricomycetes;
+OC   Cantharellales; Ceratobasidiaceae; Rhizoctonia.
+XX
+RN   [1]
+RP   1-660
+RA   Kuninaga S.;
+RT   ;
+RL   Submitted (19-DEC-1996) to the INSDC.
+RL   Contact:Shiro Kuninaga Health Sciences University of Hokkaido, General
+RL   Education; 1757 Kanazawa, Tohbetsu, Hokkaido 061-02, Japan
+XX
+RN   [2]
+RX   DOI; 10.1007/s002940050272.
+RX   PUBMED; 9339350.
+RA   Kuninaga S., Natsuaki T., Takeuchi T.;
+RT   "Sequence variation of the rDNA ITS regions within and between anastomosis
+RT   groups in Rhizoctonia solani";
+RL   Curr. Genet. 32(3):237-243(1997).
+XX
+DR   MD5; 57aa8f4aec8d7066b51230586739bee6.
+DR   EuropePMC; PMC5172426; 15629058.
+DR   RFAM; RF00002; 5_8S_rRNA.
+DR   Unite; 121114.
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..660
+FT                   /organism="Rhizoctonia solani"
+FT                   /strain="AG-3"
+FT                   /isolate="#1"
+FT                   /mol_type="genomic DNA"
+FT                   /db_xref="taxon:456999"
+FT   rRNA            <1..6
+FT                   /product="18S rRNA"
+FT   rRNA            229..383
+FT                   /product="5.8S rRNA"
+FT   rRNA            656..>660
+FT                   /product="28S rRNA"
+XX
+SQ   Sequence 660 BP; 185 A; 125 C; 127 G; 223 T; 0 other;
+     aattttaatg aagagtttgg ttgtagctgg cccattaatt taggcatgtg cacacctttc        60
+     tctttcatcc catacacacc tgtgaacttg tgagacagat ggggaattta tttattgttt       120
+     ttttttgtaa tataaagatg ataagtcatt gaacccttct gtctactcaa ctcatataaa       180
+     ctcaatttat tttaaaatga atgtaatgga tgtaacgcat ctaatactaa gtttcaacaa       240
+     cggatctctt ggctctcgca tcgatgaaga acgcagcgaa atgcgataag taatgtgaat       300
+     tgcagaattc agtgaatcat cgaatctttg aacgcacctt gcgctccttg gtattccttg       360
+     gagcatgcct gtttgagtat catgaaatct tcaaaatcaa gtcttttgtt aattcaattg       420
+     gctttgactt tggtattgga ggtctttgca gcttcacacc tgctcctctt tgtacattag       480
+     ctggatctca gtgttatgct tggttccact cagcgtgata agttatctat cgctgaggac       540
+     actgtaaaaa ggtggccaag gtaaatgcag atgaaccgct tctaatagtc cattgacttg       600
+     gacaatattt ttatgatctg atctcaaatc aggtaggact acccgctgaa cttaagcata       660
+//

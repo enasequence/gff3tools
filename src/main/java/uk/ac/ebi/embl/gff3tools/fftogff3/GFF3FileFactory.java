@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
@@ -66,6 +67,15 @@ public class GFF3FileFactory {
      */
     public GFF3File from(EmblEntryReader entryReader, MasterMetadata masterMetadata)
             throws ValidationException, ReadException {
+        return from(entryReader, masterMetadata, entry -> {});
+    }
+
+    /**
+     * As {@link #from(EmblEntryReader, MasterMetadata)}, and hands each entry to {@code entryObserver}
+     * as it is read, before the entry is converted (conversion may modify it).
+     */
+    public GFF3File from(EmblEntryReader entryReader, MasterMetadata masterMetadata, Consumer<Entry> entryObserver)
+            throws ValidationException, ReadException {
         GFF3Header header = new GFF3Header(HEADER_VERSION);
         GFF3Species species = null;
         List<GFF3Annotation> annotations = new ArrayList<>();
@@ -74,6 +84,7 @@ public class GFF3FileFactory {
         try {
             while (entryReader.read() != null && entryReader.isEntry()) {
                 Entry entry = entryReader.getEntry();
+                entryObserver.accept(entry);
                 if (species == null) {
                     species = directivesFactory.createSpecies(entry, masterMetadata);
                 }

@@ -33,7 +33,16 @@
     },
     "version": {
       "type": "integer",
-      "minimum": 1
+      "minimum": 1,
+      "description": "Entry version: the DT line's \"Version N\", how often the record was updated."
+    },
+    "sequenceVersion": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1,
+      "description": "Sequence version: the ID line's \"SV N\", the N of accession.N. Preferred over version for the ID line."
     },
     "moleculeType": {
       "type": "string",
@@ -133,12 +142,30 @@
       "items": {
         "type": "object",
         "properties": {
-          "id": {
+          "primaryId": {
             "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "description": "Deprecated alias of primaryId, still read."
           },
           "pid": {
             "type": "string",
-            "description": "Alias of id."
+            "description": "Deprecated alias of primaryId, still read."
+          },
+          "secondaryId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Third field of the DR line, where the database has one (e.g. EuropePMC's PubMed id)."
+          },
+          "sid": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Deprecated alias of secondaryId, still read."
           },
           "source": {
             "type": "string",

@@ -1007,6 +1007,9 @@ class GFF3MapperTest {
         // multiple initials, periods + spaces
         assertEquals("E.P.", ReferenceMapper.toInitials("E. P."));
         assertEquals("E.P.", ReferenceMapper.toInitials("E P"));
+        // hyphenated initials keep their hyphen
+        assertEquals("Y.-M.", ReferenceMapper.toInitials("Y.-M."));
+        assertEquals("Z.-G.", ReferenceMapper.toInitials("Z.-G"));
         assertEquals("E.P.", ReferenceMapper.toInitials("E.P."));
         // doubled whitespace and lowercase
         assertEquals("E.P.", ReferenceMapper.toInitials("  e.   p.  "));
