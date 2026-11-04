@@ -1,0 +1,35 @@
+RN   [1]
+RC   Sequence submitted on behalf of the consortium.
+RG   Example Sequencing Consortium
+RA   van der Berg M.A.L., Okafor J.P., Wei L.;
+RT   "Chromosome-level assembly of an example genome";
+RL   Submitted (02-NOV-2023) to the INSDC.
+RL   Wellcome Sanger Institute, Tree of Life Programme, Wellcome Genome Campus,
+RL   Hinxton, Saffron Walden, Cambridgeshire CB10 1SA, United Kingdom
+XX
+RN   [2]
+RA   Silva A.;
+RT   "Reference without a submitted date";
+RL   Unpublished.
+XX
+RN   [3]
+RA   Silva A.;
+RT   "Reference with an unparseable date";
+RL   Unpublished.
+XX
+RN   [4]
+RA   ;
+RT   ;
+RL   Submitted (15-MAR-2022) to the INSDC.
+RL   Institut Pasteur, France
+XX
+RN   [5]
+RA   ;
+RT   "Reference without submitter details";
+RL   Unpublished.
+XX
+RN   [6]
+RA   Lee K.;
+RT   "Reference from a broker account";
+RL   Submitted (08-JUL-2021) to the INSDC.
+RL   Example Broker Ltd, 1 Broker Road, Cambridge, United Kingdom

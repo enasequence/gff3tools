@@ -11,7 +11,9 @@
 package uk.ac.ebi.embl.gff3tools.sequence.fasta.header;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
@@ -21,7 +23,9 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
  * Composite that chains multiple {@link FastaHeaderSource} instances in priority order
  * and returns the first non-empty {@link FastaHeader} for a given seqId.
  *
- * <p>Sources are queried in registration order (highest priority first).
+ * <p>Sources are queried in registration order (highest priority first). Once at least one
+ * source is registered, the resolved result for each seqId (including a miss) is cached, so
+ * repeated lookups for the same seqId do not walk the source chain again.
  *
  * <p>Registered on the validation engine context as a {@link ContextProvider} so consumers
  * can resolve it via {@code context.get(FastaHeaderProvider.class)}. Currently exposed for
@@ -31,8 +35,13 @@ public class FastaHeaderProvider implements ContextProvider<FastaHeaderProvider>
 
     private final List<FastaHeaderSource> sources;
 
+    // Holds the same FastaHeader instance the source returned, so in-place edits
+    // (e.g. FASTA_HEADER_VALUE_NORMALISATION) stay visible to later lookups.
+    private final Map<String, Optional<FastaHeader>> headerCache;
+
     public FastaHeaderProvider() {
         this.sources = new ArrayList<>();
+        this.headerCache = new HashMap<>();
     }
 
     @Override
@@ -60,6 +69,8 @@ public class FastaHeaderProvider implements ContextProvider<FastaHeaderProvider>
      */
     public void addSource(FastaHeaderSource source) {
         this.sources.add(source);
+        // Invalidate cached lookups so the new source is consulted.
+        this.headerCache.clear();
     }
 
     /**
@@ -72,8 +83,16 @@ public class FastaHeaderProvider implements ContextProvider<FastaHeaderProvider>
 
     /**
      * Returns the first non-empty header for the given seqId across all registered sources.
+     * Results are cached per seqId while the provider has sources.
      */
     public Optional<FastaHeader> getHeader(String seqId) {
+        if (!hasSources()) {
+            return Optional.empty();
+        }
+        return headerCache.computeIfAbsent(seqId, this::resolveHeader);
+    }
+
+    private Optional<FastaHeader> resolveHeader(String seqId) {
         for (FastaHeaderSource source : sources) {
             Optional<FastaHeader> header = source.getHeader(seqId);
             if (header.isPresent()) {

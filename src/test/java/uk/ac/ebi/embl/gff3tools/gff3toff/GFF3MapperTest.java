@@ -13,6 +13,9 @@ package uk.ac.ebi.embl.gff3tools.gff3toff;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
@@ -993,22 +996,22 @@ class GFF3MapperTest {
     @Test
     void toInitialsHandlesAllNameComponentShapes() {
         // null / blank
-        assertEquals("", GFF3Mapper.toInitials(null));
-        assertEquals("", GFF3Mapper.toInitials(""));
-        assertEquals("", GFF3Mapper.toInitials("   "));
+        assertEquals("", ReferenceMapper.toInitials(null));
+        assertEquals("", ReferenceMapper.toInitials(""));
+        assertEquals("", ReferenceMapper.toInitials("   "));
         // full name
-        assertEquals("E.", GFF3Mapper.toInitials("Eleanor"));
+        assertEquals("E.", ReferenceMapper.toInitials("Eleanor"));
         // single initial, with and without period
-        assertEquals("E.", GFF3Mapper.toInitials("E."));
-        assertEquals("E.", GFF3Mapper.toInitials("E"));
+        assertEquals("E.", ReferenceMapper.toInitials("E."));
+        assertEquals("E.", ReferenceMapper.toInitials("E"));
         // multiple initials, periods + spaces
-        assertEquals("E.P.", GFF3Mapper.toInitials("E. P."));
-        assertEquals("E.P.", GFF3Mapper.toInitials("E P"));
-        assertEquals("E.P.", GFF3Mapper.toInitials("E.P."));
+        assertEquals("E.P.", ReferenceMapper.toInitials("E. P."));
+        assertEquals("E.P.", ReferenceMapper.toInitials("E P"));
+        assertEquals("E.P.", ReferenceMapper.toInitials("E.P."));
         // doubled whitespace and lowercase
-        assertEquals("E.P.", GFF3Mapper.toInitials("  e.   p.  "));
+        assertEquals("E.P.", ReferenceMapper.toInitials("  e.   p.  "));
         // compound first name "Mary Anne"
-        assertEquals("M.A.", GFF3Mapper.toInitials("Mary Anne"));
+        assertEquals("M.A.", ReferenceMapper.toInitials("Mary Anne"));
     }
 
     // ── WGS contig regression tests ──
@@ -1204,5 +1207,475 @@ class GFF3MapperTest {
                 .filter("WGS"::equalsIgnoreCase)
                 .count();
         assertEquals(1, wgsCount, "WGS keyword should appear exactly once even when pre-populated");
+    }
+
+    // ---- ReferenceData v2: typed references (docs/2610141424_reference_data_v2.md) ----
+
+    private static final ObjectMapper REF_MAPPER = JsonMapper.builder()
+            .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
+            .build();
+
+    private String embl(String referenceJson) throws Exception {
+        return embl(new MasterMetadata(), "seq1", "[" + referenceJson + "]");
+    }
+
+    private String embl(MasterMetadata meta, String accession, String referencesJson) throws Exception {
+        meta.setReferences(List.of(REF_MAPPER.readValue(referencesJson, ReferenceData[].class)));
+        MasterMetadataProvider provider = providerFromMetadata(Map.of(accession, meta));
+        GFF3Mapper mapper = new GFF3Mapper(mockReader(), contextWith(provider));
+        Entry entry = mapper.mapGFF3ToEntry(createAnnotation(accession, 1, 5000));
+        StringWriter writer = new StringWriter();
+        EmblEntryWriter entryWriter = new EmblEntryWriter(entry);
+        entryWriter.setShowAcStartLine(false);
+        entryWriter.write(writer);
+        return writer.toString();
+    }
+
+    @Test
+    void v2ArticleIsMappedWithXrefsAndStructuredAuthors() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "ARTICLE", "title": "Complete nucleotide sequence",
+                 "authors": [{"surname": "Sugita", "firstName": "C."}, {"surname": "Doe", "firstName": "Jane", "middleName": "Q."}],
+                 "xrefs": [{"source": "DOI", "primaryId": "10.1007/s11120-006-9122-4"},
+                           {"source": "PUBMED", "primaryId": "17211581"}],
+                 "article": {"journal": "Photosyn. Res.", "volume": "93", "issue": "1-3",
+                             "firstPage": "55", "lastPage": "67", "year": 2007, "accepted": false}}
+                """);
+        assertTrue(out.contains("RX   DOI; 10.1007/s11120-006-9122-4."), out);
+        assertTrue(out.contains("RX   PUBMED; 17211581."), out);
+        assertTrue(out.contains("RA   Sugita C., Doe J.Q.;"), out);
+        assertTrue(out.contains("RL   Photosyn. Res. 93(1-3):55-67(2007)."), out);
+    }
+
+    @Test
+    void v2AcceptedArticleRendersLikeAnyOtherArticle() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "ARTICLE", "title": "In press",
+                 "article": {"journal": "Photosyn. Res.", "year": 2007, "accepted": true}}
+                """);
+        // no volume/issue/pages: this is what the sequencetools article writer emits
+        assertTrue(out.contains("\nRL   Photosyn. Res.:(2007).\n"), out);
+    }
+
+    @Test
+    void v2BookThesisPatentElectronicAreMapped() throws Exception {
+        String book = embl(
+                """
+                {"referenceNumber": 1, "type": "BOOK", "title": "t",
+                 "book": {"bookTitle": "PS2001 Proceedings", "publisher": "CSIRO Publishing",
+                          "firstPage": "40", "lastPage": "49", "year": 2001,
+                          "editors": [{"surname": "Roe", "firstName": "R."}]}}
+                """);
+        assertTrue(book.contains("RL   (in) Roe R. (Eds.);"), book);
+        assertTrue(book.contains("PS2001 Proceedings:40-49;"), book);
+        assertTrue(book.contains("CSIRO Publishing (2001)"), book);
+
+        String thesis = embl(
+                """
+                {"referenceNumber": 1, "type": "THESIS", "thesis": {"institute": "IPK Gatersleben", "year": 2008}}
+                """);
+        assertTrue(thesis.contains("RL   Thesis (2008), IPK Gatersleben"), thesis);
+
+        String patent = embl(
+                """
+                {"referenceNumber": 1, "type": "PATENT",
+                 "patent": {"patentOffice": "US", "patentNumber": "1234567", "patentType": "A1",
+                            "sequenceNumber": 1, "day": "2001-01-01", "applicants": ["ACME"]}}
+                """);
+        assertTrue(patent.contains("RL   Patent number US1234567-A1/1, 01-JAN-2001."), patent);
+
+        String electronic = embl(
+                """
+                {"referenceNumber": 1, "type": "ELECTRONIC", "electronic": {"text": "https://example.org/x"}}
+                """);
+        assertTrue(electronic.contains("\nRL   (er) https://example.org/x\n"), electronic);
+    }
+
+    @Test
+    void v2SubmissionUsesSubmissionBlock() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "SUBMISSION",
+                 "authors": [{"surname": "Doe", "firstName": "J."}],
+                 "submission": {"submittedDate": "2012-05-25", "submitterAddress": "Molecular Genetics, GERMANY."}}
+                """);
+        assertTrue(out.contains("RL   Submitted (25-MAY-2012) to the INSDC."), out);
+        assertTrue(out.contains("Molecular Genetics, GERMANY."), out);
+    }
+
+    @Test
+    void v2ConsortiumOnlySubmissionDoesNotFallBackToSubmitterContacts() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "SUBMISSION", "consortium": "Smith J., Doe A.B.",
+                 "submission": {"submittedDate": "2024-03-05", "submitterAddress": "Dept X, UK"},
+                 "submitterDetails": {"authors": [{"surname": "smith", "firstName": "John"}]}}
+                """);
+        assertTrue(out.contains("RG   Smith J., Doe A.B."), out);
+        // the sequencetools writer prints an empty "RA   ;" when there are no persons
+        assertTrue(out.contains("\nRA   ;\n"), out);
+        assertFalse(out.contains("smith"), out);
+    }
+
+    @Test
+    void unknownReferenceTypeFallsBackToUnpublished() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "HOLOGRAM", "title": "t",
+                 "authors": [{"surname": "Doe", "firstName": "J."}]}
+                """);
+        assertTrue(out.contains("RL   Unpublished."), out);
+    }
+
+    @Test
+    void typedReferenceWithoutItsBlockFallsBackToUnpublished() throws Exception {
+        String out =
+                embl("""
+                {"referenceNumber": 1, "type": "ARTICLE", "title": "t"}
+                """);
+        assertTrue(out.contains("RL   Unpublished."), out);
+    }
+
+    @Test
+    void referenceWithoutTypeKeepsV1Behaviour() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1,
+                 "submitterDetails": {"submittedDate": "2025-04-03T13:30:22.000+00:00",
+                                      "authors": [{"surname": "Doe", "firstName": "J."}]}}
+                """);
+        assertTrue(out.contains("RL   Submitted (03-APR-2025) to the INSDC."), out);
+        assertTrue(out.contains("RA   Doe J.;"), out);
+    }
+
+    @Test
+    void v1FreeTextAuthorsStringIsToleratedAndSubmitterDetailsAuthorsUsed() throws Exception {
+        // v1 master JSON carried "authors" as a plain string; it must neither fail
+        // deserialization nor shadow submitterDetails.authors
+        String out = embl(
+                """
+                {"referenceNumber": 1, "authors": "Doe J.", "address": "Somewhere",
+                 "submitterDetails": {"submittedDate": "2025-04-03T13:30:22.000+00:00",
+                                      "authors": [{"surname": "Roe", "firstName": "R."}]}}
+                """);
+        assertTrue(out.contains("RA   Roe R.;"), out);
+    }
+
+    @Test
+    void v1ReferenceIgnoresStructuredTopLevelAuthors() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "authors": [{"surname": "Doe", "firstName": "J."}],
+                 "submitterDetails": {"submittedDate": "2025-04-03T13:30:22.000+00:00",
+                                      "authors": [{"surname": "Roe", "firstName": "R."}]}}
+                """);
+        assertTrue(out.contains("\nRA   Roe R.;\n"), out);
+        assertFalse(out.contains("Doe"), out);
+    }
+
+    @Test
+    void typedReferenceWithoutAuthorsDoesNotUseSubmitterDetailsAuthors() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "SUBMISSION",
+                 "submission": {"submittedDate": "2024-03-05", "submitterAddress": "Dept X, UK"},
+                 "submitterDetails": {"authors": [{"surname": "Roe", "firstName": "R."}]}}
+                """);
+        assertTrue(out.contains("\nRA   ;\n"), out);
+        assertFalse(out.contains("Roe"), out);
+    }
+
+    @Test
+    void referenceTypeIsTrimmedAndCaseInsensitive() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": " article ",
+                 "article": {"journal": "J. Test", "year": 2007}}
+                """);
+        assertTrue(out.contains("\nRL   J. Test:(2007).\n"), out);
+    }
+
+    // ---- required fields per type, submission date fallback, RP ----
+
+    @Test
+    void articleWithoutJournalFallsBackToUnpublished() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "ARTICLE", "title": "t",
+                 "article": {"volume": "93", "firstPage": "55", "lastPage": "67", "year": 2007}}
+                """);
+        assertTrue(out.contains("RL   Unpublished."), out);
+    }
+
+    @Test
+    void bookMissingEditorTitlePublisherOrYearFallsBackToUnpublished() throws Exception {
+        String editors = "\"editors\": [{\"surname\": \"Roe\", \"firstName\": \"R.\"}]";
+        for (String block : List.of(
+                "{\"publisher\": \"CSIRO\", \"year\": 2001, " + editors + "}",
+                "{\"bookTitle\": \"PS2001\", \"year\": 2001, " + editors + "}",
+                "{\"bookTitle\": \"  \", \"publisher\": \"CSIRO\", \"year\": 2001, " + editors + "}",
+                "{\"bookTitle\": \"PS2001\", \"publisher\": \"CSIRO\", " + editors + "}",
+                "{\"bookTitle\": \"PS2001\", \"publisher\": \"CSIRO\", \"year\": 2001}",
+                "{\"bookTitle\": \"PS2001\", \"publisher\": \"CSIRO\", \"year\": 2001, \"editors\": []}",
+                "{\"bookTitle\": \"PS2001\", \"publisher\": \"CSIRO\", \"year\": 2001, "
+                        + "\"editors\": [{\"surname\": \" \", \"firstName\": \"\"}]}")) {
+            String out = embl("{\"referenceNumber\": 1, \"type\": \"BOOK\", \"book\": " + block + "}");
+            assertTrue(out.contains("RL   Unpublished."), block + "\n" + out);
+        }
+        // pages are optional for a book
+        String ok = embl(
+                """
+                {"referenceNumber": 1, "type": "BOOK",
+                 "book": {"bookTitle": "PS2001", "publisher": "CSIRO", "year": 2001,
+                          "editors": [{"surname": "Roe", "firstName": "R."}]}}
+                """);
+        assertTrue(ok.contains("\nRL   (in) Roe R. (Eds.);\nRL   PS2001:0-0;\nRL   CSIRO (2001)\n"), ok);
+    }
+
+    @Test
+    void thesisWithoutInstituteOrYearFallsBackToUnpublished() throws Exception {
+        for (String block : List.of("{\"year\": 2008}", "{\"institute\": \"IPK Gatersleben\"}")) {
+            String out = embl("{\"referenceNumber\": 1, \"type\": \"THESIS\", \"thesis\": " + block + "}");
+            assertTrue(out.contains("RL   Unpublished."), block + "\n" + out);
+        }
+    }
+
+    @Test
+    void articleWithOutOfRangeYearFallsBackToUnpublished() throws Exception {
+        for (String year : List.of("0", "99999", "2000000000")) {
+            String out = embl("{\"referenceNumber\": 1, \"type\": \"ARTICLE\", "
+                    + "\"article\": {\"journal\": \"J. Test\", \"year\": " + year + "}}");
+            assertTrue(out.contains("RL   Unpublished."), year + "\n" + out);
+        }
+    }
+
+    @Test
+    void articleWithoutYearFallsBackToUnpublished() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "ARTICLE",
+                 "article": {"journal": "Photosyn. Res.", "volume": "93", "firstPage": "55", "lastPage": "67"}}
+                """);
+        assertTrue(out.contains("RL   Unpublished."), out);
+    }
+
+    @Test
+    void patentWithInvalidOfficeOrMissingFieldsFallsBackToUnpublished() throws Exception {
+        for (String block : List.of(
+                "{\"patentOffice\": \"USA\", \"patentNumber\": \"1\", \"patentType\": \"A\", \"sequenceNumber\": 1, \"day\": \"2001-01-01\"}",
+                "{\"patentOffice\": \"US\", \"patentType\": \"A\", \"sequenceNumber\": 1, \"day\": \"2001-01-01\"}",
+                "{\"patentOffice\": \"US\", \"patentNumber\": \"1\", \"sequenceNumber\": 1, \"day\": \"2001-01-01\"}",
+                "{\"patentOffice\": \"US\", \"patentNumber\": \"1\", \"patentType\": \"A\", \"day\": \"2001-01-01\"}",
+                "{\"patentOffice\": \"US\", \"patentNumber\": \"1\", \"patentType\": \"A\", \"sequenceNumber\": 1}",
+                "{\"patentOffice\": \"US\", \"patentNumber\": \"1\", \"patentType\": \"A\", \"sequenceNumber\": 1, \"day\": \"not-a-date\"}",
+                "{\"patentOffice\": \"US\", \"patentNumber\": \"12-345\", \"patentType\": \"A\", \"sequenceNumber\": 1, \"day\": \"2001-01-01\"}")) {
+            String out = embl("{\"referenceNumber\": 1, \"type\": \"PATENT\", \"patent\": " + block + "}");
+            assertTrue(out.contains("RL   Unpublished."), block + "\n" + out);
+        }
+    }
+
+    @Test
+    void patentNumberAndTypeAreTrimmed() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "PATENT",
+                 "patent": {"patentOffice": "US", "patentNumber": "1234567 ", "patentType": " A1",
+                            "sequenceNumber": 1, "day": "2001-01-01"}}
+                """);
+        assertTrue(out.contains("\nRL   Patent number US1234567-A1/1, 01-JAN-2001.\n"), out);
+    }
+
+    @Test
+    void electronicWithoutTextFallsBackToUnpublished() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "ELECTRONIC", "electronic": {"text": "  "}}
+                """);
+        assertTrue(out.contains("RL   Unpublished."), out);
+    }
+
+    @Test
+    void submissionWithoutDateFallsBackToSubmitterDetails() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "SUBMISSION",
+                 "submission": {"submitterAddress": "Somewhere"},
+                 "submitterDetails": {"submittedDate": "2025-04-03T13:30:22.000+00:00",
+                                      "submissionAccount": {"centerName": "EBI", "country": "UK"}}}
+                """);
+        // only the date falls back; the block's address still wins over the account's
+        assertTrue(out.contains("\nRL   Submitted (03-APR-2025) to the INSDC.\nRL   Somewhere\n"), out);
+    }
+
+    @Test
+    void submissionWithInvalidDateFallsBackToSubmitterDetailsDate() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "SUBMISSION",
+                 "submission": {"submittedDate": "not-a-date", "submitterAddress": "Somewhere"},
+                 "submitterDetails": {"submittedDate": "2025-04-03T13:30:22.000+00:00"}}
+                """);
+        assertTrue(out.contains("\nRL   Submitted (03-APR-2025) to the INSDC.\nRL   Somewhere\n"), out);
+    }
+
+    @Test
+    void submissionWithoutAddressFallsBackToSubmitterAccountAddress() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "SUBMISSION",
+                 "submission": {"submittedDate": "2012-05-25", "submitterAddress": " "},
+                 "submitterDetails": {"submittedDate": "2025-04-03T13:30:22.000+00:00",
+                                      "submissionAccount": {"centerName": "EBI", "country": "UK"}}}
+                """);
+        assertTrue(out.contains("\nRL   Submitted (25-MAY-2012) to the INSDC.\nRL   EBI, UK\n"), out);
+    }
+
+    @Test
+    void submissionWithoutBlockOrSubmitterDetailsFallsBackToUnpublished() throws Exception {
+        String out = embl("""
+                {"referenceNumber": 1, "type": "SUBMISSION"}
+                """);
+        assertTrue(out.contains("RL   Unpublished."), out);
+    }
+
+    @Test
+    void submitterAddressFollowsLegacyBrokerRule() throws Exception {
+        String account = "\"centerName\": \"Center\", \"laboratoryName\": \"Lab\", "
+                + "\"address\": \"1 Road\", \"country\": \"UK\"";
+        String nonBroker = embl("{\"referenceNumber\": 1, \"submitterDetails\": {\"submittedDate\": \"2012-05-25\", "
+                + "\"submissionAccount\": {" + account + ", \"brokerName\": \" \"}}}");
+        assertTrue(nonBroker.contains("\nRL   Center, Lab, 1 Road, UK\n"), nonBroker);
+
+        String broker = embl("{\"referenceNumber\": 1, \"submitterDetails\": {\"submittedDate\": \"2012-05-25\", "
+                + "\"submissionAccount\": {" + account + ", \"brokerName\": \"Broker Ltd\"}}}");
+        assertTrue(broker.contains("\nRL   Broker Ltd, 1 Road, UK\n"), broker);
+    }
+
+    @Test
+    void submissionWithoutAnyDateFallsBackToUnpublished() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "SUBMISSION", "submission": {"submitterAddress": "Somewhere"}}
+                """);
+        assertTrue(out.contains("RL   Unpublished."), out);
+    }
+
+    @Test
+    void v1ReferencePositionIsNotRendered() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "referencePosition": "1-500",
+                 "submitterDetails": {"submittedDate": "2004-12-10"}}
+                """);
+        assertFalse(out.contains("RP   "), out);
+        assertTrue(out.contains("RL   Submitted (10-DEC-2004) to the INSDC."), out);
+    }
+
+    @Test
+    void wgsContigLengthOverridesV2ReferencePosition() throws Exception {
+        String out = embl(
+                createWgsSetMasterMetadata(),
+                "CAXMYH010000001",
+                """
+                [{"referenceNumber": 1, "type": "SUBMISSION", "referencePosition": "1-100",
+                  "submission": {"submittedDate": "2004-12-10", "submitterAddress": "Somewhere"}}]
+                """);
+        assertTrue(out.contains("\nRP   1-5000\n"), out);
+        assertFalse(out.contains("RP   1-100"), out);
+    }
+
+    @Test
+    void referencesAreNumberedInOrder() throws Exception {
+        String out = embl(
+                new MasterMetadata(),
+                "seq1",
+                """
+                [{"referenceNumber": 1, "type": "SUBMISSION", "submission": {"submittedDate": "2004-12-10"}},
+                 {"referenceNumber": 2, "type": "ARTICLE", "article": {"journal": "J. Test", "year": 2007}},
+                 {"referenceNumber": 3, "type": "BOOK",
+                  "book": {"bookTitle": "PS2001", "publisher": "CSIRO", "year": 2001,
+                           "editors": [{"surname": "Roe", "firstName": "R."}]}}]
+                """);
+        int rn1 = out.indexOf("RN   [1]");
+        int submitted = out.indexOf("RL   Submitted (10-DEC-2004)");
+        int rn2 = out.indexOf("RN   [2]");
+        int article = out.indexOf("RL   J. Test:(2007).");
+        int rn3 = out.indexOf("RN   [3]");
+        int book = out.indexOf("RL   (in) Roe R. (Eds.);");
+        assertTrue(0 <= rn1 && rn1 < submitted && submitted < rn2 && rn2 < article && article < rn3 && rn3 < book, out);
+    }
+
+    @Test
+    void xrefSourcesAreNormalisedAndBlankIdsSkipped() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "ARTICLE",
+                 "xrefs": [{"source": " doi ", "primaryId": " 10.1/x "},
+                           {"source": "PUBMED", "primaryId": "  "},
+                           {"source": " ", "primaryId": "123"},
+                           {"source": "agricola", "primaryId": "IND1"},
+                           {"source": "EMBL", "primaryId": "AB000001"}],
+                 "article": {"journal": "J. Test", "year": 2007}}
+                """);
+        assertTrue(out.contains("RX   DOI; 10.1/x."), out);
+        assertTrue(out.contains("RX   AGRICOLA; IND1."), out);
+        // unknown sources are rendered (with a WARN)
+        assertTrue(out.contains("RX   EMBL; AB000001."), out);
+        assertFalse(out.contains("PUBMED"), out);
+        assertTrue(out.lines().filter(l -> l.startsWith("RX")).noneMatch(l -> l.contains("123")), out);
+    }
+
+    @Test
+    void patentOfficeIsUpperCasedAndBlankApplicantsSkipped() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "PATENT",
+                 "patent": {"patentOffice": " us ", "patentNumber": "1234567", "patentType": "A1",
+                            "sequenceNumber": 1, "day": "2001-01-01", "applicants": ["ACME", " ", null, "Globex"]}}
+                """);
+        assertTrue(out.contains("\nRL   Patent number US1234567-A1/1, 01-JAN-2001.\nRL   ACME;\nRL   Globex.\n"), out);
+    }
+
+    @Test
+    void authorsArrayOfStringsSkipsNonObjectElements() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "UNPUBLISHED",
+                 "authors": ["Doe J.", {"surname": "Roe", "firstName": "R."}, 42, null]}
+                """);
+        assertTrue(out.contains("RA   Roe R.;"), out);
+        assertFalse(out.contains("Doe"), out);
+    }
+
+    @Test
+    void referencePositionIsRenderedAsRpLine() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "SUBMISSION", "referencePosition": "1-2696255",
+                 "submission": {"submittedDate": "2004-12-10", "submitterAddress": "Somewhere"}}
+                """);
+        assertTrue(out.contains("RP   1-2696255"), out);
+    }
+
+    @Test
+    void multiRangeReferencePositionIsRenderedAsRpLine() throws Exception {
+        String out = embl(
+                """
+                {"referenceNumber": 1, "type": "ARTICLE", "referencePosition": "1-100,200-300",
+                 "article": {"journal": "J. Test", "year": 2007}}
+                """);
+        assertTrue(out.contains("RP   1-100, 200-300"), out);
+    }
+
+    @Test
+    void unparseableReferencePositionOmitsRpLineWithoutFailing() throws Exception {
+        for (String position : List.of("abc", "1-", "0-5", "10-5", "1-5;7-9", "1-99999999999999999999")) {
+            String out = embl(
+                    "{\"referenceNumber\": 1, \"type\": \"UNPUBLISHED\", \"referencePosition\": \"" + position + "\"}");
+            assertFalse(out.contains("RP   "), position + "\n" + out);
+            assertTrue(out.contains("RL   Unpublished."), position + "\n" + out);
+        }
     }
 }
