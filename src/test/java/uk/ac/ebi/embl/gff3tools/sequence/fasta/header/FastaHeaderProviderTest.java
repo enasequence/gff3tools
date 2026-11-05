@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.sequence.fasta.header;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 
@@ -24,6 +25,13 @@ class FastaHeaderProviderTest {
         h.setMoleculeType("genomic DNA");
         h.setTopology("linear");
         return h;
+    }
+
+    private FastaHeaderSource countingSource(int[] calls, Map<String, FastaHeader> headers) {
+        return seqId -> {
+            calls[0]++;
+            return Optional.ofNullable(headers.get(seqId));
+        };
     }
 
     @Test
@@ -81,5 +89,56 @@ class FastaHeaderProviderTest {
         assertEquals("Source 1", provider.getHeader("seq1").orElseThrow().getDescription());
         // seq2 only in second source -> second source
         assertEquals("Source 2", provider.getHeader("seq2").orElseThrow().getDescription());
+    }
+
+    @Test
+    void addingSourceInvalidatesCachedMiss() {
+        FastaHeaderProvider provider = new FastaHeaderProvider();
+        provider.addSource(new FileFastaHeaderSource(Map.of("seq1", createHeader("From FASTA"))));
+
+        // seq2 not in FASTA -> miss is cached
+        assertTrue(provider.getHeader("seq2").isEmpty());
+
+        // A new source must be consulted, not the cached miss
+        provider.addSource(new CliFastaHeaderSource(createHeader("From CLI")));
+        assertEquals("From CLI", provider.getHeader("seq2").orElseThrow().getDescription());
+    }
+
+    @Test
+    void cachedHeaderIsSameInstanceSoInPlaceEditsPersist() {
+        FastaHeaderProvider provider = new FastaHeaderProvider();
+        provider.addSource(new FileFastaHeaderSource(Map.of("seq1", createHeader("Original"))));
+
+        FastaHeader first = provider.getHeader("seq1").orElseThrow();
+        first.setDescription("Normalised");
+
+        // FASTA_HEADER_VALUE_NORMALISATION edits the header in place; later lookups must see it
+        FastaHeader second = provider.getHeader("seq1").orElseThrow();
+        assertSame(first, second);
+        assertEquals("Normalised", second.getDescription());
+    }
+
+    @Test
+    void repeatedHitIsServedFromCache() {
+        int[] calls = {0};
+        FastaHeaderProvider provider = new FastaHeaderProvider();
+        provider.addSource(countingSource(calls, Map.of("seq1", createHeader("Test organism"))));
+
+        provider.getHeader("seq1");
+        provider.getHeader("seq1");
+
+        assertEquals(1, calls[0]);
+    }
+
+    @Test
+    void repeatedMissIsServedFromCache() {
+        int[] calls = {0};
+        FastaHeaderProvider provider = new FastaHeaderProvider();
+        provider.addSource(countingSource(calls, Map.of("seq1", createHeader("Test organism"))));
+
+        assertTrue(provider.getHeader("unknown").isEmpty());
+        assertTrue(provider.getHeader("unknown").isEmpty());
+
+        assertEquals(1, calls[0]);
     }
 }
