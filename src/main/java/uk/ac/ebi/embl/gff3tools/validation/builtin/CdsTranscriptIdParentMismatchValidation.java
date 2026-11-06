@@ -82,7 +82,7 @@ public class CdsTranscriptIdParentMismatchValidation implements Validation {
                     && !cdsTranscriptId.get().equals(mrnaTranscriptId.get())) {
                 violations.add(VIOLATION_MESSAGE.formatted(
                         cds.getId().orElse("<no ID>"),
-                        describeLocation(cds, cdsSegments),
+                        ValidationUtils.getGroupLocationString(cdsSegments),
                         cdsTranscriptId.get(),
                         parentId,
                         mrnaTranscriptId.get()));
@@ -101,13 +101,6 @@ public class CdsTranscriptIdParentMismatchValidation implements Validation {
                         segment.getAttribute(GFF3Attributes.TRANSCRIPT_ID).orElse(null))
                 .filter(Objects::nonNull)
                 .findFirst();
-    }
-
-    /** The span the feature covers, with the line of its first segment where it was read from a file. */
-    private String describeLocation(GFF3Feature representative, List<GFF3Feature> segments) {
-        long end = segments.stream().mapToLong(GFF3Feature::getEnd).max().orElse(representative.getEnd());
-        String location = "%s:%d..%d".formatted(representative.accession(), representative.getStart(), end);
-        return representative.getLine() >= 0 ? location + " (line %d)".formatted(representative.getLine()) : location;
     }
 
     private boolean isCds(GFF3Feature feature) {

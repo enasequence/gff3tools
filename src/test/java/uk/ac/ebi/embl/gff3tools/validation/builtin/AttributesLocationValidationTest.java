@@ -19,6 +19,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -417,6 +419,21 @@ public class AttributesLocationValidationTest {
     public void testValidateTranslExceptTermWithInvalidLengthSpan() {
         GFF3Feature f1 = TestUtils.createGFF3Feature(
                 OntologyTerm.RRNA.name(), 200, 989, Map.of(TRANSL_EXCEPT, List.of("(pos:252..258,aa:TERM)")));
+
+        gff3Annotation.addFeature(f1);
+
+        ValidationException ex = Assertions.assertThrows(
+                ValidationException.class, () -> attributesLocationValidation.validateTranslExcept(gff3Annotation, 1));
+
+        Assertions.assertTrue(ex.getMessage()
+                .contains("%s location span must be \"3\" at location 252..258".formatted(TRANSL_EXCEPT)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"(pos:258,aa:TERM)", "(pos:257..258,aa:Ter)", "(pos:257..258,aa:term)"})
+    public void testValidateTranslExceptShortStopCodonInAnySpelling(String value) {
+        GFF3Feature f1 =
+                TestUtils.createGFF3Feature(OntologyTerm.RRNA.name(), 200, 989, Map.of(TRANSL_EXCEPT, List.of(value)));
 
         gff3Annotation.addFeature(f1);
 
