@@ -218,6 +218,7 @@ file says so:
 |------|----------------|
 | `LOCUS_TAG_EXISTS` | the analysis type is `SEQUENCE_ASSEMBLY`, and a registered `TaxonProvider` resolves the organism to a non-virus. Core ships no `TaxonProvider`. |
 | `MOLECULE_TYPE_ANALYSIS_TYPE` | the analysis type is `SEQUENCE_ASSEMBLY` or `TRANSCRIPTOME_ASSEMBLY`, and the FASTA header declares a recognised molecule type |
+| `ARTIFICIAL_ASSEMBLY_ANALYSIS_TYPE` | the analysis type is `SEQUENCE_FLATFILE` or `TRANSCRIPTOME_ASSEMBLY`; `artificial_assembly` is only permitted for `SEQUENCE_ASSEMBLY` |
 | `ASSEMBLY_SEQUENCE_TOO_SHORT` | the analysis type is `SEQUENCE_ASSEMBLY`, the assembly type is a whole genome sequence one (`clone or isolate`, MAG, SAG or `COVID-19 outbreak`), and a registered sequence source knows the sequence's length |
 
 The CLI has no option to set the analysis type or the assembly type, so these rules never fire
