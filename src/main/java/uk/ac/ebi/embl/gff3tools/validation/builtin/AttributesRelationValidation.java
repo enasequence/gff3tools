@@ -18,12 +18,15 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.PseudoLookup;
+import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
 
 @Gff3Validation(name = "ATTRIBUTES_RELATION")
@@ -46,6 +49,10 @@ public class AttributesRelationValidation implements Validation {
     private static final String ERROR_PSEUDO_PRODUCT_CONFLICT =
             "Feature annotated with \"%s\" should not contain \"%s\". "
                     + "Please move the \"%s\" attribute value into \"%s\" or add a comment for a curator.";
+
+    private static final String CDS_PSEUDO_PRODUCT_MESSAGE =
+            "%s \"%s\" at %s:%s has a \"product\" attribute but is pseudo: %s. A pseudo CDS must not name a"
+                    + " product; move the value into \"note\" or add a comment for a curator.";
 
     private static final String CIRCULAR_RNA_ATTRIBUTE_ERROR =
             "Attribute circularRNA is not allowed in feature \"%s\",  only CDS,mRNA or tRNA feature can contain circularRNA qualifier.";
@@ -170,6 +177,49 @@ public class AttributesRelationValidation implements Validation {
                 }
             }
         }
+    }
+
+    /**
+     * The pseudo/product pair across lines: a {@code product} on a CDS or {@code pseudogenic_CDS}
+     * whose ancestor is pseudo. Pseudo on a CDS (with a {@code product} attribute) itself is reported
+     * in {@code MUTUALLY_EXCLUSIVE_ATTRIBUTES}'.
+     *
+     * Runs at HIGH, before {@code GENE_ASSOCIATED_FEATURE_REMOVAL} can delete that ancestor.
+     */
+    @ValidationMethod(
+            rule = "CDS_PSEUDO_PRODUCT",
+            description = "A CDS under a pseudo parent must not have a product",
+            type = ValidationType.ANNOTATION,
+            severity = RuleSeverity.WARN,
+            priority = ValidationPriority.HIGH)
+    public void validateCdsPseudoParentProduct(GFF3Annotation annotation, int line) throws ValidationException {
+        PseudoLookup pseudoLookup = PseudoLookup.of(annotation, context);
+
+        List<String> violations = new ArrayList<>();
+        for (List<GFF3Feature> segments : ValidationUtils.groupFeaturesById(
+                        annotation, pseudoLookup::isCdsOrPseudogenicCds)
+                .values()) {
+            if (segments.stream().noneMatch(s -> s.hasAttribute(GFF3Attributes.PRODUCT))) {
+                continue;
+            }
+            pseudoLookup
+                    .ancestorPseudoReason(segments)
+                    .ifPresent(reason -> violations.add(describeCds(segments, reason)));
+        }
+
+        if (!violations.isEmpty()) {
+            throw new ValidationException(line, String.join("\n", violations));
+        }
+    }
+
+    private static String describeCds(List<GFF3Feature> segments, String reason) {
+        GFF3Feature representative = ValidationUtils.representativeOfFeatureGroup(segments);
+        return CDS_PSEUDO_PRODUCT_MESSAGE.formatted(
+                representative.getName(),
+                representative.getId().orElse("<no ID>"),
+                representative.accession(),
+                ValidationUtils.getLocationString(representative),
+                reason);
     }
 
     @ValidationMethod(rule = "MUTUALLY_EXCLUSIVE_ATTRIBUTES_VALUE", type = ValidationType.FEATURE)

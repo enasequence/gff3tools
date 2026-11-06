@@ -18,6 +18,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.PseudoLookup;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
@@ -68,25 +69,44 @@ public class GeneAssociatedFeatureRemoval implements Fix {
             }
         }
 
-        Set<String> removedGeneIds = new HashSet<>();
+        Map<String, GFF3Feature> removedGenes = new HashMap<>();
         for (GFF3Feature geneAssociatedFeature : geneAssociatedFeatures) {
             String locationKey = geneAssociatedFeature.getStart() + ":" + geneAssociatedFeature.getEnd();
             GFF3Feature toRemove = geneFeatureMap.get(locationKey);
             if (toRemove != null) {
-                toRemove.getId().ifPresent(removedGeneIds::add);
+                toRemove.getId().ifPresent(id -> removedGenes.put(id, toRemove));
                 gff3Annotation.removeFeature(toRemove);
             }
         }
 
         // Clear Parent reference on any feature whose parent was just removed,
-        // preventing DANGLING_PARENT errors from the validator.
-        if (!removedGeneIds.isEmpty()) {
+        // preventing DANGLING_PARENT errors from the validator. A child of a pseudo
+        // gene takes the gene's pseudo, which it would otherwise lose with the link.
+        if (!removedGenes.isEmpty()) {
+            PseudoLookup pseudoLookup = PseudoLookup.of(gff3Annotation, context);
             for (GFF3Feature feature : gff3Annotation.getFeatures()) {
-                feature.getParentId().filter(removedGeneIds::contains).ifPresent(ignored -> {
+                feature.getParentId().map(removedGenes::get).ifPresent(gene -> {
+                    if (pseudoLookup.isPseudo(List.of(gene))) {
+                        copyPseudo(gene, feature);
+                    }
                     feature.setParentId(Optional.empty());
                     feature.removeAttributeList(GFF3Attributes.ATTRIBUTE_PARENT);
                 });
             }
+        }
+    }
+
+    // pseudo and pseudogene are mutually exclusive, so the child gets the gene's pseudogene
+    // when it has one, otherwise pseudo=true. A child that already has either keeps its own.
+    private static void copyPseudo(GFF3Feature gene, GFF3Feature child) {
+        if (child.hasAttribute(GFF3Attributes.PSEUDO) || child.hasAttribute(GFF3Attributes.PSEUDOGENE)) {
+            return;
+        }
+        Optional<List<String>> pseudogene = gene.getAttributeList(GFF3Attributes.PSEUDOGENE);
+        if (pseudogene.isPresent()) {
+            child.setAttributeList(GFF3Attributes.PSEUDOGENE, new ArrayList<>(pseudogene.get()));
+        } else {
+            child.addAttribute(GFF3Attributes.PSEUDO, "true");
         }
     }
 }

@@ -24,6 +24,7 @@ import uk.ac.ebi.embl.gff3tools.translation.TranslationResult;
 import uk.ac.ebi.embl.gff3tools.translation.Translator;
 import uk.ac.ebi.embl.gff3tools.utils.CoordinateShiftUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.PseudoLookup;
 import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
@@ -99,13 +100,18 @@ public class TranslationFix {
                         annotation.getSequenceRegion(), annotation.getAccession(), sequenceLengthCache, context)
                 : null;
 
+        PseudoLookup pseudoLookup = PseudoLookup.of(annotation, context);
         for (List<GFF3Feature> segments : cdsGroups.values()) {
-            translateCdsGroup(segments, sequenceLookup, line, circularSequenceLength);
+            translateCdsGroup(segments, sequenceLookup, line, circularSequenceLength, pseudoLookup.isPseudo(segments));
         }
     }
 
     private void translateCdsGroup(
-            List<GFF3Feature> features, SequenceLookup sequenceLookup, int line, Long circularSequenceLength)
+            List<GFF3Feature> features,
+            SequenceLookup sequenceLookup,
+            int line,
+            Long circularSequenceLength,
+            boolean isPseudo)
             throws ValidationException {
 
         boolean isTransSpliced = features.stream().anyMatch(s -> s.hasAttribute(GFF3Attributes.TRANS_SPLICING));
@@ -158,6 +164,11 @@ public class TranslationFix {
             }
 
             Translator translator = new Translator(sortedFeatures);
+            if (isPseudo) {
+                // The Translator only checks the first segment's own attributes. A CDS is also
+                // pseudo when a later segment or an ancestor is, and must not be translated.
+                translator.setNonTranslating(true);
+            }
             if (hasMixedStrands) {
                 // Sequence is already strand-corrected per segment; prevent the Translator
                 // from applying an additional full-sequence RC.
