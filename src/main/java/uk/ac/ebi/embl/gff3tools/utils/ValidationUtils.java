@@ -25,6 +25,8 @@ import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils.MolType;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
 
 public class ValidationUtils {
 
@@ -139,5 +141,15 @@ public class ValidationUtils {
     /** A feature's coordinates as messages report them, {@code start..end}. */
     public static String getLocationString(GFF3Feature feature) {
         return "%d..%d".formatted(feature.getStart(), feature.getEnd());
+    }
+
+    /**
+     * {@link AnalysisContext} defaults to {@link AnalysisType#UNKNOWN}. An unknown analysis type is
+     * not ruled out as an assembly, so the rule stays inert unless a caller registers a real one.
+     */
+    public static AnalysisType getAnalysisType(ValidationContext context) {
+        return context.contains(AnalysisContext.class)
+                ? context.get(AnalysisContext.class).getAnalysisType()
+                : AnalysisType.UNKNOWN;
     }
 }

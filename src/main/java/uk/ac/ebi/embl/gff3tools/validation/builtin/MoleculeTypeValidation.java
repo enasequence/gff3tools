@@ -28,7 +28,6 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
-import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
 
 @Gff3Validation(name = "MOLECULE_TYPE_FEATURE")
@@ -224,7 +223,7 @@ public class MoleculeTypeValidation implements Validation {
             return;
         }
 
-        AnalysisType analysisType = getAnalysisType();
+        AnalysisType analysisType = ValidationUtils.getAnalysisType(context);
         if (FORBIDDEN_MOLECULE_TYPES_BY_ANALYSIS_TYPE
                 .getOrDefault(analysisType, Set.of())
                 .contains(moleculeType.get())) {
@@ -234,17 +233,6 @@ public class MoleculeTypeValidation implements Validation {
                     "Molecule type %s is not permitted for analysis type %s."
                             .formatted(moleculeType.get().getValue(), analysisType));
         }
-    }
-
-    /**
-     * Only the caller can tell us which technique produced the sequences - nothing in a GFF3 marks
-     * one. {@link AnalysisContext} is classpath-scanned and defaults to {@link AnalysisType#UNKNOWN},
-     * so the rule stays inert unless a caller registers a real analysis type.
-     */
-    private AnalysisType getAnalysisType() {
-        return context.contains(AnalysisContext.class)
-                ? context.get(AnalysisContext.class).getAnalysisType()
-                : AnalysisType.UNKNOWN;
     }
 
     private boolean hasRibosomalSlippage(List<GFF3Feature> segments) {
