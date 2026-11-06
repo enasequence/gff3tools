@@ -13,50 +13,48 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
-import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
 
-@Gff3Validation(name = "ARTIFICIAL_ASSEMBLY")
-public class ArtificialAssemblyValidation implements Validation {
+/**
+ * The source-dependent rule of the INSDC Annotation Minimum Specification v1.0, section c.ii.
+ *
+ * <p>Use of {@code artificial_location} (either {@code low-quality sequence region} or {@code
+ * heterogeneous population sequenced}) must be limited to genome-scale annotation, which is {@link
+ * AnalysisType#SEQUENCE_ASSEMBLY} here.
+ */
+@Gff3Validation(name = "ARTIFICIAL_LOCATION")
+public class ArtificialLocationValidation implements Validation {
 
-    public static final String ARTIFICIAL_ASSEMBLY_ANALYSIS_TYPE_RULE = "ARTIFICIAL_ASSEMBLY_ANALYSIS_TYPE";
+    public static final String ARTIFICIAL_LOCATION_ANALYSIS_TYPE_RULE = "ARTIFICIAL_LOCATION_ANALYSIS_TYPE";
 
-    private static final String ARTIFICIAL_ASSEMBLY_MESSAGE =
-            "Feature \"%s\" must not carry the artificial_assembly attribute for analysis type %s; it is only permitted for SEQUENCE_ASSEMBLY.";
+    private static final String ARTIFICIAL_LOCATION_MESSAGE =
+            "Feature \"%s\" carries artificial_location, which is limited to genome-scale annotation"
+                    + " (analysis type SEQUENCE_ASSEMBLY), but the analysis type is %s.";
 
     @InjectContext
     private ValidationContext context;
 
     @ValidationMethod(
-            rule = ARTIFICIAL_ASSEMBLY_ANALYSIS_TYPE_RULE,
-            description = "Check that artificial_assembly is only used in a sequence assembly",
+            rule = ARTIFICIAL_LOCATION_ANALYSIS_TYPE_RULE,
+            description = "Attribute artificial_location is limited to genome-scale annotation",
             type = ValidationType.FEATURE)
-    public void validateArtificialAssemblyAnalysisType(GFF3Feature feature, int line) throws ValidationException {
-        AnalysisType analysisType = getAnalysisType();
+    public void validateArtificialLocationAnalysisType(GFF3Feature feature, int line) throws ValidationException {
+        AnalysisType analysisType = ValidationUtils.getAnalysisType(context);
         if (analysisType == AnalysisType.UNKNOWN
                 || analysisType == AnalysisType.SEQUENCE_ASSEMBLY
-                || !feature.hasAttribute(GFF3Attributes.ARTIFICIAL_ASSEMBLY)) {
+                || !feature.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION)) {
             return;
         }
         throw new ValidationException(
-                ARTIFICIAL_ASSEMBLY_ANALYSIS_TYPE_RULE,
+                ARTIFICIAL_LOCATION_ANALYSIS_TYPE_RULE,
                 line,
-                ARTIFICIAL_ASSEMBLY_MESSAGE.formatted(feature.getName(), analysisType));
-    }
-
-    /**
-     * {@link AnalysisContext} defaults to {@link AnalysisType#UNKNOWN}. An unknown analysis type is
-     * not ruled out as an assembly, so the rule stays inert unless a caller registers a real one.
-     */
-    private AnalysisType getAnalysisType() {
-        return context.contains(AnalysisContext.class)
-                ? context.get(AnalysisContext.class).getAnalysisType()
-                : AnalysisType.UNKNOWN;
+                ARTIFICIAL_LOCATION_MESSAGE.formatted(feature.getName(), analysisType));
     }
 }

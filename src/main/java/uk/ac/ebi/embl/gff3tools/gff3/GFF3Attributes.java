@@ -48,7 +48,6 @@ public class GFF3Attributes {
     public static final String MOL_TYPE = "mol_type";
     public static final String CIRCULAR_RNA = "Is_circular";
     public static final String ARTIFICIAL_LOCATION = "artificial_location";
-    public static final String ARTIFICIAL_ASSEMBLY = "artificial_assembly";
     public static final String RIBOSOMAL_SLIPPAGE = "ribosomal_slippage";
     public static final String TRANS_SPLICING = "trans_splicing";
     public static final String ANTI_CODON = "anticodon";
