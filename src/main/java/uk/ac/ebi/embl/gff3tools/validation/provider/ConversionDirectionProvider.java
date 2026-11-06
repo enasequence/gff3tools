@@ -36,9 +36,10 @@ public class ConversionDirectionProvider implements ContextProvider<ConversionDi
         this.toFileType = toFileType;
     }
 
-    /** True when converting an EMBL flat file to GFF3. */
-    public boolean isFlatfileToGff3() {
-        return fromFileType == ConversionFileFormat.embl && toFileType == ConversionFileFormat.gff3;
+    /** True when converting between EMBL flat file and GFF3, in either direction. */
+    public boolean isFlatfileGff3Conversion() {
+        return (fromFileType == ConversionFileFormat.embl && toFileType == ConversionFileFormat.gff3)
+                || (fromFileType == ConversionFileFormat.gff3 && toFileType == ConversionFileFormat.embl);
     }
 
     @Override
