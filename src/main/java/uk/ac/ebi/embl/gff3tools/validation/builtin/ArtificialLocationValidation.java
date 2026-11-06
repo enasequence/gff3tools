@@ -35,8 +35,8 @@ public class ArtificialLocationValidation implements Validation {
     public static final String ARTIFICIAL_LOCATION_ANALYSIS_TYPE_RULE = "ARTIFICIAL_LOCATION_ANALYSIS_TYPE";
 
     private static final String ARTIFICIAL_LOCATION_MESSAGE =
-            "Feature \"%s\" carries artificial_location, which is limited to genome-scale annotation"
-                    + " (analysis type SEQUENCE_ASSEMBLY), but the analysis type is %s.";
+            "Feature \"%s\" carries artificial_location, which is limited to genome-scale annotation "
+                    + "(so analysis type sequence assembly), but the analysis type was submitted as %s.";
 
     @InjectContext
     private ValidationContext context;
