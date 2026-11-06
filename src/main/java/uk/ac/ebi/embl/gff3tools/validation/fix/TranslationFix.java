@@ -196,8 +196,8 @@ public class TranslationFix {
      * Applies translation-derived partiality and pseudo attributes across multi-segment CDS join segments.
      * 5'/3' partial are assigned to the strand-correct segment (first/last depends on strand),
      * and pseudo is set on all segments. An existing 3' partial is removed when the translation
-     * ends in a valid stop codon. These are only fixed for FF -> GFF3 conversion;
-     * otherwise a {@link ValidationException} is thrown.
+     * ends in a valid stop codon. These are fixed during FF -> GFF3 and GFF3 -> FF conversion;
+     * during validation a {@link ValidationException} is thrown instead.
      */
     private void propagateJoinAttributes(List<GFF3Feature> segments, TranslationResult result, int line)
             throws ValidationException {
@@ -208,9 +208,9 @@ public class TranslationFix {
         GFF3Feature first = segments.get(0);
         GFF3Feature last = segments.get(segments.size() - 1);
 
-        boolean applyFixes = isFlatfileToGff3Conversion();
+        boolean applyFixes = isFlatfileGff3Conversion();
 
-        // Rule: Fix 5' partiality only for FF -> GFF3 conversion; otherwise report it as an error.
+        // Rule: Fix 5' partiality during FF <-> GFF3 conversion; during validation report it as an error.
         if (result.isFixedFivePrimePartial()) {
             GFF3Feature fivePrimeTarget = first.isComplement() ? last : first;
             if (!fivePrimeTarget.isFivePrimePartial()) {
@@ -237,7 +237,8 @@ public class TranslationFix {
         // Only propagate pseudo when translation newly determines the CDS is pseudo.
         // We intentionally do not copy an existing pseudo from the first segment to
         // the rest of the group, because such segments should not be treated as one join.
-        // Rule: Fix pseudo (internal stop codons) only for FF -> GFF3 conversion; otherwise report it as an error.
+        // Rule: Fix pseudo (internal stop codons) during FF <-> GFF3 conversion; during validation report it as an
+        // error.
         if (result.isFixedPseudo()) {
             if (applyFixes) {
                 for (GFF3Feature segment : segments) {
@@ -257,8 +258,8 @@ public class TranslationFix {
         }
     }
 
-    // No stop codon at the 3' end -> make the CDS 3' partial, only for FF -> GFF3 conversion;
-    // otherwise report it as an error.
+    // No stop codon at the 3' end -> make the CDS 3' partial during FF <-> GFF3 conversion;
+    // during validation report it as an error.
     private void applyThreePrimePartial(GFF3Feature first, GFF3Feature last, boolean applyFixes, int line)
             throws ValidationException {
         GFF3Feature target = first.isComplement() ? first : last;
@@ -274,8 +275,8 @@ public class TranslationFix {
         target.setThreePrimePartial();
     }
 
-    // Valid stop codon at a 3' partial end -> remove 3' partial, only for FF -> GFF3 conversion;
-    // otherwise report it as an error. The Translator derives join partiality from either boundary
+    // Valid stop codon at a 3' partial end -> remove 3' partial during FF <-> GFF3 conversion;
+    // during validation report it as an error. The Translator derives join partiality from either boundary
     // segment, so it is cleared from both.
     private void removeThreePrimePartial(GFF3Feature first, GFF3Feature last, boolean applyFixes, int line)
             throws ValidationException {
@@ -294,10 +295,10 @@ public class TranslationFix {
         }
     }
 
-    /** Partiality and pseudo are auto-fixed only when converting EMBL flat files to GFF3. */
-    private boolean isFlatfileToGff3Conversion() {
+    /** Partiality and pseudo are auto-fixed during FF <-> GFF3 conversion; validation reports them as errors. */
+    private boolean isFlatfileGff3Conversion() {
         return context.contains(ConversionDirectionProvider.class)
-                && context.get(ConversionDirectionProvider.class).isFlatfileToGff3();
+                && context.get(ConversionDirectionProvider.class).isFlatfileGff3Conversion();
     }
 
     private String lookupOldTranslation(GFF3Feature feature) {

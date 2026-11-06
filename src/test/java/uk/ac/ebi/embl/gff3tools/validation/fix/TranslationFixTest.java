@@ -237,7 +237,7 @@ class TranslationFixTest {
 
     @Test
     void translatesMixedStrandJoinWithPerSegmentReverseComplement() throws Exception {
-        // Partiality is auto-fixed only for FF -> GFF3 conversion
+        // Partiality is auto-fixed during FF <-> GFF3 conversion
         enableFlatfileToGff3Conversion();
         // join(complement(1..6), 10..15)
         // seg1 minus: raw "TTCATT" → RC "AATGAA"
@@ -444,7 +444,7 @@ class TranslationFixTest {
 
     @Test
     void fivePrimePartialAssignedToFirstSegmentOnForwardStrand() throws Exception {
-        // Partiality is auto-fixed only for FF -> GFF3 conversion
+        // Partiality is auto-fixed during FF <-> GFF3 conversion
         enableFlatfileToGff3Conversion();
         // No ATG start codon → Translator fixes 5' partial
         // Forward strand → 5' partial belongs on the first (lowest coord) segment
@@ -461,7 +461,7 @@ class TranslationFixTest {
 
     @Test
     void threePrimePartialAssignedToLastSegmentOnForwardStrand() throws Exception {
-        // Partiality is auto-fixed only for FF -> GFF3 conversion
+        // Partiality is auto-fixed during FF <-> GFF3 conversion
         enableFlatfileToGff3Conversion();
         // Has ATG but no stop codon → Translator fixes 3' partial
         // Forward strand → 3' partial belongs on the last (highest coord) segment
@@ -478,7 +478,7 @@ class TranslationFixTest {
 
     @Test
     void fivePrimePartialAssignedToLastSegmentOnComplementStrand() throws Exception {
-        // Partiality is auto-fixed only for FF -> GFF3 conversion
+        // Partiality is auto-fixed during FF <-> GFF3 conversion
         enableFlatfileToGff3Conversion();
         // Concat "TTATTGTTT" → RC "AAACAATAA" → no ATG, has stop → 5' partial
         // Complement strand → 5' partial belongs on the last (highest coord) segment
@@ -495,7 +495,7 @@ class TranslationFixTest {
 
     @Test
     void threePrimePartialAssignedToFirstSegmentOnComplementStrand() throws Exception {
-        // Partiality is auto-fixed only for FF -> GFF3 conversion
+        // Partiality is auto-fixed during FF <-> GFF3 conversion
         enableFlatfileToGff3Conversion();
         // Concat "GGGTTTCAT" → RC "ATGAAACCC" → has ATG, no stop → 3' partial
         // Complement strand → 3' partial belongs on the first (lowest coord) segment
@@ -511,7 +511,7 @@ class TranslationFixTest {
     }
 
     @Test
-    void fivePrimePartialOnForwardStrandThrowsWhenNotFlatfileToGff3() throws Exception {
+    void fivePrimePartialOnForwardStrandThrowsWhenValidating() throws Exception {
         // No ATG start codon → 5' partial is reported as an error on the first segment
         when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("AAACAA");
         when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("CCCTAA");
@@ -527,7 +527,7 @@ class TranslationFixTest {
     }
 
     @Test
-    void threePrimePartialOnForwardStrandThrowsWhenNotFlatfileToGff3() throws Exception {
+    void threePrimePartialOnForwardStrandThrowsWhenValidating() throws Exception {
         // Has ATG but no stop codon → 3' partial is reported as an error on the last segment
         when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("ATGAAA");
         when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("CCCCCC");
@@ -543,7 +543,7 @@ class TranslationFixTest {
     }
 
     @Test
-    void fivePrimePartialOnComplementStrandThrowsWhenNotFlatfileToGff3() throws Exception {
+    void fivePrimePartialOnComplementStrandThrowsWhenValidating() throws Exception {
         // RC "AAACAATAA" → no ATG → 5' partial is reported as an error on the last segment
         when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("TTATTG");
         when(mockLookup.getSequenceSlice("seq1", 10L, 12L)).thenReturn("TTT");
@@ -557,7 +557,7 @@ class TranslationFixTest {
     }
 
     @Test
-    void threePrimePartialOnComplementStrandThrowsWhenNotFlatfileToGff3() throws Exception {
+    void threePrimePartialOnComplementStrandThrowsWhenValidating() throws Exception {
         // RC "ATGAAACCC" → no stop codon → 3' partial is reported as an error on the first segment
         when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("GGGTTT");
         when(mockLookup.getSequenceSlice("seq1", 10L, 12L)).thenReturn("CAT");
@@ -588,7 +588,7 @@ class TranslationFixTest {
     }
 
     @Test
-    void threePrimePartialWithStopCodonThrowsWhenNotFlatfileToGff3() throws Exception {
+    void threePrimePartialWithStopCodonThrowsWhenValidating() throws Exception {
         // Ends in TAA but marked partial=end → reported as an error, feature left unchanged
         when(mockLookup.getSequenceSlice("seqA", 1L, 81L)).thenReturn(COMPLETE_CDS_81);
 
@@ -635,7 +635,7 @@ class TranslationFixTest {
     }
 
     @Test
-    void pseudoThrowsWhenNotFlatfileToGff3() throws Exception {
+    void pseudoThrowsWhenValidating() throws Exception {
         // "ATGTAA"+"AAATAA" → M * K * → internal stop codon → reported as an error for the whole join
         when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("ATGTAA");
         when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("AAATAA");
@@ -650,10 +650,74 @@ class TranslationFixTest {
         assertFalse(seg2.hasAttribute(GFF3Attributes.PSEUDO));
     }
 
+    @Test
+    void fivePrimePartialFixedForGff3ToFlatfile() throws Exception {
+        enableGff3ToFlatfileConversion();
+        // No ATG start codon → 5' partial is fixed on the first segment
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("AAACAA");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("CCCTAA");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "+");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
+        fix.fixAnnotation(createAnnotation(seg1, seg2), 1);
+
+        assertTrue(seg1.isFivePrimePartial());
+        assertFalse(seg2.isFivePrimePartial());
+    }
+
+    @Test
+    void threePrimePartialFixedForGff3ToFlatfile() throws Exception {
+        enableGff3ToFlatfileConversion();
+        // Has ATG but no stop codon → 3' partial is fixed on the last segment
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("ATGAAA");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("CCCCCC");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "+");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
+        fix.fixAnnotation(createAnnotation(seg1, seg2), 1);
+
+        assertFalse(seg1.isThreePrimePartial());
+        assertTrue(seg2.isThreePrimePartial());
+    }
+
+    @Test
+    void threePrimePartialRemovedWhenStopCodonPresentForGff3ToFlatfile() throws Exception {
+        enableGff3ToFlatfileConversion();
+        when(mockLookup.getSequenceSlice("seqA", 1L, 81L)).thenReturn(COMPLETE_CDS_81);
+
+        GFF3Feature cds = createFeature(OntologyTerm.CDS.name(), "cds1", "seqA", 1, 81, "+");
+        cds.setThreePrimePartial();
+        fix.fixAnnotation(createAnnotation(cds), 1);
+
+        assertFalse(cds.isThreePrimePartial());
+        assertFalse(cds.hasAttribute(GFF3Attributes.PARTIAL));
+    }
+
+    @Test
+    void pseudoSetOnAllSegmentsForGff3ToFlatfile() throws Exception {
+        enableGff3ToFlatfileConversion();
+        // "ATGTAA"+"AAATAA" → M * K * → internal stop codon → pseudo is fixed on all segments
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("ATGTAA");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("AAATAA");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "+");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
+        fix.fixAnnotation(createAnnotation(seg1, seg2), 1);
+
+        assertEquals(Optional.of("true"), seg1.getAttribute(GFF3Attributes.PSEUDO));
+        assertEquals(Optional.of("true"), seg2.getAttribute(GFF3Attributes.PSEUDO));
+    }
+
     private void enableFlatfileToGff3Conversion() {
         context.register(
                 ConversionDirectionProvider.class,
                 new ConversionDirectionProvider(ConversionFileFormat.embl, ConversionFileFormat.gff3));
+    }
+
+    private void enableGff3ToFlatfileConversion() {
+        context.register(
+                ConversionDirectionProvider.class,
+                new ConversionDirectionProvider(ConversionFileFormat.gff3, ConversionFileFormat.embl));
     }
 
     private static final String CDS = "ATGAAACCCGGGTAA";
