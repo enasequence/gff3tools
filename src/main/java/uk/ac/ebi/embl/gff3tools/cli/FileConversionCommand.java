@@ -37,6 +37,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.ConversionDirectionProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.FileSequenceSource;
 
 // Using pandoc CLI interface conventions
@@ -150,11 +151,20 @@ public class FileConversionCommand extends AbstractCommand {
                     // The header provider self-skips when it carries no header source (see
                     // FastaHeaderProvider#isActive), so an empty one never lands on the context and
                     // header-aware rules (e.g. FASTA_HEADER_MAPPING) stay inert.
+                    // The conversion direction that will be used by validations and fixes
+                    ConversionDirectionProvider conversionDirectionProvider =
+                            new ConversionDirectionProvider(fromFileType, toFileType);
                     ContextProvider<?>[] providers = analysisContextProvider != null
                             ? new ContextProvider<?>[] {
-                                compositeProvider, metadataProvider, headerProvider, analysisContextProvider
+                                compositeProvider,
+                                metadataProvider,
+                                headerProvider,
+                                conversionDirectionProvider,
+                                analysisContextProvider
                             }
-                            : new ContextProvider<?>[] {compositeProvider, metadataProvider, headerProvider};
+                            : new ContextProvider<?>[] {
+                                compositeProvider, metadataProvider, headerProvider, conversionDirectionProvider
+                            };
                     // Gap generation belongs to FASTA -> GFF3, where the gap features are the entire
                     // output. Every other direction is converting annotation the submitter already
                     // wrote, so synthesising extra features into it is not this command's job.

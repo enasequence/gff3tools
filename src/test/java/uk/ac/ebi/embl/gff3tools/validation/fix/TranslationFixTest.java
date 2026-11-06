@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.fastareader.SequenceStats;
 import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
+import uk.ac.ebi.embl.gff3tools.cli.ConversionFileFormat;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -35,6 +36,7 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationRegistry;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.ConversionDirectionProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.SequenceSource;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationStateProvider;
@@ -235,6 +237,8 @@ class TranslationFixTest {
 
     @Test
     void translatesMixedStrandJoinWithPerSegmentReverseComplement() throws Exception {
+        // Partiality is auto-fixed only for FF -> GFF3 conversion
+        enableFlatfileToGff3Conversion();
         // join(complement(1..6), 10..15)
         // seg1 minus: raw "TTCATT" → RC "AATGAA"
         // seg2 plus:  raw "CCCTAA" (unchanged)
@@ -440,6 +444,8 @@ class TranslationFixTest {
 
     @Test
     void fivePrimePartialAssignedToFirstSegmentOnForwardStrand() throws Exception {
+        // Partiality is auto-fixed only for FF -> GFF3 conversion
+        enableFlatfileToGff3Conversion();
         // No ATG start codon → Translator fixes 5' partial
         // Forward strand → 5' partial belongs on the first (lowest coord) segment
         when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("AAACAA");
@@ -455,6 +461,8 @@ class TranslationFixTest {
 
     @Test
     void threePrimePartialAssignedToLastSegmentOnForwardStrand() throws Exception {
+        // Partiality is auto-fixed only for FF -> GFF3 conversion
+        enableFlatfileToGff3Conversion();
         // Has ATG but no stop codon → Translator fixes 3' partial
         // Forward strand → 3' partial belongs on the last (highest coord) segment
         when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("ATGAAA");
@@ -470,6 +478,8 @@ class TranslationFixTest {
 
     @Test
     void fivePrimePartialAssignedToLastSegmentOnComplementStrand() throws Exception {
+        // Partiality is auto-fixed only for FF -> GFF3 conversion
+        enableFlatfileToGff3Conversion();
         // Concat "TTATTGTTT" → RC "AAACAATAA" → no ATG, has stop → 5' partial
         // Complement strand → 5' partial belongs on the last (highest coord) segment
         when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("TTATTG");
@@ -485,6 +495,8 @@ class TranslationFixTest {
 
     @Test
     void threePrimePartialAssignedToFirstSegmentOnComplementStrand() throws Exception {
+        // Partiality is auto-fixed only for FF -> GFF3 conversion
+        enableFlatfileToGff3Conversion();
         // Concat "GGGTTTCAT" → RC "ATGAAACCC" → has ATG, no stop → 3' partial
         // Complement strand → 3' partial belongs on the first (lowest coord) segment
         when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("GGGTTT");
@@ -496,6 +508,152 @@ class TranslationFixTest {
 
         assertTrue(seg1.isThreePrimePartial());
         assertFalse(seg2.isThreePrimePartial());
+    }
+
+    @Test
+    void fivePrimePartialOnForwardStrandThrowsWhenNotFlatfileToGff3() throws Exception {
+        // No ATG start codon → 5' partial is reported as an error on the first segment
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("AAACAA");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("CCCTAA");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "+");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
+        GFF3Annotation annotation = createAnnotation(seg1, seg2);
+
+        ValidationException ex = assertThrows(ValidationException.class, () -> fix.fixAnnotation(annotation, 1));
+        assertTrue(ex.getMessage().contains("location 1-6 should be 5' partial"), ex.getMessage());
+        assertFalse(seg1.isFivePrimePartial());
+        assertFalse(seg2.isFivePrimePartial());
+    }
+
+    @Test
+    void threePrimePartialOnForwardStrandThrowsWhenNotFlatfileToGff3() throws Exception {
+        // Has ATG but no stop codon → 3' partial is reported as an error on the last segment
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("ATGAAA");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("CCCCCC");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "+");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
+        GFF3Annotation annotation = createAnnotation(seg1, seg2);
+
+        ValidationException ex = assertThrows(ValidationException.class, () -> fix.fixAnnotation(annotation, 1));
+        assertTrue(ex.getMessage().contains("location 10-15 should be 3' partial"), ex.getMessage());
+        assertFalse(seg1.isThreePrimePartial());
+        assertFalse(seg2.isThreePrimePartial());
+    }
+
+    @Test
+    void fivePrimePartialOnComplementStrandThrowsWhenNotFlatfileToGff3() throws Exception {
+        // RC "AAACAATAA" → no ATG → 5' partial is reported as an error on the last segment
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("TTATTG");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 12L)).thenReturn("TTT");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "-");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 12, "-");
+        GFF3Annotation annotation = createAnnotation(seg1, seg2);
+
+        ValidationException ex = assertThrows(ValidationException.class, () -> fix.fixAnnotation(annotation, 1));
+        assertTrue(ex.getMessage().contains("location 10-12 should be 5' partial"), ex.getMessage());
+    }
+
+    @Test
+    void threePrimePartialOnComplementStrandThrowsWhenNotFlatfileToGff3() throws Exception {
+        // RC "ATGAAACCC" → no stop codon → 3' partial is reported as an error on the first segment
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("GGGTTT");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 12L)).thenReturn("CAT");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "-");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 12, "-");
+        GFF3Annotation annotation = createAnnotation(seg1, seg2);
+
+        ValidationException ex = assertThrows(ValidationException.class, () -> fix.fixAnnotation(annotation, 1));
+        assertTrue(ex.getMessage().contains("location 1-6 should be 3' partial"), ex.getMessage());
+    }
+
+    // ATG AAA×25 TAA: starts with ATG and ends with a stop codon, so both ends are complete.
+    private static final String COMPLETE_CDS_81 = "ATG" + "AAA".repeat(25) + "TAA";
+
+    @Test
+    void threePrimePartialRemovedWhenStopCodonPresentForFlatfileToGff3() throws Exception {
+        // Ends in TAA → 3' end is complete, so the existing partial=end is wrong and is removed
+        enableFlatfileToGff3Conversion();
+        when(mockLookup.getSequenceSlice("seqA", 1L, 81L)).thenReturn(COMPLETE_CDS_81);
+
+        GFF3Feature cds = createFeature(OntologyTerm.CDS.name(), "cds1", "seqA", 1, 81, "+");
+        cds.setThreePrimePartial();
+        fix.fixAnnotation(createAnnotation(cds), 1);
+
+        assertFalse(cds.isThreePrimePartial());
+        assertFalse(cds.hasAttribute(GFF3Attributes.PARTIAL));
+    }
+
+    @Test
+    void threePrimePartialWithStopCodonThrowsWhenNotFlatfileToGff3() throws Exception {
+        // Ends in TAA but marked partial=end → reported as an error, feature left unchanged
+        when(mockLookup.getSequenceSlice("seqA", 1L, 81L)).thenReturn(COMPLETE_CDS_81);
+
+        GFF3Feature cds = createFeature(OntologyTerm.CDS.name(), "cds1", "seqA", 1, 81, "+");
+        cds.setThreePrimePartial();
+        GFF3Annotation annotation = createAnnotation(cds);
+
+        ValidationException ex = assertThrows(ValidationException.class, () -> fix.fixAnnotation(annotation, 1));
+        assertTrue(ex.getMessage().contains("location 1-81 should not be 3' partial"), ex.getMessage());
+        assertTrue(cds.isThreePrimePartial());
+    }
+
+    @Test
+    void threePrimePartialRemovedOnComplementStrandKeepsFivePrimePartial() throws Exception {
+        // Complement: 3' partial is partial=start, 5' partial is partial=end.
+        // Coding strand "AAA..TAA": no ATG (5' partial is valid), ends in TAA (3' partial is wrong)
+        enableFlatfileToGff3Conversion();
+        when(mockLookup.getSequenceSlice("seqA", 1L, 81L))
+                .thenReturn(reverseComplement("AAA" + "AAA".repeat(25) + "TAA"));
+
+        GFF3Feature cds = createFeature(OntologyTerm.CDS.name(), "cds1", "seqA", 1, 81, "-");
+        cds.setFivePrimePartial();
+        cds.setThreePrimePartial();
+        fix.fixAnnotation(createAnnotation(cds), 1);
+
+        assertFalse(cds.isThreePrimePartial());
+        assertTrue(cds.isFivePrimePartial());
+        assertEquals(Optional.of(List.of("end")), cds.getAttributeList(GFF3Attributes.PARTIAL));
+    }
+
+    @Test
+    void pseudoSetOnAllSegmentsForFlatfileToGff3() throws Exception {
+        // "ATGTAA"+"AAATAA" → M * K * → internal stop codon → Translator fixes pseudo
+        enableFlatfileToGff3Conversion();
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("ATGTAA");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("AAATAA");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "+");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
+        fix.fixAnnotation(createAnnotation(seg1, seg2), 1);
+
+        assertEquals(Optional.of("true"), seg1.getAttribute(GFF3Attributes.PSEUDO));
+        assertEquals(Optional.of("true"), seg2.getAttribute(GFF3Attributes.PSEUDO));
+    }
+
+    @Test
+    void pseudoThrowsWhenNotFlatfileToGff3() throws Exception {
+        // "ATGTAA"+"AAATAA" → M * K * → internal stop codon → reported as an error for the whole join
+        when(mockLookup.getSequenceSlice("seq1", 1L, 6L)).thenReturn("ATGTAA");
+        when(mockLookup.getSequenceSlice("seq1", 10L, 15L)).thenReturn("AAATAA");
+
+        GFF3Feature seg1 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 1, 6, "+");
+        GFF3Feature seg2 = createFeature(OntologyTerm.CDS.name(), "cds1", "seq1", 10, 15, "+");
+        GFF3Annotation annotation = createAnnotation(seg1, seg2);
+
+        ValidationException ex = assertThrows(ValidationException.class, () -> fix.fixAnnotation(annotation, 1));
+        assertTrue(ex.getMessage().contains("locations 1-6, 10-15 should be pseudo"), ex.getMessage());
+        assertFalse(seg1.hasAttribute(GFF3Attributes.PSEUDO));
+        assertFalse(seg2.hasAttribute(GFF3Attributes.PSEUDO));
+    }
+
+    private void enableFlatfileToGff3Conversion() {
+        context.register(
+                ConversionDirectionProvider.class,
+                new ConversionDirectionProvider(ConversionFileFormat.embl, ConversionFileFormat.gff3));
     }
 
     private static final String CDS = "ATGAAACCCGGGTAA";
