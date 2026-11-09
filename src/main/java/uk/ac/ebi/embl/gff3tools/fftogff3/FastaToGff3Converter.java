@@ -60,12 +60,21 @@ public class FastaToGff3Converter implements Converter {
         this.source = source;
     }
 
+    /**
+     * Implemented for the {@link Converter} contract only: the reader is ignored, because the
+     * sequence is read exactly once via the shared {@link FileSequenceSource}. Callers that hold
+     * the source should use {@link #convert(BufferedWriter)} and not open a reader at all.
+     */
     @Override
     public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException {
+        convert(writer);
+    }
 
-        // The BufferedReader is intentionally unused: the sequence is read exactly once via the
-        // shared FileSequenceSource.
+    /**
+     * Writes the GFF3 generated from the shared {@link FileSequenceSource}.
+     */
+    public void convert(BufferedWriter writer) throws ReadException, WriteException, ValidationException {
         List<GFF3Annotation> annotations = buildAnnotations();
 
         GFF3Header header = new GFF3Header(GFF3Header.DEFAULT_VERSION);

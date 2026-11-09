@@ -236,6 +236,14 @@ annotation, pass the parent analysis type of the analysis it annotates: there is
 `DECOUPLED_ANNOTATION` value. Without an analysis type the context defaults to `UNKNOWN`, meaning
 no ENA submission context, and these rules stay off.
 
+### Rules that depend on the organism
+
+`PROKARYOTE_PARTIAL_LOCATION` runs only when a registered `TaxonProvider` resolves the organism to
+Bacteria or Archaea and a sequence source supplies the sequence. Core ships no `TaxonProvider`, so
+it never fires from `validation` or `conversion`. A partial feature passes when it ends within 2
+bases of the end of the sequence or of an N-run at least the minimum gap size long (10 unless an
+`AnalysisContext` sets it).
+
 ### Rules that depend on the FASTA header
 
 Some rules read a sequence's molecule type, topology or chromosome fields from its FASTA header.
