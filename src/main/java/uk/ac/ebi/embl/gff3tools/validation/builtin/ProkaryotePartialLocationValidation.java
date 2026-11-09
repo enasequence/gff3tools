@@ -17,6 +17,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
@@ -137,10 +138,8 @@ public class ProkaryotePartialLocationValidation implements Validation {
      * when no {@link TaxonProvider} is registered or the lookup fails, is not ruled one.
      */
     private boolean isKnownProkaryote(String accession) {
-        return context.contains(TaxonProvider.class)
-                && context.get(TaxonProvider.class)
-                        .resolve(accession)
-                        .filter(taxon -> PROKARYOTE_LINEAGE_DOMAINS.stream().anyMatch(taxon::isChildOf))
-                        .isPresent();
+        return ValidationUtils.resolveTaxon(accession, context)
+                .filter(taxon -> PROKARYOTE_LINEAGE_DOMAINS.stream().anyMatch(taxon::isChildOf))
+                .isPresent();
     }
 }

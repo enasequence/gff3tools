@@ -21,6 +21,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyClient;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
@@ -32,7 +33,6 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
 import uk.ac.ebi.embl.gff3tools.validation.provider.LocusTagProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonProvider;
-import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 @Gff3Validation(name = "LOCUS_TAG")
 public class LocusTagExistsValidation implements Validation {
@@ -166,15 +166,9 @@ public class LocusTagExistsValidation implements Validation {
      * nothing, which includes a taxonomy service failure.
      */
     private boolean isKnownNonVirus(String accession) {
-        return resolveTaxon(accession)
+        return ValidationUtils.resolveTaxon(accession, context)
                 .filter(taxon -> !taxon.isChildOf(VIRUS_LINEAGE_DOMAIN))
                 .isPresent();
-    }
-
-    private Optional<Taxon> resolveTaxon(String accession) {
-        return context.contains(TaxonProvider.class)
-                ? context.get(TaxonProvider.class).resolve(accession)
-                : Optional.empty();
     }
 
     @ValidationMethod(rule = LOCUS_TAG_PREFIX_RULE, type = ValidationType.FEATURE)
