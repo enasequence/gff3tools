@@ -80,14 +80,14 @@ class ProkaryotePartialLocationValidationTest {
     }
 
     @Test
-    void startPartialAbuttingGapSuccess() throws Exception {
+    void startPartialNearGapSuccess() throws Exception {
         when(lookup.getGapRegions(SEQ_ID, 100L, 102L)).thenReturn(List.of(new GapRegion(90L, 100L)));
         GFF3Feature cds = partialCds(103, 300, "+", "start");
         assertDoesNotThrow(validation(prokaryote(), cds));
     }
 
     @Test
-    void endPartialAbuttingGapSuccess() throws Exception {
+    void endPartialNearGapSuccess() throws Exception {
         when(lookup.getGapRegions(SEQ_ID, 501L, 503L)).thenReturn(List.of(new GapRegion(503L, 520L)));
         GFF3Feature cds = partialCds(300, 500, "+", "end");
         assertDoesNotThrow(validation(prokaryote(), cds));

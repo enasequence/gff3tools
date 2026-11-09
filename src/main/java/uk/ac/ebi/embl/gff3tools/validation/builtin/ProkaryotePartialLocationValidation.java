@@ -30,8 +30,10 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonProvider;
 
 /**
  * INSDC annotation minimal spec v1.0, c.i.1: on a prokaryote sequence a feature may only be partial
- * where the sequence stops, at a gap or at the end of the sequence. Up to two bases may lie between
- * the two, for a codon the boundary cuts short.
+ * near a gap or the end of the sequence, where the sequence stops.
+ *
+ * <p>Near means at most 2 bases ({@code INCOMPLETE_CODON_BASES}) lie between the partial end of the
+ * feature and the gap or the end of the sequence, room for a codon the boundary cuts short.
  *
  * <p>{@code partial=start} marks the lower coordinate and {@code partial=end} the higher one on
  * either strand, so the check needs no strand logic. A gap is a run of N bases at least as long as
@@ -66,7 +68,7 @@ public class ProkaryotePartialLocationValidation implements Validation {
 
     @ValidationMethod(
             rule = PROKARYOTE_PARTIAL_LOCATION_RULE,
-            description = "A partial feature of a prokaryote sequence must abut a gap or the end of the sequence",
+            description = "A partial feature of a prokaryote sequence must end near a gap or the end of the sequence",
             type = ValidationType.ANNOTATION,
             priority = ValidationPriority.LOW)
     public void validatePartialLocation(GFF3Annotation annotation, int line) throws ValidationException {
@@ -81,11 +83,11 @@ public class ProkaryotePartialLocationValidation implements Validation {
             for (GFF3Feature feature : annotation.getFeatures()) {
                 List<String> partials =
                         feature.getAttributeList(GFF3Attributes.PARTIAL).orElse(List.of());
-                if (partials.contains("start") && !startAbutsGapOrEnd(lookup, accession, feature.getStart())) {
+                if (partials.contains("start") && !startIsNearGapOrEnd(lookup, accession, feature.getStart())) {
                     violations.add(describe(feature, feature.getStart()));
                 }
                 if (partials.contains("end")
-                        && !endAbutsGapOrEnd(lookup, accession, feature.getEnd(), sequenceLength)) {
+                        && !endIsNearGapOrEnd(lookup, accession, feature.getEnd(), sequenceLength)) {
                     violations.add(describe(feature, feature.getEnd()));
                 }
             }
@@ -101,12 +103,12 @@ public class ProkaryotePartialLocationValidation implements Validation {
         }
     }
 
-    private boolean startAbutsGapOrEnd(SequenceLookup lookup, String accession, long start) throws Exception {
+    private boolean startIsNearGapOrEnd(SequenceLookup lookup, String accession, long start) throws Exception {
         return start - 1 <= INCOMPLETE_CODON_BASES
                 || hasGap(lookup, accession, start - 1 - INCOMPLETE_CODON_BASES, start - 1);
     }
 
-    private boolean endAbutsGapOrEnd(SequenceLookup lookup, String accession, long end, long sequenceLength)
+    private boolean endIsNearGapOrEnd(SequenceLookup lookup, String accession, long end, long sequenceLength)
             throws Exception {
         return sequenceLength - end <= INCOMPLETE_CODON_BASES
                 || hasGap(lookup, accession, end + 1, end + 1 + INCOMPLETE_CODON_BASES);
