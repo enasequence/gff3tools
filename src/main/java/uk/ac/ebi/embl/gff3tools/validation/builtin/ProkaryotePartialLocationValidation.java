@@ -19,6 +19,7 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.meta.ExitMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
@@ -30,35 +31,33 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonProvider;
 
 /**
- * INSDC annotation minimal spec v1.0, c.i.1: on a prokaryote sequence a feature may only be partial
- * near a gap or the end of the sequence, where the sequence stops.
+ * INSDC annotation minimal spec v1.0, c.i.1, for prokaryotes (bacteria and archaea).
  *
- * <p>Near means at most 2 bases ({@code INCOMPLETE_CODON_BASES}) lie between the partial end of the
- * feature and the gap or the end of the sequence, room for a codon the boundary cuts short.
+ * <p>A feature marked {@code partial} carries on past the sequence we have, so its partial end must
+ * be near where the sequence stops: the end of the sequence, or a gap (a run of unknown "N" bases).
+ * Near means at most {@value #MAX_BASES_TO_GAP_OR_END} bases in between.
  *
- * <p>{@code partial=start} marks the lower coordinate and {@code partial=end} the higher one on
- * either strand, so the check needs no strand logic. A gap is a run of N bases at least as long as
- * the minimum gap size, the same runs {@code GapGenerationFix} annotates as gaps.
+ * <p>{@code partial=start} is the feature's lower coordinate and {@code partial=end} its higher one,
+ * on either strand.
  *
- * <p>Runs at LOW priority on the annotation, after {@code TranslationFix} has added or removed
- * partial markers, so it judges the partiality that reaches the output. Inert unless a
- * {@link TaxonProvider} resolves the organism to a prokaryote and a sequence source is registered.
+ * <p>Runs after {@code TranslationFix}, which can add or remove partial markers. Does nothing unless
+ * a {@link TaxonProvider} identifies the organism and the sequence is available.
  */
 @Gff3Validation(
         name = "PROKARYOTE_PARTIAL_LOCATION",
-        description = "Prokaryote features may only be partial next to a gap or the end of the sequence")
+        description = "Prokaryote features may only be partial near a gap or the end of the sequence")
 public class ProkaryotePartialLocationValidation implements Validation {
 
     public static final String PROKARYOTE_PARTIAL_LOCATION_RULE = "PROKARYOTE_PARTIAL_LOCATION";
 
-    /** Bases allowed between a partial end and the gap or sequence end, for an incomplete codon. */
-    private static final int INCOMPLETE_CODON_BASES = 2;
+    /** Genes are read in 3-base codons, so up to 2 bases of a cut-off codon may remain. */
+    private static final int MAX_BASES_TO_GAP_OR_END = 2;
 
-    /** The domains that open a prokaryote lineage, e.g. "Bacteria; Pseudomonadota; ...". */
-    private static final List<String> PROKARYOTE_LINEAGE_DOMAINS = List.of("Bacteria", "Archaea");
+    /** The top-level taxonomy groups that make up the prokaryotes. */
+    private static final List<String> PROKARYOTE_DOMAINS = List.of("Bacteria", "Archaea");
 
     private static final String PARTIAL_LOCATION_MESSAGE =
-            "Features of a prokaryote sequence can only be partial next to a gap or the end of the sequence:%s";
+            "Features of a prokaryote sequence can only be partial near a gap or the end of the sequence:%s";
 
     private static final String VIOLATION_MESSAGE =
             "\nFeature %s on accession \"%s\" is partial at base %d, which is more than %d bases from a gap or the end"
@@ -66,6 +65,9 @@ public class ProkaryotePartialLocationValidation implements Validation {
 
     @InjectContext
     private ValidationContext context;
+
+    /** The same for the whole file, so read once and reset by {@link #clear()}. */
+    private Integer minGapSize;
 
     @ValidationMethod(
             rule = PROKARYOTE_PARTIAL_LOCATION_RULE,
@@ -78,6 +80,7 @@ public class ProkaryotePartialLocationValidation implements Validation {
             return;
         }
         SequenceLookup lookup = context.get(SequenceLookup.class);
+
         List<String> violations = new ArrayList<>();
         try {
             long sequenceLength = lookup.getSequenceLength(accession);
@@ -85,11 +88,11 @@ public class ProkaryotePartialLocationValidation implements Validation {
                 List<String> partials =
                         feature.getAttributeList(GFF3Attributes.PARTIAL).orElse(List.of());
                 if (partials.contains("start") && !startIsNearGapOrEnd(lookup, accession, feature.getStart())) {
-                    violations.add(describe(feature, feature.getStart()));
+                    violations.add(violation(feature, feature.getStart()));
                 }
                 if (partials.contains("end")
                         && !endIsNearGapOrEnd(lookup, accession, feature.getEnd(), sequenceLength)) {
-                    violations.add(describe(feature, feature.getEnd()));
+                    violations.add(violation(feature, feature.getEnd()));
                 }
             }
         } catch (Exception e) {
@@ -104,42 +107,47 @@ public class ProkaryotePartialLocationValidation implements Validation {
         }
     }
 
+    @ExitMethod
+    public void clear() {
+        minGapSize = null;
+    }
+
     private boolean startIsNearGapOrEnd(SequenceLookup lookup, String accession, long start) throws Exception {
-        return start - 1 <= INCOMPLETE_CODON_BASES
-                || hasGap(lookup, accession, start - 1 - INCOMPLETE_CODON_BASES, start - 1);
+        long basesBefore = start - 1;
+        return basesBefore <= MAX_BASES_TO_GAP_OR_END
+                || hasGap(lookup, accession, start - MAX_BASES_TO_GAP_OR_END - 1, start - 1);
     }
 
     private boolean endIsNearGapOrEnd(SequenceLookup lookup, String accession, long end, long sequenceLength)
             throws Exception {
-        return sequenceLength - end <= INCOMPLETE_CODON_BASES
-                || hasGap(lookup, accession, end + 1, end + 1 + INCOMPLETE_CODON_BASES);
+        long basesAfter = sequenceLength - end;
+        return basesAfter <= MAX_BASES_TO_GAP_OR_END
+                || hasGap(lookup, accession, end + 1, end + MAX_BASES_TO_GAP_OR_END + 1);
     }
 
-    /** Whether an N-run of at least the minimum gap size overlaps [fromBase, toBase]. */
+    /** Whether a gap touches bases fromBase to toBase. Runs of N shorter than the minimum gap size are not gaps. */
     private boolean hasGap(SequenceLookup lookup, String accession, long fromBase, long toBase) throws Exception {
-        int minGapSize = minGapSize();
         return lookup.getGapRegions(accession, fromBase, toBase).stream()
-                .anyMatch(gap -> gap.lengthBases() >= minGapSize);
+                .anyMatch(nRun -> nRun.lengthBases() >= minGapSize());
     }
 
-    private String describe(GFF3Feature feature, long base) {
-        return VIOLATION_MESSAGE.formatted(feature.getName(), feature.accession(), base, INCOMPLETE_CODON_BASES);
-    }
-
-    /** Minimum gap size, from the context when available, otherwise the shared default. */
     private int minGapSize() {
-        return context.contains(AnalysisContext.class)
-                ? context.get(AnalysisContext.class).getMinGapSize()
-                : AnalysisContextProvider.DEFAULT_MIN_GAP_SIZE;
+        if (minGapSize == null) {
+            minGapSize = context.contains(AnalysisContext.class)
+                    ? context.get(AnalysisContext.class).getMinGapSize()
+                    : AnalysisContextProvider.DEFAULT_MIN_GAP_SIZE;
+        }
+        return minGapSize;
     }
 
-    /**
-     * Whether the organism is known to be a prokaryote. An organism that does not resolve, including
-     * when no {@link TaxonProvider} is registered or the lookup fails, is not ruled one.
-     */
+    /** An organism that can't be identified is not treated as a prokaryote. */
     private boolean isKnownProkaryote(String accession) {
         return ValidationUtils.resolveTaxon(accession, context)
-                .filter(taxon -> PROKARYOTE_LINEAGE_DOMAINS.stream().anyMatch(taxon::isChildOf))
+                .filter(taxon -> PROKARYOTE_DOMAINS.stream().anyMatch(taxon::isChildOf))
                 .isPresent();
+    }
+
+    private String violation(GFF3Feature feature, long base) {
+        return VIOLATION_MESSAGE.formatted(feature.getName(), feature.accession(), base, MAX_BASES_TO_GAP_OR_END);
     }
 }

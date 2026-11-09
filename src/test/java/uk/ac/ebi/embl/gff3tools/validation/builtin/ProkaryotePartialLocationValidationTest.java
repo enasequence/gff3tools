@@ -80,21 +80,21 @@ class ProkaryotePartialLocationValidationTest {
     }
 
     @Test
-    void startPartialNearGapSuccess() throws Exception {
+    void startPartialTwoBasesAfterGapSuccess() throws Exception {
         when(lookup.getGapRegions(SEQ_ID, 100L, 102L)).thenReturn(List.of(new GapRegion(90L, 100L)));
         GFF3Feature cds = partialCds(103, 300, "+", "start");
         assertDoesNotThrow(validation(prokaryote(), cds));
     }
 
     @Test
-    void endPartialNearGapSuccess() throws Exception {
+    void endPartialTwoBasesBeforeGapSuccess() throws Exception {
         when(lookup.getGapRegions(SEQ_ID, 501L, 503L)).thenReturn(List.of(new GapRegion(503L, 520L)));
         GFF3Feature cds = partialCds(300, 500, "+", "end");
         assertDoesNotThrow(validation(prokaryote(), cds));
     }
 
     @Test
-    void partialNextToNRunShorterThanMinGapSizeFails() throws Exception {
+    void startPartialNextToShortNRunFails() throws Exception {
         when(lookup.getGapRegions(SEQ_ID, 98L, 100L)).thenReturn(List.of(new GapRegion(95L, 100L)));
         GFF3Feature cds = partialCds(101, 300, "+", "start");
         assertThrows(ValidationException.class, validation(prokaryote(), cds));
@@ -109,7 +109,7 @@ class ProkaryotePartialLocationValidationTest {
         assertDoesNotThrow(validation(context, cds));
     }
 
-    /** partial=start marks the lower coordinate on either strand, here the 3' end of a minus-strand CDS. */
+    /** partial=start always means the lower coordinate, even on the minus strand. */
     @Test
     void startPartialOnMinusStrandChecksLowerCoordinate() {
         GFF3Feature cds = partialCds(400, 998, "-", "start");
@@ -118,13 +118,13 @@ class ProkaryotePartialLocationValidationTest {
     }
 
     @Test
-    void internalFeatureWithoutPartialSuccess() {
+    void featureWithoutPartialSuccess() {
         GFF3Feature cds = TestUtils.createGFF3Feature("CDS1", OntologyTerm.CDS.name(), SEQ_ID, 400, 600, "+");
         assertDoesNotThrow(validation(prokaryote(), cds));
     }
 
     @Test
-    void archaeaIsGatedAsProkaryote() {
+    void archaeaIsCheckedAsProkaryote() {
         GFF3Feature cds = partialCds(400, 600, "+", "end");
         assertThrows(ValidationException.class, validation(taxonProvider(taxon(ARCHAEA_LINEAGE)), cds));
     }
@@ -156,7 +156,7 @@ class ProkaryotePartialLocationValidationTest {
     }
 
     @Test
-    void everyInternalPartialIsReportedInOneMessage() {
+    void everyViolationIsReportedInOneMessage() {
         GFF3Feature first = partialCds(100, 200, "+", "start", "end");
         GFF3Feature second = partialCds(400, 600, "+", "end");
         ValidationException ex = assertThrows(ValidationException.class, validation(prokaryote(), first, second));
@@ -183,7 +183,7 @@ class ProkaryotePartialLocationValidationTest {
                 TestUtils.createGFF3Annotation(SEQ_ID, 1, SEQUENCE_LENGTH, features), 1);
     }
 
-    /** A context with the mocked sequence lookup; a {@code null} {@code taxonProvider} registers none. */
+    /** A context with the mocked sequence; a null taxonProvider registers none. */
     private ValidationContext context(TaxonProvider taxonProvider) {
         ValidationContext context = TestUtils.createTestContext();
         TestUtils.registerProvider(context, SequenceLookup.class, lookup);
@@ -197,7 +197,7 @@ class ProkaryotePartialLocationValidationTest {
         return taxonProvider(taxon(BACTERIA_LINEAGE));
     }
 
-    /** Resolves every accession to {@code taxon}, or to nothing when it is {@code null}. */
+    /** Resolves every accession to taxon, or to nothing when it is null. */
     private TaxonProvider taxonProvider(Taxon taxon) {
         return new TaxonProvider() {
             @Override

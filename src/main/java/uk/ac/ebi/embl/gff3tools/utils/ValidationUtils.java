@@ -85,11 +85,7 @@ public class ValidationUtils {
                 .flatMap(ControlledVocabularyUtils::normaliseMolType);
     }
 
-    /**
-     * The organism of an accession, or empty when it does not resolve. That covers no
-     * {@link TaxonProvider} being registered, as in client-side processing, and a lookup that finds
-     * nothing, which includes a taxonomy service failure.
-     */
+    /** The organism of an accession, or empty if no {@link TaxonProvider} is registered or it finds none. */
     public static Optional<Taxon> resolveTaxon(String accession, ValidationContext context) {
         return context.contains(TaxonProvider.class)
                 ? context.get(TaxonProvider.class).resolve(accession)
