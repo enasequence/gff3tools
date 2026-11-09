@@ -143,10 +143,10 @@ public class FileConversionCommand extends AbstractCommand {
             final FileSequenceSource inputFastaSourceFinal = inputFastaSource;
             WriterAction writeAction = writer -> {
                 // FASTA -> GFF3 reads the sequence exclusively through the shared FileSequenceSource,
-                // so no input reader is opened for it: that would open (and, for gzip, decompress)
-                // the input a second time. try-with-resources skips a null resource.
-                try (BufferedReader inputReader =
-                        inputFastaSourceFinal != null ? null : createInputReader(inputFilePath)) {
+                // so we avoid opening (and, for gzip, decompressing) the input a second time here.
+                try (BufferedReader inputReader = inputFastaSourceFinal != null
+                        ? new BufferedReader(new StringReader(""))
+                        : createInputReader(inputFilePath)) {
                     SequenceLookup sequenceLookup = compositeProvider.hasSources() ? compositeProvider.get(null) : null;
                     // The header provider self-skips when it carries no header source (see
                     // FastaHeaderProvider#isActive), so an empty one never lands on the context and
@@ -175,11 +175,7 @@ public class FileConversionCommand extends AbstractCommand {
                         Converter converter =
                                 getConverter(engine, fromFileType, toFileType, inputFastaSourceFinal, sequenceLookup);
                         try {
-                            if (converter instanceof FastaToGff3Converter fastaConverter) {
-                                fastaConverter.convert(writer);
-                            } else {
-                                converter.convert(inputReader, writer);
-                            }
+                            converter.convert(inputReader, writer);
                         } finally {
                             // Written in a finally so a failed conversion still reports what it counted.
                             writeMetricsReport(metrics, metricsFilePath, metricsFormat);
