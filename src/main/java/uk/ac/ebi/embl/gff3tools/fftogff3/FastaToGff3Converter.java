@@ -64,6 +64,8 @@ public class FastaToGff3Converter implements Converter {
     public void convert(BufferedReader reader, BufferedWriter writer)
             throws ReadException, WriteException, ValidationException {
 
+        // The BufferedReader is intentionally unused: the sequence is read exactly once via the
+        // shared FileSequenceSource.
         List<GFF3Annotation> annotations = buildAnnotations();
 
         GFF3Header header = new GFF3Header(GFF3Header.DEFAULT_VERSION);
