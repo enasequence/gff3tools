@@ -12,6 +12,7 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import java.util.ArrayList;
 import java.util.List;
+import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
@@ -59,13 +60,11 @@ public class ProkaryotePartialLocationValidation implements Validation {
 
     /** Genes are read in 3-base codons, so up to 2 bases of a cut-off codon may remain. */
     private static final int MAX_BASES_TO_GAP_OR_END = 2;
-
     /** The top-level taxonomy groups that make up the prokaryotes. */
     private static final List<String> PROKARYOTE_DOMAINS = List.of("Bacteria", "Archaea");
 
     private static final String PARTIAL_LOCATION_MESSAGE =
             "Features of a prokaryote sequence can only be partial near a gap or the end of the sequence:%s";
-
     private static final String VIOLATION_MESSAGE =
             "\nFeature %s on accession \"%s\" is partial at base %d, which is more than %d bases from a gap or the end"
                     + " of the sequence";
@@ -75,8 +74,8 @@ public class ProkaryotePartialLocationValidation implements Validation {
 
     /** The same for the whole file, so read once and reset by {@link #clear()}. */
     private Integer minGapSize;
-
-    private record Sequence(SequenceLookup lookup, String accession, long length, boolean circular) {}
+    /** An annotation's one sequence, with its gaps: runs of N at least the minimum gap size long. */
+    private record SequenceData(long length, boolean circular, List<GapRegion> gaps) {}
 
     @ValidationMethod(
             rule = PROKARYOTE_PARTIAL_LOCATION_RULE,
@@ -85,30 +84,23 @@ public class ProkaryotePartialLocationValidation implements Validation {
             priority = ValidationPriority.LOW)
     public void validatePartialLocation(GFF3Annotation annotation, int line) throws ValidationException {
         String accession = annotation.getAccession();
-        if (!context.contains(SequenceLookup.class) || !isKnownProkaryote(accession)) {
+        SequenceLookup lookup = context.contains(SequenceLookup.class) ? context.get(SequenceLookup.class) : null;
+        // A sequence missing from the lookup is reported by SEQUENCE_MAPPING.
+        if (lookup == null || !lookup.hasSequence(accession) || !isKnownProkaryote(accession)) {
             return;
         }
-        SequenceLookup lookup = context.get(SequenceLookup.class);
+        SequenceData sequence = extractSequenceData(lookup, accession);
 
         List<String> violations = new ArrayList<>();
-        try {
-            Sequence sequence = new Sequence(
-                    lookup,
-                    accession,
-                    lookup.getSequenceLength(accession),
-                    TopologyUtils.isCircularSequence(accession, context));
-            for (GFF3Feature feature : annotation.getFeatures()) {
-                List<String> partials =
-                        feature.getAttributeList(GFF3Attributes.PARTIAL).orElse(List.of());
-                if (partials.contains("start") && !startIsNearGapOrEnd(sequence, feature.getStart())) {
-                    violations.add(violation(feature, feature.getStart()));
-                }
-                if (partials.contains("end") && !endIsNearGapOrEnd(sequence, feature.getEnd())) {
-                    violations.add(violation(feature, feature.getEnd()));
-                }
+        for (GFF3Feature feature : annotation.getFeatures()) {
+            List<String> partials =
+                    feature.getAttributeList(GFF3Attributes.PARTIAL).orElse(List.of());
+            if (partials.contains("start") && !startIsNearGapOrEnd(sequence, feature.getStart())) {
+                violations.add(violation(feature, feature.getStart()));
             }
-        } catch (Exception e) {
-            throw new IllegalStateException("Unable to read the length or gap regions of sequence " + accession, e);
+            if (partials.contains("end") && !endIsNearGapOrEnd(sequence, feature.getEnd())) {
+                violations.add(violation(feature, feature.getEnd()));
+            }
         }
 
         if (!violations.isEmpty()) {
@@ -124,35 +116,41 @@ public class ProkaryotePartialLocationValidation implements Validation {
         minGapSize = null;
     }
 
-    private boolean startIsNearGapOrEnd(Sequence sequence, long start) throws Exception {
+    private SequenceData extractSequenceData(SequenceLookup lookup, String accession) {
+        try {
+            List<GapRegion> gaps = lookup.getGapRegions(accession).stream()
+                    .filter(nRun -> nRun.lengthBases() >= minGapSize())
+                    .toList();
+            return new SequenceData(
+                    lookup.getSequenceLength(accession), TopologyUtils.isCircularSequence(accession, context), gaps);
+        } catch (Exception e) {
+            throw new IllegalStateException("Unable to read the length or gap regions of sequence " + accession, e);
+        }
+    }
+
+    private boolean startIsNearGapOrEnd(SequenceData sequence, long start) {
         long basesBefore = start - 1;
         return (!sequence.circular() && basesBefore <= MAX_BASES_TO_GAP_OR_END)
                 || hasGap(sequence, start - MAX_BASES_TO_GAP_OR_END - 1, start - 1);
     }
 
-    private boolean endIsNearGapOrEnd(Sequence sequence, long end) throws Exception {
+    private boolean endIsNearGapOrEnd(SequenceData sequence, long end) {
         long basesAfter = sequence.length() - end;
         return (!sequence.circular() && basesAfter <= MAX_BASES_TO_GAP_OR_END)
                 || hasGap(sequence, end + 1, end + MAX_BASES_TO_GAP_OR_END + 1);
     }
 
-    /** Whether a gap touches bases fromBase to toBase. Runs of N shorter than the minimum gap size are not gaps. */
-    private boolean hasGap(Sequence sequence, long fromBase, long toBase) throws Exception {
-        for (Span span : onSequence(sequence, fromBase, toBase)) {
-            boolean gapFound = sequence.lookup().getGapRegions(sequence.accession(), span.start(), span.end()).stream()
-                    .anyMatch(nRun -> nRun.lengthBases() >= minGapSize());
-            if (gapFound) {
-                return true;
-            }
-        }
-        return false;
+    /** Whether a gap touches any of the bases fromBase to toBase. */
+    private boolean hasGap(SequenceData sequence, long fromBase, long toBase) {
+        return onSequence(sequence, fromBase, toBase).stream()
+                .anyMatch(span -> sequence.gaps().stream().anyMatch(gap -> gap.overlaps(span.start(), span.end())));
     }
 
     /**
      * The bases fromBase to toBase as ranges within the sequence. On a circular sequence, bases
      * before 1 or past the length wrap across the origin, which can split the range in two.
      */
-    private List<Span> onSequence(Sequence sequence, long fromBase, long toBase) {
+    private List<Span> onSequence(SequenceData sequence, long fromBase, long toBase) {
         if (!sequence.circular()) {
             return List.of(new Span(fromBase, toBase));
         }

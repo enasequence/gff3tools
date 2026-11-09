@@ -51,6 +51,7 @@ class ProkaryotePartialLocationValidationTest {
     void setUp() throws Exception {
         validation = new ProkaryotePartialLocationValidation();
         lookup = mock(SequenceLookup.class);
+        when(lookup.hasSequence(SEQ_ID)).thenReturn(true);
         when(lookup.getSequenceLength(SEQ_ID)).thenReturn(SEQUENCE_LENGTH);
     }
 
@@ -83,28 +84,28 @@ class ProkaryotePartialLocationValidationTest {
 
     @Test
     void startPartialTwoBasesAfterGapSuccess() throws Exception {
-        when(lookup.getGapRegions(SEQ_ID, 100L, 102L)).thenReturn(List.of(new GapRegion(90L, 100L)));
+        when(lookup.getGapRegions(SEQ_ID)).thenReturn(List.of(new GapRegion(90L, 100L)));
         GFF3Feature cds = partialCds(103, 300, "+", "start");
         assertDoesNotThrow(validation(prokaryote(), cds));
     }
 
     @Test
     void endPartialTwoBasesBeforeGapSuccess() throws Exception {
-        when(lookup.getGapRegions(SEQ_ID, 501L, 503L)).thenReturn(List.of(new GapRegion(503L, 520L)));
+        when(lookup.getGapRegions(SEQ_ID)).thenReturn(List.of(new GapRegion(503L, 520L)));
         GFF3Feature cds = partialCds(300, 500, "+", "end");
         assertDoesNotThrow(validation(prokaryote(), cds));
     }
 
     @Test
     void startPartialNextToShortNRunFails() throws Exception {
-        when(lookup.getGapRegions(SEQ_ID, 98L, 100L)).thenReturn(List.of(new GapRegion(95L, 100L)));
+        when(lookup.getGapRegions(SEQ_ID)).thenReturn(List.of(new GapRegion(95L, 100L)));
         GFF3Feature cds = partialCds(101, 300, "+", "start");
         assertThrows(ValidationException.class, validation(prokaryote(), cds));
     }
 
     @Test
     void minGapSizeIsTakenFromAnalysisContext() throws Exception {
-        when(lookup.getGapRegions(SEQ_ID, 98L, 100L)).thenReturn(List.of(new GapRegion(95L, 100L)));
+        when(lookup.getGapRegions(SEQ_ID)).thenReturn(List.of(new GapRegion(95L, 100L)));
         GFF3Feature cds = partialCds(101, 300, "+", "start");
         ValidationContext context = context(prokaryote());
         TestUtils.registerProvider(context, AnalysisContext.class, new AnalysisContext(AnalysisType.UNKNOWN, 5));
@@ -177,7 +178,7 @@ class ProkaryotePartialLocationValidationTest {
 
     @Test
     void endPartialPastOriginNearGapSuccess() throws Exception {
-        when(lookup.getGapRegions(SEQ_ID, 201L, 203L)).thenReturn(List.of(new GapRegion(203L, 220L)));
+        when(lookup.getGapRegions(SEQ_ID)).thenReturn(List.of(new GapRegion(203L, 220L)));
         GFF3Feature cds = partialCds(901, 1200, "+", "end");
         assertDoesNotThrow(validation(circular(), cds));
     }
@@ -185,7 +186,7 @@ class ProkaryotePartialLocationValidationTest {
     /** Bases past the sequence length are looked up back on the sequence, rather than failing the lookup. */
     @Test
     void startPartialPastOriginNearGapSuccess() throws Exception {
-        when(lookup.getGapRegions(SEQ_ID, 98L, 100L)).thenReturn(List.of(new GapRegion(80L, 100L)));
+        when(lookup.getGapRegions(SEQ_ID)).thenReturn(List.of(new GapRegion(80L, 100L)));
         GFF3Feature cds = partialCds(1101, 1150, "+", "start");
         assertDoesNotThrow(validation(circular(), cds));
     }
@@ -199,9 +200,24 @@ class ProkaryotePartialLocationValidationTest {
 
     @Test
     void startPartialAfterGapAcrossOriginSuccess() throws Exception {
-        when(lookup.getGapRegions(SEQ_ID, 999L, 1000L)).thenReturn(List.of(new GapRegion(985L, 1000L)));
+        when(lookup.getGapRegions(SEQ_ID)).thenReturn(List.of(new GapRegion(985L, 1000L)));
         GFF3Feature cds = partialCds(2, 300, "+", "start");
         assertDoesNotThrow(validation(circular(), cds));
+    }
+
+    /** SEQUENCE_MAPPING reports the missing sequence; this rule leaves it alone. */
+    @Test
+    void sequenceMissingFromLookupIsNotChecked() {
+        when(lookup.hasSequence(SEQ_ID)).thenReturn(false);
+        GFF3Feature cds = partialCds(400, 600, "+", "start", "end");
+        assertDoesNotThrow(validation(prokaryote(), cds));
+    }
+
+    @Test
+    void startPartialThreeBasesAfterGapFails() throws Exception {
+        when(lookup.getGapRegions(SEQ_ID)).thenReturn(List.of(new GapRegion(90L, 99L)));
+        GFF3Feature cds = partialCds(103, 300, "+", "start");
+        assertThrows(ValidationException.class, validation(prokaryote(), cds));
     }
 
     private GFF3Feature partialCds(long start, long end, String strand, String... partials) {
