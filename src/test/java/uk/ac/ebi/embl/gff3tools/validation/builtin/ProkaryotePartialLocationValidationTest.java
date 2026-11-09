@@ -24,6 +24,8 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
+import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.FastaHeader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
@@ -165,6 +167,43 @@ class ProkaryotePartialLocationValidationTest {
         assertTrue(ex.getMessage().contains("is partial at base 600"));
     }
 
+    /** 901-1200 crosses the origin: its partial end is really base 200, mid-sequence. */
+    @Test
+    void endPartialPastOriginWithoutGapFails() {
+        GFF3Feature cds = partialCds(901, 1200, "+", "end");
+        ValidationException ex = assertThrows(ValidationException.class, validation(circular(), cds));
+        assertTrue(ex.getMessage().contains("is partial at base 1200"));
+    }
+
+    @Test
+    void endPartialPastOriginNearGapSuccess() throws Exception {
+        when(lookup.getGapRegions(SEQ_ID, 201L, 203L)).thenReturn(List.of(new GapRegion(203L, 220L)));
+        GFF3Feature cds = partialCds(901, 1200, "+", "end");
+        assertDoesNotThrow(validation(circular(), cds));
+    }
+
+    /** Bases past the sequence length are looked up back on the sequence, rather than failing the lookup. */
+    @Test
+    void startPartialPastOriginNearGapSuccess() throws Exception {
+        when(lookup.getGapRegions(SEQ_ID, 98L, 100L)).thenReturn(List.of(new GapRegion(80L, 100L)));
+        GFF3Feature cds = partialCds(1101, 1150, "+", "start");
+        assertDoesNotThrow(validation(circular(), cds));
+    }
+
+    /** A circular sequence has no end, so base 1 does not count as one. */
+    @Test
+    void startPartialAtOriginOfCircularSequenceFails() {
+        GFF3Feature cds = partialCds(2, 300, "+", "start");
+        assertThrows(ValidationException.class, validation(circular(), cds));
+    }
+
+    @Test
+    void startPartialAfterGapAcrossOriginSuccess() throws Exception {
+        when(lookup.getGapRegions(SEQ_ID, 999L, 1000L)).thenReturn(List.of(new GapRegion(985L, 1000L)));
+        GFF3Feature cds = partialCds(2, 300, "+", "start");
+        assertDoesNotThrow(validation(circular(), cds));
+    }
+
     private GFF3Feature partialCds(long start, long end, String strand, String... partials) {
         GFF3Feature cds = TestUtils.createGFF3Feature("CDS1", OntologyTerm.CDS.name(), SEQ_ID, start, end, strand);
         for (String partial : partials) {
@@ -190,6 +229,17 @@ class ProkaryotePartialLocationValidationTest {
         if (taxonProvider != null) {
             context.register(TaxonProvider.class, taxonProvider);
         }
+        return context;
+    }
+
+    /** A prokaryote context whose sequence is declared circular. */
+    private ValidationContext circular() {
+        FastaHeader header = new FastaHeader();
+        header.setTopology("circular");
+        FastaHeaderProvider headers = new FastaHeaderProvider();
+        headers.addSource(seqId -> Optional.of(header));
+        ValidationContext context = context(prokaryote());
+        context.register(FastaHeaderProvider.class, headers);
         return context;
     }
 
