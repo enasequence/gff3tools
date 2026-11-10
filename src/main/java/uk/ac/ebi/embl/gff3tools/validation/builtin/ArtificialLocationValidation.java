@@ -10,6 +10,8 @@
  */
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
+import java.util.EnumSet;
+import java.util.Set;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
@@ -38,6 +40,9 @@ public class ArtificialLocationValidation implements Validation {
             "Feature \"%s\" carries artificial_location, which is limited to genome-scale annotation "
                     + "(so analysis type sequence assembly), but the analysis type was submitted as %s.";
 
+    private static final Set<AnalysisType> ARTIFICIAL_LOCATION_NOT_ALLOWED =
+            EnumSet.of(AnalysisType.TRANSCRIPTOME_ASSEMBLY, AnalysisType.SEQUENCE_FLATFILE);
+
     @InjectContext
     private ValidationContext context;
 
@@ -46,15 +51,15 @@ public class ArtificialLocationValidation implements Validation {
             description = "Attribute artificial_location is limited to genome-scale annotation",
             type = ValidationType.FEATURE)
     public void validateArtificialLocationAnalysisType(GFF3Feature feature, int line) throws ValidationException {
-        AnalysisType analysisType = ValidationUtils.getAnalysisType(context);
-        if (analysisType == AnalysisType.UNKNOWN
-                || analysisType == AnalysisType.SEQUENCE_ASSEMBLY
-                || !feature.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION)) {
+        if (!feature.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION)) {
             return;
         }
-        throw new ValidationException(
-                ARTIFICIAL_LOCATION_ANALYSIS_TYPE_RULE,
-                line,
-                ARTIFICIAL_LOCATION_MESSAGE.formatted(feature.getName(), analysisType));
+        AnalysisType analysisType = ValidationUtils.getAnalysisType(context);
+        if (ARTIFICIAL_LOCATION_NOT_ALLOWED.contains(analysisType)) {
+            throw new ValidationException(
+                    ARTIFICIAL_LOCATION_ANALYSIS_TYPE_RULE,
+                    line,
+                    ARTIFICIAL_LOCATION_MESSAGE.formatted(feature.getName(), analysisType));
+        }
     }
 }
