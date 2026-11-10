@@ -15,13 +15,13 @@ import java.util.Set;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType;
+import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.AnalysisType;
 
 /**
@@ -54,12 +54,22 @@ public class ArtificialLocationValidation implements Validation {
         if (!feature.hasAttribute(GFF3Attributes.ARTIFICIAL_LOCATION)) {
             return;
         }
-        AnalysisType analysisType = ValidationUtils.getAnalysisType(context);
+        AnalysisType analysisType = getAnalysisType(context);
         if (ARTIFICIAL_LOCATION_NOT_ALLOWED.contains(analysisType)) {
             throw new ValidationException(
                     ARTIFICIAL_LOCATION_ANALYSIS_TYPE_RULE,
                     line,
                     ARTIFICIAL_LOCATION_MESSAGE.formatted(feature.getName(), analysisType));
         }
+    }
+
+    /**
+     * {@link AnalysisContext} defaults to {@link AnalysisType#UNKNOWN}. An unknown analysis type is
+     * not ruled out as an assembly, so the rule stays inert unless a caller registers a real one.
+     */
+    public static AnalysisType getAnalysisType(ValidationContext context) {
+        return context.contains(AnalysisContext.class)
+                ? context.get(AnalysisContext.class).getAnalysisType()
+                : AnalysisType.UNKNOWN;
     }
 }
