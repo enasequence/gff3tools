@@ -98,10 +98,12 @@ public class TranslExceptCodonValidation implements Validation {
         List<TranslExceptCds> cdsWithTranslExceptList = extractCdsWithTranslExcept(annotation);
 
         for (TranslExceptCds cds : cdsWithTranslExceptList) {
+            // check for duplicate values of transl_except
             for (String value : cds.repeated()) {
                 violations.add(REPEATED_VIOLATION.formatted(cds.id(), cds.location(), value));
             }
 
+            // check for overlaps in transl_except values
             List<String> values = List.copyOf(cds.exceptions().keySet());
             for (int i = 0; i < values.size(); i++) {
                 for (int j = i + 1; j < values.size(); j++) {
@@ -177,22 +179,40 @@ public class TranslExceptCodonValidation implements Validation {
         }
     }
 
-    private Optional<String> findSharedBases(TranslExceptCds cds, String firstText, String secondText) {
-        TranslExceptAttribute first = cds.exceptions().get(firstText);
-        TranslExceptAttribute second = cds.exceptions().get(secondText);
-        int sharedStart = Math.max(first.getStartPosition(), second.getStartPosition());
-        int sharedEnd = Math.min(first.getEndPosition(), second.getEndPosition());
+    /**
+     * Whether two distinct values of one CDS share at least one base, and if so how: they name the same
+     * codon where both cover the same bases, and overlap otherwise. Empty where they share no base.
+     *
+     * <p>Values are compared by position, not text, so the same codon written two ways is found here.
+     * The same text given twice is not, as the CDS keeps each text once; {@code TranslExceptCds.repeated}
+     * holds those.
+     */
+    private Optional<String> findSharedBases(
+            TranslExceptCds cds, String firstTranslExceptValue, String secondTranslExceptValue) {
+        TranslExceptAttribute firstTranslExcept = cds.exceptions().get(firstTranslExceptValue);
+        TranslExceptAttribute secondTranslExcept = cds.exceptions().get(secondTranslExceptValue);
+
+        // The later start and the earlier end.
+        int sharedStart = Math.max(firstTranslExcept.getStartPosition(), secondTranslExcept.getStartPosition());
+        int sharedEnd = Math.min(firstTranslExcept.getEndPosition(), secondTranslExcept.getEndPosition());
+        // The values share at least one base exactly when sharedStart <= sharedEnd, so otherwise no overlap
         if (sharedStart > sharedEnd) {
             return Optional.empty();
         }
 
-        boolean sameCodon = first.getStartPosition().equals(second.getStartPosition())
-                && first.getEndPosition().equals(second.getEndPosition());
+        boolean sameCodon = firstTranslExcept.getStartPosition().equals(secondTranslExcept.getStartPosition())
+                && firstTranslExcept.getEndPosition().equals(secondTranslExcept.getEndPosition());
         return Optional.of(
                 sameCodon
-                        ? SAME_CODON_VIOLATION.formatted(cds.id(), cds.location(), firstText, secondText)
+                        ? SAME_CODON_VIOLATION.formatted(
+                                cds.id(), cds.location(), firstTranslExceptValue, secondTranslExceptValue)
                         : OVERLAP_VIOLATION.formatted(
-                                cds.id(), cds.location(), firstText, secondText, sharedStart, sharedEnd));
+                                cds.id(),
+                                cds.location(),
+                                firstTranslExceptValue,
+                                secondTranslExceptValue,
+                                sharedStart,
+                                sharedEnd));
     }
 
     private boolean isShortStopCodon(TranslExceptAttribute value) {
