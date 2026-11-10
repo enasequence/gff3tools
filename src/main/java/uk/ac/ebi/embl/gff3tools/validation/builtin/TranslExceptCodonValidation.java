@@ -77,6 +77,9 @@ public class TranslExceptCodonValidation implements Validation {
             "\nCDS \"%s\" at %s: \"%s\" starts %d base%s into a codon on strand \"%s\" (codon_start=%d)";
     private static final String BEFORE_FIRST_CODON_VIOLATION =
             "\nCDS \"%s\" at %s: \"%s\" starts before the first full codon (codon_start=%d)";
+    private static final String INVALID_CODON_START_MESSAGE =
+            "codon_start must be 1, 2 or 3 to place a transl_except in the reading frame:"
+                    + "\nCDS \"%s\" at %s has codon_start \"%s\"";
 
     private static final char STOP_CODON = '*';
 
@@ -158,11 +161,11 @@ public class TranslExceptCodonValidation implements Validation {
         List<String> violations = new ArrayList<>();
 
         for (CdsExceptions cds : readCdsExceptions(annotation)) {
-            Optional<Integer> codonStart = findCodonStart(cds.segments());
-            if (codonStart.isEmpty() || isNotReadInOneFrame(cds.segments())) {
+            if (isNotReadInOneFrame(cds.segments())) {
                 continue;
             }
-            cds.exceptions().forEach((text, value) -> findFrameViolation(cds, text, value, codonStart.get())
+            int codonStart = findCodonStart(cds, line);
+            cds.exceptions().forEach((text, value) -> findFrameViolation(cds, text, value, codonStart)
                     .ifPresent(violations::add));
         }
 
@@ -270,23 +273,30 @@ public class TranslExceptCodonValidation implements Validation {
 
     /**
      * The codon_start of the first row carrying one, or the default where none does, as the translation
-     * reads it. Empty where it is not 1, 2 or 3, which the translation reports.
+     * reads it.
+     *
+     * @throws ValidationException where it is not 1, 2 or 3, since no reading frame can be taken from it
      */
-    private Optional<Integer> findCodonStart(List<GFF3Feature> segments) {
-        String value = segments.stream()
+    private int findCodonStart(CdsExceptions cds, int line) throws ValidationException {
+        String value = cds.segments().stream()
                 .map(segment -> segment.getAttribute(GFF3Attributes.CODON_START).orElse(null))
                 .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(null);
         if (value == null) {
-            return Optional.of(DEFAULT_CODON_START);
+            return DEFAULT_CODON_START;
         }
+        String message = INVALID_CODON_START_MESSAGE.formatted(cds.id(), cds.location(), value);
+        int codonStart;
         try {
-            int codonStart = Integer.parseInt(value.trim());
-            return codonStart >= 1 && codonStart <= 3 ? Optional.of(codonStart) : Optional.empty();
+            codonStart = Integer.parseInt(value.trim());
         } catch (NumberFormatException e) {
-            return Optional.empty();
+            throw new ValidationException(line, message, e);
         }
+        if (codonStart < 1 || codonStart > 3) {
+            throw new ValidationException(line, message);
+        }
+        return codonStart;
     }
 
     private boolean isNotReadInOneFrame(List<GFF3Feature> segments) {

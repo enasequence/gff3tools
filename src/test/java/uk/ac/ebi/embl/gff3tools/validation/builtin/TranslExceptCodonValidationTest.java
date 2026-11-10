@@ -298,10 +298,12 @@ class TranslExceptCodonValidationTest {
 
         @ParameterizedTest
         @ValueSource(strings = {"4", "x"})
-        void leavesAnInvalidCodonStartToTheTranslation(String codonStart) {
+        void failsOnAnInvalidCodonStart(String codonStart) {
             cds(1, 300, te("5..7", "Sec")).addAttribute(GFF3Attributes.CODON_START, codonStart);
 
-            assertDoesNotThrow(this::validate);
+            String violations = violationsOf(this::validate);
+            assertTrue(violations.contains("codon_start must be 1, 2 or 3"));
+            assertTrue(violations.contains("CDS \"cds1\" at seq1:1..300 has codon_start \"%s\"".formatted(codonStart)));
         }
 
         @ParameterizedTest
