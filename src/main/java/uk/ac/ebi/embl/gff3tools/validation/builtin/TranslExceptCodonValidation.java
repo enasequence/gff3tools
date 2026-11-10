@@ -95,8 +95,9 @@ public class TranslExceptCodonValidation implements Validation {
             type = ANNOTATION)
     public void validateOncePerCodon(GFF3Annotation annotation, int line) throws ValidationException {
         List<String> violations = new ArrayList<>();
+        List<TranslExceptCds> cdsWithTranslExceptList = extractCdsWithTranslExcept(annotation);
 
-        for (TranslExceptCds cds : readCdsExceptions(annotation)) {
+        for (TranslExceptCds cds : cdsWithTranslExceptList) {
             for (String value : cds.repeated()) {
                 violations.add(REPEATED_VIOLATION.formatted(cds.id(), cds.location(), value));
             }
@@ -125,8 +126,9 @@ public class TranslExceptCodonValidation implements Validation {
             type = ANNOTATION)
     public void validateShortStopPosition(GFF3Annotation annotation, int line) throws ValidationException {
         List<String> violations = new ArrayList<>();
+        List<TranslExceptCds> cdsWithTranslExceptList = extractCdsWithTranslExcept(annotation);
 
-        for (TranslExceptCds cds : readCdsExceptions(annotation)) {
+        for (TranslExceptCds cds : cdsWithTranslExceptList) {
             cds.exceptions().forEach((text, value) -> {
                 if (!isShortStopCodon(value)) {
                     return;
@@ -159,8 +161,9 @@ public class TranslExceptCodonValidation implements Validation {
             type = ANNOTATION)
     public void validateReadingFrame(GFF3Annotation annotation, int line) throws ValidationException {
         List<String> violations = new ArrayList<>();
+        List<TranslExceptCds> cdsWithTranslExceptList = extractCdsWithTranslExcept(annotation);
 
-        for (TranslExceptCds cds : readCdsExceptions(annotation)) {
+        for (TranslExceptCds cds : cdsWithTranslExceptList) {
             if (isNotReadInOneFrame(cds.segments())) {
                 continue;
             }
@@ -235,7 +238,7 @@ public class TranslExceptCodonValidation implements Validation {
      * The CDSs of the annotation that carry at least one transl_except read as a codon. Each row of a
      * join repeats the CDS's values, so a value copied across rows counts once.
      */
-    private List<TranslExceptCds> readCdsExceptions(GFF3Annotation annotation) {
+    private List<TranslExceptCds> extractCdsWithTranslExcept(GFF3Annotation annotation) {
         List<TranslExceptCds> result = new ArrayList<>();
         for (List<GFF3Feature> segments :
                 ValidationUtils.groupFeaturesById(annotation, this::isCds).values()) {
