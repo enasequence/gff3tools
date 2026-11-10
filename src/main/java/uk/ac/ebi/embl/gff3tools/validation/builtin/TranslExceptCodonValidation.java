@@ -96,7 +96,7 @@ public class TranslExceptCodonValidation implements Validation {
     public void validateOncePerCodon(GFF3Annotation annotation, int line) throws ValidationException {
         List<String> violations = new ArrayList<>();
 
-        for (CdsExceptions cds : readCdsExceptions(annotation)) {
+        for (TranslExceptCds cds : readCdsExceptions(annotation)) {
             for (String value : cds.repeated()) {
                 violations.add(REPEATED_VIOLATION.formatted(cds.id(), cds.location(), value));
             }
@@ -126,7 +126,7 @@ public class TranslExceptCodonValidation implements Validation {
     public void validateShortStopPosition(GFF3Annotation annotation, int line) throws ValidationException {
         List<String> violations = new ArrayList<>();
 
-        for (CdsExceptions cds : readCdsExceptions(annotation)) {
+        for (TranslExceptCds cds : readCdsExceptions(annotation)) {
             cds.exceptions().forEach((text, value) -> {
                 if (!isShortStopCodon(value)) {
                     return;
@@ -160,7 +160,7 @@ public class TranslExceptCodonValidation implements Validation {
     public void validateReadingFrame(GFF3Annotation annotation, int line) throws ValidationException {
         List<String> violations = new ArrayList<>();
 
-        for (CdsExceptions cds : readCdsExceptions(annotation)) {
+        for (TranslExceptCds cds : readCdsExceptions(annotation)) {
             if (isNotReadInOneFrame(cds.segments())) {
                 continue;
             }
@@ -174,7 +174,7 @@ public class TranslExceptCodonValidation implements Validation {
         }
     }
 
-    private Optional<String> findSharedBases(CdsExceptions cds, String firstText, String secondText) {
+    private Optional<String> findSharedBases(TranslExceptCds cds, String firstText, String secondText) {
         TranslExceptAttribute first = cds.exceptions().get(firstText);
         TranslExceptAttribute second = cds.exceptions().get(secondText);
         int sharedStart = Math.max(first.getStartPosition(), second.getStartPosition());
@@ -207,7 +207,7 @@ public class TranslExceptCodonValidation implements Validation {
     }
 
     private Optional<String> findFrameViolation(
-            CdsExceptions cds, String text, TranslExceptAttribute value, int codonStart) {
+            TranslExceptCds cds, String text, TranslExceptAttribute value, int codonStart) {
         Optional<CdsLayout.Span> span = cds.layout().locate(value.getStartPosition(), value.getEndPosition());
         if (span.isEmpty()) {
             return Optional.empty();
@@ -235,8 +235,8 @@ public class TranslExceptCodonValidation implements Validation {
      * The CDSs of the annotation that carry at least one transl_except read as a codon. Each row of a
      * join repeats the CDS's values, so a value copied across rows counts once.
      */
-    private List<CdsExceptions> readCdsExceptions(GFF3Annotation annotation) {
-        List<CdsExceptions> result = new ArrayList<>();
+    private List<TranslExceptCds> readCdsExceptions(GFF3Annotation annotation) {
+        List<TranslExceptCds> result = new ArrayList<>();
         for (List<GFF3Feature> segments :
                 ValidationUtils.groupFeaturesById(annotation, this::isCds).values()) {
             Map<String, TranslExceptAttribute> exceptions = new LinkedHashMap<>();
@@ -253,7 +253,7 @@ public class TranslExceptCodonValidation implements Validation {
                 }
             }
             if (!exceptions.isEmpty()) {
-                result.add(new CdsExceptions(segments, exceptions, repeated, new CdsLayout(segments)));
+                result.add(new TranslExceptCds(segments, exceptions, repeated, new CdsLayout(segments)));
             }
         }
         return result;
@@ -277,7 +277,7 @@ public class TranslExceptCodonValidation implements Validation {
      *
      * @throws ValidationException where it is not 1, 2 or 3, since no reading frame can be taken from it
      */
-    private int findCodonStart(CdsExceptions cds, int line) throws ValidationException {
+    private int findCodonStart(TranslExceptCds cds, int line) throws ValidationException {
         String value = cds.segments().stream()
                 .map(segment -> segment.getAttribute(GFF3Attributes.CODON_START).orElse(null))
                 .filter(Objects::nonNull)
@@ -314,7 +314,7 @@ public class TranslExceptCodonValidation implements Validation {
      * One CDS with its distinct readable transl_except values, keyed by their text, and the values
      * given more than once on a single row.
      */
-    private record CdsExceptions(
+    private record TranslExceptCds(
             List<GFF3Feature> segments,
             Map<String, TranslExceptAttribute> exceptions,
             Set<String> repeated,
