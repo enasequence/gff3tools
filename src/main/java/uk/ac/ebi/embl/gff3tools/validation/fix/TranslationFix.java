@@ -14,6 +14,7 @@ import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.ANNOTATION
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
@@ -31,6 +32,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.FixMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Fix;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
+import uk.ac.ebi.embl.gff3tools.validation.provider.ConversionDirectionProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 /**
@@ -178,7 +180,7 @@ public class TranslationFix {
                 recordTranslationState(representative, line, oldTranslation, translation);
             }
 
-            propagateJoinAttributes(sortedFeatures, result);
+            propagateJoinAttributes(sortedFeatures, result, line);
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
@@ -191,11 +193,14 @@ public class TranslationFix {
     }
 
     /**
-     * Redistributes partiality and pseudo attributes across multi-segment CDS join segments.
+     * Applies translation-derived partiality and pseudo attributes across multi-segment CDS join segments.
      * 5'/3' partial are assigned to the strand-correct segment (first/last depends on strand),
-     * and pseudo is propagated from the first segment to all others.
+     * and pseudo is set on all segments. An existing 3' partial is removed when the translation
+     * ends in a valid stop codon. These are fixed during FF -> GFF3 and GFF3 -> FF conversion;
+     * during validation a {@link ValidationException} is thrown instead.
      */
-    private void propagateJoinAttributes(List<GFF3Feature> segments, TranslationResult result) {
+    private void propagateJoinAttributes(List<GFF3Feature> segments, TranslationResult result, int line)
+            throws ValidationException {
         if (segments.isEmpty()) {
             return;
         }
@@ -203,30 +208,97 @@ public class TranslationFix {
         GFF3Feature first = segments.get(0);
         GFF3Feature last = segments.get(segments.size() - 1);
 
-        // Partiality based on translation is set to first or last segment based on strand
+        boolean applyFixes = isFlatfileGff3Conversion();
+
+        // Rule: Fix 5' partiality during FF <-> GFF3 conversion; during validation report it as an error.
         if (result.isFixedFivePrimePartial()) {
             GFF3Feature fivePrimeTarget = first.isComplement() ? last : first;
             if (!fivePrimeTarget.isFivePrimePartial()) {
-                fivePrimeTarget.setFivePrimePartial();
+                if (applyFixes) {
+                    fivePrimeTarget.setFivePrimePartial();
+                } else {
+                    throw new ValidationException(
+                            "TRANSLATION",
+                            line,
+                            "CDS feature at location %d-%d should be 5' partial"
+                                    .formatted(fivePrimeTarget.getStart(), fivePrimeTarget.getEnd()));
+                }
             }
         }
 
         if (result.isFixedThreePrimePartial()) {
-            GFF3Feature threePrimeTarget = first.isComplement() ? first : last;
-            if (!threePrimeTarget.isThreePrimePartial()) {
-                threePrimeTarget.setThreePrimePartial();
-            }
+            applyThreePrimePartial(first, last, applyFixes, line);
+        }
+
+        if (result.isRemovedThreePrimePartial()) {
+            removeThreePrimePartial(first, last, applyFixes, line);
         }
 
         // Only propagate pseudo when translation newly determines the CDS is pseudo.
         // We intentionally do not copy an existing pseudo from the first segment to
         // the rest of the group, because such segments should not be treated as one join.
+        // Rule: Fix pseudo (internal stop codons) during FF <-> GFF3 conversion; during validation report it as an
+        // error.
         if (result.isFixedPseudo()) {
-            for (GFF3Feature segment : segments) {
-                segment.removeAttributeList(GFF3Attributes.PSEUDO);
-                segment.addAttribute(GFF3Attributes.PSEUDO, "true");
+            if (applyFixes) {
+                for (GFF3Feature segment : segments) {
+                    segment.removeAttributeList(GFF3Attributes.PSEUDO);
+                    segment.addAttribute(GFF3Attributes.PSEUDO, "true");
+                }
+            } else {
+                String locations = segments.stream()
+                        .map(segment -> segment.getStart() + "-" + segment.getEnd())
+                        .collect(Collectors.joining(", "));
+                throw new ValidationException(
+                        "TRANSLATION",
+                        line,
+                        "CDS feature at locations %s should be pseudo as its translation contains internal stop codons"
+                                .formatted(locations));
             }
         }
+    }
+
+    // No stop codon at the 3' end -> make the CDS 3' partial during FF <-> GFF3 conversion;
+    // during validation report it as an error.
+    private void applyThreePrimePartial(GFF3Feature first, GFF3Feature last, boolean applyFixes, int line)
+            throws ValidationException {
+        GFF3Feature target = first.isComplement() ? first : last;
+        if (target.isThreePrimePartial()) {
+            return;
+        }
+        if (!applyFixes) {
+            throw new ValidationException(
+                    "TRANSLATION",
+                    line,
+                    "CDS feature at location %d-%d should be 3' partial".formatted(target.getStart(), target.getEnd()));
+        }
+        target.setThreePrimePartial();
+    }
+
+    // Valid stop codon at a 3' partial end -> remove 3' partial during FF <-> GFF3 conversion;
+    // during validation report it as an error. The Translator derives join partiality from either boundary
+    // segment, so it is cleared from both.
+    private void removeThreePrimePartial(GFF3Feature first, GFF3Feature last, boolean applyFixes, int line)
+            throws ValidationException {
+        for (GFF3Feature target : List.of(first, last)) {
+            if (!target.isThreePrimePartial()) {
+                continue;
+            }
+            if (!applyFixes) {
+                throw new ValidationException(
+                        "TRANSLATION",
+                        line,
+                        "CDS feature at location %d-%d should not be 3' partial"
+                                .formatted(target.getStart(), target.getEnd()));
+            }
+            target.removeThreePrimePartial();
+        }
+    }
+
+    /** Partiality and pseudo are auto-fixed during FF <-> GFF3 conversion; validation reports them as errors. */
+    private boolean isFlatfileGff3Conversion() {
+        return context.contains(ConversionDirectionProvider.class)
+                && context.get(ConversionDirectionProvider.class).isFlatfileGff3Conversion();
     }
 
     private String lookupOldTranslation(GFF3Feature feature) {

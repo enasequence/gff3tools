@@ -258,6 +258,20 @@ public class GFF3Feature {
         addAttribute(GFF3Attributes.PARTIAL, isComplement() ? "start" : "end");
     }
 
+    /**
+     * Removes the 3' partial marker ("end", or "start" on the complement strand),
+     * keeping any 5' partial marker. The attribute is dropped when no values remain.
+     */
+    public void removeThreePrimePartial() {
+        String partialValue = isComplement() ? "start" : "end";
+        getAttributeList(GFF3Attributes.PARTIAL)
+                .ifPresent(values -> setAttributeList(
+                        GFF3Attributes.PARTIAL,
+                        values.stream()
+                                .filter(value -> !partialValue.equalsIgnoreCase(value))
+                                .toList()));
+    }
+
     public boolean isFivePrimePartial() {
         String partialValue = isComplement() ? "end" : "start";
         return getAttributeList(GFF3Attributes.PARTIAL)

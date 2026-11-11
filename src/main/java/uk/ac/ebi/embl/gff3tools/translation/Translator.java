@@ -601,7 +601,8 @@ public class Translator {
                 return false;
             } else {
                 if (fixValidStopCodonRemove3Partial) {
-                    translationResult.setFixedThreePrimePartial(true);
+                    // Rule: Stop codon at a 3' end -> remove 3' partial.
+                    translationResult.setRemovedThreePrimePartial(true);
                     threePrimePartial = false;
                     fixes.add("fixValidStopCodonRemove3Partial");
                 } else {
