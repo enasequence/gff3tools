@@ -102,7 +102,7 @@ public class TranslationFix {
 
         PseudoLookup pseudoLookup = PseudoLookup.of(annotation, context);
         for (List<GFF3Feature> segments : cdsGroups.values()) {
-            translateCdsGroup(segments, sequenceLookup, line, circularSequenceLength, pseudoLookup.isPseudo(segments));
+            translateCdsGroup(segments, sequenceLookup, line, circularSequenceLength, pseudoLookup);
         }
     }
 
@@ -111,7 +111,7 @@ public class TranslationFix {
             SequenceLookup sequenceLookup,
             int line,
             Long circularSequenceLength,
-            boolean isPseudo)
+            PseudoLookup pseudoLookup)
             throws ValidationException {
 
         boolean isTransSpliced = features.stream().anyMatch(s -> s.hasAttribute(GFF3Attributes.TRANS_SPLICING));
@@ -164,7 +164,7 @@ public class TranslationFix {
             }
 
             Translator translator = new Translator(sortedFeatures);
-            if (isPseudo) {
+            if (pseudoLookup.isPseudo(features)) {
                 // The Translator only checks the first segment's own attributes. A CDS is also
                 // pseudo when a later segment or an ancestor is, and must not be translated.
                 translator.setNonTranslating(true);
@@ -189,7 +189,7 @@ public class TranslationFix {
                 recordTranslationState(representative, line, oldTranslation, translation);
             }
 
-            propagateJoinAttributes(sortedFeatures, result);
+            propagateJoinAttributes(sortedFeatures, result, pseudoLookup);
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
@@ -206,7 +206,8 @@ public class TranslationFix {
      * 5'/3' partial are assigned to the strand-correct segment (first/last depends on strand),
      * and pseudo is propagated from the first segment to all others.
      */
-    private void propagateJoinAttributes(List<GFF3Feature> segments, TranslationResult result) {
+    private void propagateJoinAttributes(
+            List<GFF3Feature> segments, TranslationResult result, PseudoLookup pseudoLookup) {
         if (segments.isEmpty()) {
             return;
         }
@@ -237,6 +238,9 @@ public class TranslationFix {
                 segment.removeAttributeList(GFF3Attributes.PSEUDO);
                 segment.addAttribute(GFF3Attributes.PSEUDO, "true");
             }
+            // The shared lookup was built before this CDS became pseudo; the rules after this fix
+            // must see it as pseudo.
+            pseudoLookup.markPseudo(segments);
         }
     }
 

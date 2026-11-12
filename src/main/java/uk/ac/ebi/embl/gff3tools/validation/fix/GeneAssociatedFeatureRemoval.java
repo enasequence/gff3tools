@@ -40,6 +40,11 @@ public class GeneAssociatedFeatureRemoval implements Fix {
                     "Removes gene features entry if locations are identical with gene associated features (CDS, RRNA, TRNA)",
             type = ANNOTATION)
     public void fixAnnotation(GFF3Annotation gff3Annotation, int line) {
+        // Build the shared CDS lookup before any gene goes, so its reasons name the genes the
+        // submitter wrote. Removing a gene never changes whether a CDS is pseudo: a pseudo gene's
+        // marker is copied to its children below.
+        PseudoLookup.of(gff3Annotation, context);
+
         OntologyClient ontologyClient = context.get(OntologyClient.class);
         List<GFF3Feature> geneAssociatedFeatures = new ArrayList<>();
         Map<String, GFF3Feature> geneFeatureMap = new HashMap<>();
@@ -83,10 +88,10 @@ public class GeneAssociatedFeatureRemoval implements Fix {
         // preventing DANGLING_PARENT errors from the validator. A child of a pseudo
         // gene takes the gene's pseudo, which it would otherwise lose with the link.
         if (!removedGenes.isEmpty()) {
-            PseudoLookup pseudoLookup = PseudoLookup.of(gff3Annotation, context);
+            PseudoLookup.Walker walker = PseudoLookup.walker(gff3Annotation, context);
             for (GFF3Feature feature : gff3Annotation.getFeatures()) {
                 feature.getParentId().map(removedGenes::get).ifPresent(gene -> {
-                    if (pseudoLookup.isPseudo(List.of(gene))) {
+                    if (walker.isPseudo(gene)) {
                         copyPseudo(gene, feature);
                     }
                     feature.setParentId(Optional.empty());
