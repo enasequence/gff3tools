@@ -363,6 +363,25 @@ public class GFF3FileReader implements AutoCloseable {
         return attributes;
     }
 
+    /**
+     * Reads all {@code ##sequence-region} accession IDs from the file header without constructing a
+     * full reader. Stops at the first non-directive line or {@code ##FASTA}. Returns an empty list
+     * when no directives are present (e.g. legacy files or non-standard headers).
+     */
+    public static List<String> readSequenceRegionIds(Path gff3Path) throws IOException {
+        List<String> ids = new ArrayList<>();
+        try (BufferedReader reader = Files.newBufferedReader(gff3Path)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.isBlank()) continue;
+                if (!line.startsWith("#") || line.startsWith("##FASTA")) break;
+                Matcher m = SEQUENCE_REGION_DIRECTIVE.matcher(line);
+                if (m.matches()) ids.add(m.group("accession"));
+            }
+        }
+        return ids;
+    }
+
     public GFF3Header readHeader() throws IOException, ValidationException {
         String line;
         while ((line = readLine()) != null) {

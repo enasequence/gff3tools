@@ -21,7 +21,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.OptionalLong;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -46,9 +45,9 @@ class FastaSectionLocatorTest {
     void emptyFileReturnsEmpty() throws IOException {
         Path file = writeFile("");
 
-        OptionalLong offset = FastaSectionLocator.locate(file);
+        long offset = FastaSectionLocator.locate(file);
 
-        assertTrue(offset.isEmpty());
+        assertEquals(-1L, offset);
     }
 
     @Test
@@ -60,9 +59,9 @@ class FastaSectionLocatorTest {
                 "chr1\t.\tmRNA\t1\t1000\t.\t+\t.\tID=mrna1",
                 ""));
 
-        OptionalLong offset = FastaSectionLocator.locate(file);
+        long offset = FastaSectionLocator.locate(file);
 
-        assertTrue(offset.isEmpty());
+        assertEquals(-1L, offset);
     }
 
     @Test
@@ -71,10 +70,9 @@ class FastaSectionLocatorTest {
                 "\n", "##gff-version 3", "chr1\t.\tgene\t1\t1000\t.\t+\t.\tID=gene1", ">seq1", "ACDEFG", "");
         Path file = writeFile(content);
 
-        OptionalLong offset = FastaSectionLocator.locate(file);
+        long offset = FastaSectionLocator.locate(file);
 
-        assertTrue(offset.isPresent());
-        assertEquals(content.indexOf('>'), offset.getAsLong());
+        assertEquals(content.indexOf('>'), offset);
     }
 
     @Test
@@ -82,10 +80,9 @@ class FastaSectionLocatorTest {
         String content = String.join("\n", "##FASTA", ">seq1", "ACDEFG", "");
         Path file = writeFile(content);
 
-        OptionalLong offset = FastaSectionLocator.locate(file);
+        long offset = FastaSectionLocator.locate(file);
 
-        assertTrue(offset.isPresent());
-        assertEquals(0L, offset.getAsLong());
+        assertEquals(0L, offset);
     }
 
     @Test
@@ -94,10 +91,9 @@ class FastaSectionLocatorTest {
                 String.join("\n", "##gff-version 3", "chr1\t.\tgene\t1\t1000\t.\t+\t.\tID=gene1", "##FASTA", "");
         Path file = writeFile(content);
 
-        OptionalLong offset = FastaSectionLocator.locate(file);
+        long offset = FastaSectionLocator.locate(file);
 
-        assertTrue(offset.isPresent());
-        assertEquals(content.indexOf("##FASTA"), offset.getAsLong());
+        assertEquals(content.indexOf("##FASTA"), offset);
     }
 
     @Test
@@ -112,10 +108,9 @@ class FastaSectionLocatorTest {
                 "");
         Path file = writeFile(content);
 
-        OptionalLong offset = FastaSectionLocator.locate(file);
+        long offset = FastaSectionLocator.locate(file);
 
-        assertTrue(offset.isPresent());
-        assertEquals(content.indexOf("##FASTA"), offset.getAsLong());
+        assertEquals(content.indexOf("##FASTA"), offset);
     }
 
     @Test
@@ -124,10 +119,9 @@ class FastaSectionLocatorTest {
                 + ">seq1\r\n" + "ACDEFG\n";
         Path file = writeFile(content);
 
-        OptionalLong offset = FastaSectionLocator.locate(file);
+        long offset = FastaSectionLocator.locate(file);
 
-        assertTrue(offset.isPresent());
-        assertEquals(content.indexOf("##FASTA"), offset.getAsLong());
+        assertEquals(content.indexOf("##FASTA"), offset);
     }
 
     @Test
@@ -144,10 +138,9 @@ class FastaSectionLocatorTest {
                 "");
         Path file = writeFile(content);
 
-        OptionalLong offset = FastaSectionLocator.locate(file);
+        long offset = FastaSectionLocator.locate(file);
 
-        assertTrue(offset.isPresent());
-        assertEquals(content.indexOf("##FASTA"), offset.getAsLong());
+        assertEquals(content.indexOf("##FASTA"), offset);
     }
 
     @Test
@@ -159,10 +152,9 @@ class FastaSectionLocatorTest {
         String content = longAnnotationLine + "##FASTA\n>seq1\nACDEFG\n";
         Path file = writeFile(content);
 
-        OptionalLong offset = FastaSectionLocator.locate(file);
+        long offset = FastaSectionLocator.locate(file);
 
-        assertTrue(offset.isPresent());
-        assertEquals(content.indexOf("##FASTA"), offset.getAsLong());
+        assertEquals(content.indexOf("##FASTA"), offset);
     }
 
     @Test
@@ -176,10 +168,9 @@ class FastaSectionLocatorTest {
         String content = annotationLine + marker + ">seq1\nACDEFG\n";
         Path file = writeFile(content);
 
-        OptionalLong offset = FastaSectionLocator.locate(file);
+        long offset = FastaSectionLocator.locate(file);
 
-        assertTrue(offset.isPresent());
-        assertEquals(content.indexOf("##FASTA"), offset.getAsLong());
+        assertEquals(content.indexOf("##FASTA"), offset);
     }
 
     @Test
@@ -195,10 +186,9 @@ class FastaSectionLocatorTest {
 
         try (CountingSeekableByteChannel channel =
                 new CountingSeekableByteChannel(Files.newByteChannel(file, StandardOpenOption.READ))) {
-            OptionalLong offset = FastaSectionLocator.locate(channel);
+            long offset = FastaSectionLocator.locate(channel);
 
-            assertTrue(offset.isPresent());
-            assertEquals(content.indexOf("##FASTA"), offset.getAsLong());
+            assertEquals(content.indexOf("##FASTA"), offset);
             assertNoFullScan(channel, content.length());
         }
     }
@@ -216,10 +206,9 @@ class FastaSectionLocatorTest {
 
         try (CountingSeekableByteChannel channel =
                 new CountingSeekableByteChannel(Files.newByteChannel(file, StandardOpenOption.READ))) {
-            OptionalLong offset = FastaSectionLocator.locate(channel);
+            long offset = FastaSectionLocator.locate(channel);
 
-            assertTrue(offset.isPresent());
-            assertEquals(content.indexOf("##FASTA"), offset.getAsLong());
+            assertEquals(content.indexOf("##FASTA"), offset);
             assertNoFullScan(channel, content.length());
         }
     }
@@ -238,10 +227,10 @@ class FastaSectionLocatorTest {
                 "");
         Path file = writeFile(content);
 
-        OptionalLong offset = FastaSectionLocator.locate(file);
+        long offset = FastaSectionLocator.locate(file);
 
-        assertTrue(offset.isPresent());
-        assertTrue(offset.getAsLong() <= content.indexOf('>'));
+        assertTrue(offset >= 0);
+        assertTrue(offset <= content.indexOf('>'));
     }
 
     private static void assertNoFullScan(CountingSeekableByteChannel channel, long fileSize) {

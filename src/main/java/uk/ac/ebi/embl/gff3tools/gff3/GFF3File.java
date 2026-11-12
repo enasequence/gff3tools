@@ -38,7 +38,6 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
  * annotation, never between them. Translations are scoped to the relevant annotations.
  */
 @Slf4j
-@Builder
 public class GFF3File implements IGFF3Feature {
 
     GFF3Header header;
@@ -70,11 +69,12 @@ public class GFF3File implements IGFF3Feature {
      *     {@code TranslationFix}; each entry wins over the source GFF3's translation for the same
      *     feature. May hold nothing
      */
+    @Builder
     public GFF3File(
             GFF3Header header,
             GFF3Species species,
             List<GFF3Annotation> annotations,
-            GFF3FileReader gff3FileReader,
+            GFF3FileReader gff3Reader,
             Path fastaFilePath,
             boolean writeAnnotationFasta,
             List<ValidationException> parsingWarnings,
@@ -85,7 +85,7 @@ public class GFF3File implements IGFF3Feature {
         this.annotations = annotations;
         this.fastaFilePath = fastaFilePath;
         this.parsingWarnings = parsingWarnings;
-        this.gff3Reader = gff3FileReader;
+        this.gff3Reader = gff3Reader;
         this.writeAnnotationFasta = writeAnnotationFasta;
         this.translationState = translationState;
     }
@@ -101,7 +101,6 @@ public class GFF3File implements IGFF3Feature {
      */
     @Override
     public void writeGFF3String(Writer writer) throws WriteException {
-
         try {
             if (header != null) {
                 header.writeGFF3String(writer);
