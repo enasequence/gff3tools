@@ -10,7 +10,7 @@ plugins {
 base {
     archivesName = 'gff3tools'
     group = 'uk.ac.ebi.ena'
-    version = '5.6.5'
+    version = '5.6.6'
 }
 
 java {
@@ -56,6 +56,9 @@ application {
 
 jar {
     archiveClassifier.set('')
+    // Keep logback.xml out of the library jar so it doesn't clash with the
+    // consumer's own config. The executable (shadow) jar still includes it.
+    exclude('logback.xml')
 }
 
 shadowJar {
