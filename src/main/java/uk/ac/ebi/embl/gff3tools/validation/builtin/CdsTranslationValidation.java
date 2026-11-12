@@ -123,7 +123,8 @@ public class CdsTranslationValidation {
                                 representative.getName(),
                                 representative.getStart(),
                                 representative.getEnd(),
-                                pseudoLookup.pseudoReason(segments).orElseThrow()));
+                                PseudoLookup.describe(
+                                        pseudoLookup.pseudoSource(segments).orElseThrow(), segments)));
             }
         }
 

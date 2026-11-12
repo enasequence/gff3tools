@@ -36,8 +36,21 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.PseudoLookupProvider;
  */
 public final class PseudoLookup {
 
-    /** Why a pseudo CDS group is pseudo: in full, and through its ancestors alone (if so). */
-    private record CdsPseudo(String reason, Optional<String> ancestorReason) {}
+    /** What makes a feature pseudo. */
+    public enum PseudoKind {
+        PSEUDO_ATTRIBUTE,
+        PSEUDOGENE_ATTRIBUTE,
+        PSEUDO_TYPE
+    }
+
+    /**
+     * The feature that makes a CDS pseudo: one of its own segments, or an ancestor. {@code value} is
+     * the attribute's value, or the feature's type for {@link PseudoKind#PSEUDO_TYPE}.
+     */
+    public record PseudoSource(GFF3Feature feature, PseudoKind kind, String value) {}
+
+    /** What makes a pseudo CDS group pseudo: in full, and through its ancestors alone (if so). */
+    private record CdsPseudo(PseudoSource source, Optional<PseudoSource> ancestorSource) {}
 
     private final OntologyClient ontologyClient;
     private final Map<String, CdsPseudo> pseudoCds = new HashMap<>();
@@ -47,9 +60,9 @@ public final class PseudoLookup {
         Walker walker = new Walker(annotation, ontologyClient);
         for (List<GFF3Feature> segments : ValidationUtils.groupFeaturesById(annotation, this::isCdsOrPseudogenicCds)
                 .values()) {
-            walker.pseudoReason(segments)
-                    .ifPresent(reason ->
-                            pseudoCds.put(key(segments), new CdsPseudo(reason, walker.ancestorPseudoReason(segments))));
+            walker.pseudoSource(segments)
+                    .ifPresent(source ->
+                            pseudoCds.put(key(segments), new CdsPseudo(source, walker.ancestorPseudoSource(segments))));
         }
     }
 
@@ -85,11 +98,11 @@ public final class PseudoLookup {
     }
 
     /**
-     * Why the CDS spread over {@code segments} (one or more lines sharing an ID) is pseudo, or empty
-     * when it is not. It is pseudo when any segment, or any segment's ancestor, is.
+     * What makes the CDS spread over {@code segments} (one or more lines sharing an ID) pseudo, or
+     * empty when it is not. It is pseudo when any segment, or any segment's ancestor, is.
      */
-    public Optional<String> pseudoReason(List<GFF3Feature> segments) {
-        return Optional.ofNullable(pseudoCds.get(key(segments))).map(CdsPseudo::reason);
+    public Optional<PseudoSource> pseudoSource(List<GFF3Feature> segments) {
+        return Optional.ofNullable(pseudoCds.get(key(segments))).map(CdsPseudo::source);
     }
 
     public boolean isPseudo(List<GFF3Feature> segments) {
@@ -97,11 +110,29 @@ public final class PseudoLookup {
     }
 
     /**
-     * Why an ancestor of the CDS spread over {@code segments} is pseudo, or empty when none is. The
-     * CDS's own attributes and type are ignored.
+     * The ancestor that makes the CDS spread over {@code segments} pseudo, or empty when none does.
+     * The CDS's own attributes and type are ignored.
      */
-    public Optional<String> ancestorPseudoReason(List<GFF3Feature> segments) {
-        return Optional.ofNullable(pseudoCds.get(key(segments))).flatMap(CdsPseudo::ancestorReason);
+    public Optional<PseudoSource> ancestorPseudoSource(List<GFF3Feature> segments) {
+        return Optional.ofNullable(pseudoCds.get(key(segments))).flatMap(CdsPseudo::ancestorSource);
+    }
+
+    /**
+     * The source as submitters read it, for the CDS spread over {@code segments}: {@code it has
+     * pseudo=true} for one of its own segments, {@code its ancestor "gene1" has pseudo=true} for an
+     * ancestor.
+     */
+    public static String describe(PseudoSource source, List<GFF3Feature> segments) {
+        String what =
+                switch (source.kind()) {
+                    case PSEUDO_ATTRIBUTE -> "has %s=%s".formatted(GFF3Attributes.PSEUDO, source.value());
+                    case PSEUDOGENE_ATTRIBUTE -> "has %s=%s".formatted(GFF3Attributes.PSEUDOGENE, source.value());
+                    case PSEUDO_TYPE -> "is of type " + source.value();
+                };
+        boolean own = segments.stream().anyMatch(segment -> segment == source.feature());
+        return own
+                ? "it " + what
+                : "its ancestor \"%s\" %s".formatted(source.feature().getId().orElse(""), what);
     }
 
     /**
@@ -115,30 +146,38 @@ public final class PseudoLookup {
             return;
         }
         segments.stream()
-                .map(segment -> ownReason(segment, ontologyClient))
+                .map(segment -> ownSource(segment, ontologyClient))
                 .flatMap(Optional::stream)
                 .findFirst()
-                .ifPresent(own -> pseudoCds.put(key, new CdsPseudo("it " + own, Optional.empty())));
+                .ifPresent(own -> pseudoCds.put(key, new CdsPseudo(own, Optional.empty())));
     }
 
     private static String key(List<GFF3Feature> segments) {
         return ValidationUtils.featureGroupKey(segments.get(0));
     }
 
-    /** Why the feature itself is pseudo, ignoring its ancestors. */
-    private static Optional<String> ownReason(GFF3Feature feature, OntologyClient ontologyClient) {
-        for (String attribute : List.of(GFF3Attributes.PSEUDO, GFF3Attributes.PSEUDOGENE)) {
-            if (feature.hasAttribute(attribute)) {
-                return Optional.of("has %s=%s"
-                        .formatted(attribute, feature.getAttribute(attribute).orElse("")));
-            }
+    /** What makes the feature itself pseudo, ignoring its ancestors. */
+    private static Optional<PseudoSource> ownSource(GFF3Feature feature, OntologyClient ontologyClient) {
+        if (feature.hasAttribute(GFF3Attributes.PSEUDO)) {
+            return Optional.of(new PseudoSource(
+                    feature,
+                    PseudoKind.PSEUDO_ATTRIBUTE,
+                    feature.getAttribute(GFF3Attributes.PSEUDO).orElse("")));
+        }
+        if (feature.hasAttribute(GFF3Attributes.PSEUDOGENE)) {
+            return Optional.of(new PseudoSource(
+                    feature,
+                    PseudoKind.PSEUDOGENE_ATTRIBUTE,
+                    feature.getAttribute(GFF3Attributes.PSEUDOGENE).orElse("")));
         }
         boolean pseudoType = ontologyClient
                 .getSoTermId(feature.getName())
                 .map(soId -> ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENE.ID)
                         || ontologyClient.isSelfOrDescendantOf(soId, OntologyTerm.PSEUDOGENIC_REGION.ID))
                 .orElse(false);
-        return pseudoType ? Optional.of("is of type " + feature.getName()) : Optional.empty();
+        return pseudoType
+                ? Optional.of(new PseudoSource(feature, PseudoKind.PSEUDO_TYPE, feature.getName()))
+                : Optional.empty();
     }
 
     /**
@@ -159,7 +198,7 @@ public final class PseudoLookup {
 
         private final OntologyClient ontologyClient;
         private final Map<String, List<GFF3Feature>> linesById = new HashMap<>();
-        private final Map<GFF3Feature, Optional<String>> ownReasons = new IdentityHashMap<>();
+        private final Map<GFF3Feature, Optional<PseudoSource>> ownSources = new IdentityHashMap<>();
 
         private Walker(GFF3Annotation annotation, OntologyClient ontologyClient) {
             this.ontologyClient = ontologyClient;
@@ -174,38 +213,38 @@ public final class PseudoLookup {
 
         /** True when the feature, or any of its ancestors, is pseudo. */
         public boolean isPseudo(GFF3Feature feature) {
-            return pseudoReason(feature).isPresent();
+            return pseudoSource(feature).isPresent();
         }
 
-        private Optional<String> pseudoReason(List<GFF3Feature> segments) {
+        private Optional<PseudoSource> pseudoSource(List<GFF3Feature> segments) {
             for (GFF3Feature segment : segments) {
-                Optional<String> reason = pseudoReason(segment);
-                if (reason.isPresent()) {
-                    return reason;
+                Optional<PseudoSource> source = pseudoSource(segment);
+                if (source.isPresent()) {
+                    return source;
                 }
             }
             return Optional.empty();
         }
 
-        private Optional<String> ancestorPseudoReason(List<GFF3Feature> segments) {
+        private Optional<PseudoSource> ancestorPseudoSource(List<GFF3Feature> segments) {
             for (GFF3Feature segment : segments) {
-                Optional<String> reason = ancestorPseudoReason(segment);
-                if (reason.isPresent()) {
-                    return reason;
+                Optional<PseudoSource> source = ancestorPseudoSource(segment);
+                if (source.isPresent()) {
+                    return source;
                 }
             }
             return Optional.empty();
         }
 
-        private Optional<String> pseudoReason(GFF3Feature feature) {
-            Optional<String> own = ownReason(feature);
+        private Optional<PseudoSource> pseudoSource(GFF3Feature feature) {
+            Optional<PseudoSource> own = ownSource(feature);
             if (own.isPresent()) {
-                return own.map(reason -> "it " + reason);
+                return own;
             }
-            return ancestorPseudoReason(feature);
+            return ancestorPseudoSource(feature);
         }
 
-        private Optional<String> ancestorPseudoReason(GFF3Feature feature) {
+        private Optional<PseudoSource> ancestorPseudoSource(GFF3Feature feature) {
             // Parents are resolved from Parent references, because only the flat file to GFF3 path ever
             // sets the linked parent object. Every line of a parent counts, as for the feature's own.
             Set<String> seen = new HashSet<>();
@@ -217,9 +256,9 @@ public final class PseudoLookup {
                     continue;
                 }
                 for (GFF3Feature parentLine : linesById.getOrDefault(parentId, List.of())) {
-                    Optional<String> inherited = ownReason(parentLine);
+                    Optional<PseudoSource> inherited = ownSource(parentLine);
                     if (inherited.isPresent()) {
-                        return Optional.of("its ancestor \"%s\" %s".formatted(parentId, inherited.get()));
+                        return inherited;
                     }
                     parentLine.getParentId().ifPresent(pending::add);
                 }
@@ -228,8 +267,8 @@ public final class PseudoLookup {
         }
 
         /** Memoised, because sibling features walk up through the same ancestors. */
-        private Optional<String> ownReason(GFF3Feature feature) {
-            return ownReasons.computeIfAbsent(feature, f -> PseudoLookup.ownReason(f, ontologyClient));
+        private Optional<PseudoSource> ownSource(GFF3Feature feature) {
+            return ownSources.computeIfAbsent(feature, f -> PseudoLookup.ownSource(f, ontologyClient));
         }
     }
 }

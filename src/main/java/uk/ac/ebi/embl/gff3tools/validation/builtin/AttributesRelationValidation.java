@@ -203,8 +203,9 @@ public class AttributesRelationValidation implements Validation {
                 continue;
             }
             pseudoLookup
-                    .ancestorPseudoReason(segments)
-                    .ifPresent(reason -> violations.add(describeCds(segments, reason)));
+                    .ancestorPseudoSource(segments)
+                    .ifPresent(
+                            source -> violations.add(describeCds(segments, PseudoLookup.describe(source, segments))));
         }
 
         if (!violations.isEmpty()) {
