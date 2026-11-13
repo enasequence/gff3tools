@@ -174,4 +174,67 @@ class EmblEntryMetadataSourceTest {
 
         assertEquals("circular", meta.getTopology());
     }
+
+    @Test
+    void derivesWgsContigDataclassAndWgsSetFromMasterWgsLine() {
+        Entry entry = entryFactory.createEntry();
+        entry.setPrimaryAccession("CAXMYH010000000");
+        entry.setDataClass("SET");
+        entry.setContigDataclass("WGS");
+        entry.addContigAccession(new Text("CAXMYH010000001-CAXMYH010000009"));
+
+        MasterMetadata meta = new EmblEntryMetadataSource(entry).getMetadata();
+
+        assertEquals("SET", meta.getDataClass());
+        assertEquals("WGS", meta.getContigDataclass());
+        assertEquals("CAXMYH01", meta.getWgsSet());
+    }
+
+    @Test
+    void setMasterWithoutWgsLineHasNoContigDataclass() {
+        Entry entry = entryFactory.createEntry();
+        entry.setDataClass("SET");
+
+        MasterMetadata meta = new EmblEntryMetadataSource(entry).getMetadata();
+
+        assertNull(meta.getContigDataclass());
+        assertNull(meta.getWgsSet());
+    }
+
+    @Test
+    void wgsSetFallsBackToPrimaryAccessionWhenWgsLineHasNoParseableRange() {
+        Entry entry = entryFactory.createEntry();
+        entry.setPrimaryAccession("CAXMYH010000000");
+        entry.setDataClass("SET");
+        entry.setContigDataclass("WGS");
+        entry.addContigAccession(new Text("junk"));
+
+        assertEquals(
+                "CAXMYH01", new EmblEntryMetadataSource(entry).getMetadata().getWgsSet());
+    }
+
+    @Test
+    void tsaMasterKeepsSetPathAndDerivesNoWgsSet() {
+        Entry entry = entryFactory.createEntry();
+        entry.setDataClass("SET");
+        entry.setContigDataclass("TSA");
+        entry.addContigAccession(new Text("GAAA01000001-GAAA01000009"));
+
+        MasterMetadata meta = new EmblEntryMetadataSource(entry).getMetadata();
+
+        assertEquals("TSA", meta.getContigDataclass());
+        assertNull(meta.getWgsSet());
+    }
+
+    @Test
+    void wgsSetFromContigRangeHandlesLegacyAndModernPrefixes() {
+        assertEquals("CAXMYH01", EmblEntryMetadataSource.wgsSetFromContigRange("CAXMYH010000001-CAXMYH010000009"));
+        assertEquals("AAAA01", EmblEntryMetadataSource.wgsSetFromContigRange("AAAA01000001-AAAA01012345"));
+        assertEquals("CAXMYH01", EmblEntryMetadataSource.wgsSetFromContigRange("  caxmyh010000001-caxmyh010000009"));
+        assertNull(
+                EmblEntryMetadataSource.wgsSetFromContigRange("ABCDE01000001")); // 5-letter prefixes are not WGS sets
+        assertNull(EmblEntryMetadataSource.wgsSetFromContigRange("ABCDEF")); // no set version
+        assertNull(EmblEntryMetadataSource.wgsSetFromContigRange("12345"));
+        assertNull(EmblEntryMetadataSource.wgsSetFromContigRange(null));
+    }
 }

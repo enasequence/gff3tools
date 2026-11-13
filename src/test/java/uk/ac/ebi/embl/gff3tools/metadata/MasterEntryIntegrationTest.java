@@ -18,6 +18,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
@@ -94,6 +95,47 @@ class MasterEntryIntegrationTest {
 
         assertEquals(0, exitCode, "Conversion with --master-entry EMBL should succeed");
         assertTrue(Files.exists(outFile), "Output file should be created");
+
+        // reduced/master.embl carries a WGS line, so it is a WGS set master: the converted
+        // entry must get contig-level treatment (dataClass WGS, KW WGS., SET cross-refs).
+        String content = Files.readString(outFile);
+        assertTrue(content.contains("; WGS; INV; 1000 BP."), "ID line with WGS data class and per-contig length");
+        assertTrue(content.contains("KW   WGS."), "WGS keyword added");
+        assertTrue(content.contains("DR   ENA; CAXMMS010000000; SET."), "master accession cross-ref");
+        assertTrue(content.contains("DR   ENA; CAXMMS000000000; SET."), "root set cross-ref");
+    }
+
+    @Test
+    void gff3ToEmbl_wgsSetMasterEmbl_matchesJsonMasterContigFields() throws Exception {
+        Path gff3 = getResourcePath("cli-examples/wgs/wgs_contig.gff3");
+        Path masterJson = getResourcePath("cli-examples/wgs/wgs_master.json");
+        Path masterEmbl = getResourcePath("cli-examples/wgs/wgs_master.embl");
+        Path outJson = tempDir.resolve("from_json.embl");
+        Path outEmbl = tempDir.resolve("from_embl.embl");
+
+        assertEquals(
+                0,
+                executeCommand(
+                        "conversion", "--master-entry", masterJson.toString(), gff3.toString(), outJson.toString()));
+        assertEquals(
+                0,
+                executeCommand(
+                        "conversion", "--master-entry", masterEmbl.toString(), gff3.toString(), outEmbl.toString()));
+
+        // Contig-level fields derived from the WGS set master must be identical for both master formats.
+        List<String> fromJson = wgsContigLines(outJson);
+        List<String> fromEmbl = wgsContigLines(outEmbl);
+        assertEquals(fromJson, fromEmbl);
+        assertTrue(fromEmbl.stream().anyMatch(l -> l.startsWith("ID") && l.contains("; WGS;")), "ID data class WGS");
+        assertTrue(fromEmbl.contains("KW   WGS."));
+        assertTrue(fromEmbl.contains("DR   ENA; CAXMYH010000000; SET."));
+        assertTrue(fromEmbl.contains("DR   ENA; CAXMYH000000000; SET."));
+    }
+
+    private static List<String> wgsContigLines(Path embl) throws Exception {
+        return Files.readAllLines(embl).stream()
+                .filter(l -> l.startsWith("ID") || l.startsWith("KW") || (l.startsWith("DR") && l.endsWith("SET.")))
+                .toList();
     }
 
     @Test
