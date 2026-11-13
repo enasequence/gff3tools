@@ -220,6 +220,47 @@ class ProkaryotePartialLocationValidationTest {
         assertThrows(ValidationException.class, validation(prokaryote(), cds));
     }
 
+    /** 91-100 is 10 Ns, exactly the default minimum gap size. */
+    @Test
+    void startPartialNextToNRunOfMinGapSizeSuccess() throws Exception {
+        when(lookup.getGapRegions(SEQ_ID)).thenReturn(List.of(new GapRegion(91L, 100L)));
+        GFF3Feature cds = partialCds(101, 300, "+", "start");
+        assertDoesNotThrow(validation(prokaryote(), cds));
+    }
+
+    /** 92-100 is 9 Ns, one below the default minimum gap size. */
+    @Test
+    void startPartialNextToNRunOneBelowMinGapSizeFails() throws Exception {
+        when(lookup.getGapRegions(SEQ_ID)).thenReturn(List.of(new GapRegion(92L, 100L)));
+        GFF3Feature cds = partialCds(101, 300, "+", "start");
+        assertThrows(ValidationException.class, validation(prokaryote(), cds));
+    }
+
+    /** partial=end always means the higher coordinate, even on the minus strand. */
+    @Test
+    void endPartialOnMinusStrandChecksHigherCoordinate() {
+        GFF3Feature cds = partialCds(3, 600, "-", "end");
+        ValidationException ex = assertThrows(ValidationException.class, validation(prokaryote(), cds));
+        assertTrue(ex.getMessage().contains("is partial at base 600"));
+    }
+
+    /** Segments share an ID; partial=start sits on the first and partial=end on the last. */
+    @Test
+    void joinedFeatureWithOuterPartialsNearSequenceEndsSuccess() {
+        GFF3Feature first = partialCds(3, 200, "+", "start");
+        GFF3Feature last = partialCds(400, 998, "+", "end");
+        assertDoesNotThrow(validation(prokaryote(), first, last));
+    }
+
+    @Test
+    void joinedFeatureIsCheckedOnTheSegmentCarryingThePartial() {
+        GFF3Feature first = partialCds(3, 200, "+", "start");
+        GFF3Feature last = partialCds(400, 900, "+", "end");
+        ValidationException ex = assertThrows(ValidationException.class, validation(prokaryote(), first, last));
+        assertTrue(ex.getMessage().contains("is partial at base 900"));
+        assertFalse(ex.getMessage().contains("is partial at base 3"));
+    }
+
     private GFF3Feature partialCds(long start, long end, String strand, String... partials) {
         GFF3Feature cds = TestUtils.createGFF3Feature("CDS1", OntologyTerm.CDS.name(), SEQ_ID, start, end, strand);
         for (String partial : partials) {
