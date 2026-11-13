@@ -11,7 +11,6 @@
 package uk.ac.ebi.embl.gff3tools.gff3.reader;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
@@ -45,11 +44,9 @@ public final class FastaSectionLocator {
      * returned offset is guaranteed to be at or before the first {@code >}
      * header byte in the file.
      */
-    public static OptionalLong locate(Path gff3Path) {
+    public static OptionalLong locate(Path gff3Path) throws IOException {
         try (SeekableByteChannel channel = Files.newByteChannel(gff3Path, StandardOpenOption.READ)) {
             return locate(channel);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
         }
     }
 

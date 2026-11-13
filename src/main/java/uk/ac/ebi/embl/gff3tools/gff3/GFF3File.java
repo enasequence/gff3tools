@@ -66,8 +66,17 @@ public class GFF3File implements IGFF3Feature {
         this.translationState = translationState;
     }
 
+    /**
+     * Writes the full GFF3 output including the embedded FASTA section.
+     *
+     * <p>When translations are sourced from the GFF3 file itself (via {@code gff3Reader}),
+     * this method reads translation sequences from the embedded FASTA section while writing.
+     * Any read failure is wrapped as a {@link WriteException} so the write contract
+     * remains clean — callers inspect {@link WriteException#getCause()} to distinguish
+     * a translation read failure from a pure write failure.
+     */
     @Override
-    public void writeGFF3String(Writer writer) throws WriteException, ReadException {
+    public void writeGFF3String(Writer writer) throws WriteException {
 
         try {
             if (header != null) {
@@ -91,6 +100,8 @@ public class GFF3File implements IGFF3Feature {
             if (!writeAnnotationFasta) {
                 writeTranslationSection(writer);
             }
+        } catch (ReadException e) {
+            throw new WriteException(e);
         } catch (IOException e) {
             throw new WriteException(e);
         }
@@ -101,10 +112,11 @@ public class GFF3File implements IGFF3Feature {
             writeFastaFromTranslationState(writer);
         } else if (fastaFilePath != null) {
             writeFastaFromExistingFile(writer);
-        } else if (gff3Reader != null
-                && gff3Reader.getTranslationOffsetMap() != null
-                && !gff3Reader.getTranslationOffsetMap().isEmpty()) {
-            writeFastaFromOffsets(writer, gff3Reader.getTranslationOffsetMap());
+        } else if (gff3Reader != null) {
+            Map<String, Long> translationOffsets = gff3Reader.getTranslationOffsetMap();
+            if (!translationOffsets.isEmpty()) {
+                writeFastaFromOffsets(writer, translationOffsets);
+            }
         }
     }
 

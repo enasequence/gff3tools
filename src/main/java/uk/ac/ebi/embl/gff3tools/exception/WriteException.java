@@ -22,6 +22,17 @@ public class WriteException extends ExitException {
         super(message, cause);
     }
 
+    /**
+     * Wraps a {@link ReadException} as a write failure. Used when a GFF3 write
+     * operation requires reading embedded FASTA translations from the source file
+     * (e.g. {@code GFF3File.writeGFF3String}), so that read failures are reported
+     * through the write contract rather than leaking a read-side exception through
+     * a write interface.
+     */
+    public WriteException(ReadException cause) {
+        super("Failed to write GFF3 output: could not read embedded FASTA translation — " + cause.getMessage(), cause);
+    }
+
     @Override
     public CLIExitCode exitCode() {
         return CLIExitCode.WRITE_ERROR;
