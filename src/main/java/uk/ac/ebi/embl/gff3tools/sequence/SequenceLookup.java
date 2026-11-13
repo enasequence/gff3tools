@@ -50,14 +50,14 @@ public interface SequenceLookup {
     SequenceStats getSequenceStats(String seqId) throws Exception;
 
     /**
-     * All contiguous N-runs in the whole sequence.
+     * All contiguous N-runs in the whole sequence, in ascending order of position.
      *
      * @param seqId id of the sequence
      */
     List<GapRegion> getGapRegions(String seqId) throws Exception;
 
     /**
-     * N-runs overlapping [fromBase, toBase] (1-based inclusive).
+     * N-runs overlapping [fromBase, toBase] (1-based inclusive), in ascending order of position.
      * Returned regions are not clipped to the range.
      *
      * @param seqId id of the sequence

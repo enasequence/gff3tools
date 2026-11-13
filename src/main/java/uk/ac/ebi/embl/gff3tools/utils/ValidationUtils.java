@@ -25,6 +25,8 @@ import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.FastaHeaderProvider;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils;
 import uk.ac.ebi.embl.gff3tools.sequence.fasta.header.utils.ControlledVocabularyUtils.MolType;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonProvider;
+import uk.ac.ebi.ena.taxonomy.taxon.Taxon;
 
 public class ValidationUtils {
 
@@ -81,6 +83,13 @@ public class ValidationUtils {
         return context.get(FastaHeaderProvider.class)
                 .getHeader(accession)
                 .flatMap(ControlledVocabularyUtils::normaliseMolType);
+    }
+
+    /** The organism of an accession, or empty if no {@link TaxonProvider} is registered or it finds none. */
+    public static Optional<Taxon> resolveTaxon(String accession, ValidationContext context) {
+        return context.contains(TaxonProvider.class)
+                ? context.get(TaxonProvider.class).resolve(accession)
+                : Optional.empty();
     }
 
     /**

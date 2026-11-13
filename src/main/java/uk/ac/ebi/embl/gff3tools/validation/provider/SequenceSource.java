@@ -33,8 +33,10 @@ public interface SequenceSource {
 
     SequenceStats getSequenceStats(String seqId) throws Exception;
 
+    /** N-runs in ascending order of position, as {@link uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup} promises. */
     List<GapRegion> getGapRegions(String seqId, SequenceRangeOption option) throws Exception;
 
+    /** N-runs in ascending order of position, as {@link uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup} promises. */
     List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase, SequenceRangeOption option)
             throws Exception;
 
