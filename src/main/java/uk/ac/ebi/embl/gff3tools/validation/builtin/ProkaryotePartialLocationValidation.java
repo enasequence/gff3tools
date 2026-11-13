@@ -147,8 +147,28 @@ public class ProkaryotePartialLocationValidation implements Validation {
 
     /** Whether a gap touches any of the bases fromBase to toBase. */
     private boolean hasGap(SequenceData sequence, long fromBase, long toBase) {
-        return onSequence(sequence, fromBase, toBase).stream()
-                .anyMatch(span -> sequence.gaps().stream().anyMatch(gap -> gap.overlaps(span.start(), span.end())));
+        for (Span span : onSequence(sequence, fromBase, toBase)) {
+            GapRegion gap = firstGapEndingAtOrAfter(sequence.gaps(), span.start());
+            if (gap != null && gap.startBase <= span.end()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Binary search: gaps come in ascending order and don't overlap, so their ends ascend too. */
+    private GapRegion firstGapEndingAtOrAfter(List<GapRegion> gaps, long base) {
+        int low = 0;
+        int high = gaps.size();
+        while (low < high) {
+            int mid = (low + high) >>> 1;
+            if (gaps.get(mid).endBase < base) {
+                low = mid + 1;
+            } else {
+                high = mid;
+            }
+        }
+        return low < gaps.size() ? gaps.get(low) : null;
     }
 
     /**
