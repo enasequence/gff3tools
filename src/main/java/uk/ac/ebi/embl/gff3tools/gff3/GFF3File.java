@@ -91,15 +91,16 @@ public class GFF3File implements IGFF3Feature {
     }
 
     /**
-     * Writes this document: header, species, every annotation's features, then the translations of
-     * those annotations in at most one {@code ##FASTA} section — see
-     * {@link #writeTranslationSection(Writer)}.
+     * Writes the full GFF3 output including the embedded FASTA section.
      *
-     * @param writer destination; not closed by this method
-     * @throws WriteException if the underlying writer fails
+     * <p>When translations are sourced from the GFF3 file itself (via {@code gff3Reader}),
+     * this method reads translation sequences from the embedded FASTA section while writing.
+     * Any read failure is wrapped as a {@link WriteException} so the write contract
+     * remains clean — callers inspect {@link WriteException#getCause()} to distinguish
+     * a translation read failure from a pure write failure.
      */
     @Override
-    public void writeGFF3String(Writer writer) throws WriteException, ReadException {
+    public void writeGFF3String(Writer writer) throws WriteException {
 
         try {
             if (header != null) {
@@ -112,17 +113,13 @@ public class GFF3File implements IGFF3Feature {
 
             for (GFF3Annotation ann : annotations) {
                 ann.writeGFF3String(writer);
-
-                if (writeAnnotationFasta) {
-                    Map<String, Long> annOffserMap = gff3Reader.getTranslationOffsetForAnnotation(ann);
-                    // Write translation by annotation offset map
-                    writeFastaFromOffsets(writer, annOffserMap);
-                }
             }
 
-            if (!writeAnnotationFasta) {
+            if (writeAnnotationFasta) {
                 writeTranslationSection(writer);
             }
+        } catch (ReadException e) {
+            throw new WriteException(e);
         } catch (IOException e) {
             throw new WriteException(e);
         }
@@ -175,19 +172,6 @@ public class GFF3File implements IGFF3Feature {
         }
         log.info("Written {} translation sequences", translations.size());
         writer.write("\n");
-    }
-
-    private void writeFastaFromOffsets(Writer writer, Map<String, Long> translationOffsetMap)
-            throws IOException, ReadException {
-        if (translationOffsetMap.isEmpty()) {
-            return;
-        }
-        writer.write("##FASTA\n");
-        for (Map.Entry<String, Long> entry : translationOffsetMap.entrySet()) {
-            String translation = gff3Reader.getTranslation(entry.getValue());
-            TranslationWriter.writeTranslation(writer, entry.getKey(), translation);
-        }
-        log.info("Written {} sequences from: ", translationOffsetMap.size());
     }
 
     /**

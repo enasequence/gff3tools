@@ -35,7 +35,6 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.gff3tools.metadata.AuthorData;
 import uk.ac.ebi.embl.gff3tools.metadata.CrossReference;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadata;
 import uk.ac.ebi.embl.gff3tools.metadata.MasterMetadataProvider;
