@@ -72,8 +72,13 @@ public class ProkaryotePartialLocationValidation implements Validation {
     @InjectContext
     private ValidationContext context;
 
-    /** The same for the whole file, so read once and reset by {@link #clear()}. */
+    /**
+     * The only value kept between annotations: it comes from the analysis context, which is the same
+     * for the whole file. Length, topology and gaps belong to one sequence, so they are read per
+     * annotation into {@link SequenceData}. Reset by {@link #clear()}.
+     */
     private Integer minGapSize;
+
     /** An annotation's one sequence, with its gaps: runs of N at least the minimum gap size long. */
     private record SequenceData(long length, boolean circular, List<GapRegion> gaps) {}
 
