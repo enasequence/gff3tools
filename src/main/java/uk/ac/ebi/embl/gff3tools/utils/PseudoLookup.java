@@ -49,7 +49,7 @@ public final class PseudoLookup {
      */
     public record PseudoSource(GFF3Feature feature, PseudoKind kind, String value) {}
 
-    /** What makes a pseudo CDS group pseudo: in full, and through its ancestors alone (if so). */
+    /** What makes a pseudo CDS group pseudo: in full, and through its ancestors (if so). */
     private record CdsPseudo(PseudoSource source, Optional<PseudoSource> ancestorSource) {}
 
     private final OntologyClient ontologyClient;
