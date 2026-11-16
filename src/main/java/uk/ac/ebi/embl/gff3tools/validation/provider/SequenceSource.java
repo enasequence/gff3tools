@@ -44,10 +44,7 @@ public interface SequenceSource {
             throws Exception;
 
     /**
-     * Called once all annotations for {@code seqId} have been processed, so the source can free
-     * per-sequence resources such as open file handles. The sequence may still be requested again
-     * later (e.g. when a seqId reappears further down the file), so implementations must be able
-     * to reopen it.
+     * Called once all annotations for {@code seqId} have been processed.
      */
     default void release(String seqId) {}
 

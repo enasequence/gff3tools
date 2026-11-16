@@ -228,8 +228,7 @@ public class ValidationEngine implements AutoCloseable {
 
     /**
      * Signals that every annotation for {@code accession} has been validated and handled, so the
-     * registered {@link SequenceLookup} can free that sequence's resources. No-op when there is no
-     * lookup or no accession.
+     * registered {@link SequenceLookup} can free that sequence's resources.
      */
     public void releaseSequence(String accession) {
         if (accession == null || !context.contains(SequenceLookup.class)) {
