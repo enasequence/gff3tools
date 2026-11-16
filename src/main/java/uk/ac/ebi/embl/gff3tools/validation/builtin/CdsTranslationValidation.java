@@ -27,7 +27,6 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
-import uk.ac.ebi.embl.gff3tools.validation.provider.SourceTranslations;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 /**
@@ -40,10 +39,6 @@ public class CdsTranslationValidation {
 
     private static final String PRESENCE_RULE = "CDS_TRANSLATION_PRESENCE";
     private static final String ABSENCE_RULE = "CDS_TRANSLATION_ABSENCE";
-
-    private static final String UNREADABLE_SOURCE_TRANSLATIONS_MESSAGE =
-            "Could not check the translations of pseudo CDS features, because the ##FASTA section could not be"
-                    + " read: %s";
 
     @InjectContext
     private ValidationContext context;
@@ -116,7 +111,7 @@ public class CdsTranslationValidation {
             }
             GFF3Feature representative = ValidationUtils.representativeOfFeatureGroup(segments);
 
-            if (hasTranslation(segments, translationKey(representative), line)) {
+            if (hasTranslation(segments, translationKey(representative))) {
                 unexpected.add("\nTranslation provided for: %s %s: %d-%d (%s)"
                         .formatted(
                                 representative.accession(),
@@ -165,41 +160,24 @@ public class CdsTranslationValidation {
     }
 
     /**
-     * Whether the CDS has a translation from any source: an inline attribute (still present when
-     * {@code REMOVE_TRANSLATION_ATTRIBUTE} is off), the one recorded for it, or the source file's
-     * {@code ##FASTA}. A recorded translation counts whether submitted or generated, matching what
+     * Whether the CDS has a translation: an inline attribute (still present when
+     * {@code REMOVE_TRANSLATION_ATTRIBUTE} is off), or the one recorded for it. A recorded
+     * translation counts whether submitted or generated, matching what
      * {@link TranslationState#forEachResolved} writes out.
      */
-    private boolean hasTranslation(List<GFF3Feature> segments, String key, int line) throws ValidationException {
+    private boolean hasTranslation(List<GFF3Feature> segments, String key) {
         if (segments.stream().anyMatch(s -> s.hasAttribute(GFF3Attributes.TRANSLATION))) {
             return true;
         }
         if (key == null) {
             return false;
         }
-        if (context.contains(TranslationState.class)
-                && hasRecordedTranslation(context.get(TranslationState.class).get(key))) {
-            return true;
-        }
-        return context.contains(SourceTranslations.class) && hasSourceTranslation(key, line);
+        return context.contains(TranslationState.class)
+                && hasRecordedTranslation(context.get(TranslationState.class).get(key));
     }
 
     private boolean hasRecordedTranslation(TranslationState.TranslationEntry entry) {
         return entry != null && (isPresent(entry.newTranslation()) || isPresent(entry.oldTranslation()));
-    }
-
-    /**
-     * Reading the source file's {@code ##FASTA} fails with an unchecked exception when the section is
-     * malformed. Report-only validation has no other reason to read it, so the failure is reported
-     * here as a violation rather than ending the run with a stack trace.
-     */
-    private boolean hasSourceTranslation(String key, int line) throws ValidationException {
-        try {
-            return context.get(SourceTranslations.class).contains(key);
-        } catch (RuntimeException e) {
-            throw new ValidationException(
-                    ABSENCE_RULE, line, UNREADABLE_SOURCE_TRANSLATIONS_MESSAGE.formatted(e.getMessage()));
-        }
     }
 
     private static boolean isPresent(String translation) {

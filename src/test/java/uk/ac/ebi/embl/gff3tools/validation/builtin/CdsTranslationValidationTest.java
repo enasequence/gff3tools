@@ -13,7 +13,6 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -26,7 +25,6 @@ import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationRegistry;
-import uk.ac.ebi.embl.gff3tools.validation.provider.SourceTranslations;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationStateProvider;
 
@@ -234,21 +232,6 @@ class CdsTranslationValidationTest {
         }
 
         @Test
-        void throwsForTranslationInSourceFasta() {
-            context.register(
-                    SourceTranslations.class,
-                    new SourceTranslations(() -> Set.of(TranslationState.buildKey("seq1", "cds1"))));
-            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
-                    "seq1",
-                    1,
-                    100,
-                    pseudoGene("gene1"),
-                    TestUtils.createGFF3Feature("cds1", "gene1", "CDS", "seq1", 1, 9));
-
-            assertReported(annotation, "seq1 CDS: 1-9");
-        }
-
-        @Test
         void throwsWhenPseudoIsOnSecondLineOfParent() {
             state.record(TranslationState.buildKey("seq1", "cds1"), "MK", null);
             GFF3Feature geneFirstLine = TestUtils.createGFF3Feature("gene1", null, "gene", "seq1", 1, 10);
@@ -364,21 +347,6 @@ class CdsTranslationValidationTest {
 
             // Neither gene is pseudo, so nothing is reported, and the walk must not loop.
             validation.validateTranslationAbsence(annotation, 1);
-        }
-
-        @Test
-        void reportsUnreadableSourceFastaAsViolation() {
-            context.register(SourceTranslations.class, new SourceTranslations(() -> {
-                throw new RuntimeException("Invalid GFF3 translation sequence: not a sequence");
-            }));
-            GFF3Annotation annotation = TestUtils.createGFF3Annotation(
-                    "seq1",
-                    1,
-                    100,
-                    pseudoGene("gene1"),
-                    TestUtils.createGFF3Feature("cds1", "gene1", "CDS", "seq1", 1, 9));
-
-            assertReported(annotation, "could not be read", "not a sequence");
         }
     }
 }
