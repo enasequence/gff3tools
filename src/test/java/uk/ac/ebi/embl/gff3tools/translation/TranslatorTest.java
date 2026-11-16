@@ -644,7 +644,8 @@ public class TranslatorTest {
         translator.setFixValidStopCodonRemove3Partial(true);
         TranslationResult result = translator.translate("ATGAAATAG".getBytes());
         assertTrue(result.isValid());
-        assertTrue(result.isFixedThreePrimePartial());
+        assertTrue(result.isRemovedThreePrimePartial());
+        assertFalse(result.isFixedThreePrimePartial());
         assertFalse(translator.isThreePrimePartial()); // should be removed
         assertTrue(translator.getFixes().contains("fixValidStopCodonRemove3Partial"));
     }

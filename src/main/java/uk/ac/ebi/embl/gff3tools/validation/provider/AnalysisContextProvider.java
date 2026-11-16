@@ -37,7 +37,7 @@ public class AnalysisContextProvider implements ContextProvider<AnalysisContext>
     }
 
     /**
-     * @param analysisType the analysis type (must not be {@code null})
+     * @param analysisType the analysis type, or {@code null} when not supplied
      * @param minGapSize   the minimum gap size (must be greater than zero)
      */
     public AnalysisContextProvider(AnalysisType analysisType, int minGapSize) {
@@ -45,11 +45,20 @@ public class AnalysisContextProvider implements ContextProvider<AnalysisContext>
     }
 
     /**
-     * @param analysisType    the analysis type (must not be {@code null})
+     * @param analysisType the analysis type, or {@code null} when not supplied
+     * @param minGapSize   the minimum gap size (must be greater than zero)
+     * @param assemblyType the assembly type, or {@code null} when the caller does not supply one
+     */
+    public AnalysisContextProvider(AnalysisType analysisType, int minGapSize, String assemblyType) {
+        this(new AnalysisContext(analysisType, minGapSize, assemblyType));
+    }
+
+    /**
+     * @param analysisType    the analysis type, or {@code null} when not supplied
      * @param minGapSize      the minimum gap size (must be greater than zero)
      * @param gapType         optional gap_type for generated gap features
      * @param linkageEvidence optional linkage_evidence for generated gap features
-     * @param assemblyType the assembly type, or {@code null} when the caller does not supply one
+     * @param assemblyType    the assembly type, or {@code null} when the caller does not supply one
      */
     public AnalysisContextProvider(
             AnalysisType analysisType, int minGapSize, String gapType, String linkageEvidence, String assemblyType) {
@@ -57,7 +66,7 @@ public class AnalysisContextProvider implements ContextProvider<AnalysisContext>
     }
 
     /**
-     * @param analysisType    the analysis type (must not be {@code null})
+     * @param analysisType    the analysis type, or {@code null} when not supplied
      * @param minGapSize      the minimum gap size (must be greater than zero)
      * @param gapType         optional gap_type for generated gap features
      * @param linkageEvidence optional linkage_evidence for generated gap features

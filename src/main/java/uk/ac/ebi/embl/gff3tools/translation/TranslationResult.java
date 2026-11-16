@@ -29,6 +29,10 @@ public class TranslationResult {
 
     private boolean fixedThreePrimePartial = false;
 
+    // Set when the Translator removes an existing 3' partial because the translation
+    // ends in a valid stop codon (fixValidStopCodonRemove3Partial).
+    private boolean removedThreePrimePartial = false;
+
     private boolean fixedPseudo = false;
 
     private boolean fixedDegenerateStartCodon = false;

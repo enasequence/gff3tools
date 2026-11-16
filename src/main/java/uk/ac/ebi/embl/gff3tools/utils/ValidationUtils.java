@@ -140,4 +140,15 @@ public class ValidationUtils {
     public static String getLocationString(GFF3Feature feature) {
         return "%d..%d".formatted(feature.getStart(), feature.getEnd());
     }
+
+    /**
+     * A whole feature's location as messages report it, {@code accession:start..end} over all its
+     * segments, with the line of its representative segment where it was read from a file.
+     */
+    public static String getGroupLocationString(List<GFF3Feature> segments) {
+        GFF3Feature representative = representativeOfFeatureGroup(segments);
+        long end = segments.stream().mapToLong(GFF3Feature::getEnd).max().orElseThrow();
+        String location = "%s:%d..%d".formatted(representative.accession(), representative.getStart(), end);
+        return representative.getLine() >= 0 ? location + " (line %d)".formatted(representative.getLine()) : location;
+    }
 }
