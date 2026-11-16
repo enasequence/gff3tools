@@ -31,7 +31,7 @@ public class AttributesLocationValidation implements Validation {
     private static final String INVALID_LOCATION_RANGE = "%s location %s..%s is outside feature range %s..%s";
     private static final String INVALID_LOCATION_VALUE =
             "Invalid %s location: start must be > 0 and less than end at %s..%s";
-    private static final String INVALID_LOCATION_SPAN = "%s location span must be \"%s\" at location %s";
+    private static final String INVALID_LOCATION_SPAN = "%s location span must be \"%s\" at location %s..%s";
     private static final String COMPLEMENT_STRAND_CONFLICT =
             "%s location is wrapped in complement() but the containing feature is on strand \"%s\": %s";
 
@@ -168,10 +168,12 @@ public class AttributesLocationValidation implements Validation {
                                 line, INVALID_LOCATION_RANGE.formatted(attribute, start, end, fullStart, fullEnd));
                     }
 
-                    // Length must be 3 unless transl_except TERM
-                    if (length != 3
-                            && !(attribute.equalsIgnoreCase(TRANSL_EXCEPT) && TERM_AMINO_ACID.equals(aminoAcidCode))) {
-                        throw new ValidationException(line, INVALID_LOCATION_SPAN.formatted(attribute, 3, fullStart));
+                    // A codon spans 3 bases. A transl_except stop codon, in any of the spellings read as
+                    // one, may span 1-2; where it may sit is TRANSL_EXCEPT_SHORT_STOP_POSITION's call.
+                    boolean stopCodon = attribute.equalsIgnoreCase(TRANSL_EXCEPT)
+                            && AminoAcidExcept.getAminoAcidLetter(aminoAcidCode) == '*';
+                    if (length > 3 || (length < 3 && !stopCodon)) {
+                        throw new ValidationException(line, INVALID_LOCATION_SPAN.formatted(attribute, 3, start, end));
                     }
                 }
             }
