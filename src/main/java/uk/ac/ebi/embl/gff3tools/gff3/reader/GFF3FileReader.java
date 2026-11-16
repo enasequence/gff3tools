@@ -199,12 +199,16 @@ public class GFF3FileReader implements AutoCloseable {
                     if (previousAnnotation != null) {
                         // writeEntry(mapper, previousAnnotation, writer);
                         annotationHandler.handle(previousAnnotation);
+                        validationEngine.releaseSequence(previousAnnotation.getAccession());
                     }
                     previousAnnotation = currentAnnotation;
                 }
             }
             // After the loop, handle the last accumulated annotation.
             annotationHandler.handle(previousAnnotation);
+            if (previousAnnotation != null) {
+                validationEngine.releaseSequence(previousAnnotation.getAccession());
+            }
 
             validationEngine.executeExits();
         } catch (IOException e) {

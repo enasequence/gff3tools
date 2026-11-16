@@ -43,6 +43,14 @@ public interface SequenceSource {
     Reader getSequenceSliceReader(String seqId, long fromBase, long toBase, SequenceRangeOption option)
             throws Exception;
 
+    /**
+     * Called once all annotations for {@code seqId} have been processed, so the source can free
+     * per-sequence resources such as open file handles. The sequence may still be requested again
+     * later (e.g. when a seqId reappears further down the file), so implementations must be able
+     * to reopen it.
+     */
+    default void release(String seqId) {}
+
     /** Release any resources held by this source. */
     default void close() {}
 }

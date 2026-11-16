@@ -80,4 +80,12 @@ public interface SequenceLookup {
      * @param seqId id of the sequence
      */
     Reader getSequenceSliceReader(String seqId, long fromBase, long toBase) throws Exception;
+
+    /**
+     * Signals that all annotations for {@code seqId} have been processed, so per-sequence
+     * resources can be freed. The sequence may still be requested again afterwards.
+     *
+     * @param seqId id of the sequence
+     */
+    default void release(String seqId) {}
 }
