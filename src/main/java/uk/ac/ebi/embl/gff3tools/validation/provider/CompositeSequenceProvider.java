@@ -119,6 +119,14 @@ public class CompositeSequenceProvider implements ContextProvider<SequenceLookup
                     return sourceFor(seqId)
                             .getSequenceSliceReader(seqId, fromBase, toBase, SequenceRangeOption.WHOLE_SEQUENCE);
                 }
+
+                @Override
+                public void release(String seqId) {
+                    // Release seqId from all sources.
+                    for (SequenceSource source : sources) {
+                        source.release(seqId);
+                    }
+                }
             };
         }
         return cachedLookup;

@@ -155,6 +155,8 @@ public class TSVToGFF3Converter implements Converter {
                                     submissionId);
                     }
                 }
+                // The entry is handled and sequence is released.
+                validationEngine.releaseSequence(submissionId);
             }
 
             LOG.info("Converted {} entries from TSV", entryCount);

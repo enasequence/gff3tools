@@ -14,6 +14,9 @@ import java.io.*;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.*;
+import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
+import uk.ac.ebi.embl.fastareader.SequenceStats;
+import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
@@ -23,8 +26,62 @@ import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationRegistry;
+import uk.ac.ebi.embl.gff3tools.validation.provider.SequenceSource;
 
 public class TestUtils {
+
+    /**
+     * A {@link SequenceSource} that serves a gap-free sequence of {@code length} bases for every
+     * seqId and records each {@code release()} call as {@code "release:<seqId>"} in {@code events}.
+     */
+    public static SequenceSource recordingSequenceSource(List<String> events, long length) {
+        return new SequenceSource() {
+            @Override
+            public boolean hasSequence(String seqId) {
+                return true;
+            }
+
+            @Override
+            public String getSequenceSlice(String seqId, long fromBase, long toBase, SequenceRangeOption option) {
+                return "A".repeat((int) (toBase - fromBase + 1));
+            }
+
+            @Override
+            public long getSequenceLength(String seqId, SequenceRangeOption option) {
+                return length;
+            }
+
+            @Override
+            public SequenceStats getSequenceStats(String seqId) {
+                return new SequenceStats(length, length, 0L, 0L, Map.of('A', length));
+            }
+
+            @Override
+            public List<GapRegion> getGapRegions(String seqId, SequenceRangeOption option) {
+                return List.of();
+            }
+
+            @Override
+            public List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase, SequenceRangeOption option) {
+                return List.of();
+            }
+
+            @Override
+            public Set<String> knownSeqIds() {
+                return Set.of();
+            }
+
+            @Override
+            public Reader getSequenceSliceReader(String seqId, long fromBase, long toBase, SequenceRangeOption option) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public void release(String seqId) {
+                events.add("release:" + seqId);
+            }
+        };
+    }
 
     public static final String DEFAULT_ACCESSION = "1234";
 
