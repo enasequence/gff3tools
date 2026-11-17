@@ -79,7 +79,7 @@ public class GFF3FileFactory {
                 }
                 GFF3Annotation annotation = annotationFactory.from(entry);
                 annotations.add(annotation);
-                // The entry validated and handled, so its sequence is released.
+                // The entry validated and handled, so its sequence can be released.
                 engine.releaseSequence(annotation.getAccession());
             }
         } catch (IOException e) {

@@ -148,6 +148,19 @@ class GFF3FileReaderReleaseTest {
     }
 
     @Test
+    void annotationWithOnlySequenceRegionIsReleased() throws Exception {
+        // SEQ2.1 has a ##sequence-region but no features, so the reader produces it from the
+        // sequence-region map after all feature lines have been read
+        String content = "##gff-version 3\n"
+                + "##sequence-region SEQ1.1 1 1000\n"
+                + "##sequence-region SEQ2.1 1 1000\n"
+                + "SEQ1.1\t.\tgene\t1\t100\t.\t+\t.\tID=gene1\n";
+
+        assertEquals(
+                List.of("handle:SEQ1.1", "release:SEQ1.1", "handle:SEQ2.1", "release:SEQ2.1"), readAndRecord(content));
+    }
+
+    @Test
     void releaseFailurePropagatesToCaller() {
         String content = "##gff-version 3\n"
                 + "SEQ1.1\t.\tgene\t1\t100\t.\t+\t.\tID=gene1\n"
