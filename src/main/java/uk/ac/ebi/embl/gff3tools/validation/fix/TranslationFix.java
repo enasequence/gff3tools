@@ -25,6 +25,7 @@ import uk.ac.ebi.embl.gff3tools.translation.TranslationResult;
 import uk.ac.ebi.embl.gff3tools.translation.Translator;
 import uk.ac.ebi.embl.gff3tools.utils.CoordinateShiftUtils;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
+import uk.ac.ebi.embl.gff3tools.utils.PseudoLookup;
 import uk.ac.ebi.embl.gff3tools.utils.TopologyUtils;
 import uk.ac.ebi.embl.gff3tools.utils.ValidationUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
@@ -101,13 +102,18 @@ public class TranslationFix {
                         annotation.getSequenceRegion(), annotation.getAccession(), sequenceLengthCache, context)
                 : null;
 
+        PseudoLookup pseudoLookup = PseudoLookup.of(annotation, context);
         for (List<GFF3Feature> segments : cdsGroups.values()) {
-            translateCdsGroup(segments, sequenceLookup, line, circularSequenceLength);
+            translateCdsGroup(segments, sequenceLookup, line, circularSequenceLength, pseudoLookup);
         }
     }
 
     private void translateCdsGroup(
-            List<GFF3Feature> features, SequenceLookup sequenceLookup, int line, Long circularSequenceLength)
+            List<GFF3Feature> features,
+            SequenceLookup sequenceLookup,
+            int line,
+            Long circularSequenceLength,
+            PseudoLookup pseudoLookup)
             throws ValidationException {
 
         boolean isTransSpliced = features.stream().anyMatch(s -> s.hasAttribute(GFF3Attributes.TRANS_SPLICING));
@@ -160,6 +166,11 @@ public class TranslationFix {
             }
 
             Translator translator = new Translator(sortedFeatures);
+            if (pseudoLookup.isPseudo(features)) {
+                // The Translator only checks the first segment's own attributes. A CDS is also
+                // pseudo when a later segment or an ancestor is, and must not be translated.
+                translator.setNonTranslating(true);
+            }
             if (hasMixedStrands) {
                 // Sequence is already strand-corrected per segment; prevent the Translator
                 // from applying an additional full-sequence RC.
@@ -180,7 +191,7 @@ public class TranslationFix {
                 recordTranslationState(representative, line, oldTranslation, translation);
             }
 
-            propagateJoinAttributes(sortedFeatures, result, line);
+            propagateJoinAttributes(sortedFeatures, result, pseudoLookup, line);
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
@@ -199,7 +210,8 @@ public class TranslationFix {
      * ends in a valid stop codon. These are fixed during FF -> GFF3 and GFF3 -> FF conversion;
      * during validation a {@link ValidationException} is thrown instead.
      */
-    private void propagateJoinAttributes(List<GFF3Feature> segments, TranslationResult result, int line)
+    private void propagateJoinAttributes(
+            List<GFF3Feature> segments, TranslationResult result, PseudoLookup pseudoLookup, int line)
             throws ValidationException {
         if (segments.isEmpty()) {
             return;
@@ -245,6 +257,9 @@ public class TranslationFix {
                     segment.removeAttributeList(GFF3Attributes.PSEUDO);
                     segment.addAttribute(GFF3Attributes.PSEUDO, "true");
                 }
+                // The shared lookup was built before this CDS became pseudo; the rules after this fix
+                // must see it as pseudo.
+                pseudoLookup.markPseudo(segments);
             } else {
                 String locations = segments.stream()
                         .map(segment -> segment.getStart() + "-" + segment.getEnd())

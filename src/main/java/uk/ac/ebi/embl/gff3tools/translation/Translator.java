@@ -196,6 +196,14 @@ public class Translator {
         this.isComplement = isComplement;
     }
 
+    /**
+     * Overrides the pseudo flag set from the first feature's own attributes. Use when the CDS is
+     * pseudo for a reason the features alone do not show, e.g. a pseudo parent gene.
+     */
+    public void setNonTranslating(boolean nonTranslating) {
+        this.nonTranslating = nonTranslating;
+    }
+
     public void enableAllFixes() {
         fixNoStartCodonMake5Partial = true;
         fixCodonStartNotOneMake5Partial = true;
