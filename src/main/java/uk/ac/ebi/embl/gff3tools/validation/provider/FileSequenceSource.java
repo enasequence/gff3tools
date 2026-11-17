@@ -34,6 +34,8 @@ import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
  * A {@link SequenceSource} backed by a single file (FASTA or plain sequence).
  *
  * <p>The reader is opened lazily on first access and closed when {@link #close()} is called.
+ * {@link #release(String)} is not overridden because a single reader serves every sequence in the file,
+ * so there is nothing to free per sequence.
  *
  * <p>For plain sequences:
  * <ul>

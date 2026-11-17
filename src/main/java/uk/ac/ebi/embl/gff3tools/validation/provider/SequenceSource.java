@@ -45,6 +45,11 @@ public interface SequenceSource {
     Reader getSequenceSliceReader(String seqId, long fromBase, long toBase, SequenceRangeOption option)
             throws Exception;
 
+    /**
+     * Called once all annotations for {@code seqId} have been processed.
+     */
+    default void release(String seqId) {}
+
     /** Release any resources held by this source. */
     default void close() {}
 }

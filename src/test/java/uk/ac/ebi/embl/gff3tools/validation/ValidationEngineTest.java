@@ -28,6 +28,7 @@ import uk.ac.ebi.embl.gff3tools.exception.DuplicateValidationRuleException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 public class ValidationEngineTest {
@@ -554,5 +555,55 @@ public class ValidationEngineTest {
         assertEquals(List.of("VAL_CRITICAL_FAIL", "VAL_NORMAL"), executionLog, "No-fast-fail should run all tiers");
         // Error was collected
         assertEquals(1, collectEngine.getCollectedErrors().size());
+    }
+
+    private static ValidationEngine engineWithLookup(SequenceLookup lookup) {
+        ValidationContext context = new ValidationContext();
+        context.register(SequenceLookup.class, new ContextProvider<>() {
+            @Override
+            public SequenceLookup get(ValidationContext ctx) {
+                return lookup;
+            }
+
+            @Override
+            public Class<SequenceLookup> type() {
+                return SequenceLookup.class;
+            }
+        });
+        return new ValidationEngine(mock(ValidationConfig.class), mock(ValidationRegistry.class), context, false);
+    }
+
+    @Test
+    void releaseSequence_delegatesToSequenceLookup() {
+        SequenceLookup lookup = mock(SequenceLookup.class);
+        ValidationEngine releaseEngine = engineWithLookup(lookup);
+
+        releaseEngine.releaseSequence("ACC1");
+
+        verify(lookup, times(1)).release("ACC1");
+        verifyNoMoreInteractions(lookup);
+    }
+
+    @Test
+    void releaseSequence_nullAccession_doesNotRelease() {
+        SequenceLookup lookup = mock(SequenceLookup.class);
+        ValidationEngine releaseEngine = engineWithLookup(lookup);
+
+        releaseEngine.releaseSequence(null);
+
+        verifyNoInteractions(lookup);
+    }
+
+    @Test
+    void releaseSequence_noSequenceLookupRegistered_isNoOp() {
+        // The engine from setup() has an empty context, so no SequenceLookup is registered
+        assertDoesNotThrow(() -> engine.releaseSequence("ACC1"));
+    }
+
+    @Test
+    void releaseSequence_providerReturnsNullLookup_isNoOp() {
+        ValidationEngine releaseEngine = engineWithLookup(null);
+
+        assertDoesNotThrow(() -> releaseEngine.releaseSequence("ACC1"));
     }
 }

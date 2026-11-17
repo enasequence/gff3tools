@@ -19,6 +19,7 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.metrics.MetricsCollector;
+import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.validation.meta.*;
 
 public class ValidationEngine implements AutoCloseable {
@@ -222,6 +223,20 @@ public class ValidationEngine implements AutoCloseable {
             throw ve;
         } else {
             collectedErrors.add(ve);
+        }
+    }
+
+    /**
+     * Signals that every annotation for {@code accession} has been validated and handled, so the
+     * registered {@link SequenceLookup} can free that sequence's resources.
+     */
+    public void releaseSequence(String accession) {
+        if (accession == null || !context.contains(SequenceLookup.class)) {
+            return;
+        }
+        SequenceLookup lookup = context.get(SequenceLookup.class);
+        if (lookup != null) {
+            lookup.release(accession);
         }
     }
 
