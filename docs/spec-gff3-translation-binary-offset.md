@@ -128,6 +128,15 @@ consumers keep working with mechanical type changes only.
   - else return `fastaReader.getSequenceSlice(id, 1, n).toUpperCase()` (uppercase
     preserves current output; the slice already has newlines stripped).
 
+### Compressed input
+
+- **FR-24** Before calling the locator, `readTranslationOffset()` MUST check whether the file
+  starts with the gzip magic bytes (`GzipUtils.isGzipped`, which matches both plain gzip and
+  bgzip). If it does, it MUST log one WARN that any `##FASTA` translations are omitted and the
+  file should be decompressed to keep them, then return an empty `TreeMap` and open **no**
+  `FastaReader`. The check sits in the reader rather than in a command so every caller is
+  covered; `ValidationCommand` already decompresses to a temp file and never reaches it.
+
 ### Map value type change (OffsetRange → Long)
 
 - **FR-9** The translation map value type MUST change from `OffsetRange` to `Long` (the
@@ -217,6 +226,12 @@ consumers keep working with mechanical type changes only.
   mid-line; `\n` vs `\r\n` line endings. It MUST assert the returned offset is `<=` the
   first `'>'` in the file.
 
+- **FR-25** Tests MUST cover FR-24: in `GFF3TranslationReaderTest`, a gzipped file returns an
+  empty map with the WARN logged, and a multi-block BGZF file large enough that the old
+  behaviour returned a partial map returns an empty one; in `FileConversionCommandTest`,
+  GFF3 → EMBL conversion of gzipped input exits 0 both without a `##FASTA` section and with
+  one, the latter alongside a plain copy of the same file that does produce `/translation`.
+
 ## Non-Functional Requirements
 
 - **NFR-1 (performance — logarithmic probes)** Locating the FASTA boundary MUST take
@@ -253,6 +268,9 @@ consumers keep working with mechanical type changes only.
 - **SC-6** Malformed translation content in the FASTA section produces a `ReadException`
   (exit code `READ_ERROR=10`) whose cause message names the illegal character and its
   absolute file position.
+- **SC-7** GFF3 → EMBL conversion of a gzip- or bgzip-compressed GFF3 file exits 0 with no
+  `/translation` qualifiers and the FR-24 warning, whether or not the file has a `##FASTA`
+  section.
 
 ## Scope and Boundaries
 
@@ -269,7 +287,10 @@ Explicitly out of scope:
 - **Modifying the `fastareader` repo/dependency itself.** The `fastareader` repo at
   `/root/code/ebi/fastareader` is read-only reference and MUST NOT be modified; the
   dependency stays at `uk.ac.ebi.ena:fastareader:1.3.0`.
-- **Any CLI or user-facing surface change.** No command, flag, or output-format change.
+- **Any CLI or user-facing surface change.** No command, flag, or output-format change. The
+  only user-visible addition is the FR-24 warning, documented in `docs/cli-usage-guide.md`.
+- **Reading translations from compressed input.** Compressed files are skipped (FR-24), not
+  decompressed; see Open Questions.
 - Re-introducing a soft/WARN validation pathway for translation-sequence characters (see
   Open Questions).
 
@@ -338,6 +359,12 @@ Files this work touches (anchors reused from the prior verified exploration):
   change required).
 - `docs/0001_error_handling.md` — exit-code / `ExitException` hierarchy reference
   (`ReadException` = `READ_ERROR=10`).
+- `src/main/java/uk/ac/ebi/embl/gff3tools/utils/GzipUtils.java` — `isGzipped` magic-byte
+  check used by FR-24 (unchanged).
+- `src/test/java/uk/ac/ebi/embl/gff3tools/cli/FileConversionCommandTest.java` — compressed
+  GFF3 → EMBL conversion tests per FR-25.
+- `docs/cli-usage-guide.md` — "Gzip-compressed input" section notes that conversion omits
+  translations from compressed GFF3.
 
 fastareader 1.3.0 API surface used:
 
@@ -379,6 +406,33 @@ fastareader 1.3.0 API surface used:
   lands on it the boundary is placed too early (6 of 500 positions in a sweep). The result
   is unaffected: `FastaReader` starts there and still returns every record (500 of 500
   positions).
+- **Compressed input is skipped, not read (resolved, FR-24).** `FileConversionCommand`
+  decompresses gzip input as a stream for the annotation reader but passes the original
+  `.gz` path to `Gff3ToFFConverter`, so the locator searched compressed bytes. On `main` the
+  old backward scan found nothing there and returned no translations without a warning.
+  Before FR-24, this branch did worse:
+
+  | Input (GFF3 → EMBL conversion) | `main` | Before FR-24 | With FR-24 |
+  |---|---|---|---|
+  | gzip, no `##FASTA` | exit 0 | exit 10, "Plain gzip is not supported" | exit 0, warning |
+  | gzip, with `##FASTA` | exit 0, 0 translations, no warning | exit 10 | exit 0, 0 translations, warning |
+  | bgzip, with `##FASTA` (500 proteins) | exit 0, 0 translations, no warning | exit 0, 351 of 500 read, no warning | exit 0, 0 read, warning |
+
+  `FastaReader` opens BGZF, but the locator's offset is a position in the compressed bytes
+  while `FastaReader` reads it as a position in the decompressed text; when it lands past the
+  real FASTA start the first records are dropped (0 of 50 `/translation` qualifiers in the
+  converted EMBL for the file above). Two fixes were weighed:
+
+  | | Skip with a warning (chosen) | Decompress to a temp file first |
+  |---|---|---|
+  | Change | ~5 lines in `GFF3TranslationReader` + docs | ~10–15 lines in conversion, copying `ValidationCommand` |
+  | Translations from compressed input | omitted, with a warning | kept |
+  | Consistency with `validation` | differs: validation keeps them | same |
+  | Cost on large files | none | a full decompressed copy written to disk |
+
+  Skipping was chosen for this change because it is smaller and matches what `main` already
+  did, but no longer silently. Follow-up: decompress to a temp file when FASTA reading moves
+  into validation, or sooner if ENA sends compressed GFF3 to conversion.
 
 ## Phased Delivery Plan
 
@@ -458,6 +512,21 @@ fastareader 1.3.0 API surface used:
 - **Effort:** small. **Difficulty:** easy.
 - **Blockers:** Phases 1–4.
 
+### Phase 6 — skip compressed input
+
+- **Goal:** stop the locator from searching compressed bytes, which failed plain gzip input
+  and silently dropped records from bgzip input.
+- **Scope (modify):** `GFF3TranslationReader.java` (FR-24), `GFF3TranslationReaderTest.java`
+  and `FileConversionCommandTest.java` (FR-25), `docs/cli-usage-guide.md`.
+- **Out of bounds:** decompressing compressed input to read its translations (see Open
+  Questions).
+- **Entry conditions:** Phases 1–5 complete.
+- **Exit criteria:** SC-7 holds; the FR-25 tests fail with the FR-24 check disabled and pass
+  with it; full suite green.
+- **Parallelism:** final, sequential.
+- **Effort:** small. **Difficulty:** easy.
+- **Blockers:** Phases 1–5.
+
 ## Phases (JSON)
 
 ```json
@@ -466,6 +535,7 @@ fastareader 1.3.0 API surface used:
   { "phase": 2, "focus": "Rewrite GFF3TranslationReader: open one FastaReader at located offset, build Map<String,Long>, getSequenceSlice extraction, AutoCloseable, wrap failures in ReadException.", "effort": "medium", "difficulty": "medium" },
   { "phase": 3, "focus": "Swap map value type OffsetRange->Long across GFF3FileReader/GFF3File/GFF3Mapper; wire GFF3FileReader.close() to close translationReader; delete OffsetRange.", "effort": "small", "difficulty": "easy" },
   { "phase": 4, "focus": "Rewrite GFF3TranslationReaderTest per behavior changes (ReadException on illegal char, no-throw for annotation-side malformed line, zero-base empty string, new-API extraction).", "effort": "medium", "difficulty": "medium" },
-  { "phase": 5, "focus": "Run spotlessApply then spotlessCheck test with gitlab_private_token=dummy-token; fix formatting and any surfaced failures.", "effort": "small", "difficulty": "easy" }
+  { "phase": 5, "focus": "Run spotlessApply then spotlessCheck test with gitlab_private_token=dummy-token; fix formatting and any surfaced failures.", "effort": "small", "difficulty": "easy" },
+  { "phase": 6, "focus": "Skip gzip/bgzip input in GFF3TranslationReader with a WARN (no FastaReader opened); tests for gzip, BGZF and compressed GFF3->EMBL conversion; cli-usage-guide note.", "effort": "small", "difficulty": "easy" }
 ]
 ```

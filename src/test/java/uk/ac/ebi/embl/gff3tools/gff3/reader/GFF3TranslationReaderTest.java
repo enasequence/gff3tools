@@ -10,22 +10,35 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3.reader;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.zip.CRC32;
+import java.util.zip.Deflater;
+import java.util.zip.GZIPOutputStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.slf4j.LoggerFactory;
 import uk.ac.ebi.embl.fastareader.FastaReader;
 import uk.ac.ebi.embl.fastareader.sequenceutils.SequenceAlphabet;
 import uk.ac.ebi.embl.fastareader.sequenceutils.SequenceIndex;
@@ -236,5 +249,102 @@ public class GFF3TranslationReaderTest {
         ReadException exception = Assertions.assertThrows(ReadException.class, () -> reader.readTranslationOffset());
 
         Assertions.assertTrue(exception.getMessage().contains("Illegal character '#'"));
+    }
+
+    @Test
+    void testGzippedFileIsSkippedWithWarning() throws IOException, ReadException {
+        // Offsets found by seeking in compressed bytes do not point into the decompressed text,
+        // so compressed input is not read at all: no translations, no failure, one warning.
+        writeGzipped(tempFile, Files.readAllBytes(tempFile));
+
+        ListAppender<ILoggingEvent> logs = captureLogs();
+        try {
+            Assertions.assertTrue(reader.readTranslationOffset().isEmpty());
+        } finally {
+            stopCapturingLogs(logs);
+        }
+
+        Assertions.assertTrue(
+                logs.list.stream()
+                        .anyMatch(e -> e.getLevel() == Level.WARN
+                                && e.getFormattedMessage().contains("The input file is compressed")),
+                "Expected a warning that compressed input is not read");
+    }
+
+    @Test
+    void testBgzippedFileIsSkipped() throws IOException, ReadException {
+        // FastaReader can open BGZF itself, but the boundary would still be searched for in the
+        // compressed bytes. With a file this size that offset lands inside the FASTA section and
+        // the first records are silently dropped, so BGZF is skipped like plain gzip.
+        StringBuilder content = new StringBuilder("##gff-version 3\n");
+        for (int i = 0; i < 50; i++) {
+            content.append("seq1\t.\tCDS\t1\t90\t.\t+\t0\tID=cds").append(i).append('\n');
+        }
+        content.append("##FASTA\n");
+        Random random = new Random(1);
+        String aminoAcids = "ACDEFGHIKLMNPQRSTVWY";
+        for (int i = 0; i < 500; i++) {
+            content.append(">seq1|cds").append(i).append('\n');
+            for (int line = 0; line < 5; line++) {
+                for (int j = 0; j < 60; j++) {
+                    content.append(aminoAcids.charAt(random.nextInt(aminoAcids.length())));
+                }
+                content.append('\n');
+            }
+        }
+        writeBgzipped(tempFile, content.toString().getBytes(StandardCharsets.US_ASCII));
+
+        Assertions.assertTrue(reader.readTranslationOffset().isEmpty());
+    }
+
+    private static void writeGzipped(Path file, byte[] content) throws IOException {
+        try (OutputStream gz = new GZIPOutputStream(Files.newOutputStream(file))) {
+            gz.write(content);
+        }
+    }
+
+    /** Writes {@code content} as BGZF, the block format bgzip produces, ending with its EOF block. */
+    private static void writeBgzipped(Path file, byte[] content) throws IOException {
+        int blockSize = 0xff00; // bgzip's own uncompressed block size
+        try (OutputStream out = Files.newOutputStream(file)) {
+            for (int start = 0; start < content.length; start += blockSize) {
+                int length = Math.min(blockSize, content.length - start);
+                out.write(bgzfBlock(content, start, length));
+            }
+            out.write(HexFormat.of().parseHex("1f8b08040000000000ff0600424302001b0003000000000000000000"));
+        }
+    }
+
+    private static byte[] bgzfBlock(byte[] content, int start, int length) {
+        Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
+        deflater.setInput(content, start, length);
+        deflater.finish();
+        byte[] compressed = new byte[length + 1024];
+        int compressedLength = deflater.deflate(compressed);
+        deflater.end();
+
+        CRC32 crc = new CRC32();
+        crc.update(content, start, length);
+
+        // gzip header with the BGZF "BC" extra field, whose value is the total block size minus one
+        ByteBuffer block = ByteBuffer.allocate(18 + compressedLength + 8).order(ByteOrder.LITTLE_ENDIAN);
+        block.put(new byte[] {31, (byte) 139, 8, 4, 0, 0, 0, 0, 0, (byte) 255, 6, 0, 'B', 'C', 2, 0});
+        block.putShort((short) (block.capacity() - 1));
+        block.put(compressed, 0, compressedLength);
+        block.putInt((int) crc.getValue());
+        block.putInt(length);
+        return block.array();
+    }
+
+    private static ListAppender<ILoggingEvent> captureLogs() {
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        ((Logger) LoggerFactory.getLogger(GFF3TranslationReader.class)).addAppender(appender);
+        return appender;
+    }
+
+    private static void stopCapturingLogs(ListAppender<ILoggingEvent> appender) {
+        ((Logger) LoggerFactory.getLogger(GFF3TranslationReader.class)).detachAppender(appender);
+        appender.stop();
     }
 }

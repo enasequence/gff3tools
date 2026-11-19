@@ -22,7 +22,9 @@ import uk.ac.ebi.embl.fastareader.FastaReader;
 import uk.ac.ebi.embl.fastareader.exception.FastaFileException;
 import uk.ac.ebi.embl.fastareader.sequenceutils.SequenceAlphabet;
 import uk.ac.ebi.embl.fastareader.sequenceutils.SequenceIndex;
+import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
+import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 
 /**
@@ -68,6 +70,15 @@ public class GFF3TranslationReader implements AutoCloseable {
             return offsetMap;
         }
 
+        // The FASTA section is located by seeking in the file's raw bytes, which for gzip or bgzip
+        // input are compressed: offsets found there do not point into the decompressed text.
+        // Callers that need translations from compressed input decompress it to a file first.
+        if (isGzipped()) {
+            log.warn("The input file is compressed: any translations in its ##FASTA section cannot be read "
+                    + "and are omitted from the output. Decompress the file first to keep them.");
+            return offsetMap;
+        }
+
         try {
             OptionalLong boundary = FastaSectionLocator.locate(gff3Path);
             if (boundary.isEmpty()) {
@@ -78,7 +89,7 @@ public class GFF3TranslationReader implements AutoCloseable {
                     new FastaReader(gff3Path.toFile(), SequenceAlphabet.defaultProteinAlphabet(), boundary.getAsLong());
         } catch (FastaFileException | IOException | UncheckedIOException e) {
             throw new ReadException(
-                    "Error reading translations from " + gff3Path + ": " + e.getMessage(),
+                    "Error reading translations from " + gff3Path + ": " + rootCauseMessage(e),
                     ReadException.wrapAsIOException(e));
         }
 
@@ -106,9 +117,32 @@ public class GFF3TranslationReader implements AutoCloseable {
             return fastaReader.getSequenceSlice(id, 1, n).toUpperCase();
         } catch (Exception e) {
             throw new ReadException(
-                    "Error reading translation from " + gff3Path + ": " + e.getMessage(),
+                    "Error reading translation from " + gff3Path + ": " + rootCauseMessage(e),
                     ReadException.wrapAsIOException(e));
         }
+    }
+
+    private boolean isGzipped() throws ReadException {
+        try {
+            return GzipUtils.isGzipped(gff3Path);
+        } catch (NonExistingFile e) {
+            throw new ReadException(
+                    "Error reading translations from " + gff3Path + ": " + e.getMessage(),
+                    ReadException.wrapAsIOException(e));
+        }
+    }
+
+    /**
+     * The message of the innermost cause. fastareader wraps its errors, and a wrapper's own
+     * message is its cause's {@code toString()}, which puts a Java class name in front of the
+     * text a submitter needs. The full chain stays available as the exception cause.
+     */
+    private static String rootCauseMessage(Throwable e) {
+        Throwable root = e;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        return root.getMessage() != null ? root.getMessage() : e.getMessage();
     }
 
     @Override

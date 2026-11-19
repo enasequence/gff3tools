@@ -114,6 +114,15 @@ gff3tools detects `.gz` files automatically; no extra flag is needed:
 $GFF3TOOLS conversion OZ026791.embl.gz OZ026791.gff3
 ```
 
+GFF3 → EMBL conversion cannot read translations from the `##FASTA` section of a compressed
+(gzip or bgzip) GFF3 file: they are left out of the EMBL output and a warning is logged.
+Decompress the file first to keep them:
+
+```bash
+gunzip -k OZ026791.gff3.gz
+$GFF3TOOLS conversion -f gff3 -t embl OZ026791.gff3 OZ026791.embl
+```
+
 ### Master entry (`--master-entry` / `-m`)
 
 A master entry file provides metadata (organism, topology, molecule type, …) that is
