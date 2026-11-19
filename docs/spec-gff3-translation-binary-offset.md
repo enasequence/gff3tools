@@ -2,7 +2,7 @@
 
 - Feature: `gff3_translation_binary_offset`
 - Date: 2026-07-08
-- Status: Ready for implementation
+- Status: Implemented
 
 ## Problem Statement
 
@@ -20,8 +20,8 @@ translations using two hand-rolled mechanisms that are both slow and hard to mai
    a length-N translation. This per-byte extraction is the single biggest real
    performance problem.
 
-A shipped capability — `uk.ac.ebi.ena:fastareader:1.3.0` (already declared at
-`build.gradle:77`, resolved via `mavenLocal()` first) — provides a `FastaReader` that can
+`uk.ac.ebi.ena:fastareader:1.3.0` (this change bumps the `build.gradle` dependency from
+1.2.0) provides a `FastaReader` that can
 open at an arbitrary decompressed-stream byte offset (designed exactly for
 "annotations, then embedded `##FASTA`" files) and serve slices with buffered 4 MB
 positional reads. It removes the need for both the backward scan and the per-byte
@@ -114,7 +114,8 @@ consumers keep working with mechanical type changes only.
 ### FastaReader integration
 
 - **FR-6** `GFF3TranslationReader` MUST keep its constructor
-  `GFF3TranslationReader(ValidationEngine, Path)` (invoked at `GFF3FileReader.java:64`).
+  `GFF3TranslationReader(ValidationEngine, Path)` (invoked from the `GFF3FileReader`
+  constructor).
 
 - **FR-7** `readTranslationOffset()` MUST:
   1. Call the locator. If empty → return an empty `TreeMap` and open **no** `FastaReader`
@@ -152,8 +153,9 @@ consumers keep working with mechanical type changes only.
   `getTranslationOffsetMap()` return `Map<String, Long>`; `getTranslation(OffsetRange)` →
   `getTranslation(Long id)` delegating to `translationReader.readTranslation(id)`.
 
-- **FR-11** `GFF3File` MUST be updated: `writeFastaFromOffsets(Writer, Map<String, Long>)`;
-  the `annOffserMap` type; `getTranslation(entry.getValue())` unchanged in shape.
+- **FR-11** `GFF3File` MUST be updated: `writeTranslationSection` iterates
+  `Map.Entry<String, Long>`; `getTranslation(entry.getValue())` unchanged in shape. A
+  `ReadException` raised while writing is wrapped in `WriteException`.
 
 - **FR-12** `GFF3Mapper` MUST be updated: `mapGFF3Feature` / `mapTranslation` signatures
   take `Map<String, Long>`; `getTranslation(translationMap.get(translationKey))` unchanged
@@ -209,8 +211,9 @@ consumers keep working with mechanical type changes only.
   (`id\tsource\tattribute\nid\tsource\n>test_1\nATGCATGCATAT`) MUST be rewritten to assert
   the translation is read **successfully with no throw**. The old backward-scan threw
   `RuntimeException("Invalid GFF3 translation sequence: ...")` on the malformed annotation
-  line above the header; the new locator classifies that line as annotation-side, starts
-  the `FastaReader` at `>test_1`, which contains only legal characters. The
+  line above the header. The new locator classifies those lines as FASTA-side (they are not
+  feature lines, FR-2), so the boundary lands on them, and `FastaReader` skips everything
+  before `>test_1`, which contains only legal characters. The
   "clear informative error" intent is covered instead by FR-19 and a new dedicated
   illegal-character test.
 
@@ -289,9 +292,8 @@ In scope:
 
 Explicitly out of scope:
 
-- **Modifying the `fastareader` repo/dependency itself.** The `fastareader` repo at
-  `/root/code/ebi/fastareader` is read-only reference and MUST NOT be modified; the
-  dependency stays at `uk.ac.ebi.ena:fastareader:1.3.0`.
+- **Modifying `fastareader` itself.** gff3tools uses `uk.ac.ebi.ena:fastareader:1.3.0` as
+  published.
 - **Any CLI or user-facing surface change.** No command, flag, or output-format change. The
   only user-visible addition is the FR-24 warning, documented in `docs/cli-usage-guide.md`.
 - **Reading translations from compressed input.** Compressed files are skipped (FR-24), not
@@ -307,8 +309,7 @@ Two components in `gff3/reader/`:
    FR-1 … FR-5 over raw byte offsets. Kept separate from `GFF3TranslationReader` because the
    boundary logic has independent test value: every boundary edge case can be asserted
    against raw byte offsets without constructing a `FastaReader` or supplying valid protein
-   data. Matches the repo's existing pattern of small focused classes (`TranslationKey`,
-   `OffsetRange`).
+   data. Matches the repo's existing pattern of small focused classes (e.g. `TranslationKey`).
 
 2. **`GFF3TranslationReader`** (rewritten, same constructor) — calls the locator; if a
    boundary exists, opens one cached `FastaReader` at that offset, builds the
@@ -343,25 +344,24 @@ Files this work touches (anchors reused from the prior verified exploration):
   — **new**. Static binary-search locator (`OptionalLong locate(Path)` advisory).
 - `src/main/java/uk/ac/ebi/embl/gff3tools/gff3/reader/OffsetRange.java` — **deleted**.
 - `src/main/java/uk/ac/ebi/embl/gff3tools/gff3/reader/GFF3FileReader.java`
-  — `:64` constructs `GFF3TranslationReader`; `:320`, `:326`, `:333` are the
-  `getTranslationOffsetForAnnotation` / `getTranslationOffsetMap` / `getTranslation` call
-  sites; field type `Map<String, OffsetRange>` → `Map<String, Long>`; `getTranslation`
+  — the constructor creates `GFF3TranslationReader`; `getTranslationOffsetForAnnotation` /
+  `getTranslationOffsetMap` / `getTranslation` are the call sites; field type `Map<String, OffsetRange>` → `Map<String, Long>`; `getTranslation`
   signature `OffsetRange` → `Long`; `close()` must also close `translationReader`.
   `TRANSLATION_ID_PATTERN` is the reference for stripping the leading `>`.
 - `src/main/java/uk/ac/ebi/embl/gff3tools/gff3/GFF3File.java`
-  — `writeFastaFromOffsets(Writer, Map<String, Long>)`; `annOffserMap` type;
-  `getTranslation(entry.getValue())` unchanged in shape.
+  — `writeTranslationSection` iterates `Map<String, Long>`; read failures wrapped in
+  `WriteException` (new `WriteException(ReadException)` constructor).
 - `src/main/java/uk/ac/ebi/embl/gff3tools/gff3toff/GFF3Mapper.java`
   — `mapGFF3Feature` / `mapTranslation` signatures take `Map<String, Long>`;
   `getTranslation(translationMap.get(translationKey))` unchanged in shape.
-- `src/main/java/uk/ac/ebi/embl/gff3tools/gff3toff/TranslationKey.java`
+- `src/main/java/uk/ac/ebi/embl/gff3tools/gff3/TranslationKey.java`
   — the translation-key type used by `GFF3Mapper` (unchanged; referenced by consumers).
 - `src/test/java/uk/ac/ebi/embl/gff3tools/gff3/reader/GFF3TranslationReaderTest.java`
   — **updated** per FR-17 … FR-22.
 - `src/test/java/uk/ac/ebi/embl/gff3tools/gff3/reader/FastaSectionLocatorTest.java`
   — **new** per FR-23.
-- `build.gradle:77` — `uk.ac.ebi.ena:fastareader:1.3.0` dependency (already present; no
-  change required).
+- `build.gradle` — `uk.ac.ebi.ena:fastareader` bumped from 1.2.0 to 1.3.0 (offset
+  constructor); gff3tools version 5.7.0 → 5.7.1.
 - `docs/0001_error_handling.md` — exit-code / `ExitException` hierarchy reference
   (`ReadException` = `READ_ERROR=10`).
 - `src/main/java/uk/ac/ebi/embl/gff3tools/utils/GzipUtils.java` — `isGzipped` magic-byte
@@ -455,9 +455,11 @@ fastareader 1.3.0 API surface used:
   does not. It would also cover a full feature line pasted into the FASTA section, which the
   column check alone would still misread.
 
-  Tests not yet added: the same sweep in `FastaSectionLocatorTest` (boundary never after
-  `##FASTA`) and in `GFF3TranslationReaderTest` (`ReadException` at every position, never a
-  short map).
+  Tests: `FastaSectionLocatorTest.tabbedSequenceLinesAnywhereInFastaSectionNeverMoveTheBoundary`
+  sweeps 2,000 random layouts with tabbed sequence lines and asserts the boundary is always
+  `##FASTA`; `GFF3TranslationReaderTest.testTabInFastaSectionIsReportedNotDropped` uses a
+  fixed layout where the search probes the tabbed line and asserts a `ReadException`. Both
+  fail with the old TAB rule restored; the sweep also fails with the combined rule.
 - **Compressed input is skipped, not read (resolved, FR-24).** `FileConversionCommand`
   decompresses gzip input as a stream for the annotation reader but passes the original
   `.gz` path to `Gff3ToFFConverter`, so the locator searched compressed bytes. On `main` the
