@@ -323,6 +323,43 @@ class FastaSectionLocatorTest {
         }
     }
 
+    @Test
+    void commentLinesAnywhereInFastaSectionNeverMoveTheBoundary() throws IOException {
+        // A '#' line is not valid FASTA, but if the boundary moved past it every record
+        // before it would be silently dropped. It must stay on ##FASTA so FastaReader
+        // reads the '#' line and rejects it. Whether a probe lands on the line depends on
+        // byte positions, so many layouts are tried rather than one fixed example.
+        Random random = new Random(1);
+        for (int iteration = 0; iteration < 2_000; iteration++) {
+            StringBuilder sb = new StringBuilder("##gff-version 3\n");
+            int featureCount = random.nextInt(6);
+            for (int i = 0; i < featureCount; i++) {
+                sb.append("s1\t.\tgene\t1\t10\t.\t+\t.\tID=g").append(i).append('\n');
+            }
+            sb.append("##FASTA\n");
+            int recordCount = 2 + random.nextInt(5);
+            int commentedRecord = random.nextInt(recordCount - 1);
+            for (int i = 0; i < recordCount; i++) {
+                sb.append(">s1|p").append(i).append('\n');
+                int lineCount = 1 + random.nextInt(3);
+                for (int j = 0; j < lineCount; j++) {
+                    sb.append("MKVL".repeat(1 + random.nextInt(5))).append('\n');
+                }
+                if (i == commentedRecord || random.nextInt(4) == 0) {
+                    sb.append("# comment\n");
+                }
+            }
+            String content = sb.toString();
+            Path file = writeFile(content);
+
+            OptionalLong offset = FastaSectionLocator.locate(file);
+
+            assertTrue(offset.isPresent(), "no FASTA section found in:\n" + content);
+            assertEquals(content.indexOf("##FASTA"), offset.getAsLong(), "wrong boundary in:\n" + content);
+            Files.delete(file);
+        }
+    }
+
     private static void assertNoFullScan(CountingSeekableByteChannel channel, long fileSize) {
         // A full linear scan would need to touch every byte of the file at least
         // once; the binary search must stay well under that, proving it never

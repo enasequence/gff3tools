@@ -73,18 +73,19 @@ public final class FastaSectionLocator {
                 lineStart = lo;
             }
 
-            // Blank lines are ambiguous and can occur on either side (e.g. between two
-            // FASTA records), so they carry no boundary information: skip forward within
-            // this probe, without touching lo/hi, until a classifiable line is found. The
-            // skip is bounded by hi as well as fileSize: running into hi or EOF means only
-            // [lineStart, hi) is blank. Lines in [lo, lineStart) are still unclassified, so
-            // shrink the bracket from above and keep searching them.
+            // Blank lines and '#' lines (other than ##FASTA) are ambiguous and can occur on
+            // either side (e.g. between two FASTA records), so they carry no boundary
+            // information: skip forward within this probe, without touching lo/hi, until a
+            // classifiable line is found. The skip is bounded by hi as well as fileSize:
+            // running into hi or EOF means only [lineStart, hi) is ambiguous. Lines in
+            // [lo, lineStart) are still unclassified, so shrink the bracket from above and
+            // keep searching them.
             Line line = readLine(channel, lineStart, fileSize);
-            while (line.isBlank() && line.nextLineStart() < fileSize && line.nextLineStart() < hi) {
+            while (line.isAmbiguous() && line.nextLineStart() < fileSize && line.nextLineStart() < hi) {
                 line = readLine(channel, line.nextLineStart(), fileSize);
             }
 
-            if (line.isBlank()) {
+            if (line.isAmbiguous()) {
                 hi = lineStart;
                 continue;
             }
@@ -113,14 +114,14 @@ public final class FastaSectionLocator {
         if (line.startsWith(">")) {
             return Classification.FASTA_SIDE;
         }
-        if (line.indexOf('\t') >= 0 || line.startsWith("#")) {
+        // Only a tab marks a line as definitely annotation: FASTA lines never contain one.
+        // '#' lines never get here; they are skipped as ambiguous by the caller.
+        if (line.indexOf('\t') >= 0) {
             return Classification.ANNOTATION_SIDE;
         }
         // Any other line is treated as a sequence line, valid or not. Calling it annotation
         // would move the boundary past it and silently drop the records before it; as
         // FASTA-side it is handed to FastaReader, which rejects bad characters.
-        // Known gap: a '#' line inside the FASTA section still counts as annotation above,
-        // so it can drop the records before it (see the spec's Open Questions and Risks).
         return Classification.FASTA_SIDE;
     }
 
@@ -244,8 +245,9 @@ public final class FastaSectionLocator {
     }
 
     private record Line(String content, long lineStart, long nextLineStart) {
-        boolean isBlank() {
-            return content.isBlank();
+        /** Blank, or a '#' line other than ##FASTA: either can sit on either side of the boundary. */
+        boolean isAmbiguous() {
+            return content.isBlank() || (content.startsWith("#") && !content.equals("##FASTA"));
         }
     }
 }

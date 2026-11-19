@@ -223,4 +223,18 @@ public class GFF3TranslationReaderTest {
         Assertions.assertTrue(exception.getMessage().contains("Illegal character '1'"));
         Assertions.assertTrue(exception.getMessage().contains("position 120"));
     }
+
+    @Test
+    void testCommentLineInFastaSectionIsReportedNotDropped() throws IOException {
+        // With this byte layout the boundary search probes the "# comment" line directly.
+        // It must not be mistaken for annotation, or the boundary lands on ">B" and
+        // record A is silently dropped instead of the '#' line being reported.
+        String row = "chr1\t.\tgene\t1\t100\t.\t+\t.\tID=g1\n";
+        String content = "##gff-version 3\n" + row.repeat(3) + "##FASTA\n>A\nMKVL\n# comment\n>B\nMKVL\n>C\nMKVL\n";
+        Files.writeString(tempFile, content, StandardOpenOption.TRUNCATE_EXISTING);
+
+        ReadException exception = Assertions.assertThrows(ReadException.class, () -> reader.readTranslationOffset());
+
+        Assertions.assertTrue(exception.getMessage().contains("Illegal character '#'"));
+    }
 }

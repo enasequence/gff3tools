@@ -56,19 +56,27 @@ consumers keep working with mechanical type changes only.
 
   | Line content                                       | Classification |
   |----------------------------------------------------|----------------|
-  | Equals `##FASTA` (trimmed)                          | FASTA-side (boundary marker) |
+  | Equals `##FASTA`                                    | FASTA-side (boundary marker) |
   | Starts with `>`                                     | FASTA-side (header) |
-  | Contains a TAB, or starts with `#` (not `##FASTA`)  | annotation-side |
-  | Any other non-blank line                            | FASTA-side (sequence line, valid or not) |
+  | Starts with `#` (not `##FASTA`)                     | ambiguous → skip to next line |
   | Empty / blank                                       | ambiguous → skip to next line |
+  | Contains a TAB                                      | annotation-side |
+  | Any other line                                      | FASTA-side (sequence line, valid or not) |
   | EOF (no line at/after probe)                        | annotation-side (predicate false) |
+
+  Only a TAB marks a line as definitely annotation-side: FASTA lines never contain one.
+  A `#` line is ambiguous because comments and directives are legal in the annotation
+  section, but a stray one can also sit inside the FASTA section, and one line alone cannot
+  tell the two apart. Skipping it, as with a blank line, means the boundary never moves past
+  it, so a `#` line inside the FASTA section is handed to `FastaReader`, which rejects it per
+  FR-15. A `##FASTA` line with trailing whitespace is skipped the same way; the boundary
+  then lands on the first `>` header, which is still correct.
 
   A line with no TAB and no leading `#` MUST be classified FASTA-side even when it holds
   characters outside the protein alphabet (digits, `-`, `.`, trailing whitespace). Calling
   it annotation-side would move the boundary past it, so the records before it would be
   silently dropped and the bad characters never validated. As FASTA-side it is handed to
-  `FastaReader`, which rejects it per FR-15. Known exception: a `#` line inside the FASTA
-  section — see Open Questions and Risks.
+  `FastaReader`, which rejects it per FR-15.
 
 - **FR-3** The binary search MUST operate over search space `[0, fileSize)` with the
   invariant: everything strictly below `lo` is annotation-side; `hi` is an upper bound
@@ -78,9 +86,11 @@ consumers keep working with mechanical type changes only.
      forward from `mid` to the next `\n`/`\r`; the byte after it is the line start
      (special-case `mid == 0` as line start 0). This is an O(line-length) forward read,
      never a full-section scan.
-  3. Read that one line and classify per FR-2, skipping blank lines forward.
+  3. Read that one line and classify per FR-2, skipping ambiguous lines (blank or `#`)
+     forward, without passing `hi`.
   4. On FASTA-side → set `hi = lineStart`; on annotation-side (including EOF) → set
-     `lo = lineStartOfNextLine` (advance past the classified line).
+     `lo = lineStartOfNextLine` (advance past the classified line). If only ambiguous lines
+     remain up to `hi` or EOF → set `hi` to the probe's line start and keep searching below.
   5. Terminate when the bracket collapses; return `hi` if a FASTA-side line was ever
      seen, else empty.
 
@@ -356,16 +366,19 @@ fastareader 1.3.0 API surface used:
   check merely asked "A–Z or `*`". No extra post-extraction check is added: the protein
   alphabet is the correct domain constraint for translations. Accepted as a documented
   tightening.
-- **`#` lines inside the FASTA section can drop records silently (accepted gap).** A line
-  starting with `#` is classified annotation-side, because `#` comments and directives are
-  legal in the annotation section and one line alone cannot tell the two apart. If such a
-  line sits inside the FASTA section and a probe lands on it, the boundary moves past it:
-  every record before it is dropped with no error, and nothing reports the stray line.
-  Whether a probe lands on it depends on byte positions, so the same file shape can fail
-  for one annotation-section length and not another. Before this change the backward scan
-  threw `RuntimeException("Invalid GFF3 translation sequence: ...")` on such a line. Left
-  in deliberately: a `#` line is not valid FASTA, and closing the gap would need an exact
-  scan for the `##FASTA` line instead of the classifier.
+- **`#` lines are skipped, not classified (resolved).** An earlier version classified `#`
+  lines as annotation-side. A `#` line inside the FASTA section then moved the boundary past
+  it whenever a probe landed on it, silently dropping every record before it (6 of 500
+  positions in a 500-record sweep). Treating `#` lines as ambiguous (FR-2) closes this: the
+  same sweep now fails loudly at every position, with `FastaReader` rejecting the `#`
+  character, matching the old backward scan's hard failure. Cost: a probe that lands in a
+  run of `#` lines (e.g. many `##sequence-region` directives) reads forward to the end of
+  the run, bounded by `hi`; once a TAB line is found, `lo` moves past the whole run.
+- **Annotation lines without TABs can mislead the locator (harmless).** A malformed
+  annotation line that uses spaces instead of TABs is classified FASTA-side, so if a probe
+  lands on it the boundary is placed too early (6 of 500 positions in a sweep). The result
+  is unaffected: `FastaReader` starts there and still returns every record (500 of 500
+  positions).
 
 ## Phased Delivery Plan
 
