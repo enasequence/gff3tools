@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.OptionalLong;
+import java.util.Random;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -242,6 +243,84 @@ class FastaSectionLocatorTest {
 
         assertTrue(offset.isPresent());
         assertTrue(offset.getAsLong() <= content.indexOf('>'));
+    }
+
+    @Test
+    void trailingBlankLinesAfterFastaSectionAreHandled() throws IOException {
+        String content = String.join(
+                "\n",
+                "##gff-version 3",
+                "s1\t.\tgene\t1\t10\t.\t+\t.\tID=g0",
+                "s1\t.\tgene\t1\t10\t.\t+\t.\tID=g1",
+                "s1\t.\tgene\t1\t10\t.\t+\t.\tID=g2",
+                "##FASTA",
+                ">s1|p0",
+                "MKVLMKVLMKVL",
+                "",
+                "",
+                "");
+        Path file = writeFile(content);
+
+        OptionalLong offset = FastaSectionLocator.locate(file);
+
+        assertTrue(offset.isPresent());
+        assertEquals(content.indexOf("##FASTA"), offset.getAsLong());
+    }
+
+    @Test
+    void blankLinesInsideFastaRecordAreHandled() throws IOException {
+        String content = String.join(
+                "\n",
+                "##gff-version 3",
+                "s1\t.\tgene\t1\t10\t.\t+\t.\tID=g0",
+                "s1\t.\tgene\t1\t10\t.\t+\t.\tID=g1",
+                "s1\t.\tgene\t1\t10\t.\t+\t.\tID=g2",
+                "##FASTA",
+                ">s1|p0",
+                "MKVLMKVLMKVL",
+                "",
+                "",
+                "",
+                "MKVLMKVL",
+                "");
+        Path file = writeFile(content);
+
+        OptionalLong offset = FastaSectionLocator.locate(file);
+
+        assertTrue(offset.isPresent());
+        assertEquals(content.indexOf("##FASTA"), offset.getAsLong());
+    }
+
+    @Test
+    void blankLinesAnywhereInFastaSectionNeverMoveTheBoundary() throws IOException {
+        Random random = new Random(1);
+        for (int iteration = 0; iteration < 2_000; iteration++) {
+            StringBuilder sb = new StringBuilder("##gff-version 3\n");
+            int featureCount = random.nextInt(6);
+            for (int i = 0; i < featureCount; i++) {
+                sb.append("s1\t.\tgene\t1\t10\t.\t+\t.\tID=g").append(i).append('\n');
+            }
+            sb.append("##FASTA\n");
+            int recordCount = 1 + random.nextInt(5);
+            for (int i = 0; i < recordCount; i++) {
+                sb.append(">s1|p").append(i).append('\n');
+                int lineCount = 1 + random.nextInt(3);
+                for (int j = 0; j < lineCount; j++) {
+                    sb.append("MKVL".repeat(1 + random.nextInt(5))).append('\n');
+                    if (random.nextInt(4) == 0) {
+                        sb.append("\n".repeat(1 + random.nextInt(5)));
+                    }
+                }
+            }
+            String content = sb.toString();
+            Path file = writeFile(content);
+
+            OptionalLong offset = FastaSectionLocator.locate(file);
+
+            assertTrue(offset.isPresent(), "no FASTA section found in:\n" + content);
+            assertEquals(content.indexOf("##FASTA"), offset.getAsLong(), "wrong boundary in:\n" + content);
+            Files.delete(file);
+        }
     }
 
     private static void assertNoFullScan(CountingSeekableByteChannel channel, long fileSize) {

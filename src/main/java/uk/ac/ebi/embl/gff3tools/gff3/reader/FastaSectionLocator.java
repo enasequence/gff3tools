@@ -56,6 +56,9 @@ public final class FastaSectionLocator {
         long lo = 0;
         long hi = fileSize;
         boolean fastaSideSeen = false;
+        // Start of the earliest line classified FASTA-side so far. Kept apart from hi
+        // because hi may also shrink past blank lines, which must never be returned.
+        long boundary = fileSize;
 
         while (lo < hi) {
             long mid = (lo + hi) >>> 1;
@@ -73,28 +76,29 @@ public final class FastaSectionLocator {
             // Blank lines are ambiguous and can occur on either side (e.g. between two
             // FASTA records), so they carry no boundary information: skip forward within
             // this probe, without touching lo/hi, until a classifiable line is found. The
-            // skip is bounded by hi as well as fileSize: running into the already-known
-            // FASTA boundary (e.g. a lone blank line immediately preceding it) means the
-            // whole [lo, hi) bracket is blank, so there is nothing left to classify.
+            // skip is bounded by hi as well as fileSize: running into hi or EOF means only
+            // [lineStart, hi) is blank. Lines in [lo, lineStart) are still unclassified, so
+            // shrink the bracket from above and keep searching them.
             Line line = readLine(channel, lineStart, fileSize);
             while (line.isBlank() && line.nextLineStart() < fileSize && line.nextLineStart() < hi) {
                 line = readLine(channel, line.nextLineStart(), fileSize);
             }
 
             if (line.isBlank()) {
-                lo = hi;
+                hi = lineStart;
                 continue;
             }
 
             if (classify(line.content()) == Classification.FASTA_SIDE) {
                 fastaSideSeen = true;
                 hi = line.lineStart();
+                boundary = hi;
             } else {
                 lo = line.nextLineStart();
             }
         }
 
-        return fastaSideSeen ? OptionalLong.of(hi) : OptionalLong.empty();
+        return fastaSideSeen ? OptionalLong.of(boundary) : OptionalLong.empty();
     }
 
     private enum Classification {
