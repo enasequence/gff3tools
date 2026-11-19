@@ -798,6 +798,17 @@ class TranslationFixTest {
         assertTrue(exception.getMessage().contains("bad base range"));
     }
 
+    @Test
+    void translatesIsoleucineOrLeucineCodonToJ() throws Exception {
+        // MTT expands to ATT (I) and CTT (L), so it translates to the I/L ambiguity code J
+        when(mockLookup.getSequenceSlice("seq1", 1L, 9L)).thenReturn("ATGMTTTAA");
+
+        GFF3Feature feature = createFeature(OntologyTerm.CDS.name(), "seq1", 1, 9, "+");
+        fix.fixAnnotation(createAnnotation(feature), 1);
+
+        assertEquals("MJ", translationOf(feature));
+    }
+
     private void sequence(String bases) throws Exception {
         assertEquals(CIRCLE, bases.length());
         when(mockLookup.getSequenceSlice(eq("seq1"), anyLong(), anyLong())).thenAnswer(invocation -> {

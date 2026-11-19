@@ -406,6 +406,35 @@ fastareader 1.3.0 API surface used:
   lands on it the boundary is placed too early (6 of 500 positions in a sweep). The result
   is unaffected: `FastaReader` starts there and still returns every record (500 of 500
   positions).
+- **A TAB inside the FASTA section silently drops records (open).** FR-2 assumes FASTA lines
+  never contain a TAB, but a sequence line can carry a stray one (e.g. `MKVLAAGIVG\t`). If a
+  probe lands on it, the line is classified annotation-side, `lo` moves past it, and the
+  boundary lands on a later `>` header. `FastaReader` then never sees the bad line or any
+  record before it. Observed in a 500-record sweep, moving the TAB through each record:
+
+  | Result | Positions |
+  |---|---|
+  | Boundary placed after `##FASTA` | 3 of 500 |
+  | TAB in record 0 | no error, 499 of 500 translations read |
+  | TAB in record 13 | no error, 486 of 500 translations read |
+
+  The two misplacements are not symmetric: a boundary too early is harmless (`FastaReader`
+  skips to the first `>`, as in the entry above), a boundary too late loses data. So the
+  locator should call a line annotation-side only when it is sure.
+
+  Proposed fix, in `classify()` only: a line is annotation-side when it has exactly 9
+  TAB-separated columns and columns 4 and 5 (start, end) are integers; every other line that
+  is not `>`, `##FASTA` or ambiguous stays FASTA-side. `MKVLAAGIVG\t` then splits into 2
+  columns, stays FASTA-side, and `FastaReader` rejects the TAB per FR-15, the same loud
+  failure as a `#` line. The search loop does not change.
+
+  Optional safety net: after the search, check the boundary sits on `##FASTA` (or on a `>`
+  header with no FASTA-side line before it) and fall back to a forward scan when it does not.
+  Well-formed files never take that path; it also covers a full 9-column feature line pasted
+  into the FASTA section, which the column check alone would still misread.
+
+  Tests: the same TAB sweep in `FastaSectionLocatorTest` (boundary never after `##FASTA`)
+  and in `GFF3TranslationReaderTest` (`ReadException` at every position, never a short map).
 - **Compressed input is skipped, not read (resolved, FR-24).** `FileConversionCommand`
   decompresses gzip input as a stream for the annotation reader but passes the original
   `.gz` path to `Gff3ToFFConverter`, so the locator searched compressed bytes. On `main` the
