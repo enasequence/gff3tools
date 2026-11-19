@@ -433,6 +433,20 @@ fastareader 1.3.0 API surface used:
   Skipping was chosen for this change because it is smaller and matches what `main` already
   did, but no longer silently. Follow-up: decompress to a temp file when FASTA reading moves
   into validation, or sooner if ENA sends compressed GFF3 to conversion.
+- **Duplicate FASTA headers: the last one silently wins (resolved).** FR-7 step 3 put each
+  record into the `TreeMap` in file order, so when two records shared a header, the later
+  one overwrote the earlier one with no error. On `main`, the backward scan put records in
+  reverse order, so the *first* record won, also silently, so this change flipped which
+  copy was used. Observed: a `##FASTA` section with `>SEQID1|cds1` twice (`MFIRSTAAA`,
+  then `MSECONDAA`), converted to EMBL, exited 0 and wrote `/translation="MSECONDAA"`.
+
+  | Input | `main` | Before the fix | Now |
+  |---|---|---|---|
+  | two records with the same header | first wins, exit 0 | last wins, exit 0 | `ReadException`, exit 10 |
+
+  Fix: while building the map, `readTranslationOffset()` throws a `ReadException`
+  (`READ_ERROR=10`) when a header is already present, naming the file and the repeated
+  header, instead of overwriting it. Headers match on the full text after `>`.
 
 ## Phased Delivery Plan
 

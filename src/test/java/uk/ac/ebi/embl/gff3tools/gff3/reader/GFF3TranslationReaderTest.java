@@ -297,6 +297,19 @@ public class GFF3TranslationReaderTest {
         Assertions.assertTrue(reader.readTranslationOffset().isEmpty());
     }
 
+    @Test
+    void testDuplicateHeaderIsReportedNotOverwritten() throws IOException {
+        // Keeping either copy would silently pick a translation for the submitter.
+        Files.writeString(
+                tempFile,
+                "##FASTA\n>SEQ1|cds1\nMFIRST\n>SEQ2|cds2\nMKVL\n>SEQ1|cds1\nMSECND\n",
+                StandardOpenOption.TRUNCATE_EXISTING);
+
+        ReadException exception = Assertions.assertThrows(ReadException.class, () -> reader.readTranslationOffset());
+
+        Assertions.assertTrue(exception.getMessage().contains("\">SEQ1|cds1\" appears more than once"));
+    }
+
     private static void writeGzipped(Path file, byte[] content) throws IOException {
         try (OutputStream gz = new GZIPOutputStream(Files.newOutputStream(file))) {
             gz.write(content);

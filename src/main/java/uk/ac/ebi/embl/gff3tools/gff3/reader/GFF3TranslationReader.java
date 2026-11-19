@@ -96,7 +96,11 @@ public class GFF3TranslationReader implements AutoCloseable {
         for (long id : fastaReader.getOrderedIds()) {
             String header = fastaReader.getHeaderline(id).orElse("");
             String translationId = header.startsWith(">") ? header.substring(1) : header;
-            offsetMap.put(translationId, id);
+            // Overwriting would silently pick one of the copies; which one is never the submitter's choice.
+            if (offsetMap.putIfAbsent(translationId, id) != null) {
+                throw new ReadException("Error reading translations from " + gff3Path + ": the FASTA header \">"
+                        + translationId + "\" appears more than once");
+            }
         }
 
         return offsetMap;
