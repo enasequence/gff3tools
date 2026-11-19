@@ -35,8 +35,7 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonomyIdentifier;
 
 public class GFF3FileReader implements AutoCloseable {
 
-    static Pattern VERSION_DIRECTIVE = Pattern.compile(
-            "^##gff-version (?<version>(?<major>[0-9]+)(\\.(?<minor>[0-9]+)(:?\\.(?<patch>[0-9]+))?)?)\\s*$");
+    static Pattern VERSION_DIRECTIVE = GFF3Directives.VERSION_DIRECTIVE;
     static Pattern SPECIES_DIRECTIVE = Pattern.compile("^##species (?<species>.*)$");
     static Pattern SPECIES_TAX_ID_PATTERN = Pattern.compile("(?:^|[?&])id=(?<taxId>[0-9]+)(?:&.*)?$");
     static Pattern SEQUENCE_REGION_DIRECTIVE = Pattern.compile(
@@ -476,5 +475,4 @@ public class GFF3FileReader implements AutoCloseable {
         bufferedReader.close();
         translationReader.close();
     }
-
 }

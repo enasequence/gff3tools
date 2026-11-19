@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Directives;
 
 /**
  * Locates the byte offset of the first FASTA-side line (the {@code ##FASTA}

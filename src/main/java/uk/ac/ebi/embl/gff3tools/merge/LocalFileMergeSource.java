@@ -14,10 +14,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.FastaSectionLocator;
-import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 
 /**
  * A {@link Gff3MergeSource} backed by a local GFF3 file. Uses {@link FastaSectionLocator} to
@@ -31,10 +29,9 @@ public class LocalFileMergeSource implements Gff3MergeSource {
     private final Path gff3Path;
     private long cachedFastaOffset = Long.MIN_VALUE;
 
-    public LocalFileMergeSource(Path gff3Path) throws IOException {
+    public LocalFileMergeSource(Path gff3Path) {
         this.gff3Path = gff3Path;
-        List<String> ids = GFF3FileReader.readSequenceRegionIds(gff3Path);
-        this.objectId = ids.isEmpty() ? objectIdFromFilename(gff3Path) : ids.get(0);
+        this.objectId = objectIdFromFilename(gff3Path);
     }
 
     private static String objectIdFromFilename(Path path) {

@@ -38,6 +38,7 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
  * annotation, never between them. Translations are scoped to the relevant annotations.
  */
 @Slf4j
+@Builder
 public class GFF3File implements IGFF3Feature {
 
     private static final String FASTA_DIRECTIVE = GFF3Directives.FASTA_LINE;
@@ -61,7 +62,7 @@ public class GFF3File implements IGFF3Feature {
      *     the translations {@code translationState} does not override; may be null when no source
      *     GFF3 exists or it cannot be re-read (e.g. stdin)
      * @param fastaFilePath an existing translation FASTA, used only when neither
-     *     {@code gff3FileReader} nor {@code translationState} yields a translation for this file;
+     *     {@code gff3Reader} nor {@code translationState} yields a translation for this file;
      *     its records are filtered to this file's accessions. May be null
      * @param writeAnnotationFasta whether to write translations at all; when false no
      *     {@code ##FASTA} section is written even if a source could supply one
@@ -71,7 +72,6 @@ public class GFF3File implements IGFF3Feature {
      *     {@code TranslationFix}; each entry wins over the source GFF3's translation for the same
      *     feature. May hold nothing
      */
-    @Builder
     public GFF3File(
             GFF3Header header,
             GFF3Species species,

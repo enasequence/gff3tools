@@ -11,7 +11,7 @@
 package uk.ac.ebi.embl.gff3tools.merge;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -38,41 +38,26 @@ class LocalFileMergeSourceTest {
     }
 
     @Test
-    void objectIdFromSequenceRegionDirective() throws IOException {
-        String content =
-                "##gff-version 3\n##sequence-region ERZ123456.1 1 10000\nERZ123456.1\t.\tgene\t1\t100\t.\t+\t.\tID=gene1\n";
-        Path file = writeFile("somefile", content);
-
-        LocalFileMergeSource source = new LocalFileMergeSource(file);
-
-        assertEquals("ERZ123456.1", source.getObjectId());
-    }
-
-    @Test
-    void objectIdFallsBackToFilenameWhenNoSequenceRegion() throws IOException {
-        String content = "##gff-version 3\nERZ999999.1\t.\tgene\t1\t100\t.\t+\t.\tID=gene1\n";
-        // temp file name contains a prefix we can't control, so just check it's not blank
-        Path file = writeFile("ERZ999999.1", content);
+    void objectIdDerivedFromFilename() throws IOException {
+        Path file = writeFile("ERZ123456.1", "##gff-version 3\n");
 
         LocalFileMergeSource source = new LocalFileMergeSource(file);
 
         String objectId = source.getObjectId();
-        assertTrue(!objectId.isBlank(), "objectId should not be blank when falling back to filename");
-        // Fallback strips .gff3; it should not contain the extension
-        assertTrue(!objectId.endsWith(".gff3"), "objectId must not retain .gff3 extension");
+        assertFalse(objectId.isBlank(), "objectId must not be blank");
+        assertFalse(objectId.endsWith(".gff3"), "objectId must not retain .gff3 extension");
     }
 
     @Test
-    void objectIdUsesFirstSequenceRegionForSetFile() throws IOException {
-        String content = "##gff-version 3\n"
-                + "##sequence-region ERZ111111.1 1 5000\n"
-                + "##sequence-region ERZ222222.1 1 3000\n"
-                + "ERZ111111.1\t.\tgene\t1\t100\t.\t+\t.\tID=gene1\n";
-        Path file = writeFile("set_file", content);
+    void objectIdStripsGzExtensionBeforeGff3() throws IOException {
+        // simulate a .gff3.gz file — constructor takes Path, so just name it accordingly
+        tempFile = Files.createTempFile("ERZ999999.1", ".gff3.gz");
+        Files.write(tempFile, "##gff-version 3\n".getBytes(StandardCharsets.UTF_8));
 
-        LocalFileMergeSource source = new LocalFileMergeSource(file);
+        LocalFileMergeSource source = new LocalFileMergeSource(tempFile);
 
-        assertEquals("ERZ111111.1", source.getObjectId());
+        assertFalse(source.getObjectId().endsWith(".gz"), "objectId must not retain .gz extension");
+        assertFalse(source.getObjectId().endsWith(".gff3"), "objectId must not retain .gff3 extension");
     }
 
     @Test
