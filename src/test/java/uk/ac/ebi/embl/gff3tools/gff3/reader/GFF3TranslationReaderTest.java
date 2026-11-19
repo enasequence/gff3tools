@@ -310,6 +310,20 @@ public class GFF3TranslationReaderTest {
         Assertions.assertTrue(exception.getMessage().contains("\">SEQ1|cds1\" appears more than once"));
     }
 
+    @Test
+    void testTabInFastaSectionIsReportedNotDropped() throws IOException {
+        // With this byte layout the boundary search probes the "MKVL\t" line directly. A tab
+        // alone must not mark it as annotation, or the boundary lands on ">B" and record A is
+        // silently dropped instead of the tab being reported.
+        String row = "chr1\t.\tgene\t1\t100\t.\t+\t.\tID=g1\n";
+        String content = "##gff-version 3\n" + row.repeat(3) + "##FASTA\n>A\nMKVL\t\n>B\nMKVL\n>C\nMKVL\n";
+        Files.writeString(tempFile, content, StandardOpenOption.TRUNCATE_EXISTING);
+
+        ReadException exception = Assertions.assertThrows(ReadException.class, () -> reader.readTranslationOffset());
+
+        Assertions.assertTrue(exception.getMessage().contains("byte value: 9"), exception.getMessage());
+    }
+
     private static void writeGzipped(Path file, byte[] content) throws IOException {
         try (OutputStream gz = new GZIPOutputStream(Files.newOutputStream(file))) {
             gz.write(content);
