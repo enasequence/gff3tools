@@ -77,7 +77,10 @@ public class GFF3FileFactory {
                 if (species == null) {
                     species = directivesFactory.createSpecies(entry, masterMetadata);
                 }
-                annotations.add(annotationFactory.from(entry));
+                GFF3Annotation annotation = annotationFactory.from(entry);
+                annotations.add(annotation);
+                // The entry validated and handled, so its sequence can be released.
+                engine.releaseSequence(annotation.getAccession());
             }
         } catch (IOException e) {
             throw new ReadException(e);
