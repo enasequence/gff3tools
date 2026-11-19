@@ -116,21 +116,12 @@ public final class FastaSectionLocator {
         if (line.indexOf('\t') >= 0 || line.startsWith("#")) {
             return Classification.ANNOTATION_SIDE;
         }
-        if (isProteinAlphabetLine(line)) {
-            return Classification.FASTA_SIDE;
-        }
-        return Classification.ANNOTATION_SIDE;
-    }
-
-    private static boolean isProteinAlphabetLine(String line) {
-        for (int i = 0; i < line.length(); i++) {
-            char c = line.charAt(i);
-            boolean letter = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
-            if (!letter && c != '*') {
-                return false;
-            }
-        }
-        return true;
+        // Any other line is treated as a sequence line, valid or not. Calling it annotation
+        // would move the boundary past it and silently drop the records before it; as
+        // FASTA-side it is handed to FastaReader, which rejects bad characters.
+        // Known gap: a '#' line inside the FASTA section still counts as annotation above,
+        // so it can drop the records before it (see the spec's Open Questions and Risks).
+        return Classification.FASTA_SIDE;
     }
 
     /**

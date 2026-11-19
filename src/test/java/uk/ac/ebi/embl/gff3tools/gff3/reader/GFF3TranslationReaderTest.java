@@ -208,4 +208,19 @@ public class GFF3TranslationReaderTest {
 
         Files.delete(noSequence);
     }
+
+    @Test
+    void testInvalidCharacterInFirstRecordIsReportedNotDropped() throws IOException {
+        // The byte layout matters: with three annotation rows the boundary search probes
+        // the "MKV1L" line directly. That line must not be mistaken for annotation, or the
+        // boundary lands on ">B" and record A is silently dropped instead of reported.
+        String row = "chr1\t.\tgene\t1\t100\t.\t+\t.\tID=g1\n";
+        String content = "##gff-version 3\n" + row.repeat(3) + "##FASTA\n>A\nMKV1L\n>B\nMKVL\n>C\nMKVL\n";
+        Files.writeString(tempFile, content, StandardOpenOption.TRUNCATE_EXISTING);
+
+        ReadException exception = Assertions.assertThrows(ReadException.class, () -> reader.readTranslationOffset());
+
+        Assertions.assertTrue(exception.getMessage().contains("Illegal character '1'"));
+        Assertions.assertTrue(exception.getMessage().contains("position 120"));
+    }
 }

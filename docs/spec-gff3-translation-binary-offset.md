@@ -59,9 +59,16 @@ consumers keep working with mechanical type changes only.
   | Equals `##FASTA` (trimmed)                          | FASTA-side (boundary marker) |
   | Starts with `>`                                     | FASTA-side (header) |
   | Contains a TAB, or starts with `#` (not `##FASTA`)  | annotation-side |
-  | Only protein-alphabet chars / `*` (no TAB)          | FASTA-side (wrapped sequence line) |
+  | Any other non-blank line                            | FASTA-side (sequence line, valid or not) |
   | Empty / blank                                       | ambiguous → skip to next line |
   | EOF (no line at/after probe)                        | annotation-side (predicate false) |
+
+  A line with no TAB and no leading `#` MUST be classified FASTA-side even when it holds
+  characters outside the protein alphabet (digits, `-`, `.`, trailing whitespace). Calling
+  it annotation-side would move the boundary past it, so the records before it would be
+  silently dropped and the bad characters never validated. As FASTA-side it is handed to
+  `FastaReader`, which rejects it per FR-15. Known exception: a `#` line inside the FASTA
+  section — see Open Questions and Risks.
 
 - **FR-3** The binary search MUST operate over search space `[0, fileSize)` with the
   invariant: everything strictly below `lo` is annotation-side; `hi` is an upper bound
@@ -349,6 +356,16 @@ fastareader 1.3.0 API surface used:
   check merely asked "A–Z or `*`". No extra post-extraction check is added: the protein
   alphabet is the correct domain constraint for translations. Accepted as a documented
   tightening.
+- **`#` lines inside the FASTA section can drop records silently (accepted gap).** A line
+  starting with `#` is classified annotation-side, because `#` comments and directives are
+  legal in the annotation section and one line alone cannot tell the two apart. If such a
+  line sits inside the FASTA section and a probe lands on it, the boundary moves past it:
+  every record before it is dropped with no error, and nothing reports the stray line.
+  Whether a probe lands on it depends on byte positions, so the same file shape can fail
+  for one annotation-section length and not another. Before this change the backward scan
+  threw `RuntimeException("Invalid GFF3 translation sequence: ...")` on such a line. Left
+  in deliberately: a `#` line is not valid FASTA, and closing the gap would need an exact
+  scan for the `##FASTA` line instead of the classifier.
 
 ## Phased Delivery Plan
 
