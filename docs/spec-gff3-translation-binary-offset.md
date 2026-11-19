@@ -60,11 +60,15 @@ consumers keep working with mechanical type changes only.
   | Starts with `>`                                     | FASTA-side (header) |
   | Starts with `#` (not `##FASTA`)                     | ambiguous → skip to next line |
   | Empty / blank                                       | ambiguous → skip to next line |
-  | Contains a TAB                                      | annotation-side |
+  | Feature line: ≥ 9 TAB-separated columns, columns 4 and 5 (start, end) integers | annotation-side |
   | Any other line                                      | FASTA-side (sequence line, valid or not) |
   | EOF (no line at/after probe)                        | annotation-side (predicate false) |
 
-  Only a TAB marks a line as definitely annotation-side: FASTA lines never contain one.
+  Only a feature line, as `GFF3FileReader.readFeature` reads one, marks a line as
+  definitely annotation-side. A TAB alone is not enough: a broken sequence line can carry a
+  stray one (see Open Questions and Risks). A malformed feature line is classified
+  FASTA-side, which only places the boundary too early; `FastaReader` skips everything
+  before the first `>` header, so no record is lost.
   A `#` line is ambiguous because comments and directives are legal in the annotation
   section, but a stray one can also sit inside the FASTA section, and one line alone cannot
   tell the two apart. Skipping it, as with a blank line, means the boundary never moves past
@@ -72,8 +76,9 @@ consumers keep working with mechanical type changes only.
   FR-15. A `##FASTA` line with trailing whitespace is skipped the same way; the boundary
   then lands on the first `>` header, which is still correct.
 
-  A line with no TAB and no leading `#` MUST be classified FASTA-side even when it holds
-  characters outside the protein alphabet (digits, `-`, `.`, trailing whitespace). Calling
+  A line that is not a feature line and has no leading `#` MUST be classified FASTA-side even
+  when it holds characters outside the protein alphabet (digits, `-`, `.`, a TAB, trailing
+  whitespace). Calling
   it annotation-side would move the boundary past it, so the records before it would be
   silently dropped and the bad characters never validated. As FASTA-side it is handed to
   `FastaReader`, which rejects it per FR-15.
@@ -400,14 +405,16 @@ fastareader 1.3.0 API surface used:
   same sweep now fails loudly at every position, with `FastaReader` rejecting the `#`
   character, matching the old backward scan's hard failure. Cost: a probe that lands in a
   run of `#` lines (e.g. many `##sequence-region` directives) reads forward to the end of
-  the run, bounded by `hi`; once a TAB line is found, `lo` moves past the whole run.
-- **Annotation lines without TABs can mislead the locator (harmless).** A malformed
-  annotation line that uses spaces instead of TABs is classified FASTA-side, so if a probe
+  the run, bounded by `hi`; once a feature line is found, `lo` moves past the whole run.
+- **Malformed annotation lines can mislead the locator (harmless).** A malformed
+  annotation line (spaces instead of TABs, a non-numeric start or end, fewer than 9 columns)
+  is not a feature line, so it is classified FASTA-side, and if a probe
   lands on it the boundary is placed too early (6 of 500 positions in a sweep). The result
   is unaffected: `FastaReader` starts there and still returns every record (500 of 500
   positions).
-- **A TAB inside the FASTA section silently drops records (open).** FR-2 assumes FASTA lines
-  never contain a TAB, but a sequence line can carry a stray one (e.g. `MKVLAAGIVG\t`). If a
+- **A TAB inside the FASTA section silently drops records (resolved).** FR-2 first assumed
+  FASTA lines never contain a TAB, but a sequence line can carry a stray one (e.g.
+  `MKVLAAGIVG\t`). If a
   probe lands on it, the line is classified annotation-side, `lo` moves past it, and the
   boundary lands on a later `>` header. `FastaReader` then never sees the bad line or any
   record before it. Observed in a 500-record sweep, moving the TAB through each record:
@@ -422,19 +429,35 @@ fastareader 1.3.0 API surface used:
   skips to the first `>`, as in the entry above), a boundary too late loses data. So the
   locator should call a line annotation-side only when it is sure.
 
-  Proposed fix, in `classify()` only: a line is annotation-side when it has exactly 9
-  TAB-separated columns and columns 4 and 5 (start, end) are integers; every other line that
-  is not `>`, `##FASTA` or ambiguous stays FASTA-side. `MKVLAAGIVG\t` then splits into 2
-  columns, stays FASTA-side, and `FastaReader` rejects the TAB per FR-15, the same loud
-  failure as a `#` line. The search loop does not change.
+  Fix, in `classify()` only: a line is annotation-side only when it is a feature line, i.e.
+  at least 9 TAB-separated columns with columns 4 and 5 (start, end) integers, matching
+  `GFF3FileReader.readFeature`; every other line that is not `>`, `##FASTA` or ambiguous
+  stays FASTA-side (FR-2). Directives such as `##gff-version`, `##sequence-region` and `###`
+  never reach this check: they start with `#` and are skipped as ambiguous.
+  `MKVLAAGIVG\t` now splits into 2 columns, stays FASTA-side, and `FastaReader` rejects the
+  TAB per FR-15, the same loud failure as a `#` line. The search loop did not change.
 
-  Optional safety net: after the search, check the boundary sits on `##FASTA` (or on a `>`
-  header with no FASTA-side line before it) and fall back to a forward scan when it does not.
-  Well-formed files never take that path; it also covers a full 9-column feature line pasted
-  into the FASTA section, which the column check alone would still misread.
+  Two weaker rules were swept first and rejected; each bad line was moved through all 500
+  records, "late" meaning the boundary landed after `##FASTA`:
 
-  Tests: the same TAB sweep in `FastaSectionLocatorTest` (boundary never after `##FASTA`)
-  and in `GFF3TranslationReaderTest` (`ReadException` at every position, never a short map).
+  | Rule | `MKVLAAGIVG\t` | `MKV1AAGIVG` | `MKV1AAGIVG\t` | `MKV.AAG\tIVG` |
+  |---|---|---|---|---|
+  | Contains a TAB (before) | late | ok | late | late |
+  | Contains a TAB and a non-letter (combined with the earlier alphabet check) | ok | ok | late | late |
+  | Feature line (chosen) | ok | ok | ok | ok |
+
+  With the fix, none of these lines (nor `MKVL\tAAGIVG`, `\tMKVLAAGIVG`, `MKV-AAGIVG`) placed
+  the boundary late at any of the 500 positions, every one failed with `ReadException`
+  instead of a short map, and a clean file still read 500 of 500 translations.
+
+  Not done (optional safety net): after the search, check the boundary sits on `##FASTA` (or
+  on a `>` header with no FASTA-side line before it) and fall back to a forward scan when it
+  does not. It would also cover a full feature line pasted into the FASTA section, which the
+  column check alone would still misread.
+
+  Tests not yet added: the same sweep in `FastaSectionLocatorTest` (boundary never after
+  `##FASTA`) and in `GFF3TranslationReaderTest` (`ReadException` at every position, never a
+  short map).
 - **Compressed input is skipped, not read (resolved, FR-24).** `FileConversionCommand`
   decompresses gzip input as a stream for the annotation reader but passes the original
   `.gz` path to `Gff3ToFFConverter`, so the locator searched compressed bytes. On `main` the

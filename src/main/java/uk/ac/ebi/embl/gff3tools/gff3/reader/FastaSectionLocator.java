@@ -114,15 +114,34 @@ public final class FastaSectionLocator {
         if (line.startsWith(">")) {
             return Classification.FASTA_SIDE;
         }
-        // Only a tab marks a line as definitely annotation: FASTA lines never contain one.
-        // '#' lines never get here; they are skipped as ambiguous by the caller.
-        if (line.indexOf('\t') >= 0) {
+        // Only a feature line is definitely annotation. A tab alone is not enough: a broken
+        // sequence line can carry a stray one. '#' lines never get here; they are skipped as
+        // ambiguous by the caller.
+        if (isFeatureLine(line)) {
             return Classification.ANNOTATION_SIDE;
         }
         // Any other line is treated as a sequence line, valid or not. Calling it annotation
         // would move the boundary past it and silently drop the records before it; as
-        // FASTA-side it is handed to FastaReader, which rejects bad characters.
+        // FASTA-side it is handed to FastaReader, which rejects bad characters. A malformed
+        // feature line lands here too, which is harmless: the boundary is then too early, and
+        // FastaReader skips everything before the first '>' header.
         return Classification.FASTA_SIDE;
+    }
+
+    /**
+     * A feature line as {@code GFF3FileReader.readFeature} reads one: at least 9
+     * tab-separated columns, with start and end (columns 4 and 5) numeric.
+     */
+    private static boolean isFeatureLine(String line) {
+        if (line.indexOf('\t') < 0) {
+            return false;
+        }
+        String[] columns = line.split("\t");
+        return columns.length >= 9 && isDigits(columns[3]) && isDigits(columns[4]);
+    }
+
+    private static boolean isDigits(String s) {
+        return !s.isEmpty() && s.chars().allMatch(c -> c >= '0' && c <= '9');
     }
 
     /**
