@@ -23,6 +23,10 @@ import java.util.Map;
 import uk.ac.ebi.embl.api.entry.Entry;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
+import uk.ac.ebi.embl.flatfile.reader.embl.MasterCONReader;
+import uk.ac.ebi.embl.flatfile.reader.embl.MasterTLSReader;
+import uk.ac.ebi.embl.flatfile.reader.embl.MasterTSAReader;
+import uk.ac.ebi.embl.flatfile.reader.embl.MasterWGSReader;
 import uk.ac.ebi.embl.gff3tools.exception.CLIException;
 import uk.ac.ebi.embl.gff3tools.exception.ExitException;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
@@ -157,8 +161,7 @@ public final class Gff3ProviderFactory {
         try (BufferedReader reader = Files.newBufferedReader(path)) {
             ReaderOptions readerOptions = new ReaderOptions();
             readerOptions.setIgnoreSequence(true);
-            EmblEntryReader entryReader =
-                    new EmblEntryReader(reader, EmblEntryReader.Format.EMBL_FORMAT, "master_reader", readerOptions);
+            EmblEntryReader entryReader = new MasterEmblEntryReader(reader, readerOptions);
             Entry masterEntry = null;
             while (entryReader.read() != null && entryReader.isEntry()) {
                 masterEntry = entryReader.getEntry();
@@ -170,6 +173,25 @@ public final class Gff3ProviderFactory {
         } catch (IOException e) {
             throw new ReadException(
                     "Failed to read --master-entry EMBL file '%s': %s".formatted(path, e.getMessage()), e);
+        }
+    }
+
+    /**
+     * EMBL_FORMAT reader plus the master-specific WGS/CON/TSA/TLS line readers (a WGS line is what
+     * marks an EMBL master as a WGS set).
+     *
+     * <p>Not {@link EmblEntryReader.Format#MASTER_FORMAT}: that format drops the CO/SQ/AH/AS/AC * /ST *
+     * readers, and sequencetools then folds those lines into the preceding block (e.g. {@code ST *}
+     * text into the OC lineage). Its tag set also lives in a thread-local shared with every other
+     * EmblEntryReader on the thread, so it would corrupt an EMBL_FORMAT read in progress.
+     */
+    private static final class MasterEmblEntryReader extends EmblEntryReader {
+        MasterEmblEntryReader(BufferedReader reader, ReaderOptions readerOptions) {
+            super(reader, Format.EMBL_FORMAT, "master_reader", readerOptions);
+            addBlockReader(new MasterWGSReader(lineReader));
+            addBlockReader(new MasterCONReader(lineReader));
+            addBlockReader(new MasterTSAReader(lineReader));
+            addBlockReader(new MasterTLSReader(lineReader));
         }
     }
 

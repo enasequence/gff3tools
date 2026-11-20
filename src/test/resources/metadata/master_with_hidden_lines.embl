@@ -1,0 +1,30 @@
+ID   CAXMYH010000000; SV 1; linear; genomic DNA; SET; INV; 12 BP.
+XX
+AC   CAXMYH010000000; AB000001;
+XX
+AC * _scaffold_1
+XX
+PR   Project:PRJEB12345;
+XX
+DE   Tribolium castaneum genome assembly
+XX
+OS   Tribolium castaneum
+OC   Eukaryota; Metazoa; Arthropoda; Insecta; Coleoptera; Tenebrionidae;
+OC   Tribolium.
+XX
+ST * private 01-JAN-2030
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..12
+FT                   /organism="Tribolium castaneum"
+FT                   /mol_type="genomic DNA"
+FT                   /db_xref="taxon:7070"
+XX
+WGS  CAXMYH010000001-CAXMYH010000009
+XX
+CO   join(CAXMYH010000001.1:1..6,gap(6))
+XX
+SQ   Sequence 12 BP; 3 A; 3 C; 3 G; 3 T; 0 other;
+     acgtacgtac gt                                                            12
+//
