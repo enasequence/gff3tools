@@ -1,0 +1,40 @@
+ID   A00001; SV 1; linear; unassigned DNA; PAT; VRL; 335 BP.
+XX
+AC   A00001;
+XX
+DT   28-JAN-1993 (Rel. 34, Created)
+DT   01-SEP-2018 (Rel. 137, Last updated, Version 4)
+XX
+DE   Cauliflower mosaic virus satellite cDNA
+XX
+KW   .
+XX
+OS   Cauliflower mosaic virus
+OC   Viruses; Ortervirales; Caulimoviridae; Caulimovirus.
+XX
+RN   [1]
+RP   1-335
+RA   Baulcombe D.C., Mayo M.A., Harrison B.D., Bevan M.W.;
+RT   "Modification of plant viruses or their effects.";
+RL   Patent number EP0242016-A1/1, 21-OCT-1987.
+RL   AGRICULTURAL GENETICS COMPANY LIMITED.
+XX
+DR   MD5; b42f821113c5f1d4fa7ea2b935e74216.
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..335
+FT                   /organism="Cauliflower mosaic virus"
+FT                   /mol_type="unassigned DNA"
+FT                   /db_xref="taxon:10641"
+FT   misc_feature    1..335
+FT                   /note="satellite DNA"
+XX
+SQ   Sequence 335 BP; 69 A; 82 C; 95 G; 89 T; 0 other;
+     gttttgtttg atggagaatt gcgcagaggg gttatatctg cgtgaggatc tgtcactcgg        60
+     cggtgtggga tacctccctg ctaaggcggg ttgagtgatg ttccctcgga ctggggaccg       120
+     ctggcttgcg agctatgtcc gctactctca gtactacact ctcatttgag cccccgctca       180
+     gtttgctagc agaacccggc acatggttcg ccgataccat ggaatttcga aagaaacact       240
+     ctgttaggtg gtatgagtca tgacgcacgc agggagaggc taaggcttat gctatgctga       300
+     tctccgtgaa tgtctatcat tcctacacag gaccc                                  335
+//

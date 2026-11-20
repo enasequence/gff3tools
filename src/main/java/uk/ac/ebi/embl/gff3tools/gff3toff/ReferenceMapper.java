@@ -401,6 +401,11 @@ public final class ReferenceMapper {
         for (String token : component.trim().split("\\s+")) {
             for (String sub : token.split("\\.")) {
                 if (sub.isEmpty()) continue;
+                // hyphenated initials ("Y.-M.") keep their hyphen
+                if (sub.length() > 1 && sub.charAt(0) == '-') {
+                    sb.append('-');
+                    sub = sub.substring(1);
+                }
                 sb.append(Character.toUpperCase(sub.charAt(0))).append('.');
             }
         }

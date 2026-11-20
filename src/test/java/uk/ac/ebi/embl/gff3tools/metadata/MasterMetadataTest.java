@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import java.io.InputStream;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class MasterMetadataTest {
@@ -61,7 +62,7 @@ class MasterMetadataTest {
             // Publications (DR lines)
             assertNotNull(meta.getPublications());
             assertEquals(1, meta.getPublications().size());
-            assertEquals("SAMEA12345", meta.getPublications().get(0).getId());
+            assertEquals("SAMEA12345", meta.getPublications().get(0).getPrimaryId());
             assertEquals("BioSample", meta.getPublications().get(0).getSource());
 
             // References (RN/RG/RA/RT/RL lines) — uses "number" and "group" aliases
@@ -141,6 +142,21 @@ class MasterMetadataTest {
         assertEquals(
                 "Fernandes", reference.getSubmitterDetails().getAuthors().get(0).getSurname());
         assertEquals("M.", reference.getSubmitterDetails().getAuthors().get(1).getMiddleName());
+    }
+
+    @Test
+    void publicationIdsAreReadUnderCurrentAndLegacyNames() throws Exception {
+        String json = "{\"publications\":["
+                + "{\"source\":\"EuropePMC\",\"primaryId\":\"PMC1\",\"secondaryId\":\"11\"},"
+                + "{\"source\":\"EuropePMC\",\"id\":\"PMC2\"},"
+                + "{\"source\":\"EuropePMC\",\"pid\":\"PMC3\",\"sid\":\"33\"}]}";
+        List<CrossReference> publications =
+                MAPPER.readValue(json, MasterMetadata.class).getPublications();
+        assertEquals("PMC1", publications.get(0).getPrimaryId());
+        assertEquals("11", publications.get(0).getSecondaryId());
+        assertEquals("PMC2", publications.get(1).getPrimaryId());
+        assertEquals("PMC3", publications.get(2).getPrimaryId());
+        assertEquals("33", publications.get(2).getSecondaryId());
     }
 
     @Test

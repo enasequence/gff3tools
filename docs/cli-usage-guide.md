@@ -128,6 +128,17 @@ $GFF3TOOLS conversion -m master.json OZ026791.embl OZ026791.gff3
 $GFF3TOOLS conversion -m master.embl OZ026791.embl OZ026791.gff3
 ```
 
+### Master entry output (`--output-master-entry` / `-om`)
+
+An EMBL to GFF3 conversion can write a master entry JSON describing the input as a
+by-product. The file follows the same schema `--master-entry` reads, so the output can be
+converted back to EMBL later. It is written only when the conversion succeeds and describes
+the first entry when the input holds several.
+
+```bash
+$GFF3TOOLS conversion -f embl -t gff3 --output-master-entry master.json OZ026791.embl OZ026791.gff3
+```
+
 ### Sequence sources (`--sequence`)
 
 Sequence data is required for validations that check nucleotide content (e.g. translation

@@ -1,0 +1,85 @@
+ID   HE820743; SV 1; linear; mRNA; STD; PLN; 1467 BP.
+XX
+AC   HE820743;
+XX
+DT   29-MAY-2012 (Rel. 112, Created)
+DT   29-MAY-2012 (Rel. 112, Last updated, Version 1)
+XX
+DE   Hordeum vulgare mRNA for amino acid permease (aap2 gene), cultivar Barke,
+DE   clone HI06K20
+XX
+KW   .
+XX
+OS   Hordeum vulgare
+OC   Eukaryota; Viridiplantae; Streptophyta; Embryophyta; Tracheophyta;
+OC   Spermatophyta; Magnoliophyta; Liliopsida; Poales; Poaceae; BEP clade;
+OC   Pooideae; Triticeae; Hordeum.
+XX
+RN   [1]
+RP   1-1467
+RA   Kohl S.;
+RT   ;
+RL   Submitted (25-MAY-2012) to the INSDC.
+RL   Molecular Genetics / Seed Development, IPK, Corrensstr. 3, 06466
+RL   Gatersleben, GERMANY.
+XX
+RN   [2]
+RA   Seiler C.S.;
+RT   "Funktionelle Charakterisierung von Peptid- und Aminosauretransportern in
+RT   Leguminosen und Gerste in Relation zur Proteinakkumulation im Samen";
+RL   Thesis (2008), IPK Gatersleben.
+XX
+FH   Key             Location/Qualifiers
+FH
+FT   source          1..1467
+FT                   /organism="Hordeum vulgare"
+FT                   /cultivar="Barke"
+FT                   /mol_type="mRNA"
+FT                   /clone="HI06K20"
+FT                   /db_xref="taxon:4513"
+FT   CDS             1..1467
+FT                   /codon_start=1
+FT                   /transl_table=1
+FT                   /gene="aap2"
+FT                   /product="amino acid permease"
+FT                   /function="amino acid transport"
+FT                   /experiment="functional characterization by yeast
+FT                   complementation"
+FT                   /protein_id="CCI51007.1"
+FT                   /translation="MGQNGVGKNYYQGTAAAAMEVSSVEHGQAAASKCYDDDGRLKRTG
+FT                   TMWTASAHIITAVIGSGVLSLAWAIGQLGWVAGPAVMLLFSLVTYYTSSLLSDCYRSGD
+FT                   ETTGKRNYTYMDAVNANLSGIKVQLCGFLQYANIVGVAIGYTIAASISMLAIKKANCFH
+FT                   VKGHVNPCHISSTPYMIIFGVAEIFFSQIPDFDQISWLSILAAIMSFTYSIIGLSLGIV
+FT                   QVVANKGVKGSLTGISIGVVTPMDKVWRSLQAFGDIAFAYSYSLILIEIQDTIRAPPPS
+FT                   ESKVMRRATVVSVATTTLFYMLCGCMGYAAFGDNAPGNLLTGFGFYEPFWLLDIANAAI
+FT                   VVHLVGAYQVYCQPLFAFVEKWAQQRWPKSRFITGEIQVPLISSGFKINLFRLTWRSAF
+FT                   VVATTVVSMLLPFFNDVVGFLGAIGFWPLTVYFARGDVHCAEEDTQVELTVGVPPAAQP
+FT                   RLPNHHHCCRRRIHRRDNVRSKGLQAFLHD"
+XX
+SQ   Sequence 1467 BP; 253 A; 526 C; 402 G; 286 T; 0 other;
+     atggggcaga acggcgtggg caagaactac tatcagggga cggcggcggc ggccatggag        60
+     gtgtcctccg tggagcacgg ccaggcggcg gcctccaagt gctacgacga cgacggccgc       120
+     ctcaagcgca ccgggacgat gtggacggcg agcgcccaca tcatcacggc ggtgatcggg       180
+     tccggggtgc tgtcgctggc ctgggccatc gggcagctcg gctgggtggc cggccccgcc       240
+     gtcatgctgc tcttctccct cgtcacctac tacacctcct cgctgctctc cgactgctac       300
+     cgctccggcg acgaaaccac cggcaagcgt aactacacct acatggacgc cgtcaacgcc       360
+     aacctcagtg gcatcaaggt ccagctctgc gggttcctgc agtacgccaa catcgtcggc       420
+     gtcgccatcg gatacaccat cgccgcctcc attagcatgc ttgcgatcaa gaaggccaac       480
+     tgcttccacg tcaaggggca cgtgaacccg tgccacatct cgagcacgcc ctacatgatc       540
+     atcttcggcg tggcggagat cttcttctcc cagatcccgg acttcgacca gatctcctgg       600
+     ctctccatcc tggctgccat catgtccttc acttactcca tcatcggcct cagcctcggc       660
+     atcgtccagg tggtcgccaa caagggcgtc aagggcagcc tcaccggcat cagcatcggc       720
+     gtcgtcacgc ccatggacaa ggtgtggcgg agcctccagg cgttcggtga catcgccttc       780
+     gcttactcct actccctcat cctcatcgag atccaggaca ccatcagggc gccaccgccg       840
+     tccgagtcca aggtcatgcg ccgcgccacc gtcgtcagcg tcgccaccac cacgctcttc       900
+     tacatgctct gcggctgcat gggctacgcc gccttcggcg acaacgcccc cgggaacctc       960
+     ctcacaggct tcggcttcta cgagcccttc tggctcctcg acatcgccaa cgccgccatc      1020
+     gtcgtccacc tcgtcggcgc ctaccaggtt tactgccagc ccctgttcgc cttcgtggag      1080
+     aagtgggcgc agcagaggtg gcccaagtcc cggttcatca ccggagagat ccaggtcccg      1140
+     ctcatctcct ccggcttcaa gatcaacctc ttccgcctga cgtggcggtc cgcgttcgtg      1200
+     gtggccacga cggtggtgtc gatgctgctg ccattcttca acgacgtcgt ggggttcctc      1260
+     ggcgccatcg ggttctggcc actcaccgtc tacttcgccc gtggagatgt acattgtgca      1320
+     gaagaagata cccaagtgga gctcacagtg ggtgtgcctc cagctgctca gcctcgcctg      1380
+     cctaatcatc accattgctg ccgccgccgg atccatcgcc gggataatgt ccgatctaaa      1440
+     ggtctacaag cctttctcca cgactga                                          1467
+//

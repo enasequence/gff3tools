@@ -539,11 +539,16 @@ public class GFF3Mapper {
             }
         }
 
-        // Version: ID line version and DT line version
+        // Version: ID line version (SV) and DT line version. The sequence-region version wins for
+        // the ID line, then the master's sequenceVersion, then (masters written before that field
+        // existed) its entry version.
         if (m.getVersion() != null) {
             entry.setVersion(m.getVersion());
-            if (sequenceRegion.accessionVersion().isEmpty()) {
-                sequence.setVersion(m.getVersion());
+        }
+        if (sequenceRegion.accessionVersion().isEmpty()) {
+            Integer sequenceVersion = m.getSequenceVersion() != null ? m.getSequenceVersion() : m.getVersion();
+            if (sequenceVersion != null) {
+                sequence.setVersion(sequenceVersion);
             }
         }
 
@@ -660,8 +665,10 @@ public class GFF3Mapper {
         // Publications (e.g., BioSample). BioProject is skipped — handled via project → PR line.
         if (m.getPublications() != null) {
             for (CrossReference pub : m.getPublications()) {
-                if (pub.getSource() != null && pub.getId() != null && !"BioProject".equalsIgnoreCase(pub.getSource())) {
-                    entry.addXRef(new XRef(pub.getSource(), pub.getId()));
+                if (pub.getSource() != null
+                        && pub.getPrimaryId() != null
+                        && !"BioProject".equalsIgnoreCase(pub.getSource())) {
+                    entry.addXRef(new XRef(pub.getSource(), pub.getPrimaryId(), pub.getSecondaryId()));
                 }
             }
         }
