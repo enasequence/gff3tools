@@ -363,6 +363,21 @@ public class GFF3TranslationReaderTest {
         return block.array();
     }
 
+    @Test
+    void readTranslationAfterNoFastaSectionThrowsReadExceptionNotNPE() throws Exception {
+        // File has no ##FASTA section → readTranslationOffset returns empty map, fastaReader stays null
+        Path noFasta = Files.createTempFile("no_fasta", ".gff3");
+        try {
+            Files.writeString(noFasta, "##gff-version 3\nchr1\t.\tgene\t1\t100\t.\t+\t.\tID=g1\n");
+            GFF3TranslationReader r = new GFF3TranslationReader(mockEngine, noFasta);
+            r.readTranslationOffset(); // returns empty map; fastaReader = null
+            // calling readTranslation now should throw ReadException, not NullPointerException
+            Assertions.assertThrows(ReadException.class, () -> r.readTranslation(1L));
+        } finally {
+            Files.deleteIfExists(noFasta);
+        }
+    }
+
     private static ListAppender<ILoggingEvent> captureLogs() {
         ListAppender<ILoggingEvent> appender = new ListAppender<>();
         appender.start();

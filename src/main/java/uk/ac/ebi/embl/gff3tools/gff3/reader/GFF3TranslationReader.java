@@ -108,8 +108,16 @@ public class GFF3TranslationReader implements AutoCloseable {
      * Reads the translation sequence for the given {@link FastaReader} entry id,
      * with newlines stripped and the result uppercased. A zero-base entry yields
      * an empty string.
+     *
+     * <p>Must be called only after {@link #readTranslationOffset()} returns a non-empty map;
+     * {@code fastaReader} is not initialised when no {@code ##FASTA} section was found.
      */
     public String readTranslation(Long id) throws ReadException {
+        if (fastaReader == null) {
+            throw new ReadException(
+                    "Cannot read translation from " + gff3Path + ": no FASTA section was found",
+                    new IOException("fastaReader is not initialised"));
+        }
         SequenceIndex idx = fastaReader.getSequenceIndex(id);
         long n = idx.totalBases();
         if (n == 0) {
