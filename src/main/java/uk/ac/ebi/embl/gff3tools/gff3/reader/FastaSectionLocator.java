@@ -17,7 +17,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.OptionalLong;
 
 /**
  * Locates the byte offset of the first FASTA-side line (the {@code ##FASTA}
@@ -40,17 +39,16 @@ public final class FastaSectionLocator {
 
     /**
      * Returns the byte offset of the first FASTA-side line in {@code gff3Path},
-     * or an empty result if the file has no FASTA-side line anywhere. The
-     * returned offset is guaranteed to be at or before the first {@code >}
-     * header byte in the file.
+     * or {@code -1} if the file has no FASTA-side line anywhere. The returned
+     * offset is guaranteed to be at or before the first {@code >} header byte.
      */
-    public static OptionalLong locate(Path gff3Path) throws IOException {
+    public static long locate(Path gff3Path) throws IOException {
         try (SeekableByteChannel channel = Files.newByteChannel(gff3Path, StandardOpenOption.READ)) {
             return locate(channel);
         }
     }
 
-    static OptionalLong locate(SeekableByteChannel channel) throws IOException {
+    static long locate(SeekableByteChannel channel) throws IOException {
         long fileSize = channel.size();
 
         long lo = 0;
@@ -99,7 +97,7 @@ public final class FastaSectionLocator {
             }
         }
 
-        return fastaSideSeen ? OptionalLong.of(boundary) : OptionalLong.empty();
+        return fastaSideSeen ? boundary : -1L;
     }
 
     private enum Classification {

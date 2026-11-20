@@ -15,7 +15,6 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.OptionalLong;
 import java.util.TreeMap;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.fastareader.FastaReader;
@@ -80,13 +79,12 @@ public class GFF3TranslationReader implements AutoCloseable {
         }
 
         try {
-            OptionalLong boundary = FastaSectionLocator.locate(gff3Path);
-            if (boundary.isEmpty()) {
+            long boundary = FastaSectionLocator.locate(gff3Path);
+            if (boundary < 0) {
                 return offsetMap;
             }
 
-            fastaReader =
-                    new FastaReader(gff3Path.toFile(), SequenceAlphabet.defaultProteinAlphabet(), boundary.getAsLong());
+            fastaReader = new FastaReader(gff3Path.toFile(), SequenceAlphabet.defaultProteinAlphabet(), boundary);
         } catch (FastaFileException | IOException | UncheckedIOException e) {
             throw new ReadException(
                     "Error reading translations from " + gff3Path + ": " + rootCauseMessage(e),
