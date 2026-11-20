@@ -31,7 +31,6 @@ import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3FileFactory;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 
@@ -177,7 +176,7 @@ public class GFF3FileReaderTest {
                 // read every annotation, including the featureless ACC2.1
             }
 
-            Map<String, OffsetRange> translations = gff3Reader.getTranslationOffsetMap();
+            Map<String, Long> translations = gff3Reader.getTranslationOffsetMap();
             assertEquals(Set.of("ACC1.1|CDS_1"), translations.keySet());
             assertEquals("MKP", gff3Reader.getTranslation(translations.get("ACC1.1|CDS_1")));
         }
