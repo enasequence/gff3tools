@@ -31,8 +31,10 @@ import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3FileFactory;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
+import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3TranslationReader;
 import uk.ac.ebi.embl.gff3tools.validation.*;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 public class GFF3FileReaderTest {
 
@@ -737,6 +739,117 @@ public class GFF3FileReaderTest {
         }
     }
 
+    // ---tests for ##FASTA translations reaching TranslationState while the file is read
+
+    @Test
+    void translationReader_isInContextBeforeAnyFeatureIsRead(@TempDir Path tempDir) throws Exception {
+        Path gff3 = writeGff3(tempDir, "input.gff3", "seq1\t.\tCDS\t1\t18\t.\t+\t0\tID=cds1\n", ">seq1|cds1\nMKFGP\n");
+        ValidationEngine engine = getValidationEngine();
+
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(engine, gff3)) {
+            // Nothing read yet, not even the header: the stream is nowhere near ##FASTA.
+            assertTrue(engine.getContext().contains(GFF3TranslationReader.class));
+            assertEquals(
+                    Optional.of("MKFGP"),
+                    engine.getContext().get(GFF3TranslationReader.class).getTranslation("seq1", "cds1"));
+        }
+    }
+
+    @Test
+    void cdsAboveFasta_recordsTheFastaProteinAsOldTranslation(@TempDir Path tempDir) throws Exception {
+        Path gff3 =
+                writeGff3(tempDir, "input.gff3", "seq1\t.\tCDS\t1\t18\t.\t+\t0\tID=cds1\n", ">seq1|cds1\nMKF\ngp\n");
+        ValidationEngine engine = getValidationEngine();
+
+        TranslationState state = readAll(engine, gff3);
+
+        // Read as FastaReader serves it: lines joined, upper-cased.
+        assertEquals(
+                "MKFGP", state.get(TranslationState.buildKey("seq1", "cds1")).oldTranslation());
+    }
+
+    @Test
+    void cdsWithAttributeAndDifferentFasta_fastaWinsAndMismatchIsWarned(@TempDir Path tempDir) throws Exception {
+        Path gff3 = writeGff3(
+                tempDir,
+                "input.gff3",
+                "seq1\t.\tCDS\t1\t18\t.\t+\t0\tID=cds1;translation=MKWWW\n",
+                ">seq1|cds1\nMKFGP\n");
+        ValidationEngine engine = getValidationEngine();
+
+        TranslationState state = readAll(engine, gff3);
+
+        assertEquals(
+                "MKFGP", state.get(TranslationState.buildKey("seq1", "cds1")).oldTranslation());
+        assertEquals(
+                1,
+                engine.getParsingWarnings().stream()
+                        .filter(w -> "TRANSLATION_ATTRIBUTE_FASTA_MISMATCH".equals(w.getValidationRule()))
+                        .count());
+    }
+
+    @Test
+    void fastaRecordsInAnyOrder_eachCdsGetsItsOwnProtein(@TempDir Path tempDir) throws Exception {
+        Path gff3 = writeGff3(
+                tempDir,
+                "input.gff3",
+                "seq1\t.\tCDS\t1\t18\t.\t+\t0\tID=cds1\n" + "##sequence-region seq2 1 30\n"
+                        + "seq2\t.\tCDS\t1\t18\t.\t+\t0\tID=cds2\n",
+                ">seq2|cds2\nMSEQ\n>seq1|cds1\nMFIRST\n");
+        ValidationEngine engine = getValidationEngine();
+
+        TranslationState state = readAll(engine, gff3);
+
+        assertEquals(
+                "MFIRST", state.get(TranslationState.buildKey("seq1", "cds1")).oldTranslation());
+        assertEquals(
+                "MSEQ", state.get(TranslationState.buildKey("seq2", "cds2")).oldTranslation());
+    }
+
+    @Test
+    void featureIdWithReservedCharacter_matchesItsEncodedHeader(@TempDir Path tempDir) throws Exception {
+        // The ID is cds;1, written encoded in column 9 and in the header, as our own output writes it.
+        Path gff3 = writeGff3(
+                tempDir, "input.gff3", "seq1\t.\tCDS\t1\t18\t.\t+\t0\tID=cds%3B1\n", ">seq1|cds%3B1\nMKFGP\n");
+        ValidationEngine engine = getValidationEngine();
+
+        TranslationState state = readAll(engine, gff3);
+
+        assertEquals(
+                "MKFGP", state.get(TranslationState.buildKey("seq1", "cds;1")).oldTranslation());
+    }
+
+    @Test
+    void secondReaderOnTheSameEngine_replacesTheFirstInTheContext(@TempDir Path tempDir) throws Exception {
+        Path first =
+                writeGff3(tempDir, "first.gff3", "seq1\t.\tCDS\t1\t18\t.\t+\t0\tID=cds1\n", ">seq1|cds1\nMFIRST\n");
+        Path second =
+                writeGff3(tempDir, "second.gff3", "seq1\t.\tCDS\t1\t18\t.\t+\t0\tID=cds1\n", ">seq1|cds1\nMSECOND\n");
+        ValidationEngine engine = getValidationEngine();
+
+        try (GFF3FileReader firstReader = new GFF3FileReader(engine, first);
+                GFF3FileReader secondReader = new GFF3FileReader(engine, second)) {
+            assertEquals(
+                    Optional.of("MSECOND"),
+                    engine.getContext().get(GFF3TranslationReader.class).getTranslation("seq1", "cds1"));
+        }
+    }
+
+    @Test
+    void unreadableFasta_readingContinuesAndTheAttributeIsRecorded(@TempDir Path tempDir) throws Exception {
+        Path gff3 = writeGff3(
+                tempDir,
+                "input.gff3",
+                "seq1\t.\tCDS\t1\t18\t.\t+\t0\tID=cds1;translation=MKWWW\n",
+                ">seq1|cds1\nMK1GP\n");
+        ValidationEngine engine = getValidationEngine();
+
+        TranslationState state = readAll(engine, gff3);
+
+        assertEquals(
+                "MKWWW", state.get(TranslationState.buildKey("seq1", "cds1")).oldTranslation());
+    }
+
     private String getAttributeString(Map<String, List<String>> attributes) throws WriteException, IOException {
         try (StringWriter gff3Writer = new StringWriter()) {
             GFF3Annotation annotation = new GFF3Annotation();
@@ -747,5 +860,24 @@ public class GFF3FileReaderTest {
             // retutn only attributes
             return gff3Writer.toString().split("\t")[8].trim();
         }
+    }
+
+    /** A GFF3 file with one {@code seq1} region, the given feature lines and a ##FASTA section. */
+    private static Path writeGff3(Path dir, String name, String featureLines, String fastaSection) throws IOException {
+        Path gff3 = dir.resolve(name);
+        Files.writeString(
+                gff3, "##gff-version 3\n##sequence-region seq1 1 30\n" + featureLines + "##FASTA\n" + fastaSection);
+        return gff3;
+    }
+
+    /** Reads the whole file through the engine and returns the engine's TranslationState. */
+    private static TranslationState readAll(ValidationEngine engine, Path gff3) throws Exception {
+        try (GFF3FileReader gff3Reader = new GFF3FileReader(engine, gff3)) {
+            gff3Reader.readHeader();
+            while (gff3Reader.readAnnotation() != null) {
+                // every feature and annotation goes through the engine
+            }
+        }
+        return engine.getContext().get(TranslationState.class);
     }
 }

@@ -716,4 +716,98 @@ public class ValidationCommandTest {
                     "Sibling method PRODUCT_WITH_EC_NUMBER must not be affected by the EC_NUMBER class-name collision");
         }
     }
+
+    // ---tests for submitted ##FASTA translations, end to end
+
+    @Test
+    void validation_wrongFastaWithSequence_failsReportOnlyAndWithOutput() throws Exception {
+        Path fasta = writeCdsSequence();
+        Path gff3 = writeCdsGff3("", ">seq1|cds1\n" + WRONG_TRANSLATION + "\n");
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        assertEquals(20, executeValidation("validation", "--sequence", fasta.toString(), gff3.toString()));
+        assertEquals(
+                20,
+                executeValidation(
+                        "validation", "--sequence", fasta.toString(), gff3.toString(), outputFile.toString()));
+    }
+
+    @Test
+    void validation_attributeWrongFastaRightWithSequence_passesAndWritesTheFastaProtein() throws Exception {
+        Path fasta = writeCdsSequence();
+        Path gff3 = writeCdsGff3(";translation=" + WRONG_TRANSLATION, ">seq1|cds1\n" + RIGHT_TRANSLATION + "\n");
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode =
+                executeValidation("validation", "--sequence", fasta.toString(), gff3.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "the mismatch is only a warning");
+        String content = Files.readString(outputFile);
+        assertTrue(content.contains(">seq1|cds1\n" + RIGHT_TRANSLATION), content);
+        assertFalse(content.contains(WRONG_TRANSLATION), content);
+    }
+
+    @Test
+    void validation_exceptionCdsWithSequence_keepsTheSubmittedProtein() throws Exception {
+        Path fasta = writeCdsSequence();
+        Path gff3 = writeCdsGff3(";exception=ribosomal slippage", ">seq1|cds1\n" + WRONG_TRANSLATION + "\n");
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode =
+                executeValidation("validation", "--sequence", fasta.toString(), gff3.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "an exception CDS is not translated, so its protein is accepted");
+        assertTrue(Files.readString(outputFile).contains(">seq1|cds1\n" + WRONG_TRANSLATION));
+    }
+
+    @Test
+    void validation_wrongFastaWithoutSequence_passesAndWritesTheSubmittedProtein() throws Exception {
+        Path gff3 = writeCdsGff3("", ">seq1|cds1\n" + WRONG_TRANSLATION + "\n");
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode = executeValidation("validation", gff3.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "without sequences nothing is generated, so nothing is compared");
+        assertTrue(Files.readString(outputFile).contains(">seq1|cds1\n" + WRONG_TRANSLATION));
+    }
+
+    @Test
+    void validation_unreadableFasta_failsOnlyWhenOutputIsWritten() throws Exception {
+        Path fasta = writeCdsSequence();
+        Path gff3 = writeCdsGff3("", ">seq1|cds1\nMF1F\n");
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        assertEquals(
+                0,
+                executeValidation("validation", "--sequence", fasta.toString(), gff3.toString()),
+                "report-only runs don't report an unreadable ##FASTA yet");
+        assertEquals(
+                11,
+                executeValidation("validation", "--sequence", fasta.toString(), gff3.toString(), outputFile.toString()),
+                "writing the output reads ##FASTA and fails");
+    }
+
+    private static final String RIGHT_TRANSLATION = "MFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
+    private static final String WRONG_TRANSLATION = "MKKKKKKKKKKKKKKKKKKKKKKKKKKKKK";
+
+    /** The sequence of {@code seq1}: ATG, 29 TTT codons and TAA (1-93) translate to {@link #RIGHT_TRANSLATION}. */
+    private Path writeCdsSequence() throws IOException {
+        Path fasta = tempDir.resolve("cds.fasta");
+        Files.writeString(
+                fasta,
+                ">seq1 | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n" + "ATG"
+                        + "TTT".repeat(29) + "TAA" + "TTTTTTT\n");
+        return fasta;
+    }
+
+    /** One CDS {@code cds1} over {@code seq1} 1-93, with extra column-9 attributes and a ##FASTA section. */
+    private Path writeCdsGff3(String extraAttributes, String fastaSection) throws IOException {
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                "##gff-version 3\n##sequence-region seq1 1 100\n"
+                        + "seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1" + extraAttributes + "\n"
+                        + "##FASTA\n" + fastaSection);
+        return gff3;
+    }
 }

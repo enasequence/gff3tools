@@ -83,6 +83,59 @@ public class TestUtils {
         };
     }
 
+    /**
+     * A {@link SequenceSource} serving the given sequences by seqId, gap-free. Unknown seqIds are
+     * reported as absent, so a composite lookup falls through as it does for a real FASTA file.
+     */
+    public static SequenceSource inMemorySequenceSource(Map<String, String> sequences) {
+        return new SequenceSource() {
+            @Override
+            public boolean hasSequence(String seqId) {
+                return sequences.containsKey(seqId);
+            }
+
+            @Override
+            public String getSequenceSlice(String seqId, long fromBase, long toBase, SequenceRangeOption option) {
+                return sequences.get(seqId).substring((int) fromBase - 1, (int) toBase);
+            }
+
+            @Override
+            public long getSequenceLength(String seqId, SequenceRangeOption option) {
+                return sequences.get(seqId).length();
+            }
+
+            @Override
+            public SequenceStats getSequenceStats(String seqId) {
+                String sequence = sequences.get(seqId);
+                Map<Character, Long> baseCount = new HashMap<>();
+                for (char base : sequence.toCharArray()) {
+                    baseCount.merge(base, 1L, Long::sum);
+                }
+                return new SequenceStats(sequence.length(), sequence.length(), 0L, 0L, baseCount);
+            }
+
+            @Override
+            public List<GapRegion> getGapRegions(String seqId, SequenceRangeOption option) {
+                return List.of();
+            }
+
+            @Override
+            public List<GapRegion> getGapRegions(String seqId, long fromBase, long toBase, SequenceRangeOption option) {
+                return List.of();
+            }
+
+            @Override
+            public Set<String> knownSeqIds() {
+                return sequences.keySet();
+            }
+
+            @Override
+            public Reader getSequenceSliceReader(String seqId, long fromBase, long toBase, SequenceRangeOption option) {
+                return new StringReader(getSequenceSlice(seqId, fromBase, toBase, option));
+            }
+        };
+    }
+
     public static final String DEFAULT_ACCESSION = "1234";
 
     public static BufferedReader getResourceReaderWithPath(String path) throws IOException {

@@ -15,7 +15,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,9 +26,6 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3TranslationReader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
-import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
-import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
-import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.GFF3TranslationReaderProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationStateProvider;
@@ -160,67 +156,6 @@ class TranslationAttributeFastaMismatchValidationTest {
         assertEquals("MKWWW", state.get(KEY).oldTranslation());
     }
 
-    // ---tests for TRANSLATION_ATTRIBUTE_FASTA_MISMATCH with REMOVE_TRANSLATION_ATTRIBUTE in one engine
-
-    @Test
-    void engine_ruleSeesAttributeBeforeFixRemovesIt() throws Exception {
-        ValidationEngine engine = engineBuilder().build();
-        fastaHas("MKFGP");
-        GFF3Feature feature = cds(CDS_ID, "MKWWW");
-
-        engine.validate(feature, LINE);
-
-        assertEquals(1, ruleCount(engine.getParsingWarnings()));
-        assertEquals(0, ruleCount(engine.getCollectedErrors()));
-        assertFalse(feature.hasAttribute(GFF3Attributes.TRANSLATION));
-        // The fix leaves the rule's ##FASTA translation alone.
-        assertEquals("MKFGP", stateOf(engine).get(KEY).oldTranslation());
-    }
-
-    @Test
-    void engine_ruleSetToError_reportsMismatchAsError() throws Exception {
-        ValidationEngine engine = engineBuilder()
-                .overrideMethodRules(Map.of(RULE, RuleSeverity.ERROR))
-                .build();
-        fastaHas("MKFGP");
-
-        engine.validate(cds(CDS_ID, "MKWWW"), LINE);
-
-        assertEquals(1, ruleCount(engine.getCollectedErrors()));
-        assertEquals(0, ruleCount(engine.getParsingWarnings()));
-        assertEquals("MKFGP", stateOf(engine).get(KEY).oldTranslation());
-    }
-
-    @Test
-    void engine_ruleOff_fixRecordsAttributeAsOnMain() throws Exception {
-        ValidationEngine engine = engineBuilder()
-                .overrideMethodRules(Map.of(RULE, RuleSeverity.OFF))
-                .build();
-        fastaHas("MKFGP");
-        GFF3Feature feature = cds(CDS_ID, "MKWWW");
-
-        engine.validate(feature, LINE);
-
-        assertEquals(0, ruleCount(engine.getParsingWarnings()));
-        assertFalse(feature.hasAttribute(GFF3Attributes.TRANSLATION));
-        assertEquals("MKWWW", stateOf(engine).get(KEY).oldTranslation());
-    }
-
-    @Test
-    void engine_fixOff_ruleStillRecordsAndWarns() throws Exception {
-        ValidationEngine engine = engineBuilder()
-                .overrideMethodFixs(Map.of("REMOVE_TRANSLATION_ATTRIBUTE", false))
-                .build();
-        fastaHas("MKFGP");
-        GFF3Feature feature = cds(CDS_ID, "MKWWW");
-
-        engine.validate(feature, LINE);
-
-        assertEquals(1, ruleCount(engine.getParsingWarnings()));
-        assertTrue(feature.hasAttribute(GFF3Attributes.TRANSLATION));
-        assertEquals("MKFGP", stateOf(engine).get(KEY).oldTranslation());
-    }
-
     private void fastaHas(String translation) {
         try {
             when(reader.getTranslation(ACCESSION, CDS_ID)).thenReturn(Optional.of(translation));
@@ -235,26 +170,5 @@ class TranslationAttributeFastaMismatchValidationTest {
             feature.setAttributeList(GFF3Attributes.TRANSLATION, List.of(translationAttribute));
         }
         return feature;
-    }
-
-    /**
-     * The engine as the CLI builds it: every rule, fix and provider found on the classpath, with only
-     * the ##FASTA reader replaced by the mock. Other rules may report on the bare test CDS, so the
-     * engine tests count only this rule's reports.
-     */
-    private ValidationEngineBuilder engineBuilder() {
-        return new ValidationEngineBuilder()
-                .withProvider(new GFF3TranslationReaderProvider(reader))
-                .failFast(false);
-    }
-
-    private static long ruleCount(List<ValidationException> reports) {
-        return reports.stream()
-                .filter(report -> RULE.equals(report.getValidationRule()))
-                .count();
-    }
-
-    private static TranslationState stateOf(ValidationEngine engine) {
-        return engine.getContext().get(TranslationState.class);
     }
 }
