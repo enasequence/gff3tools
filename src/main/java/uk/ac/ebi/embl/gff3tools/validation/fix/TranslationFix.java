@@ -63,11 +63,23 @@ public class TranslationFix {
             priority = ValidationPriority.HIGH)
     public void fixFeature(GFF3Feature feature, int line) {
         String featureId = feature.getId().orElse(null);
+
         // The ##FASTA protein wins over the translation attribute: in a submitted GFF3 that is
         // where we expect it, while the attribute mostly comes from flat-file conversion.
         String translationInAttribute =
                 feature.getAttribute(GFF3Attributes.TRANSLATION).orElse(null);
         String translationInGff3Fasta = lookupFastaTranslation(feature.accession(), featureId);
+        if (translationInGff3Fasta != null
+                && translationInAttribute != null
+                && !translationInGff3Fasta.equals(translationInAttribute)) {
+            //do not throw as FASTA translation takes precedence, but throw log describing the difference
+            log.error(
+                    "Line {}: the translation attribute of feature \"{}\" on \"{}\" differs from its ##FASTA "
+                            + "translation; the ##FASTA translation is used",
+                    line,
+                    featureId,
+                    feature.accession());
+        }
         String submittedTranslation = translationInGff3Fasta != null ? translationInGff3Fasta : translationInAttribute;
 
         if (submittedTranslation != null && context.contains(TranslationState.class)) {
