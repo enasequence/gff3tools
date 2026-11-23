@@ -14,7 +14,11 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.fastareader.FastaReader;
@@ -23,6 +27,7 @@ import uk.ac.ebi.embl.fastareader.sequenceutils.SequenceAlphabet;
 import uk.ac.ebi.embl.fastareader.sequenceutils.SequenceIndex;
 import uk.ac.ebi.embl.gff3tools.exception.NonExistingFile;
 import uk.ac.ebi.embl.gff3tools.exception.ReadException;
+import uk.ac.ebi.embl.gff3tools.gff3.TranslationKey;
 import uk.ac.ebi.embl.gff3tools.utils.GzipUtils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 
@@ -46,9 +51,71 @@ public class GFF3TranslationReader implements AutoCloseable {
     Path gff3Path;
     private FastaReader fastaReader;
 
+    // Built once per reader: readTranslationOffset opens a new FastaReader on every call.
+    private Map<String, Long> offsets;
+    private Map<String, Map<String, Long>> offsetsByAccession;
+    // A failed read is not retried for every CDS that asks; the same error is rethrown instead.
+    private ReadException offsetsFailure;
+
     public GFF3TranslationReader(ValidationEngine validationEngine, Path gff3Path) {
         this.validationEngine = validationEngine;
         this.gff3Path = gff3Path;
+    }
+
+    /**
+     * The {@code ##FASTA} header → entry id map, read on first use and reused for the reader's life.
+     */
+    public Map<String, Long> getTranslationOffsets() throws ReadException {
+        if (offsetsFailure != null) {
+            throw offsetsFailure;
+        }
+        if (offsets == null) {
+            try {
+                offsets = Collections.unmodifiableMap(readTranslationOffset());
+            } catch (ReadException e) {
+                offsetsFailure = e;
+                throw e;
+            }
+        }
+        return offsets;
+    }
+
+    /**
+     * The translations belonging to one accession, keyed as {@code accession|featureId}, in the
+     * offset map's order.
+     *
+     * <p>Grouped by the accession inside each header, never by position in the file: nothing
+     * guarantees the {@code ##FASTA} entries of one accession are contiguous. Accessions are matched
+     * exactly rather than by prefix, so {@code AB123.1} never claims the translations of
+     * {@code AB123.10}. Buckets are {@link LinkedHashMap}s filled in the offset map's own sorted
+     * order, so written output stays byte-stable across runs.
+     */
+    public Map<String, Long> getTranslationOffsetsForAccession(String accession) throws ReadException {
+        if (offsetsByAccession == null) {
+            Map<String, Map<String, Long>> byAccession = new HashMap<>();
+            for (Map.Entry<String, Long> entry : getTranslationOffsets().entrySet()) {
+                String entryAccession = TranslationKey.accessionOf(entry.getKey());
+                if (entryAccession != null) {
+                    byAccession
+                            .computeIfAbsent(entryAccession, key -> new LinkedHashMap<>())
+                            .put(entry.getKey(), entry.getValue());
+                }
+            }
+            offsetsByAccession = byAccession;
+        }
+        return offsetsByAccession.getOrDefault(accession, Map.of());
+    }
+
+    /**
+     * The submitted {@code ##FASTA} protein for one feature, or empty when the file has none for it.
+     * The header must match {@link TranslationKey#of(String, String)} exactly.
+     */
+    public Optional<String> getTranslation(String accession, String featureId) throws ReadException {
+        if (accession == null || featureId == null) {
+            return Optional.empty();
+        }
+        Long id = getTranslationOffsetsForAccession(accession).get(TranslationKey.of(accession, featureId));
+        return id == null ? Optional.empty() : Optional.of(readTranslation(id));
     }
 
     /**
