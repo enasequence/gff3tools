@@ -10,25 +10,39 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3.reader;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.lang.reflect.Field;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.zip.CRC32;
+import java.util.zip.Deflater;
+import java.util.zip.GZIPOutputStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
+import org.slf4j.LoggerFactory;
+import uk.ac.ebi.embl.fastareader.FastaReader;
+import uk.ac.ebi.embl.fastareader.sequenceutils.SequenceAlphabet;
+import uk.ac.ebi.embl.fastareader.sequenceutils.SequenceIndex;
+import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 
 public class GFF3TranslationReaderTest {
@@ -65,8 +79,8 @@ public class GFF3TranslationReaderTest {
     }
 
     @Test
-    void testReadTranslationOffset_ReturnsCorrectKeys() {
-        Map<String, OffsetRange> map = reader.readTranslationOffset();
+    void testReadTranslationOffset_ReturnsCorrectKeys() throws ReadException {
+        Map<String, Long> map = reader.readTranslationOffset();
 
         Assertions.assertEquals(2, map.size());
 
@@ -80,21 +94,8 @@ public class GFF3TranslationReaderTest {
     }
 
     @Test
-    void testOffsetsPointInsideFile() throws IOException {
-        Map<String, OffsetRange> map = reader.readTranslationOffset();
-
-        long fileSize = Files.size(tempFile);
-
-        for (OffsetRange r : map.values()) {
-            Assertions.assertTrue(r.start >= 0, "Start offset should be >= 0");
-            Assertions.assertTrue(r.end <= fileSize, "End offset should be within file");
-            Assertions.assertTrue(r.start < r.end, "Start should be < end");
-        }
-    }
-
-    @Test
-    void testReadingStopsAtFasta() {
-        Map<String, OffsetRange> map = reader.readTranslationOffset();
+    void testReadingStopsAtFasta() throws ReadException {
+        Map<String, Long> map = reader.readTranslationOffset();
 
         // Must NOT include markers or GFF content
         Assertions.assertFalse(map.containsKey("##FASTA"));
@@ -109,7 +110,7 @@ public class GFF3TranslationReaderTest {
         Files.write(file, content.getBytes());
 
         GFF3TranslationReader singleReader = new GFF3TranslationReader(mockEngine, file);
-        Map<String, OffsetRange> map = singleReader.readTranslationOffset();
+        Map<String, Long> map = singleReader.readTranslationOffset();
 
         Assertions.assertEquals(1, map.size());
         Assertions.assertTrue(map.containsKey("ID1"));
@@ -124,100 +125,268 @@ public class GFF3TranslationReaderTest {
 
         GFF3TranslationReader emptyReader = new GFF3TranslationReader(null, empty);
 
-        Map<String, OffsetRange> map = emptyReader.readTranslationOffset();
+        Map<String, Long> map = emptyReader.readTranslationOffset();
         Assertions.assertTrue(map.isEmpty());
 
         Files.delete(empty);
     }
 
     @Test
-    void testReadTranslationExtractsCorrectSequence() throws IOException {
+    void testNewlinesAreRemoved() throws ReadException {
+        Map<String, Long> map = reader.readTranslationOffset();
 
-        String file = Files.readString(tempFile);
-        int start = file.indexOf("TTTT");
-        int end = start + "TTTTGGGG\n".length() - 1;
-
-        OffsetRange r = new OffsetRange(start, end);
-
-        String seq = reader.readTranslation(r);
-        Assertions.assertEquals("TTTTGGGG", seq);
-    }
-
-    @Test
-    void testNewlinesAreRemoved() throws IOException {
-        String file = Files.readString(tempFile);
-        int start = file.indexOf("ATGC");
-        int end = start + "ATGCATGC\nATG\nATAT".length() - 1;
-
-        OffsetRange r = new OffsetRange(start, end);
-        String seq = reader.readTranslation(r);
+        String seq = reader.readTranslation(map.get("BN000065.1|CDS_RHX"));
 
         Assertions.assertFalse(seq.contains("\n"));
         Assertions.assertEquals("ATGCATGCATGATAT", seq);
     }
 
     @Test
-    void testInvalidSequenceTriggersValidationError() throws IOException, ValidationException {
-        // Inject an invalid character into the file
+    void testInvalidSequenceTriggersValidationError() throws IOException {
+        // Digit '1' is illegal for the protein alphabet, so FastaReader fails eagerly
+        // during map construction rather than lazily per read.
         Files.writeString(tempFile, ">IDBAD\nATGC1234\n", StandardOpenOption.TRUNCATE_EXISTING);
 
-        // Locate "ATGC1234"
-        String file = Files.readString(tempFile);
-        int start = file.indexOf("ATGC1234");
-        int end = start + "ATGC1234".length() - 1;
-
-        OffsetRange r = new OffsetRange(start, end);
-
-        reader.readTranslation(r);
-
-        verify(mockEngine, times(1)).handleSyntacticError(any());
+        Assertions.assertThrows(ReadException.class, () -> reader.readTranslationOffset());
     }
 
     @Test
-    void testEmptyRangeReturnsEmptyString() {
-        OffsetRange r = new OffsetRange(10, 9); // end < start
+    void testInvalidSequenceExceptionNamesIllegalCharacterAndPosition() throws IOException {
+        // '1' is byte offset 11 in this content, so the cause message must name both
+        // the offending character and its absolute file position.
+        Files.writeString(tempFile, ">IDBAD\nATGC1234\n", StandardOpenOption.TRUNCATE_EXISTING);
 
-        String seq = reader.readTranslation(r);
-        Assertions.assertEquals("", seq);
+        ReadException exception = Assertions.assertThrows(ReadException.class, () -> reader.readTranslationOffset());
+
+        Assertions.assertTrue(exception.getMessage().contains("Illegal character '1'"));
+        Assertions.assertTrue(exception.getMessage().contains("position 11"));
     }
 
     @Test
-    void testNoSequenceGff3() throws IOException, ValidationException {
-        // Inject an invalid character into the file
-        Files.writeString(tempFile, "id\tsource\t", StandardOpenOption.TRUNCATE_EXISTING);
+    void testZeroBaseTranslationReturnsEmptyString() throws Exception {
+        // FastaReader's normal load path cannot represent a zero-base entry (its
+        // internal scan advances past each entry via its last base byte, which is
+        // undefined for an entry with no bases), so the zero-base SequenceIndex is
+        // injected directly via FastaReader's index-reload constructor.
+        Path file = Files.createTempFile("zero_base", ".gff3");
+        Files.write(file, "placeholder".getBytes(StandardCharsets.UTF_8));
 
+        SequenceIndex zeroBaseIndex = new SequenceIndex();
+        zeroBaseIndex.lines = new ArrayList<>();
+        HashMap<Long, SequenceIndex> indexes = new HashMap<>();
+        indexes.put(1L, zeroBaseIndex);
+
+        FastaReader fastaReader =
+                new FastaReader(file.toFile(), SequenceAlphabet.defaultProteinAlphabet(), indexes, null);
+
+        GFF3TranslationReader zeroBaseReader = new GFF3TranslationReader(mockEngine, file);
+        Field fastaReaderField = GFF3TranslationReader.class.getDeclaredField("fastaReader");
+        fastaReaderField.setAccessible(true);
+        fastaReaderField.set(zeroBaseReader, fastaReader);
+
+        Assertions.assertEquals("", zeroBaseReader.readTranslation(1L));
+
+        Files.delete(file);
+    }
+
+    @Test
+    void testNoSequenceGff3() throws Exception {
         Path noSequence = Files.createTempFile("noSequence", ".gff3");
-        Files.write(
-                noSequence,
-                "id\tsource\tattribute\nid\tsource\tattribute".getBytes(StandardCharsets.UTF_8),
-                StandardOpenOption.TRUNCATE_EXISTING);
+        Files.write(noSequence, "id\tsource\tattribute\nid\tsource\tattribute".getBytes(StandardCharsets.UTF_8));
 
         GFF3TranslationReader emptyReader = new GFF3TranslationReader(null, noSequence);
 
-        Map<String, OffsetRange> map = emptyReader.readTranslationOffset();
+        Map<String, Long> map = emptyReader.readTranslationOffset();
         Assertions.assertTrue(map.isEmpty());
 
         Files.delete(noSequence);
     }
 
     @Test
-    void testInvalidTranslationSequenceGff3() throws IOException, ValidationException {
-        // Inject an invalid character into the file
-        Files.writeString(tempFile, "id\tsource\t", StandardOpenOption.TRUNCATE_EXISTING);
-
+    void testInvalidTranslationSequenceGff3() throws Exception {
+        // The malformed annotation line above the header is classified as
+        // annotation-side; the FastaReader opens at ">test_1", which contains only
+        // legal characters, so this now reads successfully with no throw.
         Path noSequence = Files.createTempFile("noSequence", ".gff3");
         Files.write(
                 noSequence,
-                "id\tsource\tattribute\nid\tsource\n>test_1\nATGCATGCATAT".getBytes(StandardCharsets.UTF_8),
-                StandardOpenOption.TRUNCATE_EXISTING);
+                "id\tsource\tattribute\nid\tsource\n>test_1\nATGCATGCATAT".getBytes(StandardCharsets.UTF_8));
 
         GFF3TranslationReader emptyReader = new GFF3TranslationReader(null, noSequence);
 
-        RuntimeException ex =
-                Assertions.assertThrows(RuntimeException.class, () -> emptyReader.readTranslationOffset());
+        Map<String, Long> map = Assertions.assertDoesNotThrow(emptyReader::readTranslationOffset);
 
-        Assertions.assertTrue(ex.getMessage().contains("Invalid GFF3 translation sequence:"));
+        Assertions.assertEquals(1, map.size());
+        Assertions.assertEquals("ATGCATGCATAT", emptyReader.readTranslation(map.get("test_1")));
 
         Files.delete(noSequence);
+    }
+
+    @Test
+    void testInvalidCharacterInFirstRecordIsReportedNotDropped() throws IOException {
+        // The byte layout matters: with three annotation rows the boundary search probes
+        // the "MKV1L" line directly. That line must not be mistaken for annotation, or the
+        // boundary lands on ">B" and record A is silently dropped instead of reported.
+        String row = "chr1\t.\tgene\t1\t100\t.\t+\t.\tID=g1\n";
+        String content = "##gff-version 3\n" + row.repeat(3) + "##FASTA\n>A\nMKV1L\n>B\nMKVL\n>C\nMKVL\n";
+        Files.writeString(tempFile, content, StandardOpenOption.TRUNCATE_EXISTING);
+
+        ReadException exception = Assertions.assertThrows(ReadException.class, () -> reader.readTranslationOffset());
+
+        Assertions.assertTrue(exception.getMessage().contains("Illegal character '1'"));
+        Assertions.assertTrue(exception.getMessage().contains("position 120"));
+    }
+
+    @Test
+    void testCommentLineInFastaSectionIsReportedNotDropped() throws IOException {
+        // With this byte layout the boundary search probes the "# comment" line directly.
+        // It must not be mistaken for annotation, or the boundary lands on ">B" and
+        // record A is silently dropped instead of the '#' line being reported.
+        String row = "chr1\t.\tgene\t1\t100\t.\t+\t.\tID=g1\n";
+        String content = "##gff-version 3\n" + row.repeat(3) + "##FASTA\n>A\nMKVL\n# comment\n>B\nMKVL\n>C\nMKVL\n";
+        Files.writeString(tempFile, content, StandardOpenOption.TRUNCATE_EXISTING);
+
+        ReadException exception = Assertions.assertThrows(ReadException.class, () -> reader.readTranslationOffset());
+
+        Assertions.assertTrue(exception.getMessage().contains("Illegal character '#'"));
+    }
+
+    @Test
+    void testGzippedFileIsSkippedWithWarning() throws IOException, ReadException {
+        // Offsets found by seeking in compressed bytes do not point into the decompressed text,
+        // so compressed input is not read at all: no translations, no failure, one warning.
+        writeGzipped(tempFile, Files.readAllBytes(tempFile));
+
+        ListAppender<ILoggingEvent> logs = captureLogs();
+        try {
+            Assertions.assertTrue(reader.readTranslationOffset().isEmpty());
+        } finally {
+            stopCapturingLogs(logs);
+        }
+
+        Assertions.assertTrue(
+                logs.list.stream()
+                        .anyMatch(e -> e.getLevel() == Level.WARN
+                                && e.getFormattedMessage().contains("The input file is compressed")),
+                "Expected a warning that compressed input is not read");
+    }
+
+    @Test
+    void testBgzippedFileIsSkipped() throws IOException, ReadException {
+        // FastaReader can open BGZF itself, but the boundary would still be searched for in the
+        // compressed bytes. With a file this size that offset lands inside the FASTA section and
+        // the first records are silently dropped, so BGZF is skipped like plain gzip.
+        StringBuilder content = new StringBuilder("##gff-version 3\n");
+        for (int i = 0; i < 50; i++) {
+            content.append("seq1\t.\tCDS\t1\t90\t.\t+\t0\tID=cds").append(i).append('\n');
+        }
+        content.append("##FASTA\n");
+        Random random = new Random(1);
+        String aminoAcids = "ACDEFGHIKLMNPQRSTVWY";
+        for (int i = 0; i < 500; i++) {
+            content.append(">seq1|cds").append(i).append('\n');
+            for (int line = 0; line < 5; line++) {
+                for (int j = 0; j < 60; j++) {
+                    content.append(aminoAcids.charAt(random.nextInt(aminoAcids.length())));
+                }
+                content.append('\n');
+            }
+        }
+        writeBgzipped(tempFile, content.toString().getBytes(StandardCharsets.US_ASCII));
+
+        Assertions.assertTrue(reader.readTranslationOffset().isEmpty());
+    }
+
+    @Test
+    void testDuplicateHeaderIsReportedNotOverwritten() throws IOException {
+        // Keeping either copy would silently pick a translation for the submitter.
+        Files.writeString(
+                tempFile,
+                "##FASTA\n>SEQ1|cds1\nMFIRST\n>SEQ2|cds2\nMKVL\n>SEQ1|cds1\nMSECND\n",
+                StandardOpenOption.TRUNCATE_EXISTING);
+
+        ReadException exception = Assertions.assertThrows(ReadException.class, () -> reader.readTranslationOffset());
+
+        Assertions.assertTrue(exception.getMessage().contains("\">SEQ1|cds1\" appears more than once"));
+    }
+
+    @Test
+    void testTabInFastaSectionIsReportedNotDropped() throws IOException {
+        // With this byte layout the boundary search probes the "MKVL\t" line directly. A tab
+        // alone must not mark it as annotation, or the boundary lands on ">B" and record A is
+        // silently dropped instead of the tab being reported.
+        String row = "chr1\t.\tgene\t1\t100\t.\t+\t.\tID=g1\n";
+        String content = "##gff-version 3\n" + row.repeat(3) + "##FASTA\n>A\nMKVL\t\n>B\nMKVL\n>C\nMKVL\n";
+        Files.writeString(tempFile, content, StandardOpenOption.TRUNCATE_EXISTING);
+
+        ReadException exception = Assertions.assertThrows(ReadException.class, () -> reader.readTranslationOffset());
+
+        Assertions.assertTrue(exception.getMessage().contains("byte value: 9"), exception.getMessage());
+    }
+
+    private static void writeGzipped(Path file, byte[] content) throws IOException {
+        try (OutputStream gz = new GZIPOutputStream(Files.newOutputStream(file))) {
+            gz.write(content);
+        }
+    }
+
+    /** Writes {@code content} as BGZF, the block format bgzip produces, ending with its EOF block. */
+    private static void writeBgzipped(Path file, byte[] content) throws IOException {
+        int blockSize = 0xff00; // bgzip's own uncompressed block size
+        try (OutputStream out = Files.newOutputStream(file)) {
+            for (int start = 0; start < content.length; start += blockSize) {
+                int length = Math.min(blockSize, content.length - start);
+                out.write(bgzfBlock(content, start, length));
+            }
+            out.write(HexFormat.of().parseHex("1f8b08040000000000ff0600424302001b0003000000000000000000"));
+        }
+    }
+
+    private static byte[] bgzfBlock(byte[] content, int start, int length) {
+        Deflater deflater = new Deflater(Deflater.DEFAULT_COMPRESSION, true);
+        deflater.setInput(content, start, length);
+        deflater.finish();
+        byte[] compressed = new byte[length + 1024];
+        int compressedLength = deflater.deflate(compressed);
+        deflater.end();
+
+        CRC32 crc = new CRC32();
+        crc.update(content, start, length);
+
+        // gzip header with the BGZF "BC" extra field, whose value is the total block size minus one
+        ByteBuffer block = ByteBuffer.allocate(18 + compressedLength + 8).order(ByteOrder.LITTLE_ENDIAN);
+        block.put(new byte[] {31, (byte) 139, 8, 4, 0, 0, 0, 0, 0, (byte) 255, 6, 0, 'B', 'C', 2, 0});
+        block.putShort((short) (block.capacity() - 1));
+        block.put(compressed, 0, compressedLength);
+        block.putInt((int) crc.getValue());
+        block.putInt(length);
+        return block.array();
+    }
+
+    @Test
+    void readTranslationAfterNoFastaSectionThrowsReadExceptionNotNPE() throws Exception {
+        // File has no ##FASTA section → readTranslationOffset returns empty map, fastaReader stays null
+        Path noFasta = Files.createTempFile("no_fasta", ".gff3");
+        try {
+            Files.writeString(noFasta, "##gff-version 3\nchr1\t.\tgene\t1\t100\t.\t+\t.\tID=g1\n");
+            GFF3TranslationReader r = new GFF3TranslationReader(mockEngine, noFasta);
+            r.readTranslationOffset(); // returns empty map; fastaReader = null
+            // calling readTranslation now should throw ReadException, not NullPointerException
+            Assertions.assertThrows(ReadException.class, () -> r.readTranslation(1L));
+        } finally {
+            Files.deleteIfExists(noFasta);
+        }
+    }
+
+    private static ListAppender<ILoggingEvent> captureLogs() {
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        ((Logger) LoggerFactory.getLogger(GFF3TranslationReader.class)).addAppender(appender);
+        return appender;
+    }
+
+    private static void stopCapturingLogs(ListAppender<ILoggingEvent> appender) {
+        ((Logger) LoggerFactory.getLogger(GFF3TranslationReader.class)).detachAppender(appender);
+        appender.stop();
     }
 }

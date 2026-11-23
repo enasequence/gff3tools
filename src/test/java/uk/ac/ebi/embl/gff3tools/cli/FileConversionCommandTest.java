@@ -561,6 +561,52 @@ class FileConversionCommandTest {
         assertEquals(CLIExitCode.VALIDATION_ERROR.asInt(), exitCode);
     }
 
+    private static final String GFF3_WITH_TRANSLATION = "##gff-version 3\n"
+            + "##sequence-region seq1 1 1000\n"
+            + "seq1\t.\tCDS\t1\t90\t.\t+\t0\tID=cds1;transl_table=11\n"
+            + "##FASTA\n"
+            + ">seq1|cds1\n"
+            + "MKVLAAGIVGLLLAAGCSSHKEETPATQSA\n";
+
+    @Test
+    void conversionToEmbl_gzippedInputWithoutFasta_succeeds() throws Exception {
+        Path inputFile = tempDir.resolve("input.gff3.gz");
+        try (OutputStream gz = new GZIPOutputStream(Files.newOutputStream(inputFile))) {
+            gz.write("##gff-version 3\n##sequence-region seq1 1 1000\nseq1\t.\tgene\t1\t100\t.\t+\t.\tID=gene1\n"
+                    .getBytes(StandardCharsets.UTF_8));
+        }
+        Path outputFile = tempDir.resolve("output.embl");
+
+        int exitCode = executeConversion("conversion", inputFile.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "Gzipped GFF3 to EMBL conversion should succeed");
+        assertTrue(Files.exists(outputFile), "Output file should be created");
+    }
+
+    @Test
+    void conversionToEmbl_gzippedInput_omitsFastaTranslations() throws Exception {
+        // Translations are not read from compressed input. The plain file is converted too, so
+        // a missing /translation can only come from the compression, not from the fixture.
+        Path plainInput = tempDir.resolve("input.gff3");
+        Files.writeString(plainInput, GFF3_WITH_TRANSLATION);
+        Path gzippedInput = tempDir.resolve("input.gff3.gz");
+        try (OutputStream gz = new GZIPOutputStream(Files.newOutputStream(gzippedInput))) {
+            gz.write(GFF3_WITH_TRANSLATION.getBytes(StandardCharsets.UTF_8));
+        }
+        Path plainOutput = tempDir.resolve("plain.embl");
+        Path gzippedOutput = tempDir.resolve("gzipped.embl");
+
+        int plainExitCode = executeConversion("conversion", plainInput.toString(), plainOutput.toString());
+        int gzippedExitCode = executeConversion("conversion", gzippedInput.toString(), gzippedOutput.toString());
+
+        assertEquals(0, plainExitCode, "Plain GFF3 to EMBL conversion should succeed");
+        assertTrue(Files.readString(plainOutput).contains("/translation=\"MKVLAAGIVGLLLAAGCSSHKEETPATQSA"));
+        assertEquals(0, gzippedExitCode, "Gzipped GFF3 to EMBL conversion should succeed");
+        String gzippedEmbl = Files.readString(gzippedOutput);
+        assertTrue(gzippedEmbl.contains("FT   CDS"), gzippedEmbl);
+        assertFalse(gzippedEmbl.contains("/translation"), gzippedEmbl);
+    }
+
     private int executeConversion(String... args) {
         StringWriter err = new StringWriter();
         StringWriter out = new StringWriter();
