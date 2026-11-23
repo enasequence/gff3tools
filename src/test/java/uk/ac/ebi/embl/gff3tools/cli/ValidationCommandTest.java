@@ -576,9 +576,9 @@ public class ValidationCommandTest {
 
     @Test
     void validation_mergesTranslationStateWithRawFastaPassthrough_perFeature() throws Exception {
-        // cds1 has BOTH an inline translation attribute (captured into TranslationState by
-        // REMOVE_TRANSLATION_ATTRIBUTE, which runs unconditionally, without --sequence) AND a raw
-        // ##FASTA entry with a different sequence, to prove TranslationState wins on collision.
+        // cds1 has BOTH an inline translation attribute AND a raw ##FASTA entry with a different
+        // sequence. REMOVE_TRANSLATION_ATTRIBUTE (which runs without --sequence too) records the
+        // submitted translation into TranslationState, and the ##FASTA one wins over the attribute.
         // cds2 has no inline attribute, only a raw ##FASTA entry, to prove that a feature
         // TranslationState never touched still gets its translation preserved from the
         // passthrough instead of being dropped just because cds1 populated TranslationState.
@@ -604,9 +604,8 @@ public class ValidationCommandTest {
         assertEquals(0, exitCode, "Validation with output should succeed");
         String content = Files.readString(outputFile);
         assertTrue(
-                content.contains(">seq1|cds1") && content.contains("MFAKE") && !content.contains("MOLD"),
-                "cds1's TranslationState entry (from the inline attribute) must win over its raw "
-                        + "##FASTA passthrough entry: " + content);
+                content.contains(">seq1|cds1") && content.contains("MOLD") && !content.contains("MFAKE"),
+                "cds1's ##FASTA translation must win over its inline translation attribute: " + content);
         assertTrue(
                 content.contains(">seq2|cds2") && content.contains("MREAL"),
                 "cds2's raw ##FASTA passthrough translation must survive even though cds1 "
