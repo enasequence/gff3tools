@@ -21,20 +21,30 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.ac.ebi.embl.flatfile.reader.ReaderOptions;
 import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
+import uk.ac.ebi.embl.gff3tools.TestUtils;
+import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3FileFactory;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
+import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 /**
  * Contract tests for the documents {@link GFF3File} writes, built either from parsed annotations
@@ -430,6 +440,72 @@ public class Gff3FileWritingTest {
         }
     }
 
+    // ---tests for which translation is written after validation (TTENA-339)
+
+    @Nested
+    @DisplayName("translations after validation: submitted ##FASTA, attribute and generated protein")
+    class TranslationsAfterValidation {
+
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("uk.ac.ebi.embl.gff3tools.gff3.Gff3FileWritingTest#translationCases")
+        @DisplayName("fromAnnotationAndReader writes the expected protein, with the expected reports")
+        void writesTheExpectedTranslation(TranslationCase translationCase) throws Exception {
+            Written written = writeAfterValidation(translationCase);
+            Map<String, String> fasta = fastaRecordsOf(written.factoryOutput());
+
+            assertEquals(translationCase.expectedCds1(), fasta.get(CDS1_KEY), "cds1's written protein");
+            assertEquals(translationCase.input().orphan(), fasta.containsKey(ORPHAN_KEY), "the orphan ##FASTA record");
+            assertEquals(
+                    translationCase.mismatchWarnings(),
+                    countRule(written.warnings(), "TRANSLATION_ATTRIBUTE_FASTA_MISMATCH"),
+                    "TRANSLATION_ATTRIBUTE_FASTA_MISMATCH warnings");
+            assertEquals(
+                    translationCase.comparisonErrors(),
+                    countRule(written.errors(), "TRANSLATION_COMPARISON"),
+                    "TRANSLATION_COMPARISON errors");
+            assertFalse(
+                    featureLinesOf(written.factoryOutput()).contains("translation="),
+                    "the translation attribute is never written back");
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("uk.ac.ebi.embl.gff3tools.gff3.Gff3FileWritingTest#translationCases")
+        @DisplayName("the GFF3File ValidationCommand builds writes the same ##FASTA")
+        void validationCommandWritesTheSameFasta(TranslationCase translationCase) throws Exception {
+            Written written = writeAfterValidation(translationCase);
+
+            assertEquals(fastaRecordsOf(written.factoryOutput()), fastaRecordsOf(written.commandOutput()));
+        }
+    }
+
+    @Nested
+    @DisplayName("translations when converting a flat file: /translation, sequences and exception")
+    class TranslationsFromAFlatFile {
+
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("uk.ac.ebi.embl.gff3tools.gff3.Gff3FileWritingTest#flatFileTranslationCases")
+        @DisplayName("GFF3FileFactory.from writes the expected protein, with the expected reports")
+        void writesTheExpectedTranslation(FlatFileCase flatFileCase) throws Exception {
+            ValidationEngine engine = flatFileCase.sequences()
+                    ? validatingEngine(Map.of(FLAT_FILE_ACCESSION, SEQUENCE))
+                    : validatingEngine(Map.of());
+
+            String output =
+                    convert(translationFlatFileEntry(flatFileCase.translation(), flatFileCase.exception()), engine);
+            Map<String, String> fasta = fastaRecordsOf(output);
+
+            assertEquals(
+                    flatFileCase.expected() == null ? Set.of() : Set.of(flatFileCase.expected()),
+                    Set.copyOf(fasta.values()),
+                    "the written protein of the one CDS");
+            assertEquals(
+                    flatFileCase.comparisonErrors(),
+                    countRule(engine.getCollectedErrors(), "TRANSLATION_COMPARISON"),
+                    "TRANSLATION_COMPARISON errors");
+            assertFalse(featureLinesOf(output).contains("translation="), "/translation is not kept as an attribute");
+        }
+    }
+
     // helpers
 
     private static Predicate<GFF3Annotation> all() {
@@ -499,7 +575,11 @@ public class Gff3FileWritingTest {
 
     /** Converts an EMBL flat file the way {@code FFToGff3Converter} does. */
     private String convert(String flatFile) throws Exception {
-        ValidationEngine engine = engine();
+        return convert(flatFile, engine());
+    }
+
+    /** Converts an EMBL flat file the way {@code FFToGff3Converter} does, with the given engine. */
+    private String convert(String flatFile, ValidationEngine engine) throws Exception {
         ReaderOptions readerOptions = new ReaderOptions();
         readerOptions.setIgnoreSequence(true);
 
@@ -537,5 +617,251 @@ public class Gff3FileWritingTest {
             from = at + needle.length();
         }
         return count;
+    }
+
+    // helpers for the translation matrix
+
+    /** ATG, 29 TTT codons and TAA (1-93) translate to {@link #RIGHT}; 7 more bases make it 100. */
+    private static final String SEQUENCE = "ATG" + "TTT".repeat(29) + "TAA" + "TTTTTTT";
+
+    private static final String RIGHT = "M" + "F".repeat(29);
+    private static final String WRONG = "M" + "K".repeat(29);
+    private static final String ORPHAN = "MORPHAN";
+    private static final String CDS1_KEY = "seq1|cds1";
+    private static final String ORPHAN_KEY = "seq1|cds99";
+    private static final String FLAT_FILE_ACCESSION = "BN000065.1";
+
+    enum CdsKind {
+        NORMAL(""),
+        EXCEPTION(";exception=ribosomal slippage"),
+        PSEUDO(";pseudo=true");
+
+        final String attributes;
+
+        CdsKind(String attributes) {
+            this.attributes = attributes;
+        }
+    }
+
+    /** The inputs a-g of the TTENA-339 design: ##FASTA, attribute, sequences and engine. */
+    enum TranslationInput {
+        A_FASTA_RIGHT("a: ##FASTA right", RIGHT, null, true, false, false),
+        B_FASTA_WRONG("b: ##FASTA wrong", WRONG, null, true, false, false),
+        C_FASTA_WRONG_NO_SEQUENCES("c: ##FASTA wrong, no sequences", WRONG, null, false, false, false),
+        D_NO_FASTA("d: no ##FASTA", null, null, true, false, false),
+        E_FASTA_RIGHT_ATTRIBUTE_WRONG("e: ##FASTA right, attribute wrong", RIGHT, WRONG, true, false, false),
+        F_FASTA_RIGHT_READ_ONLY_ENGINE("f: ##FASTA right, no fixes or validations", RIGHT, null, true, true, false),
+        G_ORPHAN_FASTA_ONLY("g: ##FASTA only for a feature not in the file", null, null, true, false, true);
+
+        final String description;
+        final String fasta;
+        final String attribute;
+        final boolean sequences;
+        final boolean readOnly;
+        final boolean orphan;
+
+        TranslationInput(
+                String description,
+                String fasta,
+                String attribute,
+                boolean sequences,
+                boolean readOnly,
+                boolean orphan) {
+            this.description = description;
+            this.fasta = fasta;
+            this.attribute = attribute;
+            this.sequences = sequences;
+            this.readOnly = readOnly;
+            this.orphan = orphan;
+        }
+
+        boolean orphan() {
+            return orphan;
+        }
+    }
+
+    /** One cell of the matrix: what is written for {@code cds1}, or null for no record. */
+    record TranslationCase(
+            CdsKind kind, TranslationInput input, String expectedCds1, int mismatchWarnings, int comparisonErrors) {
+        @Override
+        public String toString() {
+            return kind + " CDS, " + input.description;
+        }
+    }
+
+    static Stream<TranslationCase> translationCases() {
+        return Stream.of(
+                // A normal CDS is translated; the generated protein is written, and compared with the
+                // submitted one when there is one.
+                new TranslationCase(CdsKind.NORMAL, TranslationInput.A_FASTA_RIGHT, RIGHT, 0, 0),
+                new TranslationCase(CdsKind.NORMAL, TranslationInput.B_FASTA_WRONG, RIGHT, 0, 1),
+                new TranslationCase(CdsKind.NORMAL, TranslationInput.C_FASTA_WRONG_NO_SEQUENCES, WRONG, 0, 0),
+                new TranslationCase(CdsKind.NORMAL, TranslationInput.D_NO_FASTA, RIGHT, 0, 0),
+                new TranslationCase(CdsKind.NORMAL, TranslationInput.E_FASTA_RIGHT_ATTRIBUTE_WRONG, RIGHT, 1, 0),
+                new TranslationCase(CdsKind.NORMAL, TranslationInput.F_FASTA_RIGHT_READ_ONLY_ENGINE, RIGHT, 0, 0),
+                new TranslationCase(CdsKind.NORMAL, TranslationInput.G_ORPHAN_FASTA_ONLY, RIGHT, 0, 0),
+                // An exception CDS is not translated; the submitted protein is accepted and written.
+                new TranslationCase(CdsKind.EXCEPTION, TranslationInput.A_FASTA_RIGHT, RIGHT, 0, 0),
+                new TranslationCase(CdsKind.EXCEPTION, TranslationInput.B_FASTA_WRONG, WRONG, 0, 0),
+                new TranslationCase(CdsKind.EXCEPTION, TranslationInput.C_FASTA_WRONG_NO_SEQUENCES, WRONG, 0, 0),
+                new TranslationCase(CdsKind.EXCEPTION, TranslationInput.D_NO_FASTA, null, 0, 0),
+                new TranslationCase(CdsKind.EXCEPTION, TranslationInput.E_FASTA_RIGHT_ATTRIBUTE_WRONG, RIGHT, 1, 0),
+                new TranslationCase(CdsKind.EXCEPTION, TranslationInput.F_FASTA_RIGHT_READ_ONLY_ENGINE, RIGHT, 0, 0),
+                new TranslationCase(CdsKind.EXCEPTION, TranslationInput.G_ORPHAN_FASTA_ONLY, null, 0, 0),
+                // A pseudo CDS is not translated either, but a submitted protein with sequences given
+                // fails with "No new translation" (open question Q4); the submitted protein is written.
+                new TranslationCase(CdsKind.PSEUDO, TranslationInput.A_FASTA_RIGHT, RIGHT, 0, 1),
+                new TranslationCase(CdsKind.PSEUDO, TranslationInput.B_FASTA_WRONG, WRONG, 0, 1),
+                new TranslationCase(CdsKind.PSEUDO, TranslationInput.C_FASTA_WRONG_NO_SEQUENCES, WRONG, 0, 0),
+                new TranslationCase(CdsKind.PSEUDO, TranslationInput.D_NO_FASTA, null, 0, 0),
+                new TranslationCase(CdsKind.PSEUDO, TranslationInput.E_FASTA_RIGHT_ATTRIBUTE_WRONG, RIGHT, 1, 1),
+                new TranslationCase(CdsKind.PSEUDO, TranslationInput.F_FASTA_RIGHT_READ_ONLY_ENGINE, RIGHT, 0, 0),
+                new TranslationCase(CdsKind.PSEUDO, TranslationInput.G_ORPHAN_FASTA_ONLY, null, 0, 0));
+    }
+
+    /** One flat-file conversion: the {@code /translation} given, and what is written for the CDS. */
+    record FlatFileCase(
+            String description,
+            String translation,
+            boolean exception,
+            boolean sequences,
+            String expected,
+            int comparisonErrors) {
+        @Override
+        public String toString() {
+            return description;
+        }
+    }
+
+    static Stream<FlatFileCase> flatFileTranslationCases() {
+        return Stream.of(
+                new FlatFileCase("/translation right, sequences", RIGHT, false, true, RIGHT, 0),
+                new FlatFileCase("/translation wrong, sequences", WRONG, false, true, RIGHT, 1),
+                new FlatFileCase("/translation wrong, no sequences", WRONG, false, false, WRONG, 0),
+                new FlatFileCase("no /translation, sequences", null, false, true, RIGHT, 0),
+                new FlatFileCase("exception CDS, /translation wrong, sequences", WRONG, true, true, WRONG, 0));
+    }
+
+    /** What one matrix cell wrote, through the factory and as ValidationCommand builds it. */
+    private record Written(
+            String factoryOutput,
+            String commandOutput,
+            List<ValidationException> warnings,
+            List<ValidationException> errors) {}
+
+    /** Reads, validates and writes one matrix cell the way the pipeline does. */
+    private Written writeAfterValidation(TranslationCase translationCase) throws Exception {
+        TranslationInput input = translationCase.input();
+        String gff3 = "##gff-version 3\n##sequence-region seq1 1 100\n"
+                + "seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1" + translationCase.kind().attributes
+                + (input.attribute != null ? ";translation=" + input.attribute : "") + "\n";
+        if (input.fasta != null || input.orphan) {
+            gff3 += "##FASTA\n"
+                    + (input.fasta != null ? ">" + CDS1_KEY + "\n" + input.fasta + "\n" : "")
+                    + (input.orphan ? ">" + ORPHAN_KEY + "\n" + ORPHAN + "\n" : "");
+        }
+        Path source = tempDir.resolve("translations.gff3");
+        Files.writeString(source, gff3, Charset.defaultCharset());
+
+        ValidationEngine engine = input.readOnly
+                ? new ValidationEngineBuilder()
+                        .disableAutodetectValidationsAndFixes()
+                        .disableAutodetectContextProviders()
+                        .build()
+                : validatingEngine(input.sequences ? Map.of("seq1", SEQUENCE) : Map.of());
+
+        try (GFF3FileReader reader = new GFF3FileReader(engine, new StringReader(gff3), source)) {
+            GFF3Header header = reader.readHeader();
+            List<GFF3Annotation> annotations = new ArrayList<>();
+            reader.read(annotation -> {
+                if (annotation != null) {
+                    annotations.add(annotation);
+                }
+            });
+
+            StringWriter factoryOutput = new StringWriter();
+            GFF3FileFactory.fromAnnotationAndReader(annotations, reader, true, Optional.empty())
+                    .writeGFF3String(factoryOutput);
+
+            TranslationState state = engine.getContext().contains(TranslationState.class)
+                    ? engine.getContext().get(TranslationState.class)
+                    : null;
+            StringWriter commandOutput = new StringWriter();
+            new GFF3File(header, reader.gff3Species, annotations, reader, null, true, null, state)
+                    .writeGFF3String(commandOutput);
+
+            return new Written(
+                    factoryOutput.toString(),
+                    commandOutput.toString(),
+                    List.copyOf(engine.getParsingWarnings()),
+                    List.copyOf(engine.getCollectedErrors()));
+        }
+    }
+
+    /** The full engine, with the given sequences when there are any. */
+    private static ValidationEngine validatingEngine(Map<String, String> sequences) {
+        ValidationEngineBuilder builder = new ValidationEngineBuilder();
+        if (!sequences.isEmpty()) {
+            CompositeSequenceProvider provider = new CompositeSequenceProvider();
+            provider.addSource(TestUtils.inMemorySequenceSource(sequences));
+            builder.withProvider(provider);
+        }
+        return builder.build();
+    }
+
+    /** One EMBL entry of 100 bp with one CDS over 1..93 and the given /translation, if any. */
+    private static String translationFlatFileEntry(String translation, boolean exception) {
+        StringBuilder entry = new StringBuilder()
+                .append("ID   BN000065; SV 1; linear; genomic DNA; STD; HUM; 100 BP.\n")
+                .append("XX\n")
+                .append("AC   BN000065;\n")
+                .append("XX\n")
+                .append("FH   Key             Location/Qualifiers\n")
+                .append("FH\n")
+                .append("FT   source          1..100\n")
+                .append("FT                   /mol_type=\"genomic DNA\"\n")
+                .append("FT                   /organism=\"Homo sapiens\"\n")
+                .append("FT   CDS             1..93\n")
+                .append("FT                   /protein_id=\"CAD29848.1\"\n");
+        if (exception) {
+            entry.append("FT                   /exception=\"ribosomal slippage\"\n");
+        }
+        if (translation != null) {
+            entry.append("FT                   /translation=\"")
+                    .append(translation)
+                    .append("\"\n");
+        }
+        return entry.append("XX\n//\n").toString();
+    }
+
+    /** The records of the document's ##FASTA section, header to protein, lines joined. */
+    private static Map<String, String> fastaRecordsOf(String output) {
+        Map<String, String> records = new LinkedHashMap<>();
+        int marker = output.indexOf("##FASTA");
+        if (marker < 0) {
+            return records;
+        }
+        String header = null;
+        for (String line : output.substring(marker + "##FASTA".length()).split("\n")) {
+            if (line.startsWith(">")) {
+                header = line.substring(1).trim();
+                records.put(header, "");
+            } else if (header != null && !line.isBlank()) {
+                records.merge(header, line.trim(), String::concat);
+            }
+        }
+        return records;
+    }
+
+    /** Everything above the ##FASTA section. */
+    private static String featureLinesOf(String output) {
+        int marker = output.indexOf("##FASTA");
+        return marker < 0 ? output : output.substring(0, marker);
+    }
+
+    private static long countRule(List<ValidationException> reports, String rule) {
+        return reports.stream()
+                .filter(report -> rule.equals(report.getValidationRule()))
+                .count();
     }
 }
