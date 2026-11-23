@@ -18,7 +18,7 @@ On `main` it did this with two hand-rolled mechanisms that were slow and hard to
 2. `readTranslation(OffsetRange)` read each sequence back with `seek` + `readByte()`, **one
    byte at a time**: one system call per residue. This was the biggest performance problem.
 
-`uk.ac.ebi.ena:fastareader:1.3.0` provides a `FastaReader` that can open a file at a byte
+`uk.ac.ebi.ena:fastareader:1.3.1` provides a `FastaReader` that can open a file at a byte
 offset (built for "annotations, then `##FASTA`" files), index the records in one forward
 pass, and serve sequences with buffered reads. It replaces both mechanisms. What it cannot
 do is find that offset: it knows nothing about GFF3 syntax, so locating the FASTA section is
@@ -54,7 +54,7 @@ counts as FASTA, where `FastaReader` either skips it (before the first header) o
 ### Locating the FASTA section
 
 - **FR-1** `FastaSectionLocator.locate(Path)` MUST return the byte offset of the first
-  FASTA-side line, or an empty `OptionalLong` when the file has none.
+  FASTA-side line, or `-1` when the file has none.
 
 - **FR-2** Each probed line MUST be classified with this table:
 
@@ -93,7 +93,7 @@ counts as FASTA, where `FastaReader` either skips it (before the first header) o
      and keeps searching below.
 
   It ends when the bracket collapses and returns the earliest FASTA-side line seen, never a
-  blank line, or empty if none was seen.
+  blank line, or `-1` if none was seen.
 
 - **FR-4** The returned offset MUST be at or before the first `>` header. The first
   FASTA-side line in a well-formed file is `##FASTA`, or the first `>` when there is no
@@ -133,7 +133,7 @@ counts as FASTA, where `FastaReader` either skips it (before the first header) o
 
 - **FR-10** `FastaReader` checks every byte against `defaultProteinAlphabet()` while
   indexing and throws `FastaFileException` on an illegal one, naming the character, its
-  byte value and its file position. The alphabet allows `ACDEFGHIKLMNPQRSTVWYXBZUO*` in
+  byte value and its file position. The alphabet allows `ACDEFGHIJKLMNPQRSTVWYXBZUO*` in
   either case; `\n` and `\r` are line endings. Anything else, including a TAB, a digit or
   `#`, is illegal.
 
@@ -186,7 +186,7 @@ counts as FASTA, where `FastaReader` either skips it (before the first header) o
 
 ## Out of scope
 
-- Changing `fastareader`: version 1.3.0 is used as published.
+- Changing `fastareader`: version 1.3.1 is used as published.
 - Command, flag or output-format changes. The only user-visible addition is the FR-8
   warning, documented in `docs/cli-usage-guide.md`.
 - Reading translations from compressed input (see Known limitations).
@@ -268,12 +268,12 @@ submitter, so a repeated header is an error (FR-12).
 - **Read failures while writing GFF3 exit 11.** In `validation --output` the FASTA section
   is first read while `GFF3File` writes, so a bad character is wrapped in `WriteException`
   (exit 11, not 10) after the features are already written.
-- **Bad translation characters are always fatal.** On `main` they went through
-  `ValidationEngine` and could be lowered to a warning. The `validationEngine` constructor
-  argument is now unused.
-- **`J` is rejected.** `main` accepted `A`–`Z` and `*` in either case. The protein
-  alphabet accepts the same set except `J`, which `TranslationFix` produces for codons that
-  translate to I or L, so a GFF3 file translated by gff3tools can fail to read back.
+- **Bad translation characters are always fatal.** On `main` the backward offset scan
+  already threw `RuntimeException` on most bad lines (or, in the last record, silently
+  returned no translations); only sequences that got past the scan reached the
+  `ValidationEngine` path that could be lowered to a warning. The `validationEngine`
+  constructor argument is now unused.
 - **Public API change.** `OffsetRange` and `GFF3TranslationReader.isValidSequence` are
   removed, and `getTranslationOffsetMap` / `getTranslation` change type and now throw
-  `ReadException`. The version moves 5.7.0 → 5.7.1.
+  `ReadException`. The version moves 5.7.0 → 5.8.0: a minor bump, not a patch, because of
+  the API break.
