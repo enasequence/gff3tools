@@ -72,7 +72,7 @@ public class TranslationFix {
         if (translationInGff3Fasta != null
                 && translationInAttribute != null
                 && !translationInGff3Fasta.equals(translationInAttribute)) {
-            //do not throw as FASTA translation takes precedence, but throw log describing the difference
+            //do not throw as FASTA translation takes precedence, but emit log describing the file issue
             log.error(
                     "Line {}: the translation attribute of feature \"{}\" on \"{}\" differs from its ##FASTA "
                             + "translation; the ##FASTA translation is used",
