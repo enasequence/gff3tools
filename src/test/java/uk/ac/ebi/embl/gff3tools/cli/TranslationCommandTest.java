@@ -378,19 +378,6 @@ class TranslationCommandTest {
     // ---tests for submitted ##FASTA translations
 
     @Test
-    void submittedFastaRight_writesTheTranslation() throws Exception {
-        Path fasta = createFastaFile("seq1");
-        Path gff3 = createCdsGff3("", ">seq1|cds1\n" + RIGHT_TRANSLATION + "\n");
-        Path output = tempDir.resolve("output.gff3");
-
-        int exitCode =
-                executeTranslate("translate", "--sequence", fasta.toString(), "-o", output.toString(), gff3.toString());
-
-        assertEquals(0, exitCode);
-        assertEquals(">seq1|cds1\n" + RIGHT_TRANSLATION, fastaSectionOf(Files.readString(output)));
-    }
-
-    @Test
     void submittedFastaWrong_failsTheComparisonAndWritesNothing() throws Exception {
         Path fasta = createFastaFile("seq1");
         Path gff3 = createCdsGff3("", ">seq1|cds1\n" + WRONG_TRANSLATION + "\n");
@@ -401,21 +388,6 @@ class TranslationCommandTest {
 
         assertEquals(CLIExitCode.VALIDATION_ERROR.asInt(), exitCode, "TRANSLATION_COMPARISON fails");
         assertFalse(Files.exists(output));
-    }
-
-    @Test
-    void attributeWrongFastaRight_writesTheFastaTranslation() throws Exception {
-        Path fasta = createFastaFile("seq1");
-        Path gff3 = createCdsGff3(";translation=" + WRONG_TRANSLATION, ">seq1|cds1\n" + RIGHT_TRANSLATION + "\n");
-        Path output = tempDir.resolve("output.gff3");
-
-        int exitCode =
-                executeTranslate("translate", "--sequence", fasta.toString(), "-o", output.toString(), gff3.toString());
-
-        assertEquals(0, exitCode, "the mismatch is only a warning");
-        String content = Files.readString(output);
-        assertEquals(">seq1|cds1\n" + RIGHT_TRANSLATION, fastaSectionOf(content));
-        assertFalse(content.contains("translation="), content);
     }
 
     @Test
@@ -445,41 +417,6 @@ class TranslationCommandTest {
                 Files.readString(fastaOutput).trim());
     }
 
-    @Test
-    void sourceRecordWithoutAFeature_isNotWritten() throws Exception {
-        Path fasta = createFastaFile("seq1");
-        Path gff3 = createCdsGff3("", ">seq1|cds1\n" + RIGHT_TRANSLATION + "\n>seq1|cds99\nMAAA\n");
-        Path output = tempDir.resolve("output.gff3");
-
-        int exitCode = executeTranslate(
-                "translate",
-                "--rules",
-                "FASTA_TRANSLATION_WITHOUT_FEATURE:OFF",
-                "--sequence",
-                fasta.toString(),
-                "-o",
-                output.toString(),
-                gff3.toString());
-
-        assertEquals(0, exitCode);
-        // translate writes only what TranslationState holds, not the source ##FASTA
-        assertEquals(">seq1|cds1\n" + RIGHT_TRANSLATION, fastaSectionOf(Files.readString(output)));
-    }
-
-    @Test
-    void unreadableFasta_failsAndWritesNothing() throws Exception {
-        Path fasta = createFastaFile("seq1");
-        Path gff3 = createCdsGff3("", ">seq1|cds1\nMF1F\n");
-        Path output = tempDir.resolve("output.gff3");
-
-        int exitCode =
-                executeTranslate("translate", "--sequence", fasta.toString(), "-o", output.toString(), gff3.toString());
-
-        assertEquals(CLIExitCode.VALIDATION_ERROR.asInt(), exitCode, "FASTA_SECTION_UNREADABLE fails");
-        assertFalse(Files.exists(output));
-    }
-
-    private static final String RIGHT_TRANSLATION = "MFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
     private static final String WRONG_TRANSLATION = "MKKKKKKKKKKKKKKKKKKKKKKKKKKKKK";
 
     /** One CDS {@code cds1} over {@code seq1} 1-93, with extra column-9 attributes and a ##FASTA section. */

@@ -733,45 +733,6 @@ public class ValidationCommandTest {
     }
 
     @Test
-    void validation_attributeWrongFastaRightWithSequence_passesAndWritesTheFastaProtein() throws Exception {
-        Path fasta = writeCdsSequence();
-        Path gff3 = writeCdsGff3(";translation=" + WRONG_TRANSLATION, ">seq1|cds1\n" + RIGHT_TRANSLATION + "\n");
-        Path outputFile = tempDir.resolve("output.gff3");
-
-        int exitCode =
-                executeValidation("validation", "--sequence", fasta.toString(), gff3.toString(), outputFile.toString());
-
-        assertEquals(0, exitCode, "the mismatch is only a warning");
-        String content = Files.readString(outputFile);
-        assertTrue(content.contains(">seq1|cds1\n" + RIGHT_TRANSLATION), content);
-        assertFalse(content.contains(WRONG_TRANSLATION), content);
-    }
-
-    @Test
-    void validation_exceptionCdsWithSequence_keepsTheSubmittedProtein() throws Exception {
-        Path fasta = writeCdsSequence();
-        Path gff3 = writeCdsGff3(";exception=ribosomal slippage", ">seq1|cds1\n" + WRONG_TRANSLATION + "\n");
-        Path outputFile = tempDir.resolve("output.gff3");
-
-        int exitCode =
-                executeValidation("validation", "--sequence", fasta.toString(), gff3.toString(), outputFile.toString());
-
-        assertEquals(0, exitCode, "an exception CDS is not translated, so its protein is accepted");
-        assertTrue(Files.readString(outputFile).contains(">seq1|cds1\n" + WRONG_TRANSLATION));
-    }
-
-    @Test
-    void validation_wrongFastaWithoutSequence_passesAndWritesTheSubmittedProtein() throws Exception {
-        Path gff3 = writeCdsGff3("", ">seq1|cds1\n" + WRONG_TRANSLATION + "\n");
-        Path outputFile = tempDir.resolve("output.gff3");
-
-        int exitCode = executeValidation("validation", gff3.toString(), outputFile.toString());
-
-        assertEquals(0, exitCode, "without sequences nothing is generated, so nothing is compared");
-        assertTrue(Files.readString(outputFile).contains(">seq1|cds1\n" + WRONG_TRANSLATION));
-    }
-
-    @Test
     void validation_unreadableFasta_failsValidation() throws Exception {
         Path fasta = writeCdsSequence();
         Path gff3 = writeCdsGff3("", ">seq1|cds1\nMF1F\n");

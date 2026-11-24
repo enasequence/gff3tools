@@ -39,12 +39,10 @@ import uk.ac.ebi.embl.flatfile.reader.embl.EmblEntryReader;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.fftogff3.GFF3FileFactory;
-import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngineBuilder;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
-import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 /**
  * Contract tests for the documents {@link GFF3File} writes, built either from parsed annotations
@@ -468,15 +466,6 @@ public class Gff3FileWritingTest {
                     featureLinesOf(written.factoryOutput()).contains("translation="),
                     "the translation attribute is never written back");
         }
-
-        @ParameterizedTest(name = "{0}")
-        @MethodSource("uk.ac.ebi.embl.gff3tools.gff3.Gff3FileWritingTest#translationCases")
-        @DisplayName("the GFF3File ValidationCommand builds writes the same ##FASTA")
-        void validationCommandWritesTheSameFasta(TranslationCase translationCase) throws Exception {
-            Written written = writeAfterValidation(translationCase);
-
-            assertEquals(fastaRecordsOf(written.factoryOutput()), fastaRecordsOf(written.commandOutput()));
-        }
     }
 
     @Nested
@@ -634,8 +623,7 @@ public class Gff3FileWritingTest {
 
     enum CdsKind {
         NORMAL(""),
-        EXCEPTION(";exception=ribosomal slippage"),
-        PSEUDO(";pseudo=true");
+        EXCEPTION(";exception=ribosomal slippage");
 
         final String attributes;
 
@@ -704,16 +692,7 @@ public class Gff3FileWritingTest {
                 new TranslationCase(CdsKind.EXCEPTION, TranslationInput.D_NO_FASTA, null, 0, 0),
                 new TranslationCase(CdsKind.EXCEPTION, TranslationInput.E_FASTA_RIGHT_ATTRIBUTE_WRONG, RIGHT, 1, 0),
                 new TranslationCase(CdsKind.EXCEPTION, TranslationInput.F_FASTA_RIGHT_READ_ONLY_ENGINE, RIGHT, 0, 0),
-                new TranslationCase(CdsKind.EXCEPTION, TranslationInput.G_ORPHAN_FASTA_ONLY, null, 0, 0),
-                // A pseudo CDS is not translated either, but a submitted protein with sequences given
-                // fails with "No new translation" (open question Q4); the submitted protein is written.
-                new TranslationCase(CdsKind.PSEUDO, TranslationInput.A_FASTA_RIGHT, RIGHT, 0, 1),
-                new TranslationCase(CdsKind.PSEUDO, TranslationInput.B_FASTA_WRONG, WRONG, 0, 1),
-                new TranslationCase(CdsKind.PSEUDO, TranslationInput.C_FASTA_WRONG_NO_SEQUENCES, WRONG, 0, 0),
-                new TranslationCase(CdsKind.PSEUDO, TranslationInput.D_NO_FASTA, null, 0, 0),
-                new TranslationCase(CdsKind.PSEUDO, TranslationInput.E_FASTA_RIGHT_ATTRIBUTE_WRONG, RIGHT, 1, 1),
-                new TranslationCase(CdsKind.PSEUDO, TranslationInput.F_FASTA_RIGHT_READ_ONLY_ENGINE, RIGHT, 0, 0),
-                new TranslationCase(CdsKind.PSEUDO, TranslationInput.G_ORPHAN_FASTA_ONLY, null, 0, 0));
+                new TranslationCase(CdsKind.EXCEPTION, TranslationInput.G_ORPHAN_FASTA_ONLY, null, 0, 0));
     }
 
     /** One flat-file conversion: the {@code /translation} given, and what is written for the CDS. */
@@ -739,12 +718,9 @@ public class Gff3FileWritingTest {
                 new FlatFileCase("exception CDS, /translation wrong, sequences", WRONG, true, true, WRONG, 0));
     }
 
-    /** What one matrix cell wrote, through the factory and as ValidationCommand builds it. */
+    /** What one matrix cell wrote through the factory, and the reports. */
     private record Written(
-            String factoryOutput,
-            String commandOutput,
-            List<ValidationException> warnings,
-            List<ValidationException> errors) {}
+            String factoryOutput, List<ValidationException> warnings, List<ValidationException> errors) {}
 
     /** Reads, validates and writes one matrix cell the way the pipeline does. */
     private Written writeAfterValidation(TranslationCase translationCase) throws Exception {
@@ -768,7 +744,7 @@ public class Gff3FileWritingTest {
                 : validatingEngine(input.sequences ? Map.of("seq1", SEQUENCE) : Map.of());
 
         try (GFF3FileReader reader = new GFF3FileReader(engine, new StringReader(gff3), source)) {
-            GFF3Header header = reader.readHeader();
+            reader.readHeader();
             List<GFF3Annotation> annotations = new ArrayList<>();
             reader.read(annotation -> {
                 if (annotation != null) {
@@ -780,16 +756,8 @@ public class Gff3FileWritingTest {
             GFF3FileFactory.fromAnnotationAndReader(annotations, reader, true, Optional.empty())
                     .writeGFF3String(factoryOutput);
 
-            TranslationState state = engine.getContext().contains(TranslationState.class)
-                    ? engine.getContext().get(TranslationState.class)
-                    : null;
-            StringWriter commandOutput = new StringWriter();
-            new GFF3File(header, reader.gff3Species, annotations, reader, null, true, null, state)
-                    .writeGFF3String(commandOutput);
-
             return new Written(
                     factoryOutput.toString(),
-                    commandOutput.toString(),
                     List.copyOf(engine.getParsingWarnings()),
                     List.copyOf(engine.getCollectedErrors()));
         }

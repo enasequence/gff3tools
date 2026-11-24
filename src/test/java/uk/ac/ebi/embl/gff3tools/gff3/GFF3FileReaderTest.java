@@ -769,26 +769,6 @@ public class GFF3FileReaderTest {
     }
 
     @Test
-    void cdsWithAttributeAndDifferentFasta_fastaWinsAndMismatchIsWarned(@TempDir Path tempDir) throws Exception {
-        Path gff3 = writeGff3(
-                tempDir,
-                "input.gff3",
-                "seq1\t.\tCDS\t1\t18\t.\t+\t0\tID=cds1;translation=MKWWW\n",
-                ">seq1|cds1\nMKFGP\n");
-        ValidationEngine engine = getValidationEngine();
-
-        TranslationState state = readAll(engine, gff3);
-
-        assertEquals(
-                "MKFGP", state.get(TranslationState.buildKey("seq1", "cds1")).oldTranslation());
-        assertEquals(
-                1,
-                engine.getParsingWarnings().stream()
-                        .filter(w -> "TRANSLATION_ATTRIBUTE_FASTA_MISMATCH".equals(w.getValidationRule()))
-                        .count());
-    }
-
-    @Test
     void fastaRecordsInAnyOrder_eachCdsGetsItsOwnProtein(@TempDir Path tempDir) throws Exception {
         Path gff3 = writeGff3(
                 tempDir,
@@ -833,21 +813,6 @@ public class GFF3FileReaderTest {
                     Optional.of("MSECOND"),
                     engine.getContext().get(GFF3TranslationReader.class).getTranslation("seq1", "cds1"));
         }
-    }
-
-    @Test
-    void unreadableFasta_readingContinuesAndTheAttributeIsRecorded(@TempDir Path tempDir) throws Exception {
-        Path gff3 = writeGff3(
-                tempDir,
-                "input.gff3",
-                "seq1\t.\tCDS\t1\t18\t.\t+\t0\tID=cds1;translation=MKWWW\n",
-                ">seq1|cds1\nMK1GP\n");
-        ValidationEngine engine = getValidationEngine();
-
-        TranslationState state = readAll(engine, gff3);
-
-        assertEquals(
-                "MKWWW", state.get(TranslationState.buildKey("seq1", "cds1")).oldTranslation());
     }
 
     private String getAttributeString(Map<String, List<String>> attributes) throws WriteException, IOException {

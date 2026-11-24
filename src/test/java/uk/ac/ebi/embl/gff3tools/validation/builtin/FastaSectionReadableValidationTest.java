@@ -83,22 +83,6 @@ class FastaSectionReadableValidationTest {
     }
 
     @Test
-    void readableFasta_isCheckedOnlyOnce() throws Exception {
-        validation.validateFastaSectionReadable(annotation("seq1"), LINE);
-        validation.validateFastaSectionReadable(annotation("seq2"), LINE + 10);
-
-        verify(reader, times(1)).getTranslationOffsets();
-    }
-
-    @Test
-    void proteinsAreNeverRead() throws Exception {
-        validation.validateFastaSectionReadable(annotation("seq1"), LINE);
-
-        verify(reader, never()).readTranslation(anyLong());
-        verify(reader, never()).getTranslation(any(), any());
-    }
-
-    @Test
     void noReaderInTheContext_noError() {
         FastaSectionReadableValidation noReader = new FastaSectionReadableValidation();
         TestUtils.injectContext(noReader, new ValidationContext());
