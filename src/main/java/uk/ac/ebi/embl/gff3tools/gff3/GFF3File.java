@@ -56,19 +56,16 @@ public class GFF3File implements IGFF3Feature {
      * @param header the {@code ##gff-version} directive, or null to omit it
      * @param species the {@code ##species} directive, or null to omit it
      * @param annotations the annotations this file contains; also the scope for its translations
-     * @param gff3FileReader reader over a source GFF3, whose own {@code ##FASTA} section supplies
-     *     the translations {@code translationState} does not override; may be null when no source
-     *     GFF3 exists or it cannot be re-read (e.g. stdin)
-     * @param fastaFilePath an existing translation FASTA, used only when neither
-     *     {@code gff3FileReader} nor {@code translationState} yields a translation for this file;
-     *     its records are filtered to this file's accessions. May be null
+     * @param gff3FileReader reader over the source GFF3; its {@code ##FASTA} is copied only when
+     *     {@code translationState} is null. May be null
+     * @param fastaFilePath a translation FASTA, used only when the other sources give nothing for
+     *     this file. May be null
      * @param writeAnnotationFasta whether to write translations at all; when false no
      *     {@code ##FASTA} section is written even if a source could supply one
      * @param parsingWarnings warnings collected while parsing the source; carried for the caller,
      *     never written to the document
-     * @param translationState translations captured or computed during validation, normally by
-     *     {@code TranslationFix}; each entry wins over the source GFF3's translation for the same
-     *     feature. May hold nothing
+     * @param translationState translations from validation (submitted and generated). When set,
+     *     these are the only translations written. May be null
      */
     public GFF3File(
             GFF3Header header,
@@ -91,13 +88,10 @@ public class GFF3File implements IGFF3Feature {
     }
 
     /**
-     * Writes the full GFF3 output including the embedded FASTA section.
+     * Writes the document: header, species, annotations, then one {@code ##FASTA} section.
      *
-     * <p>When translations are sourced from the GFF3 file itself (via {@code gff3Reader}),
-     * this method reads translation sequences from the embedded FASTA section while writing.
-     * Any read failure is wrapped as a {@link WriteException} so the write contract
-     * remains clean — callers inspect {@link WriteException#getCause()} to distinguish
-     * a translation read failure from a pure write failure.
+     * <p>Copying the source {@code ##FASTA} reads the source file. A read failure is thrown as a
+     * {@link WriteException} with the {@link ReadException} as its cause.
      */
     @Override
     public void writeGFF3String(Writer writer) throws WriteException {
@@ -126,30 +120,30 @@ public class GFF3File implements IGFF3Feature {
     }
 
     /**
-     * Writes this file's translations, scoped to its accessions.
-     *
-     * <p>With a {@code TranslationState}, only its translations are written: validation recorded
-     * every submitted {@code ##FASTA} protein that belongs to a feature and every {@code translation} attribute,
-     * and the source file therefore doesn't need to be read again.
-     *
-     * Without one (a read-only engine, or no state passed),
-     * the source GFF3's {@code ##FASTA} records are copied as they are.
-     *
-     * <p>The existing translation FASTA is used only when that gives nothing for the whole document.
+     * Writes the translations of this file's accessions, from the first source that has any:
+     * <ol>
+     *   <li>{@code translationState}, when set. Validation already holds every submitted and
+     *       generated translation, so the source file is not read again;
+     *   <li>the source GFF3's {@code ##FASTA}, when there is no state (e.g. a read-only engine);
+     *   <li>{@code fastaFilePath}.
+     * </ol>
      */
     private void writeTranslationSection(Writer writer) throws IOException, ReadException {
         Set<String> accessions =
                 annotations.stream().map(GFF3Annotation::getAccession).collect(Collectors.toSet());
 
+        // fallback: if there is no translation state, read from gff3 ##FASTA section
         Map<String, String> translations = translationState != null
                 ? getTranslationsFromTranslationState(accessions)
                 : getTranslationsFromSourceFasta();
 
-        if (!translations.isEmpty()) {
-            writeFastaFromMap(writer, translations);
+        // fallback: if there is no translation state or ##FASTA, read from additional .fasta file
+        if (translations.isEmpty()) {
+            writeFastaFromExistingFile(writer, accessions);
             return;
         }
-        writeFastaFromExistingFile(writer, accessions);
+
+        writeFastaFromMap(writer, translations);
     }
 
     /** The source GFF3's {@code ##FASTA} records for this file's annotations, in their order. */
@@ -188,13 +182,9 @@ public class GFF3File implements IGFF3Feature {
     }
 
     /**
-     * Copies the records of an existing translation FASTA whose {@code >accession|featureId}
-     * header names one of this document's accessions. A header in any other shape is dropped —
-     * keeping it is the misattribution this scoping prevents — and dropped records are logged.
-     *
-     * <p>This is the last translation source. An absent, empty or wholly foreign file yields no
-     * {@code ##FASTA} section rather than failing the write, since reaching it is normal, not an
-     * error.
+     * Copies the records of {@code fastaFilePath} whose {@code >accession|featureId} header names
+     * one of these accessions. Other records are dropped and logged. A missing or empty file writes
+     * no {@code ##FASTA} section.
      */
     private void writeFastaFromExistingFile(Writer writer, Set<String> accessions) throws IOException {
         if (fastaFilePath == null) {
