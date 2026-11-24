@@ -44,7 +44,7 @@ public class FastaSectionReadableValidation {
 
     @ValidationMethod(
             rule = RULE,
-            description = "Check that the ##FASTA section of a GFF3 file can be read",
+            description = "Check that the ##FASTA section of a GFF3 file is formatted correctly",
             type = ANNOTATION,
             priority = ValidationPriority.CRITICAL)
     public void validateAnnotation(GFF3Annotation annotation, int line) throws ValidationException {
