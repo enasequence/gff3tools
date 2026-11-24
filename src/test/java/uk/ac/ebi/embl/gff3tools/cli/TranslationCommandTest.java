@@ -374,4 +374,129 @@ class TranslationCommandTest {
 
         assertNotEquals(0, exitCode, "Should fail for non-existent sequence file");
     }
+
+    // ---tests for submitted ##FASTA translations
+
+    @Test
+    void submittedFastaRight_writesTheTranslation() throws Exception {
+        Path fasta = createFastaFile("seq1");
+        Path gff3 = createCdsGff3("", ">seq1|cds1\n" + RIGHT_TRANSLATION + "\n");
+        Path output = tempDir.resolve("output.gff3");
+
+        int exitCode =
+                executeTranslate("translate", "--sequence", fasta.toString(), "-o", output.toString(), gff3.toString());
+
+        assertEquals(0, exitCode);
+        assertEquals(">seq1|cds1\n" + RIGHT_TRANSLATION, fastaSectionOf(Files.readString(output)));
+    }
+
+    @Test
+    void submittedFastaWrong_failsTheComparisonAndWritesNothing() throws Exception {
+        Path fasta = createFastaFile("seq1");
+        Path gff3 = createCdsGff3("", ">seq1|cds1\n" + WRONG_TRANSLATION + "\n");
+        Path output = tempDir.resolve("output.gff3");
+
+        int exitCode =
+                executeTranslate("translate", "--sequence", fasta.toString(), "-o", output.toString(), gff3.toString());
+
+        assertEquals(CLIExitCode.VALIDATION_ERROR.asInt(), exitCode, "TRANSLATION_COMPARISON fails");
+        assertFalse(Files.exists(output));
+    }
+
+    @Test
+    void attributeWrongFastaRight_writesTheFastaTranslation() throws Exception {
+        Path fasta = createFastaFile("seq1");
+        Path gff3 = createCdsGff3(";translation=" + WRONG_TRANSLATION, ">seq1|cds1\n" + RIGHT_TRANSLATION + "\n");
+        Path output = tempDir.resolve("output.gff3");
+
+        int exitCode =
+                executeTranslate("translate", "--sequence", fasta.toString(), "-o", output.toString(), gff3.toString());
+
+        assertEquals(0, exitCode, "the mismatch is only a warning");
+        String content = Files.readString(output);
+        assertEquals(">seq1|cds1\n" + RIGHT_TRANSLATION, fastaSectionOf(content));
+        assertFalse(content.contains("translation="), content);
+    }
+
+    @Test
+    void exceptionCds_keepsTheSubmittedTranslation_inGff3AndFastaModes() throws Exception {
+        Path fasta = createFastaFile("seq1");
+        Path gff3 = createCdsGff3(";exception=ribosomal slippage", ">seq1|cds1\n" + WRONG_TRANSLATION + "\n");
+        Path gff3Output = tempDir.resolve("output.gff3");
+        Path fastaOutput = tempDir.resolve("output.fasta");
+
+        int gff3ExitCode = executeTranslate(
+                "translate", "--sequence", fasta.toString(), "-o", gff3Output.toString(), gff3.toString());
+        int fastaExitCode = executeTranslate(
+                "translate",
+                "--sequence",
+                fasta.toString(),
+                "--translation-mode",
+                "fasta",
+                "-o",
+                fastaOutput.toString(),
+                gff3.toString());
+
+        assertEquals(0, gff3ExitCode);
+        assertEquals(">seq1|cds1\n" + WRONG_TRANSLATION, fastaSectionOf(Files.readString(gff3Output)));
+        assertEquals(0, fastaExitCode);
+        assertEquals(
+                ">seq1|cds1\n" + WRONG_TRANSLATION,
+                Files.readString(fastaOutput).trim());
+    }
+
+    @Test
+    void sourceRecordWithoutAFeature_isNotWritten() throws Exception {
+        Path fasta = createFastaFile("seq1");
+        Path gff3 = createCdsGff3("", ">seq1|cds1\n" + RIGHT_TRANSLATION + "\n>seq1|cds99\nMAAA\n");
+        Path output = tempDir.resolve("output.gff3");
+
+        int exitCode = executeTranslate(
+                "translate",
+                "--rules",
+                "FASTA_TRANSLATION_WITHOUT_FEATURE:OFF",
+                "--sequence",
+                fasta.toString(),
+                "-o",
+                output.toString(),
+                gff3.toString());
+
+        assertEquals(0, exitCode);
+        // translate writes only what TranslationState holds, not the source ##FASTA
+        assertEquals(">seq1|cds1\n" + RIGHT_TRANSLATION, fastaSectionOf(Files.readString(output)));
+    }
+
+    @Test
+    void unreadableFasta_failsAndWritesNothing() throws Exception {
+        Path fasta = createFastaFile("seq1");
+        Path gff3 = createCdsGff3("", ">seq1|cds1\nMF1F\n");
+        Path output = tempDir.resolve("output.gff3");
+
+        int exitCode =
+                executeTranslate("translate", "--sequence", fasta.toString(), "-o", output.toString(), gff3.toString());
+
+        assertEquals(CLIExitCode.VALIDATION_ERROR.asInt(), exitCode, "FASTA_SECTION_UNREADABLE fails");
+        assertFalse(Files.exists(output));
+    }
+
+    private static final String RIGHT_TRANSLATION = "MFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
+    private static final String WRONG_TRANSLATION = "MKKKKKKKKKKKKKKKKKKKKKKKKKKKKK";
+
+    /** One CDS {@code cds1} over {@code seq1} 1-93, with extra column-9 attributes and a ##FASTA section. */
+    private Path createCdsGff3(String extraAttributes, String fastaRecords) throws Exception {
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                "##gff-version 3\n##sequence-region seq1 1 100\n"
+                        + "seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1" + extraAttributes + "\n"
+                        + "##FASTA\n" + fastaRecords);
+        return gff3;
+    }
+
+    /** The records after {@code ##FASTA}, one header and one sequence line each, without the trailing newline. */
+    private static String fastaSectionOf(String gff3) {
+        int start = gff3.indexOf("##FASTA\n");
+        assertTrue(start >= 0, "no ##FASTA section in:\n" + gff3);
+        return gff3.substring(start + "##FASTA\n".length()).trim();
+    }
 }
