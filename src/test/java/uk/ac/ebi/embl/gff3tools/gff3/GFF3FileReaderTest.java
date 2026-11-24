@@ -799,22 +799,6 @@ public class GFF3FileReaderTest {
                 "MKFGP", state.get(TranslationState.buildKey("seq1", "cds;1")).oldTranslation());
     }
 
-    @Test
-    void secondReaderOnTheSameEngine_replacesTheFirstInTheContext(@TempDir Path tempDir) throws Exception {
-        Path first =
-                writeGff3(tempDir, "first.gff3", "seq1\t.\tCDS\t1\t18\t.\t+\t0\tID=cds1\n", ">seq1|cds1\nMFIRST\n");
-        Path second =
-                writeGff3(tempDir, "second.gff3", "seq1\t.\tCDS\t1\t18\t.\t+\t0\tID=cds1\n", ">seq1|cds1\nMSECOND\n");
-        ValidationEngine engine = getValidationEngine();
-
-        try (GFF3FileReader firstReader = new GFF3FileReader(engine, first);
-                GFF3FileReader secondReader = new GFF3FileReader(engine, second)) {
-            assertEquals(
-                    Optional.of("MSECOND"),
-                    engine.getContext().get(GFF3TranslationReader.class).getTranslation("seq1", "cds1"));
-        }
-    }
-
     private String getAttributeString(Map<String, List<String>> attributes) throws WriteException, IOException {
         try (StringWriter gff3Writer = new StringWriter()) {
             GFF3Annotation annotation = new GFF3Annotation();

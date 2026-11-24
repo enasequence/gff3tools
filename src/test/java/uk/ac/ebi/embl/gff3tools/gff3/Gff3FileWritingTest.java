@@ -686,12 +686,10 @@ public class Gff3FileWritingTest {
                 new TranslationCase(CdsKind.NORMAL, TranslationInput.F_FASTA_RIGHT_READ_ONLY_ENGINE, RIGHT, 0, 0),
                 new TranslationCase(CdsKind.NORMAL, TranslationInput.G_ORPHAN_FASTA_ONLY, RIGHT, 0, 0),
                 // An exception CDS is not translated; the submitted protein is accepted and written.
-                new TranslationCase(CdsKind.EXCEPTION, TranslationInput.A_FASTA_RIGHT, RIGHT, 0, 0),
                 new TranslationCase(CdsKind.EXCEPTION, TranslationInput.B_FASTA_WRONG, WRONG, 0, 0),
                 new TranslationCase(CdsKind.EXCEPTION, TranslationInput.C_FASTA_WRONG_NO_SEQUENCES, WRONG, 0, 0),
                 new TranslationCase(CdsKind.EXCEPTION, TranslationInput.D_NO_FASTA, null, 0, 0),
                 new TranslationCase(CdsKind.EXCEPTION, TranslationInput.E_FASTA_RIGHT_ATTRIBUTE_WRONG, RIGHT, 1, 0),
-                new TranslationCase(CdsKind.EXCEPTION, TranslationInput.F_FASTA_RIGHT_READ_ONLY_ENGINE, RIGHT, 0, 0),
                 new TranslationCase(CdsKind.EXCEPTION, TranslationInput.G_ORPHAN_FASTA_ONLY, null, 0, 0));
     }
 

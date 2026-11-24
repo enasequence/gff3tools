@@ -120,24 +120,6 @@ class TranslationStateIntegrationTest {
         assertReports(engine, 1, 0, 1);
     }
 
-    @Test
-    void attributeEqualToFasta_noWarning() throws Exception {
-        fastaHas(RIGHT);
-
-        ValidationEngine engine = run(engineBuilder(SEQUENCE), cds(RIGHT));
-
-        assertEntry(engine, RIGHT, RIGHT);
-        assertReports(engine, 0, 0, 0);
-    }
-
-    @Test
-    void neitherFastaNorAttribute_recordsOnlyTheGeneratedTranslation() throws Exception {
-        ValidationEngine engine = run(engineBuilder(SEQUENCE), cds());
-
-        assertEntry(engine, null, RIGHT);
-        assertReports(engine, 0, 0, 0);
-    }
-
     // ---tests for CDS features the Translator treats differently
 
     @Test

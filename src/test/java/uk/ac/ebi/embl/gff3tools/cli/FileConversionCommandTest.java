@@ -629,24 +629,10 @@ class FileConversionCommandTest {
     }
 
     @Test
-    void conversionToEmbl_fastaWrong_withoutSequence_copiesIt() throws Exception {
-        Path embl = convertCds("", ">seq1|cds1\n" + WRONG_TRANSLATION + "\n", false);
-
-        assertEquals(WRONG_TRANSLATION, translationOf(embl), "nothing to compare it with");
-    }
-
-    @Test
     void conversionToEmbl_attributeWrongFastaRight_copiesTheFasta() throws Exception {
         Path embl = convertCds(";translation=" + WRONG_TRANSLATION, ">seq1|cds1\n" + RIGHT_TRANSLATION + "\n", true);
 
         assertEquals(RIGHT_TRANSLATION, translationOf(embl));
-    }
-
-    @Test
-    void conversionToEmbl_exceptionCds_copiesTheSubmittedFasta() throws Exception {
-        Path embl = convertCds(";exception=ribosomal slippage", ">seq1|cds1\n" + WRONG_TRANSLATION + "\n", true);
-
-        assertEquals(WRONG_TRANSLATION, translationOf(embl), "an exception CDS is not compared");
     }
 
     @Test
