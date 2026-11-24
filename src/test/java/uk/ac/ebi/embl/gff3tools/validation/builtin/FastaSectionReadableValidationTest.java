@@ -22,7 +22,6 @@ import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3TranslationReader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
-import uk.ac.ebi.embl.gff3tools.validation.provider.GFF3TranslationReaderProvider;
 
 class FastaSectionReadableValidationTest {
 
@@ -41,7 +40,7 @@ class FastaSectionReadableValidationTest {
         context = new ValidationContext();
         reader = mock(GFF3TranslationReader.class);
         when(reader.getTranslationOffsets()).thenReturn(Map.of("seq1|cds1", 0L));
-        context.register(GFF3TranslationReader.class, new GFF3TranslationReaderProvider(reader));
+        TestUtils.registerProvider(context, GFF3TranslationReader.class, reader);
         TestUtils.injectContext(validation, context);
     }
 

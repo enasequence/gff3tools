@@ -11,11 +11,15 @@
 package uk.ac.ebi.embl.gff3tools.cli;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.WRONG_CDS_TRANSLATION;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.fastaRecordsOf;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.writeCdsGff3;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
@@ -380,7 +384,7 @@ class TranslationCommandTest {
     @Test
     void submittedFastaWrong_failsTheComparisonAndWritesNothing() throws Exception {
         Path fasta = createFastaFile("seq1");
-        Path gff3 = createCdsGff3("", ">seq1|cds1\n" + WRONG_TRANSLATION + "\n");
+        Path gff3 = writeCdsGff3(tempDir, "", ">seq1|cds1\n" + WRONG_CDS_TRANSLATION + "\n");
         Path output = tempDir.resolve("output.gff3");
 
         int exitCode =
@@ -393,7 +397,8 @@ class TranslationCommandTest {
     @Test
     void exceptionCds_keepsTheSubmittedTranslation_inGff3AndFastaModes() throws Exception {
         Path fasta = createFastaFile("seq1");
-        Path gff3 = createCdsGff3(";exception=ribosomal slippage", ">seq1|cds1\n" + WRONG_TRANSLATION + "\n");
+        Path gff3 =
+                writeCdsGff3(tempDir, ";exception=ribosomal slippage", ">seq1|cds1\n" + WRONG_CDS_TRANSLATION + "\n");
         Path gff3Output = tempDir.resolve("output.gff3");
         Path fastaOutput = tempDir.resolve("output.fasta");
 
@@ -410,30 +415,10 @@ class TranslationCommandTest {
                 gff3.toString());
 
         assertEquals(0, gff3ExitCode);
-        assertEquals(">seq1|cds1\n" + WRONG_TRANSLATION, fastaSectionOf(Files.readString(gff3Output)));
+        assertEquals(Map.of("seq1|cds1", WRONG_CDS_TRANSLATION), fastaRecordsOf(Files.readString(gff3Output)));
         assertEquals(0, fastaExitCode);
         assertEquals(
-                ">seq1|cds1\n" + WRONG_TRANSLATION,
+                ">seq1|cds1\n" + WRONG_CDS_TRANSLATION,
                 Files.readString(fastaOutput).trim());
-    }
-
-    private static final String WRONG_TRANSLATION = "MKKKKKKKKKKKKKKKKKKKKKKKKKKKKK";
-
-    /** One CDS {@code cds1} over {@code seq1} 1-93, with extra column-9 attributes and a ##FASTA section. */
-    private Path createCdsGff3(String extraAttributes, String fastaRecords) throws Exception {
-        Path gff3 = tempDir.resolve("input.gff3");
-        Files.writeString(
-                gff3,
-                "##gff-version 3\n##sequence-region seq1 1 100\n"
-                        + "seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1" + extraAttributes + "\n"
-                        + "##FASTA\n" + fastaRecords);
-        return gff3;
-    }
-
-    /** The records after {@code ##FASTA}, one header and one sequence line each, without the trailing newline. */
-    private static String fastaSectionOf(String gff3) {
-        int start = gff3.indexOf("##FASTA\n");
-        assertTrue(start >= 0, "no ##FASTA section in:\n" + gff3);
-        return gff3.substring(start + "##FASTA\n".length()).trim();
     }
 }

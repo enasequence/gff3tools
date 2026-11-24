@@ -13,6 +13,7 @@ package uk.ac.ebi.embl.gff3tools.validation;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.reportsOf;
 
 import java.util.List;
 import java.util.Map;
@@ -167,7 +168,7 @@ class TranslationStateIntegrationTest {
 
         assertEntry(engine, RIGHT, null);
         assertReports(engine, 0, 0, 1);
-        assertTrue(reports(engine.getCollectedErrors(), COMPARISON)
+        assertTrue(reportsOf(engine.getCollectedErrors(), COMPARISON)
                 .get(0)
                 .getMessage()
                 .contains("No new translation"));
@@ -307,18 +308,14 @@ class TranslationStateIntegrationTest {
     private static void assertReports(
             ValidationEngine engine, int mismatchWarnings, int mismatchErrors, int comparisonErrors) {
         assertEquals(
-                mismatchWarnings, reports(engine.getParsingWarnings(), MISMATCH).size(), MISMATCH + " warnings");
+                mismatchWarnings,
+                reportsOf(engine.getParsingWarnings(), MISMATCH).size(),
+                MISMATCH + " warnings");
         assertEquals(
-                mismatchErrors, reports(engine.getCollectedErrors(), MISMATCH).size(), MISMATCH + " errors");
+                mismatchErrors, reportsOf(engine.getCollectedErrors(), MISMATCH).size(), MISMATCH + " errors");
         assertEquals(
                 comparisonErrors,
-                reports(engine.getCollectedErrors(), COMPARISON).size(),
+                reportsOf(engine.getCollectedErrors(), COMPARISON).size(),
                 COMPARISON + " errors");
-    }
-
-    private static List<ValidationException> reports(List<ValidationException> all, String rule) {
-        return all.stream()
-                .filter(report -> rule.equals(report.getValidationRule()))
-                .toList();
     }
 }

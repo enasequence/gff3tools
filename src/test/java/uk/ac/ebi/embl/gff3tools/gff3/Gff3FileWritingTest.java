@@ -13,6 +13,12 @@ package uk.ac.ebi.embl.gff3tools.gff3;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.CDS_SEQUENCE;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.CDS_TRANSLATION;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.WRONG_CDS_TRANSLATION;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.fastaRecordsOf;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.reportsOf;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.writeCdsGff3;
 
 import java.io.BufferedReader;
 import java.io.StringReader;
@@ -21,7 +27,6 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -456,11 +461,12 @@ public class Gff3FileWritingTest {
             assertFalse(fasta.containsKey(ORPHAN_KEY), "the orphan ##FASTA record is not written");
             assertEquals(
                     translationCase.mismatchWarnings(),
-                    countRule(written.warnings(), "TRANSLATION_ATTRIBUTE_FASTA_MISMATCH"),
+                    reportsOf(written.warnings(), "TRANSLATION_ATTRIBUTE_FASTA_MISMATCH")
+                            .size(),
                     "TRANSLATION_ATTRIBUTE_FASTA_MISMATCH warnings");
             assertEquals(
                     translationCase.comparisonErrors(),
-                    countRule(written.errors(), "TRANSLATION_COMPARISON"),
+                    reportsOf(written.errors(), "TRANSLATION_COMPARISON").size(),
                     "TRANSLATION_COMPARISON errors");
             assertFalse(
                     featureLinesOf(written.factoryOutput()).contains("translation="),
@@ -477,7 +483,7 @@ public class Gff3FileWritingTest {
         @DisplayName("GFF3FileFactory.from writes the expected protein, with the expected reports")
         void writesTheExpectedTranslation(FlatFileCase flatFileCase) throws Exception {
             ValidationEngine engine = flatFileCase.sequences()
-                    ? validatingEngine(Map.of(FLAT_FILE_ACCESSION, SEQUENCE))
+                    ? validatingEngine(Map.of(FLAT_FILE_ACCESSION, CDS_SEQUENCE))
                     : validatingEngine(Map.of());
 
             String output =
@@ -490,7 +496,8 @@ public class Gff3FileWritingTest {
                     "the written protein of the one CDS");
             assertEquals(
                     flatFileCase.comparisonErrors(),
-                    countRule(engine.getCollectedErrors(), "TRANSLATION_COMPARISON"),
+                    reportsOf(engine.getCollectedErrors(), "TRANSLATION_COMPARISON")
+                            .size(),
                     "TRANSLATION_COMPARISON errors");
             assertFalse(featureLinesOf(output).contains("translation="), "/translation is not kept as an attribute");
         }
@@ -612,10 +619,9 @@ public class Gff3FileWritingTest {
     // helpers for the translation matrix
 
     /** ATG, 29 TTT codons and TAA (1-93) translate to {@link #RIGHT}; 7 more bases make it 100. */
-    private static final String SEQUENCE = "ATG" + "TTT".repeat(29) + "TAA" + "TTTTTTT";
+    private static final String RIGHT = CDS_TRANSLATION;
 
-    private static final String RIGHT = "M" + "F".repeat(29);
-    private static final String WRONG = "M" + "K".repeat(29);
+    private static final String WRONG = WRONG_CDS_TRANSLATION;
     private static final String ORPHAN = "MORPHAN";
     private static final String CDS1_KEY = "seq1|cds1";
     private static final String ORPHAN_KEY = "seq1|cds99";
@@ -723,23 +729,19 @@ public class Gff3FileWritingTest {
     /** Reads, validates and writes one matrix cell the way the pipeline does. */
     private Written writeAfterValidation(TranslationCase translationCase) throws Exception {
         TranslationInput input = translationCase.input();
-        String gff3 = "##gff-version 3\n##sequence-region seq1 1 100\n"
-                + "seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1" + translationCase.kind().attributes
-                + (input.attribute != null ? ";translation=" + input.attribute : "") + "\n";
-        if (input.fasta != null || input.orphan) {
-            gff3 += "##FASTA\n"
-                    + (input.fasta != null ? ">" + CDS1_KEY + "\n" + input.fasta + "\n" : "")
-                    + (input.orphan ? ">" + ORPHAN_KEY + "\n" + ORPHAN + "\n" : "");
-        }
-        Path source = tempDir.resolve("translations.gff3");
-        Files.writeString(source, gff3, Charset.defaultCharset());
+        Path source = writeCdsGff3(
+                tempDir,
+                translationCase.kind().attributes + (input.attribute != null ? ";translation=" + input.attribute : ""),
+                (input.fasta != null ? ">" + CDS1_KEY + "\n" + input.fasta + "\n" : "")
+                        + (input.orphan ? ">" + ORPHAN_KEY + "\n" + ORPHAN + "\n" : ""));
+        String gff3 = Files.readString(source);
 
         ValidationEngine engine = input.readOnly
                 ? new ValidationEngineBuilder()
                         .disableAutodetectValidationsAndFixes()
                         .disableAutodetectContextProviders()
                         .build()
-                : validatingEngine(input.sequences ? Map.of("seq1", SEQUENCE) : Map.of());
+                : validatingEngine(input.sequences ? Map.of("seq1", CDS_SEQUENCE) : Map.of());
 
         try (GFF3FileReader reader = new GFF3FileReader(engine, new StringReader(gff3), source)) {
             reader.readHeader();
@@ -797,34 +799,9 @@ public class Gff3FileWritingTest {
         return entry.append("XX\n//\n").toString();
     }
 
-    /** The records of the document's ##FASTA section, header to protein, lines joined. */
-    private static Map<String, String> fastaRecordsOf(String output) {
-        Map<String, String> records = new LinkedHashMap<>();
-        int marker = output.indexOf("##FASTA");
-        if (marker < 0) {
-            return records;
-        }
-        String header = null;
-        for (String line : output.substring(marker + "##FASTA".length()).split("\n")) {
-            if (line.startsWith(">")) {
-                header = line.substring(1).trim();
-                records.put(header, "");
-            } else if (header != null && !line.isBlank()) {
-                records.merge(header, line.trim(), String::concat);
-            }
-        }
-        return records;
-    }
-
     /** Everything above the ##FASTA section. */
     private static String featureLinesOf(String output) {
         int marker = output.indexOf("##FASTA");
         return marker < 0 ? output : output.substring(0, marker);
-    }
-
-    private static long countRule(List<ValidationException> reports, String rule) {
-        return reports.stream()
-                .filter(report -> rule.equals(report.getValidationRule()))
-                .count();
     }
 }

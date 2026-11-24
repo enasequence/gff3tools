@@ -27,7 +27,6 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3TranslationReader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
-import uk.ac.ebi.embl.gff3tools.validation.provider.GFF3TranslationReaderProvider;
 
 class FastaTranslationWithoutFeatureValidationTest {
 
@@ -44,7 +43,7 @@ class FastaTranslationWithoutFeatureValidationTest {
         reader = mock(GFF3TranslationReader.class);
         when(reader.getTranslationOffsetsForAccession(any())).thenReturn(Map.of());
         ValidationContext context = new ValidationContext();
-        context.register(GFF3TranslationReader.class, new GFF3TranslationReaderProvider(reader));
+        TestUtils.registerProvider(context, GFF3TranslationReader.class, reader);
         TestUtils.injectContext(validation, context);
     }
 

@@ -11,6 +11,9 @@
 package uk.ac.ebi.embl.gff3tools.cli;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.WRONG_CDS_TRANSLATION;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.writeCdsGff3;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.writeCdsSequenceFasta;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -721,8 +724,8 @@ public class ValidationCommandTest {
 
     @Test
     void validation_wrongFastaWithSequence_failsReportOnlyAndWithOutput() throws Exception {
-        Path fasta = writeCdsSequence();
-        Path gff3 = writeCdsGff3("", ">seq1|cds1\n" + WRONG_TRANSLATION + "\n");
+        Path fasta = writeCdsSequenceFasta(tempDir);
+        Path gff3 = writeCdsGff3(tempDir, "", ">seq1|cds1\n" + WRONG_CDS_TRANSLATION + "\n");
         Path outputFile = tempDir.resolve("output.gff3");
 
         assertEquals(20, executeValidation("validation", "--sequence", fasta.toString(), gff3.toString()));
@@ -734,8 +737,8 @@ public class ValidationCommandTest {
 
     @Test
     void validation_unreadableFasta_failsValidation() throws Exception {
-        Path fasta = writeCdsSequence();
-        Path gff3 = writeCdsGff3("", ">seq1|cds1\nMF1F\n");
+        Path fasta = writeCdsSequenceFasta(tempDir);
+        Path gff3 = writeCdsGff3(tempDir, "", ">seq1|cds1\nMF1F\n");
         Path outputFile = tempDir.resolve("output.gff3");
 
         assertEquals(
@@ -747,29 +750,5 @@ public class ValidationCommandTest {
                 executeValidation("validation", "--sequence", fasta.toString(), gff3.toString(), outputFile.toString()),
                 "FASTA_SECTION_UNREADABLE reports it before the output is written");
         assertFalse(Files.exists(outputFile), "no output is written for a failed validation");
-    }
-
-    private static final String RIGHT_TRANSLATION = "MFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
-    private static final String WRONG_TRANSLATION = "MKKKKKKKKKKKKKKKKKKKKKKKKKKKKK";
-
-    /** The sequence of {@code seq1}: ATG, 29 TTT codons and TAA (1-93) translate to {@link #RIGHT_TRANSLATION}. */
-    private Path writeCdsSequence() throws IOException {
-        Path fasta = tempDir.resolve("cds.fasta");
-        Files.writeString(
-                fasta,
-                ">seq1 | {\"description\":\"test\", \"molecule_type\":\"dna\", \"topology\":\"linear\"}\n" + "ATG"
-                        + "TTT".repeat(29) + "TAA" + "TTTTTTT\n");
-        return fasta;
-    }
-
-    /** One CDS {@code cds1} over {@code seq1} 1-93, with extra column-9 attributes and a ##FASTA section. */
-    private Path writeCdsGff3(String extraAttributes, String fastaSection) throws IOException {
-        Path gff3 = tempDir.resolve("input.gff3");
-        Files.writeString(
-                gff3,
-                "##gff-version 3\n##sequence-region seq1 1 100\n"
-                        + "seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1" + extraAttributes + "\n"
-                        + "##FASTA\n" + fastaSection);
-        return gff3;
     }
 }

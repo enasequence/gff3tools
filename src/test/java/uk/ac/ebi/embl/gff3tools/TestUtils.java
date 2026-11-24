@@ -12,11 +12,13 @@ package uk.ac.ebi.embl.gff3tools;
 
 import java.io.*;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import uk.ac.ebi.embl.fastareader.SequenceRangeOption;
 import uk.ac.ebi.embl.fastareader.SequenceStats;
 import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
+import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
@@ -29,6 +31,66 @@ import uk.ac.ebi.embl.gff3tools.validation.ValidationRegistry;
 import uk.ac.ebi.embl.gff3tools.validation.provider.SequenceSource;
 
 public class TestUtils {
+
+    /** {@code seq1}: ATG, 29 TTT codons and TAA (1-93), then 7 bases. Translates to {@link #CDS_TRANSLATION}. */
+    public static final String CDS_SEQUENCE = "ATG" + "TTT".repeat(29) + "TAA" + "TTTTTTT";
+
+    /** The translation of {@code cds1} over {@link #CDS_SEQUENCE} 1-93. */
+    public static final String CDS_TRANSLATION = "M" + "F".repeat(29);
+
+    /** A protein of the same length that is not {@link #CDS_TRANSLATION}. */
+    public static final String WRONG_CDS_TRANSLATION = "M" + "K".repeat(29);
+
+    /**
+     * Writes {@code input.gff3} to {@code dir}: one CDS {@code cds1} over {@code seq1} 1-93 with the
+     * extra column-9 attributes, and a {@code ##FASTA} section holding {@code fastaRecords} when it
+     * isn't empty.
+     */
+    public static Path writeCdsGff3(Path dir, String extraAttributes, String fastaRecords) throws IOException {
+        Path gff3 = dir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                "##gff-version 3\n##sequence-region seq1 1 100\n"
+                        + "seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1" + extraAttributes + "\n"
+                        + (fastaRecords.isEmpty() ? "" : "##FASTA\n" + fastaRecords));
+        return gff3;
+    }
+
+    /** Writes {@code cds.fasta} to {@code dir}: {@code >seq1} with a JSON header and {@link #CDS_SEQUENCE}. */
+    public static Path writeCdsSequenceFasta(Path dir) throws IOException {
+        Path fasta = dir.resolve("cds.fasta");
+        Files.writeString(
+                fasta,
+                ">seq1 | {\"description\":\"test\", \"molecule_type\":\"genomic DNA\", \"topology\":\"linear\"}\n"
+                        + CDS_SEQUENCE + "\n");
+        return fasta;
+    }
+
+    /** The records of a GFF3 document's {@code ##FASTA} section, header to protein, lines joined. */
+    public static Map<String, String> fastaRecordsOf(String gff3) {
+        Map<String, String> records = new LinkedHashMap<>();
+        int marker = gff3.indexOf("##FASTA");
+        if (marker < 0) {
+            return records;
+        }
+        String header = null;
+        for (String line : gff3.substring(marker + "##FASTA".length()).split("\n")) {
+            if (line.startsWith(">")) {
+                header = line.substring(1).trim();
+                records.put(header, "");
+            } else if (header != null && !line.isBlank()) {
+                records.merge(header, line.trim(), String::concat);
+            }
+        }
+        return records;
+    }
+
+    /** The reports of one rule. */
+    public static List<ValidationException> reportsOf(List<ValidationException> reports, String rule) {
+        return reports.stream()
+                .filter(report -> rule.equals(report.getValidationRule()))
+                .toList();
+    }
 
     /**
      * A {@link SequenceSource} that serves a gap-free sequence of {@code length} bases for every

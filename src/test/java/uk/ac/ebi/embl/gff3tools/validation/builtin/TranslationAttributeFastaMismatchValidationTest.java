@@ -26,7 +26,6 @@ import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3TranslationReader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
-import uk.ac.ebi.embl.gff3tools.validation.provider.GFF3TranslationReaderProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationStateProvider;
 
@@ -51,7 +50,7 @@ class TranslationAttributeFastaMismatchValidationTest {
         state = context.get(TranslationState.class);
         reader = mock(GFF3TranslationReader.class);
         when(reader.getTranslation(any(), any())).thenReturn(Optional.empty());
-        context.register(GFF3TranslationReader.class, new GFF3TranslationReaderProvider(reader));
+        TestUtils.registerProvider(context, GFF3TranslationReader.class, reader);
         TestUtils.injectContext(validation, context);
     }
 
@@ -140,7 +139,7 @@ class TranslationAttributeFastaMismatchValidationTest {
         TranslationAttributeFastaMismatchValidation noStateValidation =
                 new TranslationAttributeFastaMismatchValidation();
         ValidationContext noStateContext = new ValidationContext();
-        noStateContext.register(GFF3TranslationReader.class, new GFF3TranslationReaderProvider(reader));
+        TestUtils.registerProvider(noStateContext, GFF3TranslationReader.class, reader);
         TestUtils.injectContext(noStateValidation, noStateContext);
         fastaHas("MKFGP");
 
