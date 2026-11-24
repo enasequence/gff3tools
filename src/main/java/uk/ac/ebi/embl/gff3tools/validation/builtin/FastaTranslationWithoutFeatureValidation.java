@@ -25,13 +25,12 @@ import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3TranslationReader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
-import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationMethod;
 
 /**
- * Warns about {@code ##FASTA} records of an annotation's accession whose {@code >accession|featureId}
- * header matches none of that annotation's features. They are still written to the output; this only
- * says that nothing in the annotation claims them.
+ * Reports {@code ##FASTA} records of an annotation's accession whose {@code >accession|featureId}
+ * header matches none of that annotation's features, as an error: nothing in the annotation claims
+ * them.
  *
  * <p>Only the headers are compared: the proteins are never read.
  */
@@ -41,7 +40,7 @@ public class FastaTranslationWithoutFeatureValidation {
 
     public static final String RULE = "FASTA_TRANSLATION_WITHOUT_FEATURE";
 
-    /** How many unmatched headers the warning names before it only counts the rest. */
+    /** How many unmatched headers the error names before it only counts the rest. */
     static final int HEADERS_NAMED = 10;
 
     @InjectContext
@@ -49,9 +48,8 @@ public class FastaTranslationWithoutFeatureValidation {
 
     @ValidationMethod(
             rule = RULE,
-            description = "Warn about ##FASTA records of an annotation that match none of its features",
-            type = ANNOTATION,
-            severity = RuleSeverity.ERROR)
+            description = "Report ##FASTA records of an annotation that match none of its features",
+            type = ANNOTATION)
     public void validateAnnotation(GFF3Annotation annotation, int line) throws ValidationException {
         String accession = annotation.getAccession();
         Set<String> headers = fastaHeaders(accession);
