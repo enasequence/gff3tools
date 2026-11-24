@@ -51,7 +51,7 @@ public class FastaTranslationWithoutFeatureValidation {
             rule = RULE,
             description = "Warn about ##FASTA records of an annotation that match none of its features",
             type = ANNOTATION,
-            severity = RuleSeverity.WARN)
+            severity = RuleSeverity.ERROR)
     public void validateAnnotation(GFF3Annotation annotation, int line) throws ValidationException {
         String accession = annotation.getAccession();
         Set<String> headers = fastaHeaders(accession);

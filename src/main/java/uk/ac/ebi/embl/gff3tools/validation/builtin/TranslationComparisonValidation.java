@@ -31,12 +31,16 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 /**
- * Validates that newly computed translations match any pre-existing translation attribute.
+ * Validates that the newly computed translation of each CDS matches its submitted translation.
  *
- * <p>Runs at {@link ValidationPriority#LOW} — the same tier as {@code TranslationFix}.
- * Within a tier, fixes run before validations, so by the time this validator executes,
- * {@code TranslationFix} has already recorded old and new translations in
- * {@link TranslationState}.
+ * <p>The submitted translation is the old translation in {@link TranslationState}: the CDS's
+ * {@code ##FASTA} protein, recorded by {@code TRANSLATION_ATTRIBUTE_FASTA_MISMATCH}, or else its
+ * {@code translation} attribute, recorded by {@code TRANSLATION_ATTRIBUTE_FASTA_MISMATCH} or, when that
+ * rule is off, by {@code REMOVE_TRANSLATION_ATTRIBUTE}.
+ *
+ * <p>Runs at {@link ValidationPriority#LOW} — the same tier as {@code TranslationFix}'s
+ * {@code TRANSLATION}. Within a tier, fixes run before validations, so by the time this validator
+ * executes, the new translations are recorded too.
  *
  * <p>If no old translation existed, this validation is a no-op.
  */
@@ -49,7 +53,8 @@ public class TranslationComparisonValidation {
 
     @ValidationMethod(
             rule = "TRANSLATION_COMPARISON",
-            description = "Compare existing translation with newly computed translation",
+            description =
+                    "Compare the submitted translation (##FASTA, else the translation attribute) with the newly computed translation",
             type = ANNOTATION,
             severity = RuleSeverity.ERROR,
             priority = ValidationPriority.LOW)
