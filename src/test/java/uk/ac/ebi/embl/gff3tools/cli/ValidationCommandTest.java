@@ -466,7 +466,7 @@ public class ValidationCommandTest {
                 + "##sequence-region BN000065.1 1 315242\n"
                 + "BN000065.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n"
                 + "##FASTA\n"
-                + ">BN000065.1|CDS_RHD\n"
+                + ">BN000065.1|gene_RHD\n"
                 + "MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEDQKGLVASYQVGQDLTVMAAI\n";
         Path gff3Gz = tempDir.resolve("input.gff3.gz");
         try (GZIPOutputStream out = new GZIPOutputStream(Files.newOutputStream(gff3Gz))) {
@@ -480,7 +480,7 @@ public class ValidationCommandTest {
         String content = Files.readString(outputFile);
         assertTrue(
                 content.contains("##FASTA")
-                        && content.contains(">BN000065.1|CDS_RHD")
+                        && content.contains(">BN000065.1|gene_RHD")
                         && content.contains("MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEDQKGLVASYQVGQDLTVMAAI"),
                 "The FASTA/translation section must round-trip from gzipped input, not be lost: " + content);
     }
@@ -772,19 +772,49 @@ public class ValidationCommandTest {
     }
 
     @Test
-    void validation_unreadableFasta_failsOnlyWhenOutputIsWritten() throws Exception {
+    void validation_unreadableFasta_failsValidation() throws Exception {
+        Path fasta = writeCdsSequence();
+        Path gff3 = writeCdsGff3("", ">seq1|cds1\nMF1F\n");
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        assertEquals(
+                20,
+                executeValidation("validation", "--sequence", fasta.toString(), gff3.toString()),
+                "FASTA_SECTION_UNREADABLE reports it on a report-only run");
+        assertEquals(
+                20,
+                executeValidation("validation", "--sequence", fasta.toString(), gff3.toString(), outputFile.toString()),
+                "FASTA_SECTION_UNREADABLE reports it before the output is written");
+        assertFalse(Files.exists(outputFile), "no output is written for a failed validation");
+    }
+
+    @Test
+    void validation_unreadableFasta_ruleOff_failsOnlyWhenOutputIsWritten() throws Exception {
         Path fasta = writeCdsSequence();
         Path gff3 = writeCdsGff3("", ">seq1|cds1\nMF1F\n");
         Path outputFile = tempDir.resolve("output.gff3");
 
         assertEquals(
                 0,
-                executeValidation("validation", "--sequence", fasta.toString(), gff3.toString()),
-                "report-only runs don't report an unreadable ##FASTA yet");
+                executeValidation(
+                        "validation",
+                        "--rules",
+                        "FASTA_SECTION_UNREADABLE:OFF",
+                        "--sequence",
+                        fasta.toString(),
+                        gff3.toString()),
+                "with the rule off, a report-only run doesn't read ##FASTA's errors");
         assertEquals(
                 11,
-                executeValidation("validation", "--sequence", fasta.toString(), gff3.toString(), outputFile.toString()),
-                "writing the output reads ##FASTA and fails");
+                executeValidation(
+                        "validation",
+                        "--rules",
+                        "FASTA_SECTION_UNREADABLE:OFF",
+                        "--sequence",
+                        fasta.toString(),
+                        gff3.toString(),
+                        outputFile.toString()),
+                "with the rule off, writing the output reads ##FASTA and fails");
     }
 
     private static final String RIGHT_TRANSLATION = "MFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";

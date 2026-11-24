@@ -169,7 +169,7 @@ public class GFF3FileReaderTest {
                         // translations are read by file offset whatever the features are
                         + "ACC1.1\tENA\tgene\t1\t12\t.\t+\t.\tID=gene1\n"
                         + "##FASTA\n"
-                        + ">ACC1.1|CDS_1\n"
+                        + ">ACC1.1|gene1\n"
                         + "MKP\n");
 
         try (GFF3FileReader gff3Reader = new GFF3FileReader(getValidationEngineFailFast(), gff3)) {
@@ -179,8 +179,8 @@ public class GFF3FileReaderTest {
             }
 
             Map<String, Long> translations = gff3Reader.getTranslationOffsetMap();
-            assertEquals(Set.of("ACC1.1|CDS_1"), translations.keySet());
-            assertEquals("MKP", gff3Reader.getTranslation(translations.get("ACC1.1|CDS_1")));
+            assertEquals(Set.of("ACC1.1|gene1"), translations.keySet());
+            assertEquals("MKP", gff3Reader.getTranslation(translations.get("ACC1.1|gene1")));
         }
     }
 
