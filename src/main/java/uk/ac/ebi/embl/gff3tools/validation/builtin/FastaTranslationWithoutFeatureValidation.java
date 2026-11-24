@@ -73,7 +73,7 @@ public class FastaTranslationWithoutFeatureValidation {
 
     /**
      * The {@code ##FASTA} headers of this accession, or none when there is no GFF3 reader or its
-     * {@code ##FASTA} cannot be read. An unreadable section is reported when the output is written.
+     * {@code ##FASTA} cannot be read. {@code FASTA_SECTION_UNREADABLE} reports an unreadable section.
      */
     private Set<String> fastaHeaders(String accession) {
         if (accession == null || !context.contains(GFF3TranslationReader.class)) {

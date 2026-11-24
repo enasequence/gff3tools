@@ -81,7 +81,7 @@ public class TranslationAttributeFastaMismatchValidation {
     /**
      * The submitted {@code ##FASTA} protein for this feature, or null when there is none, there is no
      * GFF3 reader (flat file and TSV conversion), or it cannot be read. A read failure is not reported
-     * here: writing the output reads the same section and reports it there.
+     * here: {@code FASTA_SECTION_UNREADABLE} reports it.
      */
     private String lookupFastaTranslation(String accession, String featureId) {
         if (featureId == null || !context.contains(GFF3TranslationReader.class)) {
