@@ -49,22 +49,22 @@ class FastaSectionReadableValidationTest {
 
     @Test
     void readableFasta_noError() {
-        assertDoesNotThrow(() -> validation.validateAnnotation(annotation("seq1"), LINE));
+        assertDoesNotThrow(() -> validation.validateFastaSectionReadable(annotation("seq1"), LINE));
     }
 
     @Test
     void noFastaSection_noError() throws Exception {
         when(reader.getTranslationOffsets()).thenReturn(Map.of());
 
-        assertDoesNotThrow(() -> validation.validateAnnotation(annotation("seq1"), LINE));
+        assertDoesNotThrow(() -> validation.validateFastaSectionReadable(annotation("seq1"), LINE));
     }
 
     @Test
     void unreadableFasta_isReportedWithTheReadersReason() throws Exception {
         when(reader.getTranslationOffsets()).thenThrow(new ReadException(READ_ERROR));
 
-        ValidationException exception =
-                assertThrows(ValidationException.class, () -> validation.validateAnnotation(annotation("seq1"), LINE));
+        ValidationException exception = assertThrows(
+                ValidationException.class, () -> validation.validateFastaSectionReadable(annotation("seq1"), LINE));
 
         assertEquals(RULE, exception.getValidationRule());
         assertEquals(LINE, exception.getLine());
@@ -75,33 +75,24 @@ class FastaSectionReadableValidationTest {
     void unreadableFasta_isReportedOnlyOnTheFirstAnnotation() throws Exception {
         when(reader.getTranslationOffsets()).thenThrow(new ReadException(READ_ERROR));
 
-        assertThrows(ValidationException.class, () -> validation.validateAnnotation(annotation("seq1"), LINE));
-        assertDoesNotThrow(() -> validation.validateAnnotation(annotation("seq2"), LINE + 10));
+        assertThrows(
+                ValidationException.class, () -> validation.validateFastaSectionReadable(annotation("seq1"), LINE));
+        assertDoesNotThrow(() -> validation.validateFastaSectionReadable(annotation("seq2"), LINE + 10));
 
         verify(reader, times(1)).getTranslationOffsets();
     }
 
     @Test
     void readableFasta_isCheckedOnlyOnce() throws Exception {
-        validation.validateAnnotation(annotation("seq1"), LINE);
-        validation.validateAnnotation(annotation("seq2"), LINE + 10);
+        validation.validateFastaSectionReadable(annotation("seq1"), LINE);
+        validation.validateFastaSectionReadable(annotation("seq2"), LINE + 10);
 
         verify(reader, times(1)).getTranslationOffsets();
     }
 
     @Test
-    void newReaderOnTheSameContext_isCheckedAgain() throws Exception {
-        validation.validateAnnotation(annotation("seq1"), LINE);
-        GFF3TranslationReader secondReader = mock(GFF3TranslationReader.class);
-        when(secondReader.getTranslationOffsets()).thenThrow(new ReadException(READ_ERROR));
-        context.register(GFF3TranslationReader.class, new GFF3TranslationReaderProvider(secondReader));
-
-        assertThrows(ValidationException.class, () -> validation.validateAnnotation(annotation("seq1"), LINE));
-    }
-
-    @Test
     void proteinsAreNeverRead() throws Exception {
-        validation.validateAnnotation(annotation("seq1"), LINE);
+        validation.validateFastaSectionReadable(annotation("seq1"), LINE);
 
         verify(reader, never()).readTranslation(anyLong());
         verify(reader, never()).getTranslation(any(), any());
@@ -112,7 +103,7 @@ class FastaSectionReadableValidationTest {
         FastaSectionReadableValidation noReader = new FastaSectionReadableValidation();
         TestUtils.injectContext(noReader, new ValidationContext());
 
-        assertDoesNotThrow(() -> noReader.validateAnnotation(annotation("seq1"), LINE));
+        assertDoesNotThrow(() -> noReader.validateFastaSectionReadable(annotation("seq1"), LINE));
     }
 
     private static GFF3Annotation annotation(String accession) {

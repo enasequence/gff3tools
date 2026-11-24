@@ -27,7 +27,7 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
  * an amino acid or a header that appears twice. The other translation rules treat such a section as
  * empty, so without this rule it is only noticed when the output is written.
  *
- * <p>Checked once per GFF3 reader, on the first annotation: the engine has no hook that runs once
+ * <p>Checked once, on the first annotation: the engine has no hook that runs once
  * after the reader is registered. Building the index here costs nothing extra, as the first
  * {@code ##FASTA} lookup would build it anyway.
  */
@@ -39,25 +39,21 @@ public class FastaSectionReadableValidation {
     @InjectContext
     private ValidationContext context;
 
-    /** The reader already checked, so a file is reported once, and a new reader is checked again. */
-    private GFF3TranslationReader checkedReader;
+    /** Set once the section is checked, so it is reported once. One engine reads one file. */
+    private boolean checked;
 
     @ValidationMethod(
             rule = RULE,
             description = "Check that the ##FASTA section of a GFF3 file is formatted correctly",
             type = ANNOTATION,
             priority = ValidationPriority.CRITICAL)
-    public void validateAnnotation(GFF3Annotation annotation, int line) throws ValidationException {
-        if (!context.contains(GFF3TranslationReader.class)) {
+    public void validateFastaSectionReadable(GFF3Annotation annotation, int line) throws ValidationException {
+        if (checked || !context.contains(GFF3TranslationReader.class)) {
             return;
         }
-        GFF3TranslationReader reader = context.get(GFF3TranslationReader.class);
-        if (reader == checkedReader) {
-            return;
-        }
-        checkedReader = reader;
+        checked = true;
         try {
-            reader.getTranslationOffsets();
+            context.get(GFF3TranslationReader.class).getTranslationOffsets();
         } catch (ReadException e) {
             throw new ValidationException(RULE, line, e.getMessage());
         }
