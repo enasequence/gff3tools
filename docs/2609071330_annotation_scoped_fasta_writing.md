@@ -122,15 +122,14 @@ the *generated* one, because new wins.
 
 ```mermaid
 flowchart TD
-    START["Features written"] --> FLAG{"writeAnnotationFasta?"}
-    FLAG -- no --> NONE["No ##FASTA"]
-    FLAG -- yes --> A["Submitter's ##FASTA<br/>(this document's accessions)"]
-    A --> B["Lay TranslationState on top<br/>(state wins on the same feature)"]
-    B --> MERGED{"Anything?"}
-    MERGED -- yes --> OUT["One ##FASTA section"]
-    MERGED -- no --> C{"fastaFilePath has records<br/>for this document?"}
-    C -- yes --> OUT
-    C -- "no / missing / empty" --> NONE
+    S{"TranslationState set?"} -->|"yes (validated run)"| T["Its translations: new, else old"]
+    S -->|"no (read-only engine: merging, splitting, reading)"| F["Source GFF3 ##FASTA records"]
+    T --> N{"Any for this file's accessions?"}
+    F --> N
+    N -->|"yes"| W["Written as ##FASTA"]
+    N -->|"no"| X{"Translation FASTA file given?"}
+    X -->|"yes"| A["Its records for these accessions, appended"]
+    X -->|"no"| Z["No ##FASTA section"]
 ```
 
 - `TranslationState` (`validation/provider`) is where `TranslationFix` records translations.
@@ -145,11 +144,10 @@ flowchart TD
 **`writeTranslationSection`** runs once, after all features:
 
 1. Collect the document's accessions.
-2. Fill a `LinkedHashMap` with the reader's translations for each annotation, in annotation order.
-3. Put in the `TranslationState` entries for those accessions. Same key: replaced. New key:
-   added at the end.
-4. If the map has anything, write it and stop.
-5. Otherwise copy matching records from `fastaFilePath`. `##FASTA` is written only when the first
+2. With a `TranslationState`, take its resolved translations for those accessions. Without one,
+   take the reader's translations for each annotation, in annotation order.
+3. If that gives anything, write it and stop.
+4. Otherwise copy matching records from `fastaFilePath`. `##FASTA` is written only when the first
    matching record turns up, so a file with nothing relevant leaves no bare directive.
 
 **Key questions live in `TranslationKey`**:
