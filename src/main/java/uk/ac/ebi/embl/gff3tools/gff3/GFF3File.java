@@ -128,41 +128,54 @@ public class GFF3File implements IGFF3Feature {
     /**
      * Writes this file's translations, scoped to its accessions.
      *
-     * <p>The source GFF3's {@code ##FASTA} and {@code TranslationState} are merged per feature,
-     * not chosen between: a feature this validation run never touched has no state entry, and
-     * must keep its original translation even when other features in the same file do have one.
-     * The state is overlaid last, so it wins where both hold the same feature.
+     * <p>With a {@code TranslationState}, only its translations are written: validation recorded
+     * every submitted {@code ##FASTA} protein that belongs to a feature and every {@code translation} attribute,
+     * and the source file therefore doesn't need to be read again.
      *
-     * <p>The existing translation FASTA is used only when that merge is empty. Selection is by
-     * content, not by presence: {@code TranslationState} is supplied by an auto-discovered provider
-     * and so is never null, and a fallback that only fires on null could never fire at all.
+     * Without one (a read-only engine, or no state passed),
+     * the source GFF3's {@code ##FASTA} records are copied as they are.
+     *
+     * <p>The existing translation FASTA is used only when that gives nothing for the whole document.
      */
     private void writeTranslationSection(Writer writer) throws IOException, ReadException {
         Set<String> accessions =
                 annotations.stream().map(GFF3Annotation::getAccession).collect(Collectors.toSet());
 
-        Map<String, String> translations = new LinkedHashMap<>();
-        if (gff3Reader != null) {
-            for (GFF3Annotation ann : annotations) {
-                for (Map.Entry<String, Long> entry :
-                        gff3Reader.getTranslationOffsetForAnnotation(ann).entrySet()) {
-                    translations.put(entry.getKey(), gff3Reader.getTranslation(entry.getValue()));
-                }
-            }
-        }
-        if (translationState != null) {
-            translationState.forEachResolved((key, translation) -> {
-                if (TranslationKey.belongsToAny(key, accessions)) {
-                    translations.put(key, translation);
-                }
-            });
-        }
+        Map<String, String> translations = translationState != null
+                ? getTranslationsFromTranslationState(accessions)
+                : getTranslationsFromSourceFasta();
 
         if (!translations.isEmpty()) {
             writeFastaFromMap(writer, translations);
             return;
         }
         writeFastaFromExistingFile(writer, accessions);
+    }
+
+    /** The source GFF3's {@code ##FASTA} records for this file's annotations, in their order. */
+    private Map<String, String> getTranslationsFromSourceFasta() throws ReadException {
+        Map<String, String> translations = new LinkedHashMap<>();
+        if (gff3Reader == null) {
+            return translations;
+        }
+        for (GFF3Annotation annotation : annotations) {
+            for (Map.Entry<String, Long> record :
+                    gff3Reader.getTranslationOffsetForAnnotation(annotation).entrySet()) {
+                translations.put(record.getKey(), gff3Reader.getTranslation(record.getValue()));
+            }
+        }
+        return translations;
+    }
+
+    /** The resolved translations in {@code TranslationState} for these accessions, in recording order. */
+    private Map<String, String> getTranslationsFromTranslationState(Set<String> accessions) {
+        Map<String, String> translations = new LinkedHashMap<>();
+        translationState.forEachResolved((key, translation) -> {
+            if (TranslationKey.belongsToAny(key, accessions)) {
+                translations.put(key, translation);
+            }
+        });
+        return translations;
     }
 
     private void writeFastaFromMap(Writer writer, Map<String, String> translations) throws IOException {

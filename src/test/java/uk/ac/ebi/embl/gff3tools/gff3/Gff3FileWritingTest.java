@@ -454,7 +454,8 @@ public class Gff3FileWritingTest {
             Map<String, String> fasta = fastaRecordsOf(written.factoryOutput());
 
             assertEquals(translationCase.expectedCds1(), fasta.get(CDS1_KEY), "cds1's written protein");
-            assertEquals(translationCase.input().orphan(), fasta.containsKey(ORPHAN_KEY), "the orphan ##FASTA record");
+            // TranslationState is written alone, and an orphan never reaches it
+            assertFalse(fasta.containsKey(ORPHAN_KEY), "the orphan ##FASTA record is not written");
             assertEquals(
                     translationCase.mismatchWarnings(),
                     countRule(written.warnings(), "TRANSLATION_ATTRIBUTE_FASTA_MISMATCH"),
@@ -673,10 +674,6 @@ public class Gff3FileWritingTest {
             this.sequences = sequences;
             this.readOnly = readOnly;
             this.orphan = orphan;
-        }
-
-        boolean orphan() {
-            return orphan;
         }
     }
 

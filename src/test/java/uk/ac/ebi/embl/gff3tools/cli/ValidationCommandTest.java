@@ -788,35 +788,6 @@ public class ValidationCommandTest {
         assertFalse(Files.exists(outputFile), "no output is written for a failed validation");
     }
 
-    @Test
-    void validation_unreadableFasta_ruleOff_failsOnlyWhenOutputIsWritten() throws Exception {
-        Path fasta = writeCdsSequence();
-        Path gff3 = writeCdsGff3("", ">seq1|cds1\nMF1F\n");
-        Path outputFile = tempDir.resolve("output.gff3");
-
-        assertEquals(
-                0,
-                executeValidation(
-                        "validation",
-                        "--rules",
-                        "FASTA_SECTION_UNREADABLE:OFF",
-                        "--sequence",
-                        fasta.toString(),
-                        gff3.toString()),
-                "with the rule off, a report-only run doesn't read ##FASTA's errors");
-        assertEquals(
-                11,
-                executeValidation(
-                        "validation",
-                        "--rules",
-                        "FASTA_SECTION_UNREADABLE:OFF",
-                        "--sequence",
-                        fasta.toString(),
-                        gff3.toString(),
-                        outputFile.toString()),
-                "with the rule off, writing the output reads ##FASTA and fails");
-    }
-
     private static final String RIGHT_TRANSLATION = "MFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
     private static final String WRONG_TRANSLATION = "MKKKKKKKKKKKKKKKKKKKKKKKKKKKKK";
 
