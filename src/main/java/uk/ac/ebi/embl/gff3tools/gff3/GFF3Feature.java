@@ -275,7 +275,7 @@ public class GFF3Feature {
     /**
      * Is the feature 5' partial. Checks if feature has 'start' in partial attribute.
      */
-    //TODO: will rename this to isStartPartial() when this PR is approved
+    // TODO: will rename this to isStartPartial() when this PR is approved
     public boolean isFivePrimePartial() {
         String partialValue = "start";
         return getAttributeList(GFF3Attributes.PARTIAL)
@@ -286,7 +286,7 @@ public class GFF3Feature {
     /**
      * Is the feature 3' partial. Checks if feature has 'end' in partial attribute..
      */
-    //TODO: will rename this to isEndPartial() when this PR is approved
+    // TODO: will rename this to isEndPartial() when this PR is approved
     public boolean isThreePrimePartial() {
         String partialValue = "end";
         return getAttributeList(GFF3Attributes.PARTIAL)
