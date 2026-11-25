@@ -187,6 +187,130 @@ public class GeneAssociatedFeatureRemovalTest {
                 cdsChildOfKeptGene.getAttribute(GFF3Attributes.ATTRIBUTE_PARENT).orElse(null));
     }
 
+    // Pseudo-copying tests
+
+    @Test
+    public void removedGeneWithPseudo_childGetsPseudo() {
+        GFF3Feature gene = TestUtils.createGFF3Feature("gene_1", null, "gene", TestUtils.DEFAULT_ACCESSION, 100L, 200L);
+        gene.addAttribute(GFF3Attributes.PSEUDO, "true");
+        GFF3Feature cds = TestUtils.createGFF3Feature(
+                "cds_1", "gene_1", OntologyTerm.CDS.name(), TestUtils.DEFAULT_ACCESSION, 100L, 200L);
+        gff3Annotation.setFeatures(new ArrayList<>(List.of(gene, cds)));
+
+        geneAssociatedFeatureRemoval.fixAnnotation(gff3Annotation, 1);
+
+        assertFalse(gff3Annotation.getFeatures().contains(gene));
+        assertEquals(Optional.of("true"), cds.getAttribute(GFF3Attributes.PSEUDO));
+        assertFalse(cds.hasAttribute(GFF3Attributes.PSEUDOGENE));
+    }
+
+    @Test
+    public void removedGeneWithPseudogene_childGetsPseudogeneValue() {
+        GFF3Feature gene = TestUtils.createGFF3Feature("gene_1", null, "gene", TestUtils.DEFAULT_ACCESSION, 100L, 200L);
+        gene.addAttribute(GFF3Attributes.PSEUDOGENE, "processed");
+        GFF3Feature cds = TestUtils.createGFF3Feature(
+                "cds_1", "gene_1", OntologyTerm.CDS.name(), TestUtils.DEFAULT_ACCESSION, 100L, 200L);
+        gff3Annotation.setFeatures(new ArrayList<>(List.of(gene, cds)));
+
+        geneAssociatedFeatureRemoval.fixAnnotation(gff3Annotation, 1);
+
+        assertEquals(Optional.of(List.of("processed")), cds.getAttributeList(GFF3Attributes.PSEUDOGENE));
+        assertFalse(cds.hasAttribute(GFF3Attributes.PSEUDO));
+    }
+
+    @Test
+    public void removedGeneWithPseudoAndPseudogene_childGetsPseudogeneOnly() {
+        // pseudo and pseudogene are mutually exclusive, so only the more specific one is copied.
+        GFF3Feature gene = TestUtils.createGFF3Feature("gene_1", null, "gene", TestUtils.DEFAULT_ACCESSION, 100L, 200L);
+        gene.addAttribute(GFF3Attributes.PSEUDO, "true");
+        gene.addAttribute(GFF3Attributes.PSEUDOGENE, "unitary");
+        GFF3Feature cds = TestUtils.createGFF3Feature(
+                "cds_1", "gene_1", OntologyTerm.CDS.name(), TestUtils.DEFAULT_ACCESSION, 100L, 200L);
+        gff3Annotation.setFeatures(new ArrayList<>(List.of(gene, cds)));
+
+        geneAssociatedFeatureRemoval.fixAnnotation(gff3Annotation, 1);
+
+        assertEquals(Optional.of(List.of("unitary")), cds.getAttributeList(GFF3Attributes.PSEUDOGENE));
+        assertFalse(cds.hasAttribute(GFF3Attributes.PSEUDO));
+    }
+
+    @Test
+    public void removedPseudogeneType_childGetsPseudo() {
+        GFF3Feature gene =
+                TestUtils.createGFF3Feature("gene_1", null, "pseudogene", TestUtils.DEFAULT_ACCESSION, 100L, 200L);
+        GFF3Feature cds = TestUtils.createGFF3Feature(
+                "cds_1", "gene_1", OntologyTerm.CDS.name(), TestUtils.DEFAULT_ACCESSION, 100L, 200L);
+        gff3Annotation.setFeatures(new ArrayList<>(List.of(gene, cds)));
+
+        geneAssociatedFeatureRemoval.fixAnnotation(gff3Annotation, 1);
+
+        assertFalse(gff3Annotation.getFeatures().contains(gene));
+        assertEquals(Optional.of("true"), cds.getAttribute(GFF3Attributes.PSEUDO));
+    }
+
+    @Test
+    public void removedPseudoGene_mrnaChildGetsPseudoAndCdsKeepsItsParent() {
+        // Only the unlinked child gets it; the CDS still reaches it through the mRNA.
+        GFF3Feature gene = TestUtils.createGFF3Feature("gene_1", null, "gene", TestUtils.DEFAULT_ACCESSION, 100L, 200L);
+        gene.addAttribute(GFF3Attributes.PSEUDO, "true");
+        GFF3Feature mrna =
+                TestUtils.createGFF3Feature("mrna_1", "gene_1", "mRNA", TestUtils.DEFAULT_ACCESSION, 100L, 200L);
+        GFF3Feature cds = TestUtils.createGFF3Feature(
+                "cds_1", "mrna_1", OntologyTerm.CDS.name(), TestUtils.DEFAULT_ACCESSION, 100L, 200L);
+        gff3Annotation.setFeatures(new ArrayList<>(List.of(gene, mrna, cds)));
+
+        geneAssociatedFeatureRemoval.fixAnnotation(gff3Annotation, 1);
+
+        assertFalse(gff3Annotation.getFeatures().contains(gene));
+        assertEquals(Optional.of("true"), mrna.getAttribute(GFF3Attributes.PSEUDO));
+        assertFalse(cds.hasAttribute(GFF3Attributes.PSEUDO));
+        assertEquals(Optional.of("mrna_1"), cds.getParentId());
+    }
+
+    @Test
+    public void removedPseudoGene_childWithOwnPseudoKeepsIt() {
+        GFF3Feature gene = TestUtils.createGFF3Feature("gene_1", null, "gene", TestUtils.DEFAULT_ACCESSION, 100L, 200L);
+        gene.addAttribute(GFF3Attributes.PSEUDOGENE, "processed");
+        GFF3Feature cds = TestUtils.createGFF3Feature(
+                "cds_1", "gene_1", OntologyTerm.CDS.name(), TestUtils.DEFAULT_ACCESSION, 100L, 200L);
+        cds.addAttribute(GFF3Attributes.PSEUDO, "true");
+        gff3Annotation.setFeatures(new ArrayList<>(List.of(gene, cds)));
+
+        geneAssociatedFeatureRemoval.fixAnnotation(gff3Annotation, 1);
+
+        assertEquals(Optional.of(List.of("true")), cds.getAttributeList(GFF3Attributes.PSEUDO));
+        assertFalse(cds.hasAttribute(GFF3Attributes.PSEUDOGENE));
+    }
+
+    @Test
+    public void removedGeneNotPseudo_childGetsNoPseudo() {
+        GFF3Feature gene = TestUtils.createGFF3Feature("gene_1", null, "gene", TestUtils.DEFAULT_ACCESSION, 100L, 200L);
+        GFF3Feature cds = TestUtils.createGFF3Feature(
+                "cds_1", "gene_1", OntologyTerm.CDS.name(), TestUtils.DEFAULT_ACCESSION, 100L, 200L);
+        gff3Annotation.setFeatures(new ArrayList<>(List.of(gene, cds)));
+
+        geneAssociatedFeatureRemoval.fixAnnotation(gff3Annotation, 1);
+
+        assertFalse(gff3Annotation.getFeatures().contains(gene));
+        assertFalse(cds.hasAttribute(GFF3Attributes.PSEUDO));
+        assertFalse(cds.hasAttribute(GFF3Attributes.PSEUDOGENE));
+    }
+
+    @Test
+    public void keptPseudoGene_childUnchanged() {
+        GFF3Feature gene = TestUtils.createGFF3Feature("gene_1", null, "gene", TestUtils.DEFAULT_ACCESSION, 100L, 300L);
+        gene.addAttribute(GFF3Attributes.PSEUDO, "true");
+        GFF3Feature cds = TestUtils.createGFF3Feature(
+                "cds_1", "gene_1", OntologyTerm.CDS.name(), TestUtils.DEFAULT_ACCESSION, 100L, 200L);
+        gff3Annotation.setFeatures(new ArrayList<>(List.of(gene, cds)));
+
+        geneAssociatedFeatureRemoval.fixAnnotation(gff3Annotation, 1);
+
+        assertTrue(gff3Annotation.getFeatures().contains(gene));
+        assertFalse(cds.hasAttribute(GFF3Attributes.PSEUDO));
+        assertEquals(Optional.of("gene_1"), cds.getParentId());
+    }
+
     private GFF3Feature geneWithId(String id, long start, long end) {
         GFF3Feature gene = new GFF3Feature(
                 Optional.of(id),
