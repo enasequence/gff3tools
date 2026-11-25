@@ -603,7 +603,7 @@ class TranslationFixTest {
 
     @Test
     void threePrimePartialRemovedOnComplementStrandKeepsFivePrimePartial() throws Exception {
-        // Complement: 3' partial is partial=start, 5' partial is partial=end.
+        // On either strand, 5' partial is partial=start and 3' partial is partial=end.
         // Coding strand "AAA..TAA": no ATG (5' partial is valid), ends in TAA (3' partial is wrong)
         enableFlatfileToGff3Conversion();
         when(mockLookup.getSequenceSlice("seqA", 1L, 81L))
@@ -616,7 +616,7 @@ class TranslationFixTest {
 
         assertFalse(cds.isThreePrimePartial());
         assertTrue(cds.isFivePrimePartial());
-        assertEquals(Optional.of(List.of("end")), cds.getAttributeList(GFF3Attributes.PARTIAL));
+        assertEquals(Optional.of(List.of("start")), cds.getAttributeList(GFF3Attributes.PARTIAL));
     }
 
     @Test

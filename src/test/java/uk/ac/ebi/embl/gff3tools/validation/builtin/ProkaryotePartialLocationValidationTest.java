@@ -114,8 +114,9 @@ class ProkaryotePartialLocationValidationTest {
 
     /** partial=start always means the lower coordinate, even on the minus strand. */
     @Test
-    void startPartialOnMinusStrandChecksLowerCoordinate() {
-        GFF3Feature cds = partialCds(400, 998, "-", "start");
+    void endPartialOnMinusStrandChecksLowerCoordinate() {
+        // On the minus strand the 3' end ("end") is at column 4
+        GFF3Feature cds = partialCds(400, 998, "-", "end");
         ValidationException ex = assertThrows(ValidationException.class, validation(prokaryote(), cds));
         assertTrue(ex.getMessage().contains("is partial at base 400"));
     }
@@ -238,8 +239,9 @@ class ProkaryotePartialLocationValidationTest {
 
     /** partial=end always means the higher coordinate, even on the minus strand. */
     @Test
-    void endPartialOnMinusStrandChecksHigherCoordinate() {
-        GFF3Feature cds = partialCds(3, 600, "-", "end");
+    void startPartialOnMinusStrandChecksHigherCoordinate() {
+        // On the minus strand the 5' end ("start") is at column 5
+        GFF3Feature cds = partialCds(3, 600, "-", "start");
         ValidationException ex = assertThrows(ValidationException.class, validation(prokaryote(), cds));
         assertTrue(ex.getMessage().contains("is partial at base 600"));
     }

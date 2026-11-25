@@ -15,7 +15,6 @@ import java.util.List;
 import uk.ac.ebi.embl.fastareader.sequenceutils.GapRegion;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
-import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
 import uk.ac.ebi.embl.gff3tools.sequence.SequenceLookup;
 import uk.ac.ebi.embl.gff3tools.utils.CoordinateShiftUtils;
@@ -98,12 +97,10 @@ public class ProkaryotePartialLocationValidation implements Validation {
 
         List<String> violations = new ArrayList<>();
         for (GFF3Feature feature : annotation.getFeatures()) {
-            List<String> partials =
-                    feature.getAttributeList(GFF3Attributes.PARTIAL).orElse(List.of());
-            if (partials.contains("start") && !startIsNearGapOrEnd(sequence, feature.getStart())) {
+            if (feature.isStartCoordinatePartial() && !startIsNearGapOrEnd(sequence, feature.getStart())) {
                 violations.add(violation(feature, feature.getStart()));
             }
-            if (partials.contains("end") && !endIsNearGapOrEnd(sequence, feature.getEnd())) {
+            if (feature.isEndCoordinatePartial() && !endIsNearGapOrEnd(sequence, feature.getEnd())) {
                 violations.add(violation(feature, feature.getEnd()));
             }
         }

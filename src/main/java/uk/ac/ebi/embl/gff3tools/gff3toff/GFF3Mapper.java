@@ -294,9 +294,10 @@ public class GFF3Mapper {
      */
     private List<Location> mapGFF3Location(GFF3Feature gff3Feature) {
 
-        List<String> partials = gff3Feature.getAttributeList("partial").orElse(new ArrayList<>());
-        boolean fivePrimePartial = partials.contains("start");
-        boolean threePrimePartial = partials.contains("end");
+        // The flags below are by coordinate (low end / high end), as the location is built.
+        // This will consider attribute value + strand
+        boolean fivePrimePartial = gff3Feature.isStartCoordinatePartial();
+        boolean threePrimePartial = gff3Feature.isEndCoordinatePartial();
 
         boolean isComplement = gff3Feature.getStrand().equals("-");
 

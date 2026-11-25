@@ -251,19 +251,19 @@ public class GFF3Feature {
     }
 
     public void setFivePrimePartial() {
-        addAttribute(GFF3Attributes.PARTIAL, isComplement() ? "end" : "start");
+        addAttribute(GFF3Attributes.PARTIAL, "start");
     }
 
     public void setThreePrimePartial() {
-        addAttribute(GFF3Attributes.PARTIAL, isComplement() ? "start" : "end");
+        addAttribute(GFF3Attributes.PARTIAL, "end");
     }
 
     /**
-     * Removes the 3' partial marker ("end", or "start" on the complement strand),
-     * keeping any 5' partial marker. The attribute is dropped when no values remain.
+     * Removes the 3' partial marker ("end"), keeping any 5' partial marker. The attribute is
+     * dropped when no values remain.
      */
     public void removeThreePrimePartial() {
-        String partialValue = isComplement() ? "start" : "end";
+        String partialValue = "end";
         getAttributeList(GFF3Attributes.PARTIAL)
                 .ifPresent(values -> setAttributeList(
                         GFF3Attributes.PARTIAL,
@@ -272,17 +272,53 @@ public class GFF3Feature {
                                 .toList()));
     }
 
+    /**
+     * Is the feature 5' partial. Checks if feature has 'start' in partial attribute.
+     */
+    //TODO: will rename this to isStartPartial() when this PR is approved
     public boolean isFivePrimePartial() {
-        String partialValue = isComplement() ? "end" : "start";
+        String partialValue = "start";
         return getAttributeList(GFF3Attributes.PARTIAL)
                 .map(list -> list.stream().anyMatch(partialValue::equalsIgnoreCase))
                 .orElse(false);
     }
 
+    /**
+     * Is the feature 3' partial. Checks if feature has 'end' in partial attribute..
+     */
+    //TODO: will rename this to isEndPartial() when this PR is approved
     public boolean isThreePrimePartial() {
-        String partialValue = isComplement() ? "start" : "end";
+        String partialValue = "end";
         return getAttributeList(GFF3Attributes.PARTIAL)
                 .map(list -> list.stream().anyMatch(partialValue::equalsIgnoreCase))
                 .orElse(false);
+    }
+
+    /**
+     * Checks if the start coordinate is partial with strand. This uses isComplement() to get  the start
+     */
+    public boolean isStartCoordinatePartial() {
+        return isComplement() ? isThreePrimePartial() : isFivePrimePartial();
+    }
+
+    /**
+     * Checks if the end coordinate is partial with strand. This uses isComplement() to get  the start
+     */
+    public boolean isEndCoordinatePartial() {
+        return isComplement() ? isFivePrimePartial() : isThreePrimePartial();
+    }
+
+    /**
+     * Set feature's partiality
+     */
+    public void setCoordinatePartiality(boolean startPartial, boolean endPartial) {
+        boolean fivePrime = isComplement() ? endPartial : startPartial;
+        boolean threePrime = isComplement() ? startPartial : endPartial;
+        if (fivePrime) {
+            setFivePrimePartial();
+        }
+        if (threePrime) {
+            setThreePrimePartial();
+        }
     }
 }
