@@ -10,7 +10,7 @@ plugins {
 base {
     archivesName = 'gff3tools'
     group = 'uk.ac.ebi.ena'
-    version = '5.7.0'
+    version = '5.8.0'
 }
 
 java {
@@ -83,7 +83,7 @@ repositories {
 
 dependencies {
     // gff3tools exposes fastareader types in its API
-    api("uk.ac.ebi.ena:fastareader:1.2.0") {
+    api("uk.ac.ebi.ena:fastareader:1.3.1") {
         // fastareader leaks Lombok as a runtime dependency; it is only needed at compile time.
         exclude group: 'org.projectlombok'
     }

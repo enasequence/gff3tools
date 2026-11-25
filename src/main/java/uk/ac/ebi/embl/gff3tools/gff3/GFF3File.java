@@ -22,11 +22,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
+import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.exception.WriteException;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.*;
 import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3FileReader;
-import uk.ac.ebi.embl.gff3tools.gff3.reader.OffsetRange;
 import uk.ac.ebi.embl.gff3tools.gff3.writer.TranslationWriter;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
@@ -91,12 +91,13 @@ public class GFF3File implements IGFF3Feature {
     }
 
     /**
-     * Writes this document: header, species, every annotation's features, then the translations of
-     * those annotations in at most one {@code ##FASTA} section — see
-     * {@link #writeTranslationSection(Writer)}.
+     * Writes the full GFF3 output including the embedded FASTA section.
      *
-     * @param writer destination; not closed by this method
-     * @throws WriteException if the underlying writer fails
+     * <p>When translations are sourced from the GFF3 file itself (via {@code gff3Reader}),
+     * this method reads translation sequences from the embedded FASTA section while writing.
+     * Any read failure is wrapped as a {@link WriteException} so the write contract
+     * remains clean — callers inspect {@link WriteException#getCause()} to distinguish
+     * a translation read failure from a pure write failure.
      */
     @Override
     public void writeGFF3String(Writer writer) throws WriteException {
@@ -117,6 +118,8 @@ public class GFF3File implements IGFF3Feature {
             if (writeAnnotationFasta) {
                 writeTranslationSection(writer);
             }
+        } catch (ReadException e) {
+            throw new WriteException(e);
         } catch (IOException e) {
             throw new WriteException(e);
         }
@@ -134,14 +137,14 @@ public class GFF3File implements IGFF3Feature {
      * content, not by presence: {@code TranslationState} is supplied by an auto-discovered provider
      * and so is never null, and a fallback that only fires on null could never fire at all.
      */
-    private void writeTranslationSection(Writer writer) throws IOException {
+    private void writeTranslationSection(Writer writer) throws IOException, ReadException {
         Set<String> accessions =
                 annotations.stream().map(GFF3Annotation::getAccession).collect(Collectors.toSet());
 
         Map<String, String> translations = new LinkedHashMap<>();
         if (gff3Reader != null) {
             for (GFF3Annotation ann : annotations) {
-                for (Map.Entry<String, OffsetRange> entry :
+                for (Map.Entry<String, Long> entry :
                         gff3Reader.getTranslationOffsetForAnnotation(ann).entrySet()) {
                     translations.put(entry.getKey(), gff3Reader.getTranslation(entry.getValue()));
                 }

@@ -60,8 +60,8 @@ public class GFF3FileReader implements AutoCloseable {
     // return: reading on would hit the first translation header and end the file before them.
     private boolean fastaReached;
 
-    private Map<String, OffsetRange> translationMap;
-    private Map<String, Map<String, OffsetRange>> translationsByAccession;
+    private Map<String, Long> translationMap;
+    private Map<String, Map<String, Long>> translationsByAccession;
     private final GFF3TranslationReader translationReader;
 
     // Used by GFF3 conversion process
@@ -398,7 +398,7 @@ public class GFF3FileReader implements AutoCloseable {
      * offset map's order. A lookup into a map built once per reader, not a scan: one document is
      * commonly written out as several subsets.
      */
-    public Map<String, OffsetRange> getTranslationOffsetForAnnotation(GFF3Annotation annotation) {
+    public Map<String, Long> getTranslationOffsetForAnnotation(GFF3Annotation annotation) throws ReadException {
         return translationsByAccession().getOrDefault(annotation.getAccession(), Map.of());
     }
 
@@ -409,11 +409,10 @@ public class GFF3FileReader implements AutoCloseable {
      * translations of {@code AB123.10}. Buckets are {@link LinkedHashMap}s filled in the offset
      * map's own sorted order, so written output stays byte-stable across runs.
      */
-    private Map<String, Map<String, OffsetRange>> translationsByAccession() {
+    private Map<String, Map<String, Long>> translationsByAccession() throws ReadException {
         if (translationsByAccession == null) {
-            Map<String, Map<String, OffsetRange>> byAccession = new HashMap<>();
-            for (Map.Entry<String, OffsetRange> entry :
-                    getTranslationOffsetMap().entrySet()) {
+            Map<String, Map<String, Long>> byAccession = new HashMap<>();
+            for (Map.Entry<String, Long> entry : getTranslationOffsetMap().entrySet()) {
                 String accession = TranslationKey.accessionOf(entry.getKey());
                 if (accession != null) {
                     byAccession
@@ -426,15 +425,15 @@ public class GFF3FileReader implements AutoCloseable {
         return translationsByAccession;
     }
 
-    public Map<String, OffsetRange> getTranslationOffsetMap() {
+    public Map<String, Long> getTranslationOffsetMap() throws ReadException {
         if (translationMap == null) {
             translationMap = Collections.unmodifiableMap(translationReader.readTranslationOffset());
         }
         return translationMap;
     }
 
-    public String getTranslation(OffsetRange offsetRange) {
-        return translationReader.readTranslation(offsetRange);
+    public String getTranslation(Long id) throws ReadException {
+        return translationReader.readTranslation(id);
     }
 
     public GFF3Species getSpecies() {
@@ -453,5 +452,6 @@ public class GFF3FileReader implements AutoCloseable {
     @Override
     public void close() throws IOException {
         bufferedReader.close();
+        translationReader.close();
     }
 }
