@@ -59,7 +59,7 @@ public class GFF3AnnotationFactory {
     Map<String, Long> wrappedEndByGene = new HashMap<>();
 
     /** One GFF3 line of a feature: its span, partiality and strand. */
-    private record Segment(long start, long end, List<String> partiality, String strand) {}
+    private record Segment(long start, long end, boolean startPartial, boolean endPartial, String strand) {}
 
     public GFF3AnnotationFactory(ValidationEngine validationEngine, GFF3DirectivesFactory directivesFactory) {
         this.validationEngine = validationEngine;
@@ -183,10 +183,6 @@ public class GFF3AnnotationFactory {
         for (Segment segment : getSegments(ffFeature, layout)) {
             Map<String, List<String>> attributes = new LinkedHashMap<>(baseAttributes);
 
-            if (!segment.partiality().isEmpty()) {
-                attributes.put("partial", segment.partiality());
-            }
-
             GFF3Feature gff3Feature = new GFF3Feature(
                     id,
                     parentId,
@@ -200,6 +196,7 @@ public class GFF3AnnotationFactory {
                     segment.strand(),
                     getPhase(ffFeature));
             gff3Feature.addAttributes(attributes);
+            gff3Feature.setCoordinatePartiality(segment.startPartial(), segment.endPartial());
             validationEngine.validate(gff3Feature, -1);
             gff3Features.add(gff3Feature);
         }
@@ -319,7 +316,8 @@ public class GFF3AnnotationFactory {
         for (int i = 0; i < layout.path().size(); i++) {
             Segment segment = layout.path().get(i);
             CoordinateShiftUtils.Span span = layout.virtual().get(i);
-            Segment shifted = new Segment(span.start(), span.end(), segment.partiality(), segment.strand());
+            Segment shifted = new Segment(
+                    span.start(), span.end(), segment.startPartial(), segment.endPartial(), segment.strand());
             Segment previous = result.isEmpty() ? null : result.get(result.size() - 1);
             if (previous != null
                     && CoordinateShiftUtils.continuesAcrossOrigin(
@@ -364,7 +362,8 @@ public class GFF3AnnotationFactory {
             segments.add(new Segment(
                     location.getBeginPosition(),
                     location.getEndPosition(),
-                    getPartiality(location),
+                    isFfLocationStartPartial(location),
+                    isFfLocationEndPartial(location),
                     getStrand(location, compoundLocation)));
         }
         return segments;
@@ -413,16 +412,9 @@ public class GFF3AnnotationFactory {
         return null;
     }
 
-    /** Start partiality from the first piece, end partiality from the second. */
+    /** The low end's partiality from the first piece, the high end's from the second. */
     private Segment mergeAcrossOrigin(Segment first, Segment second) {
-        List<String> partiality = new ArrayList<>();
-        if (first.partiality().contains("start")) {
-            partiality.add("start");
-        }
-        if (second.partiality().contains("end")) {
-            partiality.add("end");
-        }
-        return new Segment(first.start(), second.end(), partiality, first.strand());
+        return new Segment(first.start(), second.end(), first.startPartial(), second.endPartial(), first.strand());
     }
 
     /** Fills {@link #wrappedEndByGene} for the entry. */
@@ -439,7 +431,7 @@ public class GFF3AnnotationFactory {
             }
             List<Segment> segments = new ArrayList<>();
             for (Location location : feature.getLocations().getLocations()) {
-                segments.add(new Segment(location.getBeginPosition(), location.getEndPosition(), List.of(), ""));
+                segments.add(new Segment(location.getBeginPosition(), location.getEndPosition(), false, false, ""));
             }
             List<Segment> path = plusStrandPath(feature, segments);
             if (path == null) {
@@ -497,16 +489,14 @@ public class GFF3AnnotationFactory {
         return ".";
     }
 
-    private List<String> getPartiality(Location location) {
+    /** Flat file location partiality to GFF3 feature partiality */
+    private static boolean isFfLocationStartPartial(Location location) {
+        return location.isComplement() ? location.isThreePrimePartial() : location.isFivePrimePartial();
+    }
 
-        List<String> partiality = new ArrayList<>();
-        if (location.isFivePrimePartial()) {
-            partiality.add(location.isComplement() ? "end" : "start");
-        }
-        if (location.isThreePrimePartial()) {
-            partiality.add(location.isComplement() ? "start" : "end");
-        }
-        return partiality;
+    /** Flat file location partiality to GFF3 feature partiality */
+    private static boolean isFfLocationEndPartial(Location location) {
+        return location.isComplement() ? location.isFivePrimePartial() : location.isThreePrimePartial();
     }
 
     private boolean hasParent(GFF3Feature feature, List<GFF3Feature> gffFeatures) {
