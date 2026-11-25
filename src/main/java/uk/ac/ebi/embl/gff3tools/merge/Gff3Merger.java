@@ -65,7 +65,6 @@ public class Gff3Merger {
         }
 
         Path fastaTemp = Files.createTempFile("gff3-merge-fasta-", ".tmp");
-        log.debug("Created FASTA spool file: {}", fastaTemp);
 
         try {
             byte[] buf = COPY_BUFFER.get();
@@ -76,7 +75,6 @@ public class Gff3Merger {
             // Phase 1 + 2: stream annotations; spool FASTA sections to temp file
             try (OutputStream fastaOut = Files.newOutputStream(fastaTemp)) {
                 for (Gff3MergeSource source : sources) {
-                    log.debug("Merging annotation section of: {}", source.getObjectId());
                     long fastaOffset = source.getFastaOffset();
                     try (InputStream in = source.openStream()) {
                         long versionLineBytes = skipVersionLine(in, source.getObjectId());
@@ -99,7 +97,6 @@ public class Gff3Merger {
                 try (InputStream fastaIn = Files.newInputStream(fastaTemp)) {
                     copy(fastaIn, out, buf);
                 }
-                log.debug("FASTA spool written ({} bytes)", Files.size(fastaTemp));
             }
 
         } finally {
@@ -110,7 +107,6 @@ public class Gff3Merger {
     private void deleteTempFile(Path path) {
         try {
             Files.deleteIfExists(path);
-            log.debug("Deleted FASTA spool file: {}", path);
         } catch (IOException e) {
             log.warn("Failed to delete FASTA spool file {}: {}", path, e.getMessage());
         }

@@ -285,32 +285,6 @@ class FastaSectionLocatorTest {
         assertEquals(-1L, offset);
     }
 
-    // ---- locate(byte[]) tests ----
-
-    @Test
-    void bytesEmptyReturnsMinusOne() {
-        assertEquals(-1L, FastaSectionLocator.locate(new byte[0]));
-    }
-
-    @Test
-    void bytesNoFastaMarkerReturnsMinusOne() {
-        String content = "##gff-version 3\nchr1\t.\tgene\t1\t1000\t.\t+\t.\tID=gene1\n";
-        assertEquals(-1L, FastaSectionLocator.locate(content.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
-    }
-
-    @Test
-    void bytesFastaMarkerFoundReturnsCorrectOffset() {
-        String content = "##gff-version 3\nchr1\t.\tgene\t1\t1000\t.\t+\t.\tID=gene1\n##FASTA\n>seq1\nACDEFG\n";
-        long expected = content.indexOf("##FASTA");
-        assertEquals(expected, FastaSectionLocator.locate(content.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
-    }
-
-    @Test
-    void bytesFastaMarkerOnlyReturnsZero() {
-        String content = "##FASTA\n>seq1\nACDEFG\n";
-        assertEquals(0L, FastaSectionLocator.locate(content.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
-    }
-
     @Test
     void trailingBlankLinesAfterFastaSectionAreHandled() throws IOException {
         String content = String.join(

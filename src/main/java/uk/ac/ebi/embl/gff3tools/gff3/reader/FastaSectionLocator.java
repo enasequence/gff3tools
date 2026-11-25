@@ -10,17 +10,14 @@
  */
 package uk.ac.ebi.embl.gff3tools.gff3.reader;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Directives;
 
 /**
  * Locates the byte offset of the first FASTA-side line (the {@code ##FASTA}
@@ -39,7 +36,6 @@ public final class FastaSectionLocator {
 
     private static final int LINE_PROBE_BUFFER_SIZE = 8192;
     private static final int STREAM_BUFFER_SIZE = 4096;
-    private static final byte[] FASTA_MARKER = GFF3Directives.FASTA.getBytes(StandardCharsets.UTF_8);
 
     private FastaSectionLocator() {}
 
@@ -56,50 +52,22 @@ public final class FastaSectionLocator {
 
     /**
      * Returns the byte offset of the {@code ##FASTA} directive in the stream, or {@code -1} if not
-     * found. Used for legacy records where the offset was not stored at upload time. The caller is
-     * responsible for opening and closing the stream.
+     * found. Delegates to {@link FastaSectionScanner} — lines that cannot be {@code ##FASTA} are
+     * skipped, so only {@code #}-prefixed lines are scanned character by character. Used for legacy
+     * records where the offset was not stored at upload time; the caller is responsible for opening
+     * and closing the stream.
      */
     public static long locate(InputStream in) throws IOException {
+        FastaSectionScanner scanner = new FastaSectionScanner();
         byte[] buf = new byte[STREAM_BUFFER_SIZE];
-        long offset = 0;
-        long markerStart = -1;
-        int matchLen = 0;
-        boolean atLineStart = true;
         int n;
         while ((n = in.read(buf)) != -1) {
             for (int i = 0; i < n; i++) {
-                int b = buf[i] & 0xFF;
-                if (matchLen == 0) {
-                    if (atLineStart && b == FASTA_MARKER[0]) {
-                        markerStart = offset;
-                        matchLen = 1;
-                    }
-                } else if (b == FASTA_MARKER[matchLen]) {
-                    matchLen++;
-                    if (matchLen == FASTA_MARKER.length) {
-                        return markerStart;
-                    }
-                } else {
-                    matchLen = 0;
-                    markerStart = -1;
-                }
-                atLineStart = (b == '\n');
-                offset++;
+                scanner.scan(buf[i]);
             }
+            if (scanner.found()) return scanner.getFastaOffset();
         }
-        return -1L;
-    }
-
-    /**
-     * Returns the byte offset of the {@code ##FASTA} directive in the byte array, or {@code -1} if
-     * not found. Used when the GFF3 document is already in memory.
-     */
-    public static long locate(byte[] bytes) {
-        try {
-            return locate(new ByteArrayInputStream(bytes));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        return scanner.getFastaOffset();
     }
 
     static long locate(SeekableByteChannel channel) throws IOException {
