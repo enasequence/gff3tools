@@ -11,6 +11,10 @@
 package uk.ac.ebi.embl.gff3tools.cli;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.CDS_TRANSLATION;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.WRONG_CDS_TRANSLATION;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.writeCdsGff3;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.writeCdsSequenceFasta;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
@@ -607,6 +611,52 @@ class FileConversionCommandTest {
         assertFalse(gzippedEmbl.contains("/translation"), gzippedEmbl);
     }
 
+    // ---tests for /translation in GFF3 to EMBL conversion: only the submitted ##FASTA is copied
+
+    @Test
+    void conversionToEmbl_fastaRight_withSequence_copiesIt() throws Exception {
+        Path embl = convertCds("", ">seq1|cds1\n" + CDS_TRANSLATION + "\n", true);
+
+        assertEquals(CDS_TRANSLATION, translationOf(embl));
+    }
+
+    @Test
+    void conversionToEmbl_fastaWrong_withSequence_failsAndWritesNothing() throws Exception {
+        Path gff3 = writeCdsGff3(tempDir, "", ">seq1|cds1\n" + WRONG_CDS_TRANSLATION + "\n");
+        Path outputFile = tempDir.resolve("output.embl");
+
+        int exitCode = executeConversion(
+                "conversion",
+                "--sequence",
+                writeCdsSequenceFasta(tempDir).toString(),
+                gff3.toString(),
+                outputFile.toString());
+
+        assertEquals(CLIExitCode.VALIDATION_ERROR.asInt(), exitCode, "TRANSLATION_COMPARISON fails");
+        assertFalse(Files.exists(outputFile));
+    }
+
+    @Test
+    void conversionToEmbl_attributeWrongFastaRight_copiesTheFasta() throws Exception {
+        Path embl = convertCds(";translation=" + WRONG_CDS_TRANSLATION, ">seq1|cds1\n" + CDS_TRANSLATION + "\n", true);
+
+        assertEquals(CDS_TRANSLATION, translationOf(embl));
+    }
+
+    @Test
+    void conversionToEmbl_noFasta_withSequence_writesNoTranslation() throws Exception {
+        Path embl = convertCds("", "", true);
+
+        assertNull(translationOf(embl), "the generated translation is not written to EMBL");
+    }
+
+    @Test
+    void conversionToEmbl_attributeOnly_writesNoTranslation() throws Exception {
+        Path embl = convertCds(";translation=" + CDS_TRANSLATION, "", true);
+
+        assertNull(translationOf(embl), "the attribute is removed and not mapped");
+    }
+
     private int executeConversion(String... args) {
         StringWriter err = new StringWriter();
         StringWriter out = new StringWriter();
@@ -616,5 +666,32 @@ class FileConversionCommandTest {
         command.setErr(new PrintWriter(err));
         command.setOut(new PrintWriter(out));
         return command.execute(args);
+    }
+
+    /** Converts {@code writeCdsGff3} to EMBL, with or without {@code writeCdsSequenceFasta}, expecting success. */
+    private Path convertCds(String extraAttributes, String fastaRecords, boolean withSequence) throws Exception {
+        Path gff3 = writeCdsGff3(tempDir, extraAttributes, fastaRecords);
+        Path outputFile = tempDir.resolve("output.embl");
+        int exitCode = withSequence
+                ? executeConversion(
+                        "conversion",
+                        "--sequence",
+                        writeCdsSequenceFasta(tempDir).toString(),
+                        gff3.toString(),
+                        outputFile.toString())
+                : executeConversion("conversion", gff3.toString(), outputFile.toString());
+        assertEquals(0, exitCode);
+        return outputFile;
+    }
+
+    /** The CDS's /translation with the EMBL line prefixes removed, or null when it has none. */
+    private static String translationOf(Path embl) throws Exception {
+        String content = Files.readString(embl);
+        int start = content.indexOf("/translation=\"");
+        if (start < 0) {
+            return null;
+        }
+        start += "/translation=\"".length();
+        return content.substring(start, content.indexOf('"', start)).replaceAll("\\s*\\nFT\\s+", "");
     }
 }

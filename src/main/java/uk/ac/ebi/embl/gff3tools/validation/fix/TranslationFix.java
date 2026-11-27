@@ -53,24 +53,34 @@ public class TranslationFix {
 
     private final Map<String, Long> sequenceLengthCache = new HashMap<>();
 
+    /**
+     * Runs at NORMAL, after {@code TRANSLATION_ATTRIBUTE_FASTA_MISMATCH} (HIGH), so that rule sees the
+     * attribute before it is removed here.
+     */
     @FixMethod(
             rule = "REMOVE_TRANSLATION_ATTRIBUTE",
-            description = "Capture existing translation attribute into TranslationState and remove it from the feature",
-            type = FEATURE,
-            priority = ValidationPriority.HIGH)
+            description =
+                    "Record the translation attribute into TranslationState when no old translation is recorded yet, and remove it from the feature",
+            type = FEATURE)
     public void fixFeature(GFF3Feature feature, int line) {
         if (!feature.hasAttribute(GFF3Attributes.TRANSLATION)) {
             return;
         }
 
+        // GFF3FileReader has already recorded the ##FASTA protein, if there is one. Otherwise the
+        // attribute is the submitted translation, and is recorded here.
         String translation = feature.getAttribute(GFF3Attributes.TRANSLATION).orElse(null);
-        if (translation != null && context.contains(TranslationState.class)) {
+        if (translation != null && !translation.isEmpty() && context.contains(TranslationState.class)) {
             String key = TranslationState.buildKey(
                     feature.accession(), feature.getId().orElse(null));
             if (key != null) {
                 TranslationState state = context.get(TranslationState.class);
-                // Record the pre-existing translation; new translation computed later by TranslationFix
-                state.record(key, translation, null);
+                TranslationState.TranslationEntry entry = state.get(key);
+                if (entry == null
+                        || entry.oldTranslation() == null
+                        || entry.oldTranslation().isEmpty()) {
+                    state.record(key, translation, null);
+                }
             }
         }
 

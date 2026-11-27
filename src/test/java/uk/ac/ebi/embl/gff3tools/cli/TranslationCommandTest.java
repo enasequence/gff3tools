@@ -11,11 +11,15 @@
 package uk.ac.ebi.embl.gff3tools.cli;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.WRONG_CDS_TRANSLATION;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.fastaRecordsOf;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.writeCdsGff3;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
@@ -373,5 +377,48 @@ class TranslationCommandTest {
         int exitCode = executeTranslate("translate", "--sequence", "/tmp/nonexistent.fasta", gff3.toString());
 
         assertNotEquals(0, exitCode, "Should fail for non-existent sequence file");
+    }
+
+    // ---tests for submitted ##FASTA translations
+
+    @Test
+    void submittedFastaWrong_failsTheComparisonAndWritesNothing() throws Exception {
+        Path fasta = createFastaFile("seq1");
+        Path gff3 = writeCdsGff3(tempDir, "", ">seq1|cds1\n" + WRONG_CDS_TRANSLATION + "\n");
+        Path output = tempDir.resolve("output.gff3");
+
+        int exitCode =
+                executeTranslate("translate", "--sequence", fasta.toString(), "-o", output.toString(), gff3.toString());
+
+        assertEquals(CLIExitCode.VALIDATION_ERROR.asInt(), exitCode, "TRANSLATION_COMPARISON fails");
+        assertFalse(Files.exists(output));
+    }
+
+    @Test
+    void exceptionCds_keepsTheSubmittedTranslation_inGff3AndFastaModes() throws Exception {
+        Path fasta = createFastaFile("seq1");
+        Path gff3 =
+                writeCdsGff3(tempDir, ";exception=ribosomal slippage", ">seq1|cds1\n" + WRONG_CDS_TRANSLATION + "\n");
+        Path gff3Output = tempDir.resolve("output.gff3");
+        Path fastaOutput = tempDir.resolve("output.fasta");
+
+        int gff3ExitCode = executeTranslate(
+                "translate", "--sequence", fasta.toString(), "-o", gff3Output.toString(), gff3.toString());
+        int fastaExitCode = executeTranslate(
+                "translate",
+                "--sequence",
+                fasta.toString(),
+                "--translation-mode",
+                "fasta",
+                "-o",
+                fastaOutput.toString(),
+                gff3.toString());
+
+        assertEquals(0, gff3ExitCode);
+        assertEquals(Map.of("seq1|cds1", WRONG_CDS_TRANSLATION), fastaRecordsOf(Files.readString(gff3Output)));
+        assertEquals(0, fastaExitCode);
+        assertEquals(
+                ">seq1|cds1\n" + WRONG_CDS_TRANSLATION,
+                Files.readString(fastaOutput).trim());
     }
 }

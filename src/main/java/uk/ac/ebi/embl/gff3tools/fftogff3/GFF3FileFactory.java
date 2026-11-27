@@ -50,8 +50,8 @@ public class GFF3FileFactory {
     /**
      * Converts an EMBL flat file into a GFF3 document, one annotation per entry.
      *
-     * <p>Translations come from the {@link TranslationState} that {@code TranslationFix}
-     * populates during validation — here, each entry's {@code /translation} qualifier.
+     * <p>Translations come from the engine's {@link TranslationState}: each entry's
+     * {@code /translation}, or the generated one when sequences are given.
      *
      * <p>The {@code ##gff-version} directive is always {@link #HEADER_VERSION}, whatever the
      * source says, and {@code ##species} comes from the first entry that yields one — a
@@ -103,25 +103,24 @@ public class GFF3FileFactory {
     /**
      * Creates a GFF3 document from already-parsed annotations and the reader they came from.
      *
-     * <p>Pass a subset of the reader's annotations to get a document holding just those, with
-     * exactly their translations — that is how one submission is split across several documents.
+     * <p>Pass a subset of the reader's annotations to get a document with just those and their
+     * translations. That is how one submission is split into several documents.
      *
-     * <p>Translations, all limited to the accessions of {@code annotations}:
+     * <p>Translations, limited to the accessions of {@code annotations}, come from the first source
+     * that has any:
      * <ol>
-     *   <li>the source GFF3's own {@code ##FASTA}, merged per feature with the
-     *       {@link TranslationState} in the reader's validation context — the state wins where both
-     *       have the same feature;
-     *   <li>only if that merge is empty, {@code existingTranslationFilePathFallback}.
+     *   <li>the {@link TranslationState} in the reader's validation context, when there is one;
+     *   <li>otherwise the source GFF3's {@code ##FASTA} (e.g. a read-only engine);
+     *   <li>{@code existingTranslationFilePathFallback}.
      * </ol>
-     * If neither yields anything, no {@code ##FASTA} section is written.
      *
      * @param annotations the annotations the document contains; may be a subset of the reader's
      * @param gff3FileReader the reader those annotations came from; supplies {@code ##species}, the
-     *     validation context, parsing warnings, and the source GFF3's translations
+     *     validation context, parsing warnings and the source {@code ##FASTA}
      * @param appendTranslationFasta whether to write translations at all; {@code false} gives a
      *     features-only document
-     * @param existingTranslationFilePathFallback a translation FASTA used only when the merge above
-     *     is empty; {@link Optional#empty()} for none
+     * @param existingTranslationFilePathFallback a translation FASTA, used only when the sources
+     *     above give nothing; {@link Optional#empty()} for none
      * @return a document holding the given annotations, and their translations when requested
      */
     public static GFF3File fromAnnotationAndReader(

@@ -11,6 +11,9 @@
 package uk.ac.ebi.embl.gff3tools.cli;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.WRONG_CDS_TRANSLATION;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.writeCdsGff3;
+import static uk.ac.ebi.embl.gff3tools.TestUtils.writeCdsSequenceFasta;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -466,7 +469,7 @@ public class ValidationCommandTest {
                 + "##sequence-region BN000065.1 1 315242\n"
                 + "BN000065.1\t.\tgene\t1\t315242\t.\t+\t.\tID=gene_RHD;gene=RHD;\n"
                 + "##FASTA\n"
-                + ">BN000065.1|CDS_RHD\n"
+                + ">BN000065.1|gene_RHD\n"
                 + "MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEDQKGLVASYQVGQDLTVMAAI\n";
         Path gff3Gz = tempDir.resolve("input.gff3.gz");
         try (GZIPOutputStream out = new GZIPOutputStream(Files.newOutputStream(gff3Gz))) {
@@ -480,7 +483,7 @@ public class ValidationCommandTest {
         String content = Files.readString(outputFile);
         assertTrue(
                 content.contains("##FASTA")
-                        && content.contains(">BN000065.1|CDS_RHD")
+                        && content.contains(">BN000065.1|gene_RHD")
                         && content.contains("MSSKYPRSVRRCLPLWALTLEAALILLFYFFTHYDASLEDQKGLVASYQVGQDLTVMAAI"),
                 "The FASTA/translation section must round-trip from gzipped input, not be lost: " + content);
     }
@@ -572,46 +575,6 @@ public class ValidationCommandTest {
                         && content.contains("MFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
                 "The CDS translation computed by TranslationFix must be written to the output's "
                         + "##FASTA section, not silently discarded: " + content);
-    }
-
-    @Test
-    void validation_mergesTranslationStateWithRawFastaPassthrough_perFeature() throws Exception {
-        // cds1 has BOTH an inline translation attribute (captured into TranslationState by
-        // REMOVE_TRANSLATION_ATTRIBUTE, which runs unconditionally, without --sequence) AND a raw
-        // ##FASTA entry with a different sequence, to prove TranslationState wins on collision.
-        // cds2 has no inline attribute, only a raw ##FASTA entry, to prove that a feature
-        // TranslationState never touched still gets its translation preserved from the
-        // passthrough instead of being dropped just because cds1 populated TranslationState.
-        Path gff3 = tempDir.resolve("input.gff3");
-        Files.writeString(
-                gff3,
-                """
-                ##gff-version 3
-                ##sequence-region seq1 1 100
-                ##sequence-region seq2 1 100
-                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1;translation=MFAKE
-                seq2\t.\tCDS\t1\t93\t.\t+\t0\tID=cds2
-                ##FASTA
-                >seq1|cds1
-                MOLD
-                >seq2|cds2
-                MREAL
-                """);
-        Path outputFile = tempDir.resolve("output.gff3");
-
-        int exitCode = executeValidation("validation", gff3.toString(), outputFile.toString());
-
-        assertEquals(0, exitCode, "Validation with output should succeed");
-        String content = Files.readString(outputFile);
-        assertTrue(
-                content.contains(">seq1|cds1") && content.contains("MFAKE") && !content.contains("MOLD"),
-                "cds1's TranslationState entry (from the inline attribute) must win over its raw "
-                        + "##FASTA passthrough entry: " + content);
-        assertTrue(
-                content.contains(">seq2|cds2") && content.contains("MREAL"),
-                "cds2's raw ##FASTA passthrough translation must survive even though cds1 "
-                        + "populated TranslationState — this is the regression: a per-key merge, not "
-                        + "a whole-file switch between the two sources: " + content);
     }
 
     private int executeValidation(String... args) {
@@ -716,5 +679,82 @@ public class ValidationCommandTest {
                     config.getFix("PRODUCT_WITH_EC_NUMBER", true),
                     "Sibling method PRODUCT_WITH_EC_NUMBER must not be affected by the EC_NUMBER class-name collision");
         }
+    }
+
+    // ---tests for submitted ##FASTA translations, end to end
+
+    @Test
+    void validation_withOutput_writesEachSubmittedFastaProtein() throws Exception {
+        // No --sequence, so nothing is generated: the output holds the submitted proteins.
+        // cds1 has a ##FASTA record and a different translation attribute; the ##FASTA protein is
+        // written and the attribute only gives a warning. cds2 has only a ##FASTA record, which
+        // GFF3FileReader records into TranslationState like any other, so it is written too.
+        // cds3 has only a translation attribute; REMOVE_TRANSLATION_ATTRIBUTE records it and removes
+        // it from the feature, so it is written as a ##FASTA record.
+        Path gff3 = tempDir.resolve("input.gff3");
+        Files.writeString(
+                gff3,
+                """
+                ##gff-version 3
+                ##sequence-region seq1 1 100
+                ##sequence-region seq2 1 100
+                ##sequence-region seq3 1 100
+                seq1\t.\tCDS\t1\t93\t.\t+\t0\tID=cds1;translation=MFAKE
+                seq2\t.\tCDS\t1\t93\t.\t+\t0\tID=cds2
+                seq3\t.\tCDS\t1\t93\t.\t+\t0\tID=cds3;translation=MATTR
+                ##FASTA
+                >seq1|cds1
+                MOLD
+                >seq2|cds2
+                MREAL
+                """);
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        int exitCode = executeValidation("validation", gff3.toString(), outputFile.toString());
+
+        assertEquals(0, exitCode, "Validation with output should succeed");
+        String content = Files.readString(outputFile);
+        assertTrue(
+                content.contains(">seq1|cds1") && content.contains("MOLD") && !content.contains("MFAKE"),
+                "cds1's ##FASTA translation must win over its inline translation attribute: " + content);
+        assertTrue(
+                content.contains(">seq2|cds2") && content.contains("MREAL"),
+                "cds2's ##FASTA translation must be written although it has no attribute: " + content);
+        assertTrue(
+                content.contains(">seq3|cds3") && content.contains("MATTR"),
+                "cds3's translation attribute must be written as a ##FASTA record: " + content);
+        assertTrue(
+                content.lines().filter(line -> line.contains("\t")).noneMatch(line -> line.contains("translation=")),
+                "no feature line keeps its translation attribute: " + content);
+    }
+
+    @Test
+    void validation_wrongFastaWithSequence_failsReportOnlyAndWithOutput() throws Exception {
+        Path fasta = writeCdsSequenceFasta(tempDir);
+        Path gff3 = writeCdsGff3(tempDir, "", ">seq1|cds1\n" + WRONG_CDS_TRANSLATION + "\n");
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        assertEquals(20, executeValidation("validation", "--sequence", fasta.toString(), gff3.toString()));
+        assertEquals(
+                20,
+                executeValidation(
+                        "validation", "--sequence", fasta.toString(), gff3.toString(), outputFile.toString()));
+    }
+
+    @Test
+    void validation_unreadableFasta_failsValidation() throws Exception {
+        Path fasta = writeCdsSequenceFasta(tempDir);
+        Path gff3 = writeCdsGff3(tempDir, "", ">seq1|cds1\nMF1F\n");
+        Path outputFile = tempDir.resolve("output.gff3");
+
+        assertEquals(
+                20,
+                executeValidation("validation", "--sequence", fasta.toString(), gff3.toString()),
+                "FASTA_SECTION_UNREADABLE reports it on a report-only run");
+        assertEquals(
+                20,
+                executeValidation("validation", "--sequence", fasta.toString(), gff3.toString(), outputFile.toString()),
+                "FASTA_SECTION_UNREADABLE reports it before the output is written");
+        assertFalse(Files.exists(outputFile), "no output is written for a failed validation");
     }
 }

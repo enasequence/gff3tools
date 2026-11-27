@@ -19,6 +19,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
@@ -28,10 +29,13 @@ import uk.ac.ebi.embl.gff3tools.metrics.MetricsCollector;
 import uk.ac.ebi.embl.gff3tools.utils.Gff3Utils;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationEngine;
+import uk.ac.ebi.embl.gff3tools.validation.provider.GFF3TranslationReaderProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.SequenceRegionProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonAccessionRegistry;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonomyIdentifier;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
+@Slf4j
 public class GFF3FileReader implements AutoCloseable {
 
     static Pattern VERSION_DIRECTIVE = Pattern.compile(
@@ -60,8 +64,6 @@ public class GFF3FileReader implements AutoCloseable {
     // return: reading on would hit the first translation header and end the file before them.
     private boolean fastaReached;
 
-    private Map<String, Long> translationMap;
-    private Map<String, Map<String, Long>> translationsByAccession;
     private final GFF3TranslationReader translationReader;
 
     // Used by GFF3 conversion process
@@ -72,6 +74,7 @@ public class GFF3FileReader implements AutoCloseable {
         currentAnnotation = new GFF3Annotation();
         processedAccessions = new HashSet<>();
         translationReader = new GFF3TranslationReader(validationEngine, gff3Path);
+        registerTranslationReader();
     }
 
     // Used by GFF3 processing pipeline
@@ -253,6 +256,46 @@ public class GFF3FileReader implements AutoCloseable {
         context.get(SequenceRegionProvider.class).record(sequenceRegion);
     }
 
+    /**
+     * Makes the GFF3 file's {@code ##FASTA} index reachable from the validations that check the
+     * section's readability and headers, which run long before the reader gets to {@code ##FASTA}.
+     * The section is read through its own handle on first use, so nothing is read if reading is
+     * never requested.
+     */
+    private void registerTranslationReader() {
+        if (validationEngine == null) {
+            return;
+        }
+        validationEngine
+                .getContext()
+                .register(GFF3TranslationReader.class, new GFF3TranslationReaderProvider(translationReader));
+    }
+
+    /**
+     * Records the feature's {@code ##FASTA} protein as its old translation in {@link TranslationState},
+     * once per feature ID, so validation compares against it. Skipped without a state (a read-only
+     * engine). A section that can't be read is skipped here; {@code FASTA_SECTION_UNREADABLE} reports
+     * it.
+     */
+    private void recordFastaTranslation(GFF3Feature feature) {
+        if (validationEngine == null || !validationEngine.getContext().contains(TranslationState.class)) {
+            return;
+        }
+        String featureId = feature.getId().orElse(null);
+        String key = TranslationState.buildKey(feature.accession(), featureId);
+        TranslationState state = validationEngine.getContext().get(TranslationState.class);
+        if (key == null || state.get(key) != null) {
+            return;
+        }
+        try {
+            translationReader
+                    .getTranslation(feature.accession(), featureId)
+                    .ifPresent(translation -> state.record(key, translation, null));
+        } catch (ReadException e) {
+            log.debug("##FASTA translations could not be read: {}", e.getMessage());
+        }
+    }
+
     private void registerTaxon(String accession) {
         if (accession == null || speciesTaxId == null) {
             return;
@@ -322,6 +365,7 @@ public class GFF3FileReader implements AutoCloseable {
             feature.addAttributes(attributesMap);
             feature.setLine(lineCount);
 
+            recordFastaTranslation(feature);
             validationEngine.validate(feature, lineCount);
             return feature;
         } else {
@@ -399,37 +443,11 @@ public class GFF3FileReader implements AutoCloseable {
      * commonly written out as several subsets.
      */
     public Map<String, Long> getTranslationOffsetForAnnotation(GFF3Annotation annotation) throws ReadException {
-        return translationsByAccession().getOrDefault(annotation.getAccession(), Map.of());
-    }
-
-    /**
-     * The offset map bucketed by accession, built on first use and reused for the reader's life.
-     *
-     * <p>Accessions are matched exactly rather than by prefix, so {@code AB123.1} never claims the
-     * translations of {@code AB123.10}. Buckets are {@link LinkedHashMap}s filled in the offset
-     * map's own sorted order, so written output stays byte-stable across runs.
-     */
-    private Map<String, Map<String, Long>> translationsByAccession() throws ReadException {
-        if (translationsByAccession == null) {
-            Map<String, Map<String, Long>> byAccession = new HashMap<>();
-            for (Map.Entry<String, Long> entry : getTranslationOffsetMap().entrySet()) {
-                String accession = TranslationKey.accessionOf(entry.getKey());
-                if (accession != null) {
-                    byAccession
-                            .computeIfAbsent(accession, key -> new LinkedHashMap<>())
-                            .put(entry.getKey(), entry.getValue());
-                }
-            }
-            translationsByAccession = byAccession;
-        }
-        return translationsByAccession;
+        return translationReader.getTranslationOffsetsForAccession(annotation.getAccession());
     }
 
     public Map<String, Long> getTranslationOffsetMap() throws ReadException {
-        if (translationMap == null) {
-            translationMap = Collections.unmodifiableMap(translationReader.readTranslationOffset());
-        }
-        return translationMap;
+        return translationReader.getTranslationOffsets();
     }
 
     public String getTranslation(Long id) throws ReadException {
