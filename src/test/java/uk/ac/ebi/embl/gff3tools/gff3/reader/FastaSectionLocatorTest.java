@@ -244,18 +244,18 @@ class FastaSectionLocatorTest {
         assertTrue(offset <= content.indexOf('>'));
     }
 
-    // ---- locate(InputStream) tests ----
+    // ---- locateBufferBinarySearch(InputStream) tests ----
 
     @Test
     void streamEmptyReturnsMinusOne() throws IOException {
-        long offset = FastaSectionLocator.locate(new java.io.ByteArrayInputStream(new byte[0]));
+        long offset = FastaSectionLocator.locateBufferBinarySearch(new java.io.ByteArrayInputStream(new byte[0]));
         assertEquals(-1L, offset);
     }
 
     @Test
     void streamNoFastaMarkerReturnsMinusOne() throws IOException {
         String content = "##gff-version 3\nchr1\t.\tgene\t1\t1000\t.\t+\t.\tID=gene1\n";
-        long offset = FastaSectionLocator.locate(
+        long offset = FastaSectionLocator.locateBufferBinarySearch(
                 new java.io.ByteArrayInputStream(content.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         assertEquals(-1L, offset);
     }
@@ -263,7 +263,7 @@ class FastaSectionLocatorTest {
     @Test
     void streamFastaMarkerAtStartReturnsZero() throws IOException {
         String content = "##FASTA\n>seq1\nACDEFG\n";
-        long offset = FastaSectionLocator.locate(
+        long offset = FastaSectionLocator.locateBufferBinarySearch(
                 new java.io.ByteArrayInputStream(content.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         assertEquals(0L, offset);
     }
@@ -272,7 +272,7 @@ class FastaSectionLocatorTest {
     void streamFastaMarkerAfterAnnotationsReturnsCorrectOffset() throws IOException {
         String content = "##gff-version 3\nchr1\t.\tgene\t1\t1000\t.\t+\t.\tID=gene1\n##FASTA\n>seq1\nACDEFG\n";
         long expected = content.indexOf("##FASTA");
-        long offset = FastaSectionLocator.locate(
+        long offset = FastaSectionLocator.locateBufferBinarySearch(
                 new java.io.ByteArrayInputStream(content.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         assertEquals(expected, offset);
     }
@@ -280,7 +280,7 @@ class FastaSectionLocatorTest {
     @Test
     void streamFastaMarkerMidLineIsIgnored() throws IOException {
         String content = "##gff-version 3\nsome ##FASTA inline text\nchr1\t.\tgene\t1\t1000\t.\t+\t.\tID=gene1\n";
-        long offset = FastaSectionLocator.locate(
+        long offset = FastaSectionLocator.locateBufferBinarySearch(
                 new java.io.ByteArrayInputStream(content.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         assertEquals(-1L, offset);
     }
