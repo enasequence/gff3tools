@@ -21,6 +21,7 @@ import java.util.regex.Pattern;
 import lombok.Getter;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
+import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Directives;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3SequenceRegion;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Species;
@@ -34,8 +35,7 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonomyIdentifier;
 
 public class GFF3FileReader implements AutoCloseable {
 
-    static Pattern VERSION_DIRECTIVE = Pattern.compile(
-            "^##gff-version (?<version>(?<major>[0-9]+)(\\.(?<minor>[0-9]+)(:?\\.(?<patch>[0-9]+))?)?)\\s*$");
+    static Pattern VERSION_DIRECTIVE = GFF3Directives.VERSION_DIRECTIVE;
     static Pattern SPECIES_DIRECTIVE = Pattern.compile("^##species (?<species>.*)$");
     static Pattern SPECIES_TAX_ID_PATTERN = Pattern.compile("(?:^|[?&])id=(?<taxId>[0-9]+)(?:&.*)?$");
     static Pattern SEQUENCE_REGION_DIRECTIVE = Pattern.compile(
@@ -88,7 +88,7 @@ public class GFF3FileReader implements AutoCloseable {
                 // Ignore blank lines
                 continue;
             }
-            if (line.startsWith("##FASTA")) {
+            if (line.startsWith(GFF3Directives.FASTA)) {
                 fastaReached = true;
                 break;
             }
@@ -262,6 +262,27 @@ public class GFF3FileReader implements AutoCloseable {
             context.register(TaxonAccessionRegistry.class, new TaxonAccessionRegistry());
         }
         context.get(TaxonAccessionRegistry.class).record(accession, new TaxonomyIdentifier.ByTaxId(speciesTaxId));
+    }
+
+    /**
+     * Reads the accession IDs from {@code ##sequence-region} directives in the header block of
+     * the given GFF3 file. Stops at the first feature line or {@code ##FASTA} directive —
+     * directives are expected in the standard header position.
+     *
+     * @return accession strings in declaration order; empty when none are present
+     */
+    public static List<String> readSequenceRegionIds(Path gff3Path) throws IOException {
+        List<String> ids = new ArrayList<>();
+        try (BufferedReader reader = Files.newBufferedReader(gff3Path)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.isBlank()) continue;
+                if (!line.startsWith("#") || line.startsWith("##FASTA")) break;
+                Matcher m = SEQUENCE_REGION_DIRECTIVE.matcher(line);
+                if (m.matches()) ids.add(m.group("accession"));
+            }
+        }
+        return ids;
     }
 
     private GFF3SequenceRegion readSequenceRegion(Matcher m) {

@@ -41,6 +41,8 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 @Builder
 public class GFF3File implements IGFF3Feature {
 
+    private static final String FASTA_DIRECTIVE = GFF3Directives.FASTA_LINE;
+
     GFF3Header header;
     GFF3Species species;
     List<GFF3Annotation> annotations;
@@ -56,11 +58,11 @@ public class GFF3File implements IGFF3Feature {
      * @param header the {@code ##gff-version} directive, or null to omit it
      * @param species the {@code ##species} directive, or null to omit it
      * @param annotations the annotations this file contains; also the scope for its translations
-     * @param gff3FileReader reader over a source GFF3, whose own {@code ##FASTA} section supplies
+     * @param gff3Reader reader over a source GFF3, whose own {@code ##FASTA} section supplies
      *     the translations {@code translationState} does not override; may be null when no source
      *     GFF3 exists or it cannot be re-read (e.g. stdin)
      * @param fastaFilePath an existing translation FASTA, used only when neither
-     *     {@code gff3FileReader} nor {@code translationState} yields a translation for this file;
+     *     {@code gff3Reader} nor {@code translationState} yields a translation for this file;
      *     its records are filtered to this file's accessions. May be null
      * @param writeAnnotationFasta whether to write translations at all; when false no
      *     {@code ##FASTA} section is written even if a source could supply one
@@ -74,7 +76,7 @@ public class GFF3File implements IGFF3Feature {
             GFF3Header header,
             GFF3Species species,
             List<GFF3Annotation> annotations,
-            GFF3FileReader gff3FileReader,
+            GFF3FileReader gff3Reader,
             Path fastaFilePath,
             boolean writeAnnotationFasta,
             List<ValidationException> parsingWarnings,
@@ -85,7 +87,7 @@ public class GFF3File implements IGFF3Feature {
         this.annotations = annotations;
         this.fastaFilePath = fastaFilePath;
         this.parsingWarnings = parsingWarnings;
-        this.gff3Reader = gff3FileReader;
+        this.gff3Reader = gff3Reader;
         this.writeAnnotationFasta = writeAnnotationFasta;
         this.translationState = translationState;
     }
@@ -214,7 +216,7 @@ public class GFF3File implements IGFF3Feature {
 
                 if (keepingRecord) {
                     if (!fastaSectionStartWritten) {
-                        writer.write("##FASTA\n");
+                        writer.write(FASTA_DIRECTIVE);
                         fastaSectionStartWritten = true;
                     }
                     writer.write(line);

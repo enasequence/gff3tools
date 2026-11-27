@@ -244,6 +244,47 @@ class FastaSectionLocatorTest {
         assertTrue(offset <= content.indexOf('>'));
     }
 
+    // ---- locateBufferBinarySearch(InputStream) tests ----
+
+    @Test
+    void streamEmptyReturnsMinusOne() throws IOException {
+        long offset = FastaSectionLocator.locateBufferBinarySearch(new java.io.ByteArrayInputStream(new byte[0]));
+        assertEquals(-1L, offset);
+    }
+
+    @Test
+    void streamNoFastaMarkerReturnsMinusOne() throws IOException {
+        String content = "##gff-version 3\nchr1\t.\tgene\t1\t1000\t.\t+\t.\tID=gene1\n";
+        long offset = FastaSectionLocator.locateBufferBinarySearch(
+                new java.io.ByteArrayInputStream(content.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        assertEquals(-1L, offset);
+    }
+
+    @Test
+    void streamFastaMarkerAtStartReturnsZero() throws IOException {
+        String content = "##FASTA\n>seq1\nACDEFG\n";
+        long offset = FastaSectionLocator.locateBufferBinarySearch(
+                new java.io.ByteArrayInputStream(content.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        assertEquals(0L, offset);
+    }
+
+    @Test
+    void streamFastaMarkerAfterAnnotationsReturnsCorrectOffset() throws IOException {
+        String content = "##gff-version 3\nchr1\t.\tgene\t1\t1000\t.\t+\t.\tID=gene1\n##FASTA\n>seq1\nACDEFG\n";
+        long expected = content.indexOf("##FASTA");
+        long offset = FastaSectionLocator.locateBufferBinarySearch(
+                new java.io.ByteArrayInputStream(content.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        assertEquals(expected, offset);
+    }
+
+    @Test
+    void streamFastaMarkerMidLineIsIgnored() throws IOException {
+        String content = "##gff-version 3\nsome ##FASTA inline text\nchr1\t.\tgene\t1\t1000\t.\t+\t.\tID=gene1\n";
+        long offset = FastaSectionLocator.locateBufferBinarySearch(
+                new java.io.ByteArrayInputStream(content.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        assertEquals(-1L, offset);
+    }
+
     @Test
     void trailingBlankLinesAfterFastaSectionAreHandled() throws IOException {
         String content = String.join(
