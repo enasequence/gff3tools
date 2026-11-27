@@ -24,12 +24,13 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
 
 /**
  * Reports a {@code ##FASTA} section that cannot be read, such as one with a character that isn't
- * an amino acid or a header that appears twice. The other translation rules treat such a section as
- * empty, so without this rule it is only noticed when the output is written.
+ * an amino acid or a header that appears twice. {@code GFF3FileReader} and the other translation
+ * rules skip such a section, and a validated run writes translations from {@code TranslationState}
+ * without reading it again, so this rule is the only place it is reported.
  *
  * <p>Checked once, on the first annotation: the engine has no hook that runs once
- * after the reader is registered. Building the index here costs nothing extra, as the first
- * {@code ##FASTA} lookup would build it anyway.
+ * after the reader is registered. The index is usually built already, by the reader's first
+ * {@code ##FASTA} lookup; a failed build is remembered, so it is not retried here.
  */
 @Gff3Validation(name = FastaSectionReadableValidation.RULE)
 public class FastaSectionReadableValidation {

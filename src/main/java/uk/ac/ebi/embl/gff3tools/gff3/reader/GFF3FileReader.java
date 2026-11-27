@@ -257,9 +257,10 @@ public class GFF3FileReader implements AutoCloseable {
     }
 
     /**
-     * Makes the GFF3 file's {@code ##FASTA} proteins reachable from fixes and validations, which run
-     * per feature long before the reader gets to {@code ##FASTA}. The section is read through its
-     * own handle on first use, so nothing is read if reading is never requested.
+     * Makes the GFF3 file's {@code ##FASTA} index reachable from the validations that check the
+     * section's readability and headers, which run long before the reader gets to {@code ##FASTA}.
+     * The section is read through its own handle on first use, so nothing is read if reading is
+     * never requested.
      */
     private void registerTranslationReader() {
         if (validationEngine == null) {

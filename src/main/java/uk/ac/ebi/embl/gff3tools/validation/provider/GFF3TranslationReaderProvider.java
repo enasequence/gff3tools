@@ -15,8 +15,9 @@ import uk.ac.ebi.embl.gff3tools.validation.ContextProvider;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 
 /**
- * Supplies the {@link GFF3TranslationReader} of the GFF3 file being read, so fixes and validations
- * can look up the submitted {@code ##FASTA} proteins. Registered by the GFF3 file reader.
+ * Supplies the {@link GFF3TranslationReader} of the GFF3 file being read, so validations can check
+ * that its {@code ##FASTA} section is readable and its headers match features. Registered by the
+ * GFF3 file reader.
  *
  * <p>The instance the classpath scan creates has no reader and is inactive, so it is never
  * registered. The reader is closed by its GFF3 file reader, not here.

@@ -34,9 +34,8 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
  * Validates that the newly computed translation of each CDS matches its submitted translation.
  *
  * <p>The submitted translation is the old translation in {@link TranslationState}: the CDS's
- * {@code ##FASTA} protein, recorded by {@code TRANSLATION_ATTRIBUTE_FASTA_MISMATCH}, or else its
- * {@code translation} attribute, recorded by {@code TRANSLATION_ATTRIBUTE_FASTA_MISMATCH} or, when that
- * rule is off, by {@code REMOVE_TRANSLATION_ATTRIBUTE}.
+ * {@code ##FASTA} protein, recorded by {@code GFF3FileReader} as the feature is read, or else its
+ * {@code translation} attribute, recorded by {@code REMOVE_TRANSLATION_ATTRIBUTE}.
  *
  * <p>Runs at {@link ValidationPriority#LOW} — the same tier as {@code TranslationFix}'s
  * {@code TRANSLATION}. Within a tier, fixes run before validations, so by the time this validator

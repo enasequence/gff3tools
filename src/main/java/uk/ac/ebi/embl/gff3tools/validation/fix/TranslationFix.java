@@ -53,7 +53,10 @@ public class TranslationFix {
 
     private final Map<String, Long> sequenceLengthCache = new HashMap<>();
 
-    /** runs after {@link uk.ac.ebi.embl.gff3tools.validation.builtin.TranslationAttributeFastaMismatchValidation} at lower priority **/
+    /**
+     * Runs at NORMAL, after {@code TRANSLATION_ATTRIBUTE_FASTA_MISMATCH} (HIGH), so that rule sees the
+     * attribute before it is removed here.
+     */
     @FixMethod(
             rule = "REMOVE_TRANSLATION_ATTRIBUTE",
             description =
