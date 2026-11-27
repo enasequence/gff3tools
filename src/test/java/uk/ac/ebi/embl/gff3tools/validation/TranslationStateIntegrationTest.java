@@ -11,37 +11,31 @@
 package uk.ac.ebi.embl.gff3tools.validation;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 import static uk.ac.ebi.embl.gff3tools.TestUtils.reportsOf;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
-import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Annotation;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3TranslationReader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.meta.RuleSeverity;
 import uk.ac.ebi.embl.gff3tools.validation.provider.CompositeSequenceProvider;
-import uk.ac.ebi.embl.gff3tools.validation.provider.GFF3TranslationReaderProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 /**
- * The translation chain through the full engine, as the CLI builds it: {@code
- * TRANSLATION_ATTRIBUTE_FASTA_MISMATCH} (HIGH) records the submitted translation, {@code
- * REMOVE_TRANSLATION_ATTRIBUTE} (NORMAL) removes the attribute, the {@code TRANSLATION} fix (LOW)
- * records the generated one and {@code TRANSLATION_COMPARISON} (LOW) compares the two.
+ * The translation chain through the full engine, as the CLI builds it: {@code GFF3FileReader}
+ * records the {@code ##FASTA} protein as old, {@code TRANSLATION_ATTRIBUTE_FASTA_MISMATCH} (HIGH)
+ * compares the attribute with it, {@code REMOVE_TRANSLATION_ATTRIBUTE} (NORMAL) records the
+ * attribute when nothing is recorded and removes it, the {@code TRANSLATION} fix (LOW) records the
+ * generated one and {@code TRANSLATION_COMPARISON} (LOW) compares the two.
  *
- * <p>Only the {@code ##FASTA} reader (mocked) and the sequences (in memory) are supplied; every
- * other rule, fix and provider comes from the classpath. Other rules may report on the bare test
- * CDS, so assertions count only the reports of the translation rules.
+ * <p>{@link #run} records the {@code ##FASTA} protein as the reader does; the sequences are in
+ * memory, and every rule, fix and provider comes from the classpath. Other rules may report on the
+ * bare test CDS, so assertions count only the reports of the translation rules.
  */
 class TranslationStateIntegrationTest {
 
@@ -58,13 +52,8 @@ class TranslationStateIntegrationTest {
     private static final String RIGHT = "MKFGP";
     private static final String WRONG = "MKWWW";
 
-    private GFF3TranslationReader reader;
-
-    @BeforeEach
-    void setUp() throws ReadException {
-        reader = mock(GFF3TranslationReader.class);
-        when(reader.getTranslation(any(), any())).thenReturn(Optional.empty());
-    }
+    /** The submitted ##FASTA protein of cds1, or null for none. */
+    private String fasta;
 
     // ---tests for the submitted translation against the generated one
 
@@ -189,26 +178,26 @@ class TranslationStateIntegrationTest {
     // ---tests for rule and fix settings
 
     @Test
-    void mismatchRuleOff_fastaIsNotRecorded_asOnMain() throws Exception {
+    void mismatchRuleOff_fastaIsStillCompared() throws Exception {
         fastaHas(WRONG);
 
         ValidationEngine engine =
                 run(engineBuilder(SEQUENCE).overrideMethodRules(Map.of(MISMATCH, RuleSeverity.OFF)), cds());
 
-        assertEntry(engine, null, RIGHT);
-        assertReports(engine, 0, 0, 0);
+        assertEntry(engine, WRONG, RIGHT);
+        assertReports(engine, 0, 0, 1);
     }
 
     @Test
-    void mismatchRuleOff_attributeIsStillRecordedByTheFix_asOnMain() throws Exception {
+    void mismatchRuleOff_fastaStillWinsWithoutWarning() throws Exception {
         fastaHas(RIGHT);
         GFF3Feature feature = cds(WRONG);
 
         ValidationEngine engine =
                 run(engineBuilder(SEQUENCE).overrideMethodRules(Map.of(MISMATCH, RuleSeverity.OFF)), feature);
 
-        assertEntry(engine, WRONG, RIGHT);
-        assertReports(engine, 0, 0, 1);
+        assertEntry(engine, RIGHT, RIGHT);
+        assertReports(engine, 0, 0, 0);
         assertFalse(feature.hasAttribute(GFF3Attributes.TRANSLATION));
     }
 
@@ -224,7 +213,7 @@ class TranslationStateIntegrationTest {
     }
 
     @Test
-    void removeAttributeFixOff_ruleStillRecordsAndAttributeStays() throws Exception {
+    void removeAttributeFixOff_fastaIsStillRecordedAndAttributeStays() throws Exception {
         fastaHas(WRONG);
         GFF3Feature feature = cds(RIGHT);
 
@@ -246,8 +235,8 @@ class TranslationStateIntegrationTest {
         assertReports(engine, 0, 0, 1);
     }
 
-    private void fastaHas(String translation) throws ReadException {
-        when(reader.getTranslation(ACCESSION, CDS_ID)).thenReturn(Optional.of(translation));
+    private void fastaHas(String translation) {
+        fasta = translation;
     }
 
     /** One CDS over the whole 18 bp ORF, without a translation attribute. */
@@ -270,14 +259,17 @@ class TranslationStateIntegrationTest {
     }
 
     /**
-     * Runs the engine as {@code GFF3FileReader} does: each feature as it is read, then the
-     * annotation holding them.
+     * Runs the engine as {@code GFF3FileReader} does: for each feature, records the {@code ##FASTA}
+     * protein as old once per feature ID, then validates it; then validates the annotation.
      */
-    private static ValidationEngine run(ValidationEngineBuilder builder, GFF3Feature... features)
-            throws ValidationException {
+    private ValidationEngine run(ValidationEngineBuilder builder, GFF3Feature... features) throws ValidationException {
         ValidationEngine engine = builder.build();
+        TranslationState state = engine.getContext().get(TranslationState.class);
         int line = 2;
         for (GFF3Feature feature : features) {
+            if (fasta != null && state.get(KEY) == null) {
+                state.record(KEY, fasta, null);
+            }
             engine.validate(feature, line++);
         }
         GFF3Annotation annotation = TestUtils.createGFF3Annotation(ACCESSION, 1, 30, features);
@@ -292,9 +284,7 @@ class TranslationStateIntegrationTest {
     }
 
     private ValidationEngineBuilder engineBuilderWithoutSequences() {
-        return new ValidationEngineBuilder()
-                .withProvider(new GFF3TranslationReaderProvider(reader))
-                .failFast(false);
+        return new ValidationEngineBuilder().failFast(false);
     }
 
     private static void assertEntry(ValidationEngine engine, String oldTranslation, String newTranslation) {

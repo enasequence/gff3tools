@@ -12,12 +12,9 @@ package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import static uk.ac.ebi.embl.gff3tools.validation.meta.ValidationType.FEATURE;
 
-import lombok.extern.slf4j.Slf4j;
-import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3TranslationReader;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.meta.Gff3Validation;
 import uk.ac.ebi.embl.gff3tools.validation.meta.InjectContext;
@@ -27,17 +24,13 @@ import uk.ac.ebi.embl.gff3tools.validation.meta.ValidationPriority;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
 /**
- * Records the submitted translation of a feature as its old translation in {@link TranslationState},
- * and warns when the feature's translation attribute differs from its {@code ##FASTA} translation.
- *
- * <p>The {@code ##FASTA} protein wins over the attribute: in a submitted GFF3 that is where we expect
- * it, while the attribute mostly comes from flat-file conversion. {@code TRANSLATION_COMPARISON}
- * later compares the recorded old translation with the one {@code TranslationFix} computes.
+ * Warns when a feature's translation attribute differs from its {@code ##FASTA} translation, which
+ * {@code GFF3FileReader} has already recorded as the old translation in {@link TranslationState}.
+ * The {@code ##FASTA} protein is kept; the attribute is removed by {@code REMOVE_TRANSLATION_ATTRIBUTE}.
  *
  * <p>Runs at {@link ValidationPriority#HIGH}, before {@code REMOVE_TRANSLATION_ATTRIBUTE} (NORMAL)
- * removes the attribute: within a tier fixes run before validations, so the two can't share one.
+ * removes the attribute.
  */
-@Slf4j
 @Gff3Validation(name = "TRANSLATION_ATTRIBUTE_FASTA_MISMATCH")
 public class TranslationAttributeFastaMismatchValidation {
 
@@ -46,54 +39,30 @@ public class TranslationAttributeFastaMismatchValidation {
 
     @ValidationMethod(
             rule = "TRANSLATION_ATTRIBUTE_FASTA_MISMATCH",
-            description =
-                    "Record the submitted translation (##FASTA, else the translation attribute) and warn when the attribute differs from the ##FASTA translation",
+            description = "Warn when the translation attribute differs from the ##FASTA translation",
             type = FEATURE,
             severity = RuleSeverity.WARN,
             priority = ValidationPriority.HIGH)
     public void validateFeature(GFF3Feature feature, int line) throws ValidationException {
-        String featureId = feature.getId().orElse(null);
         String translationInAttribute =
                 feature.getAttribute(GFF3Attributes.TRANSLATION).orElse(null);
-        String translationInGff3Fasta = lookupFastaTranslation(feature.accession(), featureId);
-        String submittedTranslation = translationInGff3Fasta != null ? translationInGff3Fasta : translationInAttribute;
-
-        // Recorded before any warning is thrown, so the comparison sees it whatever the severity.
-        if (submittedTranslation != null && context.contains(TranslationState.class)) {
-            String key = TranslationState.buildKey(feature.accession(), featureId);
-            if (key != null) {
-                // The new translation is computed later by TranslationFix
-                context.get(TranslationState.class).record(key, submittedTranslation, null);
-            }
+        if (translationInAttribute == null || !context.contains(TranslationState.class)) {
+            return;
         }
+        String featureId = feature.getId().orElse(null);
+        String key = TranslationState.buildKey(feature.accession(), featureId);
+        TranslationState.TranslationEntry entry =
+                key == null ? null : context.get(TranslationState.class).get(key);
+        String translationInGff3Fasta = entry == null ? null : entry.oldTranslation();
 
         if (translationInGff3Fasta != null
-                && translationInAttribute != null
+                && !translationInGff3Fasta.isEmpty()
                 && !translationInGff3Fasta.equals(translationInAttribute)) {
             throw new ValidationException(
                     "TRANSLATION_ATTRIBUTE_FASTA_MISMATCH",
                     line,
                     "The translation attribute of feature \"%s\" on \"%s\" differs from its ##FASTA translation; the ##FASTA translation is used"
                             .formatted(featureId, feature.accession()));
-        }
-    }
-
-    /**
-     * The submitted {@code ##FASTA} protein for this feature, or null when there is none, there is no
-     * GFF3 reader (flat file and TSV conversion), or it cannot be read. A read failure is not reported
-     * here: {@code FASTA_SECTION_UNREADABLE} reports it.
-     */
-    private String lookupFastaTranslation(String accession, String featureId) {
-        if (featureId == null || !context.contains(GFF3TranslationReader.class)) {
-            return null;
-        }
-        try {
-            return context.get(GFF3TranslationReader.class)
-                    .getTranslation(accession, featureId)
-                    .orElse(null);
-        } catch (ReadException e) {
-            log.debug("##FASTA translations could not be read: {}", e.getMessage());
-            return null;
         }
     }
 }

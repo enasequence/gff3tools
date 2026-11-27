@@ -70,7 +70,7 @@ without a version matches nothing. A missing translation is easy to spot, a misa
 | Step | Source | When it is there |
 |---|---|---|
 | 1 | `TranslationState` new | `TranslationFix` translated the CDS: sequences given, `TRANSLATION` fix on, not pseudo. For an `exception` CDS the fix copies old into new |
-| 2 | `TranslationState` old | The submitted protein: the `##FASTA` record, else the `translation=` attribute. Recorded by `TRANSLATION_ATTRIBUTE_FASTA_MISMATCH` (HIGH); `REMOVE_TRANSLATION_ATTRIBUTE` (NORMAL) records the attribute only if nothing is recorded yet |
+| 2 | `TranslationState` old | The submitted protein: the `##FASTA` record, else the `translation=` attribute. `GFF3FileReader` records the `##FASTA` protein before the feature is validated; `REMOVE_TRANSLATION_ATTRIBUTE` (NORMAL) records the attribute only if nothing is recorded yet |
 | 3 | Source `##FASTA` | Only when there is no `translationState` at all. Then every record of the document's accessions is copied, including records no feature claims |
 | 4 | `fastaFilePath` | Only when steps 1 to 3 give nothing for the **whole** document |
 
@@ -120,9 +120,10 @@ flowchart TD
 
 - `TranslationState` (`validation/provider`) is where validation records translations.
 - `GFF3TranslationReader`, behind `GFF3FileReader`, finds the source's `##FASTA` by a binary
-  search over byte offsets, indexes it with `FastaReader` and reads proteins on demand. The file
-  reader also registers it in the validation context, so rules can look up a feature's `##FASTA`
-  protein (`getTranslation(accession, featureId)`) before the stream reaches `##FASTA`.
+  search over byte offsets, indexes it with `FastaReader` and reads proteins on demand. As each
+  feature is read, `GFF3FileReader` records its `##FASTA` protein in `TranslationState`, once per
+  feature ID and before the stream reaches `##FASTA`. It also registers the translation reader in
+  the validation context, for the rules that check the section's headers and readability.
 - `TranslationKey` owns the `accession|featureId` format.
 
 # Detailed Design & Implementation

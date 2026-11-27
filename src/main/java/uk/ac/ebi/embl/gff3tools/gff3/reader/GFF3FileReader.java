@@ -19,6 +19,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import uk.ac.ebi.embl.gff3tools.exception.*;
 import uk.ac.ebi.embl.gff3tools.gff3.*;
 import uk.ac.ebi.embl.gff3tools.gff3.directives.GFF3Header;
@@ -32,7 +33,9 @@ import uk.ac.ebi.embl.gff3tools.validation.provider.GFF3TranslationReaderProvide
 import uk.ac.ebi.embl.gff3tools.validation.provider.SequenceRegionProvider;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonAccessionRegistry;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TaxonomyIdentifier;
+import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
 
+@Slf4j
 public class GFF3FileReader implements AutoCloseable {
 
     static Pattern VERSION_DIRECTIVE = Pattern.compile(
@@ -267,6 +270,31 @@ public class GFF3FileReader implements AutoCloseable {
                 .register(GFF3TranslationReader.class, new GFF3TranslationReaderProvider(translationReader));
     }
 
+    /**
+     * Records the feature's {@code ##FASTA} protein as its old translation in {@link TranslationState},
+     * once per feature ID, so validation compares against it. Skipped without a state (a read-only
+     * engine). A section that can't be read is skipped here; {@code FASTA_SECTION_UNREADABLE} reports
+     * it.
+     */
+    private void recordFastaTranslation(GFF3Feature feature) {
+        if (validationEngine == null || !validationEngine.getContext().contains(TranslationState.class)) {
+            return;
+        }
+        String featureId = feature.getId().orElse(null);
+        String key = TranslationState.buildKey(feature.accession(), featureId);
+        TranslationState state = validationEngine.getContext().get(TranslationState.class);
+        if (key == null || state.get(key) != null) {
+            return;
+        }
+        try {
+            translationReader
+                    .getTranslation(feature.accession(), featureId)
+                    .ifPresent(translation -> state.record(key, translation, null));
+        } catch (ReadException e) {
+            log.debug("##FASTA translations could not be read: {}", e.getMessage());
+        }
+    }
+
     private void registerTaxon(String accession) {
         if (accession == null || speciesTaxId == null) {
             return;
@@ -336,6 +364,7 @@ public class GFF3FileReader implements AutoCloseable {
             feature.addAttributes(attributesMap);
             feature.setLine(lineCount);
 
+            recordFastaTranslation(feature);
             validationEngine.validate(feature, lineCount);
             return feature;
         } else {

@@ -64,9 +64,8 @@ public class TranslationFix {
             return;
         }
 
-        // TRANSLATION_ATTRIBUTE_FASTA_MISMATCH normally records the submitted translation
-        // (##FASTA, else this attribute) first. Only when it hasn't (rule OFF) is the attribute recorded here,
-        // as a cheap O(1) failsafe
+        // GFF3FileReader has already recorded the ##FASTA protein, if there is one. Otherwise the
+        // attribute is the submitted translation, and is recorded here.
         String translation = feature.getAttribute(GFF3Attributes.TRANSLATION).orElse(null);
         if (translation != null && !translation.isEmpty() && context.contains(TranslationState.class)) {
             String key = TranslationState.buildKey(

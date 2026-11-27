@@ -11,19 +11,14 @@
 package uk.ac.ebi.embl.gff3tools.validation.builtin;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.ac.ebi.embl.gff3tools.TestUtils;
-import uk.ac.ebi.embl.gff3tools.exception.ReadException;
 import uk.ac.ebi.embl.gff3tools.exception.ValidationException;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Attributes;
 import uk.ac.ebi.embl.gff3tools.gff3.GFF3Feature;
-import uk.ac.ebi.embl.gff3tools.gff3.reader.GFF3TranslationReader;
 import uk.ac.ebi.embl.gff3tools.utils.OntologyTerm;
 import uk.ac.ebi.embl.gff3tools.validation.ValidationContext;
 import uk.ac.ebi.embl.gff3tools.validation.provider.TranslationState;
@@ -38,53 +33,22 @@ class TranslationAttributeFastaMismatchValidationTest {
     private static final int LINE = 4;
 
     private TranslationAttributeFastaMismatchValidation validation;
-    private ValidationContext context;
     private TranslationState state;
-    private GFF3TranslationReader reader;
 
     @BeforeEach
-    void setUp() throws ReadException {
+    void setUp() {
         validation = new TranslationAttributeFastaMismatchValidation();
-        context = new ValidationContext();
+        ValidationContext context = new ValidationContext();
         context.register(TranslationState.class, new TranslationStateProvider());
         state = context.get(TranslationState.class);
-        reader = mock(GFF3TranslationReader.class);
-        when(reader.getTranslation(any(), any())).thenReturn(Optional.empty());
-        TestUtils.registerProvider(context, GFF3TranslationReader.class, reader);
         TestUtils.injectContext(validation, context);
     }
 
     // ---tests for TRANSLATION_ATTRIBUTE_FASTA_MISMATCH validation
 
     @Test
-    void fastaOnly_recordsFastaAsOldTranslation() throws Exception {
-        fastaHas("MKFGP");
-
-        validation.validateFeature(cds(CDS_ID, null), LINE);
-
-        assertEquals("MKFGP", state.get(KEY).oldTranslation());
-        assertNull(state.get(KEY).newTranslation());
-    }
-
-    @Test
-    void attributeOnly_recordsAttributeAsOldTranslation() throws Exception {
-        validation.validateFeature(cds(CDS_ID, "MKFGP"), LINE);
-
-        assertEquals("MKFGP", state.get(KEY).oldTranslation());
-    }
-
-    @Test
-    void attributeEqualToFasta_recordsFastaWithoutWarning() {
-        fastaHas("MKFGP");
-
-        assertDoesNotThrow(() -> validation.validateFeature(cds(CDS_ID, "MKFGP"), LINE));
-
-        assertEquals("MKFGP", state.get(KEY).oldTranslation());
-    }
-
-    @Test
-    void attributeDifferentFromFasta_warnsAndRecordsFasta() {
-        fastaHas("MKFGP");
+    void attributeDifferentFromFasta_warns() {
+        fastaRecorded("MKFGP");
 
         ValidationException exception =
                 assertThrows(ValidationException.class, () -> validation.validateFeature(cds(CDS_ID, "MKWWW"), LINE));
@@ -94,73 +58,64 @@ class TranslationAttributeFastaMismatchValidationTest {
         assertTrue(exception.getMessage().contains("\"" + CDS_ID + "\""));
         assertTrue(exception.getMessage().contains("\"" + ACCESSION + "\""));
         assertTrue(exception.getMessage().contains("the ##FASTA translation is used"));
-        // Recorded before the exception, so the comparison sees it whatever the severity.
-        assertEquals("MKFGP", state.get(KEY).oldTranslation());
+    }
+
+    @Test
+    void attributeEqualToFasta_noWarning() {
+        fastaRecorded("MKFGP");
+
+        assertDoesNotThrow(() -> validation.validateFeature(cds(CDS_ID, "MKFGP"), LINE));
     }
 
     @Test
     void comparisonIsExact_lowerCaseAttributeWarns() {
-        fastaHas("MKFGP");
+        fastaRecorded("MKFGP");
 
         assertThrows(ValidationException.class, () -> validation.validateFeature(cds(CDS_ID, "mkfgp"), LINE));
     }
 
     @Test
-    void neitherAttributeNorFasta_recordsNothing() throws Exception {
-        validation.validateFeature(cds(CDS_ID, null), LINE);
-
-        assertNull(state.get(KEY));
-    }
-
-    @Test
-    void featureWithoutId_recordsNothingAndDoesNotReadFasta() throws Exception {
-        validation.validateFeature(cds(null, "MKFGP"), LINE);
-
-        verify(reader, never()).getTranslation(any(), any());
-        state.forEach((key, entry) -> fail("Nothing should be recorded, found " + key));
-    }
-
-    @Test
-    void noReaderInContext_recordsAttribute() throws Exception {
-        TranslationAttributeFastaMismatchValidation noReaderValidation =
-                new TranslationAttributeFastaMismatchValidation();
-        ValidationContext noReaderContext = new ValidationContext();
-        noReaderContext.register(TranslationState.class, new TranslationStateProvider());
-        TestUtils.injectContext(noReaderValidation, noReaderContext);
-
-        noReaderValidation.validateFeature(cds(CDS_ID, "MKFGP"), LINE);
-
-        assertEquals(
-                "MKFGP", noReaderContext.get(TranslationState.class).get(KEY).oldTranslation());
-    }
-
-    @Test
-    void noTranslationStateInContext_stillWarns() throws Exception {
-        TranslationAttributeFastaMismatchValidation noStateValidation =
-                new TranslationAttributeFastaMismatchValidation();
-        ValidationContext noStateContext = new ValidationContext();
-        TestUtils.registerProvider(noStateContext, GFF3TranslationReader.class, reader);
-        TestUtils.injectContext(noStateValidation, noStateContext);
-        fastaHas("MKFGP");
-
-        assertThrows(ValidationException.class, () -> noStateValidation.validateFeature(cds(CDS_ID, "MKWWW"), LINE));
-    }
-
-    @Test
-    void unreadableFasta_recordsAttributeWithoutWarning() throws Exception {
-        when(reader.getTranslation(ACCESSION, CDS_ID)).thenThrow(new ReadException("bad ##FASTA"));
-
+    void noFastaRecorded_noWarning() {
         assertDoesNotThrow(() -> validation.validateFeature(cds(CDS_ID, "MKWWW"), LINE));
-
-        assertEquals("MKWWW", state.get(KEY).oldTranslation());
     }
 
-    private void fastaHas(String translation) {
-        try {
-            when(reader.getTranslation(ACCESSION, CDS_ID)).thenReturn(Optional.of(translation));
-        } catch (ReadException e) {
-            throw new IllegalStateException(e);
-        }
+    @Test
+    void noAttribute_noWarning() {
+        fastaRecorded("MKFGP");
+
+        assertDoesNotThrow(() -> validation.validateFeature(cds(CDS_ID, null), LINE));
+    }
+
+    @Test
+    void featureWithoutId_noWarning() {
+        fastaRecorded("MKFGP");
+
+        assertDoesNotThrow(() -> validation.validateFeature(cds(null, "MKWWW"), LINE));
+    }
+
+    @Test
+    void stateIsNeverChanged() throws Exception {
+        fastaRecorded("MKFGP");
+
+        assertThrows(ValidationException.class, () -> validation.validateFeature(cds(CDS_ID, "MKWWW"), LINE));
+        validation.validateFeature(
+                TestUtils.createGFF3Feature("cds2", OntologyTerm.CDS.name(), ACCESSION, 1, 18, "+"), LINE);
+
+        assertEquals(new TranslationState.TranslationEntry("MKFGP", null), state.get(KEY));
+        assertNull(state.get(TranslationState.buildKey(ACCESSION, "cds2")));
+    }
+
+    @Test
+    void noTranslationStateInContext_noWarning() {
+        TranslationAttributeFastaMismatchValidation noState = new TranslationAttributeFastaMismatchValidation();
+        TestUtils.injectContext(noState, new ValidationContext());
+
+        assertDoesNotThrow(() -> noState.validateFeature(cds(CDS_ID, "MKWWW"), LINE));
+    }
+
+    /** As {@code GFF3FileReader} records it before the feature is validated. */
+    private void fastaRecorded(String translation) {
+        state.record(KEY, translation, null);
     }
 
     private static GFF3Feature cds(String id, String translationAttribute) {
